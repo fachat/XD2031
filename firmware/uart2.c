@@ -99,6 +99,21 @@ static uint8_t			current_is_eoi;
  */
 
 /*
+ * helper for conversion of ASCII to PETSCII
+ */
+
+static uint8_t *append(uint8_t *outp, const char *to_append) {
+	while(*to_append != 0) {
+		*outp = ascii_to_petscii(*to_append);
+		outp++;
+		to_append++;
+	}
+	*outp = 0;
+	outp++;
+	return outp;
+}
+
+/*
  * each packet from the UART contains one directory entry. 
  * The format is defined as FS_DIR_* offset definitions
  *
@@ -189,20 +204,24 @@ static int8_t directory_converter(volatile packet_t *p) {
 	// add file type
 	if (type == FS_DIR_MOD_NAM) {
 		// file name entry
-		strcpy(outp, SW_NAME_LOWER);
-		outp += strlen(SW_NAME_LOWER)+1;	// includes ending 0-byte
+		outp = append(outp, SW_NAME);
+		//strcpy(outp, SW_NAME_LOWER);
+		//outp += strlen(SW_NAME_LOWER)+1;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_DIR) {
-		strcpy(outp, "dir");
-		outp += 4;	// includes ending 0-byte
+		outp = append(outp, "DIR");
+		//strcpy(outp, "dir");
+		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FIL) {
-		strcpy(outp, "prg");
-		outp += 4;	// includes ending 0-byte
+		outp = append(outp, "PRG");
+		//strcpy(outp, "prg");
+		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FRE) {
-		strcpy(outp, "bytes free");
-		outp += 11;	// includes ending 0-byte
+		outp = append(outp, "BYTES FREE");
+		//strcpy(outp, "bytes free");
+		//outp += 11;	// includes ending 0-byte
 
 		*outp = 0; outp++;	// BASIC end marker (zero link address)
 		*outp = 0; outp++;	// BASIC end marker (zero link address)
