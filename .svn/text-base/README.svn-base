@@ -1,0 +1,53 @@
+
+XD-2031 - Serial line filesystem server for CBMs
+------------------------------------------------
+
+This software enables to program an AVR AtMega device to play
+the role of a disk drive to a Commodore PET computer with IEEE488 
+interface.
+
+XD-2031 consists of two main parts, an AtMega firmware, and a PC server.
+Both communicate via a serial line. 
+
+Currently this hardware is supported:
+	- XS-1541 	Communication via serial line over USB
+
+For more information see the README files in the subdirectories
+
+Copyright
+---------
+
+The code is under GPL V2. Please note that the PC server part is
+also available on later versions of the GPL, the AtMega firmware is
+ONLY(!) available under GPL V2.
+
+(C) 2012 Andre Fachat <afachat@gmx.de>,
+	 Ingo Korb, Thomas Winkler, and others!
+
+Please see the individual files for specific copyright notices.
+
+
+TODO
+----
+
+Fix bugs:
+	- PC server does not handle files with multiples of the block transfer length
+	  correctly (last packet with EOF has no data)
+	- firmware does only understand "$:" - note the colon - as directory, not
+	  "$" only.
+	- PC server does not filter directory entries
+	- Only LOAD is currently working, NO SAVE, or other methods
+	- no drive commands, no error channel yet
+	- ...
+
+
+REFERENCES
+----------
+
+XS-1541: The currently supported hardware by T. Winkler is described here:
+	http://xs1541.t-winkler.net/
+
+sd2iec:	Some files in this firmware are derived from the sd2iec project by I. Korb
+	http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
+
+

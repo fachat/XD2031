@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/8bit/!svn/ver/783/trunk/Projects/xs1541/xs1541/sample
+END
+TEST
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/TEST
+END
+TEST2
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/TEST2
+END
+test3
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/test3
+END
+test3.lst
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/test3.lst
+END
+test3a
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/test3a
+END
+test3a.lst
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/8bit/!svn/ver/788/trunk/Projects/xs1541/xs1541/sample/test3a.lst
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/8bit/!svn/ver/789/trunk/Projects/xs1541/xs1541/sample/README
+END

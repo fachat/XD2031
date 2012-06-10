@@ -1,0 +1,42 @@
+
+This file describes how to build and use the XD-2031 firmware.
+
+Currently supported hardware:
+	- XS-1541
+
+BUILD
+-----
+
+Type
+	make
+On a Linux box with AVR cross-compiler installed
+
+
+INSTALLATION
+------------
+
+Type
+	sudo make load
+on a Linux box, with avrdude installed, the XS1541 connected to /dev/ttyUSB0,
+the XS1541 having the bootloader installed, don't press Enter yet.
+Press the RESET button on the XS1541, then press ENTER to start the load process.
+
+If you're slow with typing in the root password (for the sudo command), either chown
+/dev/ttyUSB0 (not tried) or do a sudo with a normal command, as the access is
+stored.
+
+
+BUGS
+----
+
+There are a number of bugs and missing features:
+
+Missing features:
+	- no commands
+	- no command channel
+	- only does LOAD at the moment, no SAVE or other access methods 
+	- a RESET command to tell the server that the device has been reset, to clean up
+
+Bugs:
+	- Sure. Many.
+ 
