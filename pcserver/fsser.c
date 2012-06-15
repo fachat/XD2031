@@ -47,19 +47,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-/*
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "privs.h"
 
-#include <sys/stat.h>
-#include <dirent.h>
-
-#include <netinet/in.h>
-#include <netdb.h>
-
-#include <time.h>
-
-*/
 
 void usage(void) {
 	printf("Usage: fsser [options] exported_directory\n"
@@ -201,6 +190,9 @@ int main(int argc, char *argv[]) {
 		readfd = fdesc;
 		writefd = readfd;
 	}
+
+	// we have the serial device open, now we can drop privileges
+	drop_privileges();
 
 	cmd_init();
 

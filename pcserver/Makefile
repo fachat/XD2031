@@ -2,13 +2,20 @@
 CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
 
+COMMONC=fscmd.c privs.c 
+COMMONH=fscmd.h privs.h
+
 all: fstcp fsser
 
-fstcp: fstcp.c fscmd.c fscmd.h 
-	${CC} ${CFLAGS} fstcp.c fscmd.c -o fstcp
+fstcp: fstcp.c $(COMMONC) $(COMMONH)
+	${CC} ${CFLAGS} fstcp.c $(COMMONC) -o fstcp
+	sudo chown root $@
+	sudo chmod u+s $@
 
-fsser: fsser.c fscmd.c fscmd.h 
-	${CC} ${CFLAGS} fsser.c fscmd.c -o fsser
+fsser: fsser.c $(COMMONC) $(COMMONH)
+	${CC} ${CFLAGS} fsser.c $(COMMONC) -o fsser
+	sudo chown root $@
+	sudo chmod u+s $@
 
 clean:
 	rm -f fstcp fsser
