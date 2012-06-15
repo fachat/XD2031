@@ -71,6 +71,15 @@ static void drop_to_uid(uid_t ruid) {
 	}
 
 	printf("New effective user ID=%d\n", new_ruid);
+
+	e = setuid(0);
+
+	if (e == 0) {
+		fprintf(stderr, "Detected problem: was able to regain privileges to uid=%d, euid=%d!\n", 
+			getuid(), geteuid());
+		exit(-1);
+	}
+
 }
 
 

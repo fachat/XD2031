@@ -10,15 +10,23 @@ BUILD
 Just type
 	make
 on a Linux box with gcc installed.
+Note that you may need to enter your sudo password to allow to Setuid the
+executables and chown them to root. 
 
 RUN
 ---
 
 Type
-	sudo make run
+	make run
 to start the server, publishing the samples directory. 
 The XS1541 device must be connected to /dev/ttyUSB0
+The code drops privileges as soon as it has aquired and configured
+the serial device (or set up the TCP/IP listen). So any
+file operations happen with the privileges of the starting user.
+(Note: tested on Linux only)
 
+Alternatively do not setuid the executable, but then you need to be 
+root to run them and they don't drop privileges!
 
 TODO
 ----

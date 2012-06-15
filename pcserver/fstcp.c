@@ -152,6 +152,9 @@ int main(int argc, char *argv[]) {
 	  return 2;
 	}
 
+	// now we have enough set up to drop privileges
+	drop_privileges();
+
 	/* note that this may probably belong into the accept branch (e.g.
 	 * if we would clone() after accept */
 	cmd_init();
