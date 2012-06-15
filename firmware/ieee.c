@@ -135,6 +135,46 @@ volatile struct {
 } ieee_data;
 
 /* ------------------------------------------------------------------------- */
+/*  Error channel handling                                                   */
+/* ------------------------------------------------------------------------- */
+
+
+static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                void (*callback)(int8_t channelno, int8_t errnum)) {
+
+	if (packet_get_type(txbuf) != FS_READ) {
+		// should not happen
+		callback(channelno, ERROR_NO_CHANNEL);
+		return;
+	}
+
+	uint8_t *buf = packet_get_buffer(rxbuf);
+	uint8_t len = packet_get_capacity(rxbuf);
+
+	strncpy(buf, error.error_buffer, len);
+	buf[len-1] = 0;	// avoid buffer overflow
+
+	// overwrite with actual length
+	len = strlen(buf);
+
+	// fixup packet	
+	packet_set_filled(rxbuf, channelno, FS_EOF, len);
+
+	// reset actual error channel until next read op
+	set_error(&error, 0);
+
+	// notify about packet ready
+	callback(channelno, 0);
+}
+
+static provider_t ieee_status_provider = {
+	NULL,
+	ieee_submit_status_refill,
+	NULL,
+	NULL
+};
+
+/* ------------------------------------------------------------------------- */
 /*  Interrupt handling                                                       */
 /* ------------------------------------------------------------------------- */
 
@@ -576,7 +616,14 @@ static uint8_t ieee_talk_handler (void)
 
   chan = channel_find(ieee_data.secondary_address);
   if(chan == NULL) {
-    return -1;
+    if (ieee_data.secondary_address == 15) {
+      // open error channel
+      int8_t e = channel_open(15, 0, &ieee_status_provider, NULL);
+      chan = channel_find(ieee_data.secondary_address);
+    }
+    if (chan == NULL) {
+      return -1;
+    }
   }
 
   while (channel_has_more(chan)) {
@@ -674,6 +721,10 @@ static void cmd_handler (void)
 # endif
     if (ieee_data.secondary_address == 0x0f) {
       doscommand(&command);                   /* Command channel */
+
+      // open/prepare the status channel
+      //int8_t e = channel_open(15, 0, &ieee_status_provider, NULL);
+
     } else {
       // to avoid data races, we need to set bus_state here
       ieee_data.bus_state = BUS_CMDWAIT;
