@@ -1,4 +1,3 @@
-
 XD-2031 - Serial line filesystem server for CBMs
 ------------------------------------------------
 
@@ -32,17 +31,13 @@ TODO
 
 Fix bugs:
 	- has problems with my IEEE488 setup, only works with the SFD1001 switched on
-	  (but there is another - switched off - PET on the IEEE488 chain, and cables are
-	  long...)
-	- definitely needs a wrapper that drops root privileges after providing access
-	  to the tty device
+	  (but there is another - switched off - PET on the IEEE488 chain, and cables 
+	  are long...)
 	- PC server does not handle files with multiples of the block transfer length
 	  correctly (last packet with EOF has no data)
-	- firmware does only understand "$:" - note the colon - as directory, not
-	  "$" only.
 	- PC server does not filter directory entries
 	- Only LOAD is currently working, NO SAVE, or other methods
-	- no drive commands, no error channel yet
+	- no drive commands
 	- ...
 
 
