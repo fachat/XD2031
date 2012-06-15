@@ -58,10 +58,10 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 		switch(state) {
 		case NAME_DRIVE:
 			// save first char as potential command	
-			if (cmd == 0 
-				&& (isalpha(*p) || (*p == '$'))) {
-				cmd = *p;
-				//p++;
+			if (cmd == 0) {
+				if (isalpha(*p) || (*p == '$')) {
+					cmd = *p;
+				}
 			}
 			// last digit as potential drive
 			if (isdigit(*p)) {
@@ -104,6 +104,14 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 		}
 		len--;
 		p++;
+	}
+
+	if (result->cmd == 0 && cmd == '$') {
+	 	// no command detected, but name starts with "$"
+	 	// so this is a directory name without file name filter
+		result->drive = drv;
+		result->cmd = cmd;
+		result->namelen = 0;
 	}
 
 	debug_puts("CMD="); debug_putc(result->cmd); debug_putcrlf();
