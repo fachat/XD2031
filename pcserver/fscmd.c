@@ -270,7 +270,18 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		    fclose(fp);
 		    files[tfd].fp = NULL;
 		  } else {
-		    retbuf[FSP_CMD] = FS_WRITE;
+		    // as feof() does not let us know if the file is EOF without
+		    // having attempted to read it first, we need this kludge
+		    int eofc = fgetc(fp);
+		    if (eofc < 0) {
+		      // EOF
+		      retbuf[FSP_CMD] = FS_EOF;
+		    } else {
+		      // restore fp, so we can read it properly on the next request
+		      ungetc(eofc, fp);
+		      // do not send EOF
+		      retbuf[FSP_CMD] = FS_WRITE;
+		    }
 		  }
 		}
 		break;
