@@ -24,41 +24,15 @@
 
 ****************************************************************************/
 
+#ifndef FSCMD_H
+#define FSCMD_H
 
-/*
- * additional FS commands to be sent between fstcp client & server
- * transparent to normal FS_* codes
- */
-#define   FS_READ        -1    	/* pull data (FSTCP internal)        */
-#define   FS_WRITE       -2  	/* push data (FSTCP internal)        */
-#define   FS_REPLY       -3  	/* return value (FSTCP internal)     */
-#define   FS_EOF         -4  	/* as FS_WRITE, but signal EOF after */
-                               	/* last byte sent                    */
-
-
-#define MAXFILES        4
-
-/* data struct exchanged with server */
-#define FSP_CMD         0
-#define FSP_LEN         1
-#define FSP_FD          2
-#define FSP_DATA        3
 
 /* status values */
 /* Note: not really used at themoment, only F_FREE is set in the init */
 #define F_FREE          0	/* must be 0 */
-#define F_CMD_SENT      1
-#define F_CMD_REQUEUE   2	/* CMD must be requeued */
 
-#define F_RD            3	/* no buffer to put to stream */
-#define F_RD_SENT       4	/* FS_READ request sent */
-#define F_RD_RXD        5	/* FS_WRITE reply received */
-#define F_RD_EOF        6	/* FS_EOF reply received */
-#define F_RD_CLOSE      7	/* FS_EOF reply processed */
-
-#define F_WR            8
-#define F_WR_WAIT       9	/* buffer ready but not (yet) sent */
-#define F_WR_WEOF       10	/* last buffer ready but not (yet) sent */
+#define MAXFILES        4
 
 
 void cmd_init();
@@ -67,4 +41,5 @@ void cmd_loop(int readfs, int writefd);
 
 void do_cmd(char *buf, int fs);
 
+#endif
 

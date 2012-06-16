@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
 
 COMMONC=fscmd.c privs.c name.c dir.c
-COMMONH=fscmd.h privs.h name.h dir.h
+COMMONH=fscmd.h privs.h name.h dir.h wireformat.h
 
 all: fstcp fsser
 

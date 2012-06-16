@@ -26,7 +26,7 @@
 #include "file.h"
 #include "name.h"
 #include "uart2.h"
-#include "oa1fs.h"
+#include "wireformat.h"
 
 #include "debug.h"
 #include "led.h"

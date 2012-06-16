@@ -31,7 +31,7 @@
 #include "packet.h"
 #include "term.h"
 #include "uart2.h"
-#include "oa1fs.h"
+#include "wireformat.h"
 
 #include <util/delay.h>
 #include "led.h"

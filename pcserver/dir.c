@@ -36,7 +36,7 @@
 #include "dir.h"
 #include "name.h"
 #include "fscmd.h"
-#include "oa1fs.h"
+#include "wireformat.h"
 
 #define min(a,b)        (((a)<(b))?(a):(b))
 

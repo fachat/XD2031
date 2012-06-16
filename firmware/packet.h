@@ -34,7 +34,7 @@
 #include <inttypes.h>
 #include <util/delay.h>
 
-#include "fscmd.h"
+#include "wireformat.h"
 #include "debug.h"
 
 /***********************************************************************************

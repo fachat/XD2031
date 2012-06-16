@@ -37,8 +37,7 @@
 #include "compat.h"
 #include "packet.h"
 #include "uart2.h"
-#include "fscmd.h"
-#include "oa1fs.h"
+#include "wireformat.h"
 #include "provider.h"
 #include "petscii.h"
 

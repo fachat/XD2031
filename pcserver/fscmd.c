@@ -37,18 +37,7 @@
 #include <dirent.h>
 #include <string.h>
 
-/*
-#include <stdlib.h>
-
-#include <sys/socket.h>
-
-
-#include <netinet/in.h>
-#include <netdb.h>
-
-*/
-
-#include "oa1fs.h"
+#include "wireformat.h"
 #include "fscmd.h"
 #include "dir.h"
 
