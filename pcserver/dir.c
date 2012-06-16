@@ -112,13 +112,15 @@ struct dirent* dir_next(DIR *dp, char *dirpattern) {
 
 	de = readdir(dp);
 
-	while (de != NULL) {
-		if (compare_pattern(de->d_name, dirpattern)) {
-			// match
-			return de;
-		}
-		de = readdir(dp);
-	}		
+	if (dirpattern != NULL && *dirpattern != 0) {
+		while (de != NULL) {
+			if (compare_pattern(de->d_name, dirpattern)) {
+				// match
+				return de;
+			}
+			de = readdir(dp);
+		}		
+	}
 
 	return de;
 }
