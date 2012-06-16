@@ -172,7 +172,7 @@ void do_cmd(char *buf, int fd) {
 		if(*nm=='/') nm++;
 		if(strchr(nm, '/')) break;
 
-		fp = fopen(nm, "wb");
+		fp = open_first_match(nm, "wb");
 printf("OPEN_WD(%s)=%p\n",buf+FSP_DATA,fp);
 		if(fp) {
 		  files[tfd].fp = fp;
@@ -196,7 +196,7 @@ printf("OPEN_DR(%s)=%p\n",buf+FSP_DATA,dp);
 		/* no directory separators - security rules! */
 		if(strchr((char*)buf+FSP_DATA, '/')) break;
 
-		fp = fopen((char*)buf+FSP_DATA, "rb");
+		fp = open_first_match((char*)buf+FSP_DATA, "rb");
 printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		if(fp) {
 		  files[tfd].fp = fp;
@@ -205,6 +205,8 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		}
 		break;
 	case FS_READ:
+		// ------------------------------------
+		// read directory entries
 		if(dp) {
 		  if (files[tfd].is_first) {
 		    files[tfd].is_first = 0;
@@ -228,6 +230,8 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		  // prepare for next read (so we know if we're done)
 		  files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
 		} else
+		// ------------------------------------
+		// read file data
 		if(fp) {
 		  n = fread(retbuf+FSP_DATA, 1, MAX_BUFFER_SIZE, fp);
 		  retbuf[FSP_LEN] = n+FSP_DATA;

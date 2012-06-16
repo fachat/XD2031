@@ -24,8 +24,10 @@
 
 ****************************************************************************/
 
+#include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -37,6 +39,41 @@
 #include "oa1fs.h"
 
 #define min(a,b)        (((a)<(b))?(a):(b))
+
+/**
+ *  * fopen the first matching directory entry, using the given
+ *   * options string
+ *    */
+FILE *open_first_match(const char *pattern, const char *options) {
+	DIR *dp;
+	FILE *fp;
+	struct dirent *de;
+
+	// shortcut - if we don't have wildcards, just open it
+	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+		return fopen(pattern, options);
+	}
+
+
+	dp = opendir(".");
+	if (dp) {
+		de = readdir(dp);
+
+		while (de != NULL) {
+			if (compare_pattern(de->d_name, pattern)) {
+				// match
+				fp = fopen(de->d_name, options);
+				closedir(dp);
+				return fp;
+			}
+			de = readdir(dp);
+		}
+		
+	}
+	return NULL;
+}
+
+
 
 /**
  * fill the buffer with a header entry, using the driveno as line number

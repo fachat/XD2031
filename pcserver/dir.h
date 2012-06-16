@@ -28,6 +28,12 @@
 #define	DIR_H
 
 /**
+ * fopen the first matching directory entry, using the given
+ * options string
+ */
+FILE *open_first_match(const char *pattern, const char *options);
+
+/**
  * fill the buffer with a header entry, using the driveno as line number
  * and dirpattern as file name
  *
