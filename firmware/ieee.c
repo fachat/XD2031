@@ -465,7 +465,7 @@ int ieee_getc(void) {
 
 static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
 
-debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
+//debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
 
   ieee_ports_talk();
   set_eoi_state (!with_eoi);
