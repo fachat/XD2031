@@ -215,7 +215,7 @@ static int8_t directory_converter(volatile packet_t *p) {
 		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FRE) {
-		outp = append(outp, "bytes free");
+		outp = append(outp, "blocks free");
 		//strcpy(outp, "bytes free");
 		//outp += 11;	// includes ending 0-byte
 
