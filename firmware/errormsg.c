@@ -31,7 +31,7 @@
 #include "xs1541.h"		/* for HW_NAME */
 
 /// Version number string, will be added to message 73
-const char PROGMEM versionstr[] = HW_NAME " V" VERSION;
+const char PROGMEM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
 
 /// Long version string, used for message 9
 const char PROGMEM longverstr[] = LONGVERSION;
