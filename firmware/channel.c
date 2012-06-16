@@ -38,6 +38,7 @@
 
 volatile channel_t channels[MAX_CHANNELS];
 
+static void _push_callback(int8_t channelno, int8_t errnum);
 static void channel_close_int(volatile channel_t *chan, uint8_t force);
 
 void channel_init(void) {
@@ -95,15 +96,16 @@ int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*d
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
 		if (channels[i].channel_no < 0) {
 			channels[i].channel_no = chan;
-			channels[i].current = -1;
+			channels[i].current = 0;
 			channels[i].writetype = writetype;
 			channels[i].provider = prov;
 			channels[i].directory_converter = dirconv;
 			// note: we should not channel_pull() here, as file open has not yet even been sent
+			// the pull is done in the open callback for a read-only channel
 			for (uint8_t j = 0; j < 2; j++) {
 				packet_reset(&channels[i].buf[j]);
 			}
-			return 0;	
+			return 0;
 		}
 	}
 	return -1;
@@ -119,6 +121,9 @@ volatile channel_t* channel_find(int8_t chan) {
 }
 
 static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
+	// TODO:fix for read/write
+	if (chan->writetype != WTYPE_READONLY) return;
+
 	if (chan->pull_state == PULL_OPEN) {
 		chan->current = 0;
 		channel_pull(chan, 0);
@@ -130,16 +135,16 @@ static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
 	}
 	if (chan->pull_state == PULL_ONECONV) {
 		if (chan->directory_converter != NULL) {
-debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
-debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
+//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
+//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
 			chan->directory_converter(&chan->buf[chan->current]);
 		}
 		chan->pull_state = PULL_ONEREAD;
 	}
 	if (chan->pull_state == PULL_TWOCONV) {
 		if (chan->directory_converter != NULL) {
-debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
+//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
+//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 			chan->directory_converter(&chan->buf[1-chan->current]);
 		}
 		chan->pull_state = PULL_TWOREAD;
@@ -202,12 +207,34 @@ static void channel_close_int(volatile channel_t *chan, uint8_t force) {
 	// would require an explicit close on the server
 	chan->channel_no = -1;
 	chan->pull_state = PULL_OPEN;
+	chan->push_state = PUSH_OPEN;
 	packet_init(&chan->buf[0], DATA_BUFLEN, chan->data[0]);
 	packet_init(&chan->buf[1], DATA_BUFLEN, chan->data[1]);
 }
 
-void channel_close(int8_t secondary_address) {
-	volatile channel_t *chan = channel_find(secondary_address);
+void channel_close(int8_t channel_no) {
+	volatile channel_t *chan = channel_find(channel_no);
+
+	if (chan->push_state != PUSH_OPEN) {
+		// if it's not PUSH_FILLONE, then it is in the process
+		// of being pushed
+		while (chan->push_state != PUSH_FILLONE) {
+			_delay_ms(1);
+		}
+
+		packet_t *curpack = &chan->buf[chan->current];
+		int l = packet_get_contentlen(curpack);
+
+		// even if l==0, send an EOF packet to close the file
+	        packet_set_filled(curpack, channel_no, FS_EOF, l);
+
+                chan->provider->submit_call(channel_no, curpack, curpack, _push_callback);
+
+               	// wait until the packet has been sent and been responded to
+      	 	while (chan->push_state == PUSH_FILLONE) {
+                       	_delay_ms(1);
+		}	
+	}
 	channel_close_int(chan, 0);
 }
 
@@ -233,8 +260,8 @@ volatile channel_t* channel_refill(volatile channel_t *chan) {
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
-debug_printf(">>3: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
+//debug_printf(">>3: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
+//debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 				chan->directory_converter(&chan->buf[1-chan->current]);
 			}
 			chan->pull_state = PULL_TWOREAD;
@@ -256,54 +283,56 @@ debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 	return NULL;
 }
 
+static void _push_callback(int8_t channelno, int8_t errnum) {
+        volatile channel_t *p = channel_find(channelno);
+        if (p != NULL) {
+                p->last_push_errorno = errnum;
 
-//static inline channel_t* channel_put(channel_t *chan, char c, int forceflush) {
-#if 0	/* this would be the sequence to be used when we would use the original
- 	   sd2iec buffers code. But we replaced it, so it only a reference here
-	*/
-      /* Flush buffer if full */
-      if (chan->mustflush) {
-        if (chan->refill(buf)) return -2;
-        /* Search the buffer again,                     */
-        /* it can change when using large buffers       */
-        chan = find_buffer(ieee_data.secondary_address);
-      }
+                // TODO: only if errorno == 0?
+                // Probably need some PUSH_ERROR as well
+                if (p->push_state == PUSH_FILLTWO) {
+			// release possibly waiting channel_put()
+                        p->push_state = PUSH_FILLONE;
+                } else 
+		if (p->push_state == PUSH_FILLONE) {
+			// release possibly waiting channel_close()
+			p->push_state = PUSH_OPEN;
+		}
+        }
+}
+	
 
-      chan->data[chan->position] = c;
-      mark_buffer_dirty(chan);
+volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush) {
 
-      if (chan->lastused < chan->position) {
-        chan->lastused = chan->position;
-      }
-      chan->position++;
+	if (chan->push_state == PUSH_OPEN) {
+		chan->push_state = PUSH_FILLONE;
+	}
 
-      /* Mark buffer for flushing if position wrapped */
-      if (chan->position == 0) {
-        chan->mustflush = 1;
-      }
+	uint8_t channo = chan->channel_no;
+	volatile packet_t *curpack = &chan->buf[chan->current];
 
-      /* REL files must be syncronized on EOI */
-      if(forceflush) {
-        if (chan->refill(chan)) return null;
-      }
-      return chan;
-#endif
-//}
+	packet_write_char(curpack, (uint8_t) c);
 
-//static inline void channel_status_set(uint8_t *error_buffer, int len) {
-  //if (errornum >= 20 && errornum != ERROR_DOSVERSION) {
-  //  FIXME: Compare to E648
-  //  // NOTE: 1571 doesn't write the BAM and closes some buffers if an error occured
-  //  led_state |= LED_ERROR;
-  //} else {
-  //  led_state &= (uint8_t)~LED_ERROR;
-  //  set_error_led(0);
-  //}
-  //// WTF?
-  //buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
-  ///* Send message without the final 0x0d */
-  //display_errorchannel(msg - error_buffer, error_buffer);
-//}
+	if (packet_is_full(curpack) || forceflush) {
+		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
+
+		// wait until the other packet has been replied to
+		while (chan->push_state != PUSH_FILLONE) {
+			_delay_ms(1);
+		}
+
+		// note that we pushed one and are filling the second
+		chan->push_state = PUSH_FILLTWO;
+
+		// use same packet as rx/tx buffer
+		chan->provider->submit_call(channo, curpack, curpack, _push_callback);
+
+		// switch
+		chan->current = 1-chan->current;
+		packet_reset(&chan->buf[chan->current]);
+	}
+	return chan;
+}
 
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl) {

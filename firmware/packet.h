@@ -111,6 +111,10 @@ static inline bool packet_is_done(volatile packet_t *buf) {
 	return buf->wp == buf->rp;
 }
 
+static inline bool packet_is_full(volatile packet_t *buf) {
+	return buf->wp == buf->len;
+}
+
 static inline void packet_wait_done(volatile packet_t *buf) {
 	while( ! packet_is_done(buf) ) { 
 		_delay_ms(1);

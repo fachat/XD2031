@@ -258,7 +258,7 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
   msg = appendnumber(msg,sector);
   *msg = 13;
 
-  channel_status_set(err->error_buffer, msg-err->error_buffer);
+  //channel_status_set(err->error_buffer, msg-err->error_buffer);
 
 #if 0
   if (errornum >= 20 && errornum != ERROR_DOSVERSION) {

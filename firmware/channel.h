@@ -39,7 +39,7 @@
  */
 #define	WTYPE_READONLY	0		
 #define	WTYPE_WRITEONLY	1
-#define	WTYPE_READWRITE	2
+#define	WTYPE_READWRITE	2	/* NOTE: absolutely broken! */
 
 /**
  * pull_state values. The interrupt callback updates the state, so state manipulation
@@ -53,6 +53,14 @@
 #define	PULL_TWOCONV	5		// second buffer is read, but may still need to be converted
 #define	PULL_TWOREAD	6		// both buffers read and valid
 
+/**
+ * push_state values. The interrupt callback updates the state, so state manipulation
+ * must be irq-protected
+ */
+#define	PUSH_OPEN	0		// after open
+#define	PUSH_FILLONE	1		// filling the first buffer
+#define	PUSH_FILLTWO	2		// filling the second buffer
+
 typedef struct {
 	// channel globals
 	int8_t		channel_no;
@@ -63,6 +71,9 @@ typedef struct {
 	// channel pull state - only one can be pulled at a time
 	int8_t		pull_state;
 	int8_t		last_pull_errorno;
+	// channel push state - only one can be pushed at a time
+	int8_t		push_state;
+	int8_t		last_push_errorno;
 	// packet area
 	packet_t	buf[2];
 	uint8_t		data[2][DATA_BUFLEN];
@@ -84,7 +95,7 @@ int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*d
 volatile channel_t* channel_find(int8_t chan);
 
 static inline int8_t channel_is_writable(volatile channel_t *chan) {
-	return chan->writetype == WTYPE_WRITEONLY;
+	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;
 }
 
 static inline uint8_t channel_is_rel(volatile channel_t *chan) {
@@ -112,43 +123,11 @@ volatile channel_t* channel_refill(volatile channel_t *chan);
 
 void channel_preload(int8_t channelno);
 
-static inline channel_t* channel_put(volatile channel_t *chan, char c, int forceflush) {
-#if 0	/* this would be the sequence to be used when we would use the original
- 	   sd2iec buffers code. But we replaced it, so it only a reference here
-	*/
-      /* Flush buffer if full */
-      if (chan->mustflush) {
-        if (chan->refill(buf)) return -2;
-        /* Search the buffer again,                     */
-        /* it can change when using large buffers       */
-        chan = find_buffer(ieee_data.secondary_address);
-      }
-
-      chan->data[chan->position] = c;
-      mark_buffer_dirty(chan);
-
-      if (chan->lastused < chan->position) {
-        chan->lastused = chan->position;
-      }
-      chan->position++;
-
-      /* Mark buffer for flushing if position wrapped */
-      if (chan->position == 0) {
-        chan->mustflush = 1;
-      }
-
-      /* REL files must be syncronized on EOI */
-      if(forceflush) {
-        if (chan->refill(chan)) return null;
-      }
-      return chan;
-#endif
-	return NULL;
-}
+volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush);
 
 void channel_close(int8_t secondary_address);
 
-static inline void channel_status_set(uint8_t *error_buffer, int len) {
+//static inline void channel_status_set(uint8_t *error_buffer, int len) {
   //if (errornum >= 20 && errornum != ERROR_DOSVERSION) {
   //  FIXME: Compare to E648
   //  // NOTE: 1571 doesn't write the BAM and closes some buffers if an error occured
@@ -161,7 +140,7 @@ static inline void channel_status_set(uint8_t *error_buffer, int len) {
   //buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
   ///* Send message without the final 0x0d */
   //display_errorchannel(msg - error_buffer, error_buffer);
-}
+//}
 
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl);

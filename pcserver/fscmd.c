@@ -247,7 +247,10 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 	case FS_WRITE:
 	case FS_EOF:
 		if(fp) {
-		  n = fwrite(buf+FSP_DATA, 1, len-FSP_DATA, fp);
+		  if (len > FSP_DATA) {
+		    // TODO: evaluate return value
+		    n = fwrite(buf+FSP_DATA, 1, len-FSP_DATA, fp);
+		  }
 		  retbuf[FSP_DATA] = 0;
 		  if(cmd == FS_EOF) {
 		    fclose(fp);

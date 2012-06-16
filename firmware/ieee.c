@@ -520,6 +520,7 @@ static int16_t ieee_listen_handler (uint8_t cmd)
 
   /* Abort if there is no buffer or it's not open for writing */
   /* and it isn't an OPEN command                             */
+  /* Note: this could be handled by a command channel similar to the talk_handler (AF) */
   if ((chan == NULL || !channel_is_writable(chan)) && (cmd & 0xf0) != 0xf0) {
     debug_putc('c');
     return -1;
@@ -574,7 +575,8 @@ static int16_t ieee_listen_handler (uint8_t cmd)
       }
     } else {
       /* REL files must be syncronized on EOI */
-      chan = channel_put(chan, c, channel_is_rel(chan) && (ieee_data.ieeeflags & EOI_RECVD));
+      /* Note: this should be done simply by using read/write channels for REL files.*/
+      chan = channel_put(chan, c, ieee_data.ieeeflags & EOI_RECVD);
       if (chan == NULL) {
 	return -2;
       }
@@ -621,7 +623,7 @@ static uint8_t ieee_talk_handler (void)
   if(chan == NULL) {
     if (ieee_data.secondary_address == 15) {
       // open error channel
-      int8_t e = channel_open(ieee_secaddr_to_channel(15), WTYPE_READWRITE, &ieee_status_provider, NULL);
+      int8_t e = channel_open(ieee_secaddr_to_channel(15), WTYPE_READONLY, &ieee_status_provider, NULL);
 
       debug_printf("open status channel -> %d\n", e);
 
@@ -684,7 +686,7 @@ debug_puthex(c);
 
     // stop sending if channel is closed after EOI
     if (!channel_has_more(chan)) {
-      if (ieee_data.secondary_address == 0 || ieee_data.secondary_address == 15) {
+      if (/*ieee_data.secondary_address == 0 ||*/  ieee_data.secondary_address == 15) {
 	// autoclose when load is done, or after reading status channel
 	channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
       }
@@ -914,7 +916,7 @@ void ieee_mainloop_iteration(void) {
             //free_multiple_buffers(FMB_USER_CLEAN);
           } else {
             /* Close a single buffer */
-	    channel_close(ieee_data.secondary_address);
+	    channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
 #if 0
             buffer_t *buf;
             buf = find_buffer (ieee_data.secondary_address);
@@ -946,6 +948,7 @@ debug_puts("cmdprocess error: "); debug_puthex(ieee_data.errnum); debug_putcrlf(
 		set_error(&error, ieee_data.errnum);
 		channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
 	} else {
+		// really only does something on read-only channels
 		channel_preload(ieee_secaddr_to_channel(ieee_data.secondary_address));
 	}
 	ieee_data.bus_state = BUS_ATNPROCESS;
