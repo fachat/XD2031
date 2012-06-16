@@ -163,8 +163,6 @@ static int8_t directory_converter(volatile packet_t *p) {
 	*outp = lineno & 255; outp++;
 	*outp = (lineno>>8) & 255; outp++;
 
-//return -1;
-
 	//snprintf(outp, 5, "%hd", (unsigned short)lineno);
 	//outp++;
 	if (lineno < 10) { *outp = ' '; outp++; }
@@ -178,7 +176,6 @@ static int8_t directory_converter(volatile packet_t *p) {
 			if (lineno < 10000) { *outp = ' '; outp++; }
 		}
 	}
-//return -1;
 
 	if (type != FS_DIR_MOD_FRE) {
 		*outp = '"'; outp++;
@@ -204,22 +201,22 @@ static int8_t directory_converter(volatile packet_t *p) {
 	// add file type
 	if (type == FS_DIR_MOD_NAM) {
 		// file name entry
-		outp = append(outp, SW_NAME);
+		outp = append(outp, SW_NAME_LOWER);
 		//strcpy(outp, SW_NAME_LOWER);
 		//outp += strlen(SW_NAME_LOWER)+1;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_DIR) {
-		outp = append(outp, "DIR");
+		outp = append(outp, "dir");
 		//strcpy(outp, "dir");
 		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FIL) {
-		outp = append(outp, "PRG");
+		outp = append(outp, "prg");
 		//strcpy(outp, "prg");
 		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FRE) {
-		outp = append(outp, "BYTES FREE");
+		outp = append(outp, "bytes free");
 		//strcpy(outp, "bytes free");
 		//outp += 11;	// includes ending 0-byte
 
@@ -252,15 +249,17 @@ static int8_t directory_converter(volatile packet_t *p) {
  * convert PETSCII names to ASCII names
  */
 static int8_t to_provider(packet_t *p) {
-	uint8_t *buf = p->buffer;
-	uint8_t len = p->wp;
-	do {
-//debug_puts("CONVERT: "); debug_putc(*buf);debug_puthex(*buf);debug_puts("->");
+	uint8_t *buf = packet_get_buffer(p);
+	uint8_t len = packet_get_contentlen(p);
+//debug_printf("CONVERT: len=%d, b=%s\n", len, buf);
+	while (len > 0) {
+//debug_puts("CONVERT: "); 
+//debug_putc(*buf); //debug_puthex(*buf);debug_puts("->");
 		*buf = petscii_to_ascii(*buf);
 //debug_putc(*buf);debug_puthex(*buf);debug_putcrlf();
 		buf++;
 		len--;
-	} while (len > 0);
+	}
 	return 0;
 }
 
