@@ -58,6 +58,7 @@
 */
 
 #include "fscmd.h"
+#include "privs.h"
 
 void usage(void) {
 	printf("Usage: fsmux [options] exported_directory hostname_to_export_to\n"
