@@ -43,7 +43,7 @@ static inline uint8_t ieee_secaddr_to_channel(uint8_t secaddr) {
 }
 
 static inline int8_t ieee_file_open(uint8_t secaddr, cmd_t *command, void (*callback)(int8_t errnum)) {
-	return file_open(ieee_secaddr_to_channel(secaddr), command, callback);
+	return file_open(ieee_secaddr_to_channel(secaddr), command, callback, secaddr == 1);
 }
 
 static inline void ieee_channel_close_all() {

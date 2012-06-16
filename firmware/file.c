@@ -61,7 +61,7 @@ void file_init(void) {
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
 //
-int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t errnum)) {
+int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t errnum), uint8_t is_save) {
 
 
 #if DEBUG
@@ -75,7 +75,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
-	parse_filename(command, &nameinfo);
+	parse_filename(command, &nameinfo, 0);
 	// check filename
 	if (nameinfo.cmd != 0 && nameinfo.cmd != '$') {
 		// command name during open
@@ -128,7 +128,8 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	}
 
 	uint8_t type = FS_OPEN_RD;
-	if (nameinfo.access == 'W') type = FS_OPEN_WR;
+	// either ",W" or secondary address is one, i.e. save
+	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
 	if (nameinfo.access == 'A') type = FS_OPEN_AP;
 	if (nameinfo.cmd == '$') type = FS_OPEN_DR;
 
@@ -149,8 +150,10 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 		return -1;
 	}
 
+debug_printf("TYPE=%x\n", type);
+
 	// open channel
-	uint8_t writetype = (type == FS_OPEN_RD || type == FS_OPEN_DR) ? 0 : 1;
+	uint8_t writetype = (type == FS_OPEN_WR || type == FS_OPEN_AP) ? 1 : 0;
 	int8_t (*converter)(volatile packet_t*) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
 	int8_t e = channel_open(channel_no, writetype, provider, converter);
