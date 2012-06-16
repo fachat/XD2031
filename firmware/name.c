@@ -34,8 +34,15 @@
 #define	NAME_NAME	1
 #define	NAME_TYPE	2
 #define	NAME_ACCESS	3
+#define	NAME_COMMAND	4
+#define	NAME_CMDDRIVE	5
+#define	NAME_FILE	6
 
-void parse_filename(cmd_t *in, nameinfo_t *result) {
+/*
+ * not sure if I should break that into a parser for file names and a parser for 
+ * commands...
+ */
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
 	// runtime vars
 	uint8_t *p = in->command_buffer;
@@ -49,20 +56,40 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 	result->name = p;	// full name
 	result->namelen = len;	// default
 
-	// tmp
-	uint8_t state = NAME_DRIVE;
-	uint8_t cmd = 0;
+	// start either for command or file name
+	uint8_t state = is_command ? NAME_COMMAND : NAME_FILE;
 	uint8_t drv = 0;
 	while (len > 0) {
 
 		switch(state) {
-		case NAME_DRIVE:
+		case NAME_COMMAND:
 			// save first char as potential command	
-			if (cmd == 0) {
-				if (isalpha(*p) || (*p == '$')) {
-					cmd = *p;
-				}
+			if (result->cmd == 0) {
+				if (isalpha(*p)) {
+					result->cmd = *p;
+					result->namelen = 0;	// just to be sure, until we parsed it
+				} 
 			}
+			// fallthrough
+		case NAME_CMDDRIVE:
+			// last digit as drive
+			if (isdigit(*p)) {
+				result->drive = *p - 0x30;
+			}
+			// command parameters following?
+			if (*p == ':') {
+				result->name = (p+1);
+				result->namelen = len-1;
+				state = NAME_NAME;
+			}
+			break;
+		case NAME_FILE:
+			if (*p == '$') {
+				result->cmd = *p;	// directory
+				result->namelen = 0;	// just to be sure, until we parsed it
+				state = NAME_CMDDRIVE;	// jump into command parser
+			}
+		case NAME_DRIVE:
 			// last digit as potential drive
 			if (isdigit(*p)) {
 				drv = *p - 0x30;
@@ -71,7 +98,6 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 			if (*p == ':') {
 				// found drive separator
 				result->drive = drv;
-				result->cmd = cmd;
 				result->name = (p+1);
 				result->namelen = len-1;
 				state = NAME_NAME;
@@ -79,6 +105,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 			}
 			// fallthrough
 		case NAME_NAME:
+			// here the "=" case for COPY/RENAME is missing, 
+			// also the "," for multiple files after the "="
 			if (*p == ',') {
 				// found file type/access separator
 				result->namelen = p - result->name;
@@ -106,13 +134,13 @@ void parse_filename(cmd_t *in, nameinfo_t *result) {
 		p++;
 	}
 
-	if (result->cmd == 0 && cmd == '$') {
-	 	// no command detected, but name starts with "$"
-	 	// so this is a directory name without file name filter
-		result->drive = drv;
-		result->cmd = cmd;
-		result->namelen = 0;
-	}
+//	if (result->cmd == 0 && cmd == '$') {
+//	 	// no command detected, but name starts with "$"
+//	 	// so this is a directory name without file name filter
+//		result->drive = drv;
+//		result->cmd = cmd;
+//		result->namelen = 0;
+//	}
 
 	debug_puts("CMD="); debug_putc(result->cmd); debug_putcrlf();
 	debug_puts("DRIVE="); debug_putc(result->drive); debug_putcrlf();

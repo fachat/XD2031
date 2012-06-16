@@ -32,4 +32,4 @@ typedef struct {
 	uint8_t	namelen;	// length of remaining file name
 } nameinfo_t;
 
-void parse_filename(cmd_t *in, nameinfo_t *result);
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command);
