@@ -142,8 +142,11 @@ volatile struct {
 static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum)) {
 
+debug_puts("IEEE Status refill"); debug_putcrlf();
+
 	if (packet_get_type(txbuf) != FS_READ) {
 		// should not happen
+		debug_printf("SNH: packet type is not FS_READ, but: %d\n", packet_get_type(txbuf));
 		callback(channelno, ERROR_NO_CHANNEL);
 		return;
 	}
@@ -513,7 +516,7 @@ static int16_t ieee_listen_handler (uint8_t cmd)
   int16_t c;
 
   ieee_data.secondary_address = cmd & 0x0f;
-  chan = channel_find(ieee_data.secondary_address);
+  chan = channel_find(ieee_secaddr_to_channel(ieee_data.secondary_address));
 
   /* Abort if there is no buffer or it's not open for writing */
   /* and it isn't an OPEN command                             */
@@ -614,12 +617,15 @@ static uint8_t ieee_talk_handler (void)
   uint8_t res;	// result from a ieee_putc, i.e. either ATN_POLLED or TIMEOUT_ABORT
   uint8_t eof;
 
-  chan = channel_find(ieee_data.secondary_address);
+  chan = channel_find(ieee_secaddr_to_channel(ieee_data.secondary_address));
   if(chan == NULL) {
     if (ieee_data.secondary_address == 15) {
       // open error channel
-      int8_t e = channel_open(15, 0, &ieee_status_provider, NULL);
-      chan = channel_find(ieee_data.secondary_address);
+      int8_t e = channel_open(ieee_secaddr_to_channel(15), WTYPE_READWRITE, &ieee_status_provider, NULL);
+
+      debug_printf("open status channel -> %d\n", e);
+
+      chan = channel_find(ieee_secaddr_to_channel(ieee_data.secondary_address));
     }
     if (chan == NULL) {
       return -1;
@@ -678,8 +684,8 @@ debug_puthex(c);
 
     // stop sending if channel is closed after EOI
     if (!channel_has_more(chan)) {
-      if (ieee_data.secondary_address == 0) {
-	// autoclose when load is done
+      if (ieee_data.secondary_address == 0 || ieee_data.secondary_address == 15) {
+	// autoclose when load is done, or after reading status channel
 	channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
       }
       break;

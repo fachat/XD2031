@@ -150,8 +150,6 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 		return -1;
 	}
 
-debug_printf("TYPE=%x\n", type);
-
 	// open channel
 	uint8_t writetype = (type == FS_OPEN_WR || type == FS_OPEN_AP) ? 1 : 0;
 	int8_t (*converter)(volatile packet_t*) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;

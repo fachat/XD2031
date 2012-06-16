@@ -74,12 +74,13 @@ static void channel_pull(volatile channel_t *c, uint8_t slot) {
 	// not irq-protected, as exlusive state conditions
 	if (c->pull_state == PULL_OPEN) {
 		c->pull_state = PULL_PRELOAD;
+		c->provider->submit_call(c->channel_no, p, p, _pull_callback);
 	} else
-	if (c->pull_state == PULL_ONEREAD) {
+	if (c->pull_state == PULL_ONEREAD && c->writetype == WTYPE_READONLY) {
 		c->pull_state = PULL_PULL2ND;
+		c->provider->submit_call(c->channel_no, p, p, _pull_callback);
 	}
 
-	c->provider->submit_call(c->channel_no, p, p, _pull_callback);
 //led_on();
 //debug_puts("pull_state is "); debug_puthex(c->pull_state); debug_putcrlf();
 }

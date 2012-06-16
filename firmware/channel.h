@@ -39,6 +39,7 @@
  */
 #define	WTYPE_READONLY	0		
 #define	WTYPE_WRITEONLY	1
+#define	WTYPE_READWRITE	2
 
 /**
  * pull_state values. The interrupt callback updates the state, so state manipulation
