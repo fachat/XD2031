@@ -137,8 +137,8 @@ void do_cmd(char *buf, int fd) {
 	struct stat sbuf;
 	struct tm *tp;
 
-	cmd = buf[FSP_CMD];	// 0
-	len = buf[FSP_LEN];	// 1
+	cmd = buf[FSP_CMD];		// 0
+	len = 255 & buf[FSP_LEN];	// 1
 
 	if (cmd == FS_TERM) {
 		if (len > 200) {
@@ -147,7 +147,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		memcpy(retbuf, buf+3, len-3);
 		retbuf[len-3] = 0;
-		printf(retbuf);
+		printf("%s",retbuf);
 		return;
 	}
 
