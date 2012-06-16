@@ -36,9 +36,6 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <time.h>
 
 /*
 #include <stdlib.h>
@@ -53,15 +50,18 @@
 
 #include "oa1fs.h"
 #include "fscmd.h"
+#include "dir.h"
 
 #define	MAX_BUFFER_SIZE	64
 
-#define	min(a,b)	(((a)<(b))?(a):(b))
+//#define	min(a,b)	(((a)<(b))?(a):(b))
 
 typedef struct {
-	int	state;		/* note: currently not really used */
-	FILE	*fp;
-	DIR 	*dp;
+	int		state;		/* note: currently not really used */
+	FILE		*fp;
+	DIR 		*dp;
+	char		dirpattern[MAX_BUFFER_SIZE];
+	struct dirent	*de;
 	unsigned int	is_first :1;	// is first directory entry?
 } File;
 
@@ -133,9 +133,6 @@ void do_cmd(char *buf, int fd) {
 	FILE *fp;
 	DIR *dp;
 	int n;
-	struct dirent *de;
-	struct stat sbuf;
-	struct tm *tp;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -184,6 +181,8 @@ printf("OPEN_WD(%s)=%p\n",buf+FSP_DATA,fp);
 		}
 		break;
 	case FS_OPEN_DR:
+		// save pattern for later comparisons
+		strcpy(files[tfd].dirpattern, buf+FSP_DATA);
 		dp = opendir("." /*buf+FSP_DATA*/);
 printf("OPEN_DR(%s)=%p\n",buf+FSP_DATA,dp);
 		if(dp) {
@@ -209,58 +208,25 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		if(dp) {
 		  if (files[tfd].is_first) {
 		    files[tfd].is_first = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+1] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+2] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+3] = 0;
-		    // don't set date for now
- 		    retbuf[FSP_DATA+FS_DIR_MODE]  = FS_DIR_MOD_NAM;
-		    // simple default (could be replaced with 
-		    strncpy(retbuf+FSP_DATA+FS_DIR_NAME, ".               ", 16);
-		    retbuf[FSP_DATA + FS_DIR_NAME + 16] = 0;
-		    retbuf[FSP_LEN] = FSP_DATA + FS_DIR_NAME + 17;
+		    int l = dir_fill_header(retbuf+FSP_DATA, 0, files[tfd].dirpattern);
+		    retbuf[FSP_LEN] = FSP_DATA + l;
 		    retbuf[FSP_CMD] = FS_WRITE;
+		    files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
 		    break;
 		  }
-		  de = readdir(dp);
-		  if(!de) {
+		  if(!files[tfd].de) {
 		    closedir(dp);
 		    files[tfd].dp = NULL;
 		    retbuf[FSP_CMD] = FS_EOF;
- 		    retbuf[FSP_DATA+FS_DIR_LEN] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+1] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+2] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_LEN+3] = 0;
- 		    retbuf[FSP_DATA+FS_DIR_MODE]  = FS_DIR_MOD_FRE;
-		    retbuf[FSP_DATA + FS_DIR_NAME] = 0;
-		    retbuf[FSP_LEN] = FSP_DATA + FS_DIR_NAME + 1;
+		    int l = dir_fill_disk(retbuf + FSP_DATA);
+		    retbuf[FSP_LEN] = FSP_DATA + l;
 		    break;
 		  }
-		  n = stat(de->d_name, &sbuf);
-		  /* TODO: check return value */
- 		  retbuf[FSP_DATA+FS_DIR_LEN] = sbuf.st_size & 255;
- 		  retbuf[FSP_DATA+FS_DIR_LEN+1] = (sbuf.st_size >> 8) & 255;
- 		  retbuf[FSP_DATA+FS_DIR_LEN+2] = (sbuf.st_size >> 16) & 255;
- 		  retbuf[FSP_DATA+FS_DIR_LEN+3] = (sbuf.st_size >> 24) & 255;
-
-		  tp = localtime(&sbuf.st_mtime);
- 		  retbuf[FSP_DATA+FS_DIR_YEAR]  = tp->tm_year;
- 		  retbuf[FSP_DATA+FS_DIR_MONTH] = tp->tm_mon;
- 		  retbuf[FSP_DATA+FS_DIR_DAY]   = tp->tm_mday;
- 		  retbuf[FSP_DATA+FS_DIR_HOUR]  = tp->tm_hour;
- 		  retbuf[FSP_DATA+FS_DIR_MIN]   = tp->tm_min;
- 		  retbuf[FSP_DATA+FS_DIR_SEC]   = tp->tm_sec;
-
- 		  retbuf[FSP_DATA+FS_DIR_MODE]  = S_ISDIR(sbuf.st_mode) ? 
-						FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
-		  // de->d_name is 0-terminated (see readdir man page)
-		  strncpy(retbuf+FSP_DATA+FS_DIR_NAME, de->d_name,
-			min(strlen(de->d_name)+1, MAX_BUFFER_SIZE-1-FSP_DATA-FS_DIR_NAME));
-		  // just in case strncpy exceeded its limit
-		  retbuf[MAX_BUFFER_SIZE-1]=0;
-		  retbuf[FSP_LEN] = FSP_DATA+FS_DIR_NAME+
-				strlen(retbuf+FSP_DATA+FS_DIR_NAME) + 1;
+		  int l = dir_fill_entry(retbuf + FSP_DATA, files[tfd].de, MAX_BUFFER_SIZE-FSP_DATA);
+		  retbuf[FSP_LEN] = FSP_DATA + l;
 		  retbuf[FSP_CMD] = FS_WRITE;
+		  // prepare for next read (so we know if we're done)
+		  files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
 		} else
 		if(fp) {
 		  n = fread(retbuf+FSP_DATA, 1, MAX_BUFFER_SIZE, fp);

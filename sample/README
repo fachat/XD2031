@@ -5,6 +5,9 @@ Test cases
 TEST / TEST2 / test3a
 	- file name case sensitivity
 
+EEST2 
+	- test for '?' file name filter check
+
 TEST	
 	- file with less than 64 byte (single transfer block)
 
