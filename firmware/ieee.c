@@ -46,7 +46,7 @@
 
 #include "xs1541.h"
 
-#define	DEBUG_IEEE	1
+#define	DEBUG_IEEE	0
 
 /*
   Debug output:
@@ -499,7 +499,7 @@ int16_t ieee_getc(int under_atn) {
  * On negative returns, the caller should return to the IEEE main loop.
  */
 
-static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
+static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_t *chan) {
 
 //debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
 
@@ -535,14 +535,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
   // signal data available
   set_dav_state(0);
 
+  _delay_us(11);    /* Allow data to settle */
+
   // NOTE: As the PET timeout handling is BROKEN, we actually should 
   // make sure _here_ that we have enough data for the next byte
-  // and get the data otherwise.
-  //
-  // For now I just hope the data is there as we are way faster than
-  // the PET...
+  // and get the data if not.
+  channel_preload(chan);
   
-  /* Wait for NRFD low, check timeout 
+  /* Wait for NRFD low, check timeout *
   timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) {
@@ -568,6 +568,20 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
   // clear dav/eoi lines
   set_dav_state(1);
   set_eoi_state(1);
+
+  // let the lines settle
+  _delay_us(11);
+
+  /* Wait for NDAC lo , check timeout */
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+  do {
+    if(!IEEE_ATN) {
+	return ATN_POLLED;
+    }
+    if(time_after(getticks(), timeout)) {
+	return TIMEOUT_ABORT;
+    }
+  } while (IEEE_NDAC);
 
   return 0;
 }
@@ -598,7 +612,7 @@ static int16_t ieee_listen_handler (uint8_t cmd)
     return -1;
   }
 
-#if DEBUG
+#if DEBUG_IEEE
   switch(cmd & 0xf0) {
     case 0x60:
       debug_putps("DATA L ");
@@ -629,7 +643,7 @@ static int16_t ieee_listen_handler (uint8_t cmd)
 #if DEBUG_IEEE
       debug_putps("EOI ");
 #endif
-_delay_ms(10);
+//_delay_ms(10);
 //term_putcrlf(); 
       ieee_data.ieeeflags |= EOI_RECVD;
     } else {
@@ -644,7 +658,7 @@ _delay_ms(10);
     if(isprint(c)) debug_putc(c); else debug_putc('?');
     debug_putcrlf();
 #endif
-_delay_ms(10);
+//_delay_ms(10);
 //term_putcrlf();
 
     if((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
@@ -716,6 +730,8 @@ static uint8_t ieee_talk_handler (void)
     }
   }
 
+  channel_preload(chan);
+
   while (channel_has_more(chan)) {
 
 //led_on();
@@ -726,7 +742,7 @@ static uint8_t ieee_talk_handler (void)
 #if DEBUG_IEEE
 debug_puthex(c);
 #endif
-      res = ieee_putc(c, eof);
+      res = ieee_putc(c, eof, chan);
 #if 0
       finalbyte = (buf->position == buf->lastused);
       c = buf->data[buf->position];
@@ -752,13 +768,13 @@ debug_puthex(c);
 #endif
         return 1;
       } else {
-#if DEBUG
+#if DEBUG_IEEE
         debug_putc(eof ? '-' : '>');
         debug_puthex(c); debug_putc(' ');
         if(isprint(c)) debug_putc(c); else debug_putc('?');
         debug_putcrlf();
 #endif
-_delay_ms(10);
+//_delay_us(200);
 /*
 term_putc(eof ? '-' : '>');
 term_putc(' ');
@@ -945,7 +961,7 @@ void ieee_mainloop_iteration(void) {
         debug_putcrlf();
 #endif
 //term_putcrlf();
-_delay_ms(10);
+//_delay_ms(10);
 
         if (cmd == 0x3f) {                           /* UNLISTEN */
           if(ieee_data.device_state == DEVICE_LISTEN) {
@@ -966,7 +982,7 @@ _delay_ms(10);
 	    debug_putcrlf();
 #endif
 //term_putcrlf();
-_delay_ms(10);
+//_delay_ms(10);
           }
           ieee_data.bus_state = BUS_IDLE;
           break;
@@ -984,8 +1000,10 @@ _delay_ms(10);
         } else 
         if (cmd == (0x20 + device_address)) {        /* LISTEN */
           ieee_data.device_state = DEVICE_LISTEN;
+#if DEBUG_IEEE
           debug_putps("LISTEN ");
           debug_puthex(device_address); debug_putcrlf();
+#endif
           ieee_data.bus_state = BUS_IDLE;
           break;
         } else 
@@ -1006,9 +1024,11 @@ _delay_ms(10);
           } else 
           if (ieee_data.device_state == DEVICE_TALK) {
             ieee_data.secondary_address = cmd & 0x0f;
+#if DEBUG_IEEE
             debug_putps("DATA T ");
             debug_puthex(ieee_data.secondary_address);
             debug_putcrlf();
+#endif
 	    uint8_t t = ieee_talk_handler();
 	    debug_puthex(t); debug_putcrlf();
             if(t == TIMEOUT_ABORT) {
@@ -1030,9 +1050,11 @@ _delay_ms(10);
           /* ----- if we reach this, we're LISTENer or TALKer ----- */
         } else if ((cmd & 0xf0) == 0xe0) {                  /* CLOSE */
           ieee_data.secondary_address = cmd & 0x0f;
+#if DEBUG_IEEE
           debug_putps("CLOSE ");
           debug_puthex(ieee_data.secondary_address);
           debug_putcrlf();
+#endif
           /* Close all buffers if sec. 15 is closed */
           if(ieee_data.secondary_address == 15) {
 	    ieee_channel_close_all();

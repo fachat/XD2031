@@ -135,16 +135,16 @@ static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
 	}
 	if (chan->pull_state == PULL_ONECONV) {
 		if (chan->directory_converter != NULL) {
-//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
-//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
+			//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
+			//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
 			chan->directory_converter(&chan->buf[chan->current]);
 		}
 		chan->pull_state = PULL_ONEREAD;
 	}
 	if (chan->pull_state == PULL_TWOCONV) {
 		if (chan->directory_converter != NULL) {
-//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
+			//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
+			//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 			chan->directory_converter(&chan->buf[1-chan->current]);
 		}
 		chan->pull_state = PULL_TWOREAD;

@@ -143,12 +143,12 @@ void do_cmd(char *buf, int fd) {
 	dp = files[tfd].dp;
 
 	buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
-
+#if 0
 	printf("got cmd=%d, fd=%d, name=%s",cmd,tfd,
 			(cmd<FS_ASSIGN)?((char*)buf+FSP_DATA):"null");
 	for (int i = 3; i < buf[FSP_LEN]; i++) printf(" %02x", (unsigned int)buf[i]);
 	printf("\n");
-
+#endif
 	retbuf[FSP_CMD] = FS_REPLY;
 	retbuf[FSP_LEN] = 4;
 	retbuf[FSP_FD] = tfd;
@@ -269,11 +269,12 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 
 
 	write(fd, retbuf, retbuf[FSP_LEN]);
-
+#if 0
 	printf("write %02x %02x %02x:", retbuf[0], retbuf[1],
 			retbuf[2] );
 	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", retbuf[i]);
 	printf("\n");
+#endif
 
 }
 
