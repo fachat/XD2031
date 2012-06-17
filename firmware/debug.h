@@ -26,7 +26,8 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#define	DEBUG 1
+//#define	DEBUG 1
+#define	DEBUG 0
 
 #if DEBUG 
 
@@ -55,6 +56,8 @@ static inline void debug_puthex(char c) {
 #else
 
 // those should be optimized away
+static inline void debug_puts(char *c) {}
+static inline void debug_putps(char *c) {}
 static inline void debug_putc(char c) {}
 static inline void debug_putcrlf() {}
 static inline void debug_putputs(char *s) {}
