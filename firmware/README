@@ -39,9 +39,10 @@ There are a number of bugs and missing features:
 Missing features:
 	- no commands
 	- no command channel
-	- only does LOAD at the moment, no SAVE or other access methods 
 	- a RESET command to tell the server that the device has been reset, to clean up
 
 Bugs:
+	- one in particularly nasty: when doing a DIR, each line is got with a separate TALK
+	  command, and it seems the first char goes missing sometimes
 	- Sure. Many.
  
