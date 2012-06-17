@@ -41,7 +41,8 @@
 #include "provider.h"
 #include "petscii.h"
 
-#include "led.h"
+#include "debug.h"
+//#include "led.h"
 
 /***********************************************************************************
  * UART stuff

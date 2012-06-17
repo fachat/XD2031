@@ -43,6 +43,7 @@ Missing features:
 
 Bugs:
 	- one in particularly nasty: when doing a DIR, each line is got with a separate TALK
-	  command, and it seems the first char goes missing sometimes
+	  command, and it seems the first char goes missing sometimes - not any more?
+	- load "test3a", then try to load another prg - hangs..
 	- Sure. Many.
  

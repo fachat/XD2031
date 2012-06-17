@@ -33,9 +33,6 @@
 #include "uart2.h"
 #include "wireformat.h"
 
-#include <util/delay.h>
-#include "led.h"
-
 #define	TERM_BUFFER_LENGTH	129
 
 static char buf[TERM_BUFFER_LENGTH];

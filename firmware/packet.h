@@ -32,10 +32,9 @@
 #define	PACKET_H
 
 #include <inttypes.h>
-#include <util/delay.h>
 
 #include "wireformat.h"
-#include "debug.h"
+#include "delay.h"
 
 /***********************************************************************************
  * packet stuff 
@@ -117,7 +116,7 @@ static inline bool packet_is_full(volatile packet_t *buf) {
 
 static inline void packet_wait_done(volatile packet_t *buf) {
 	while( ! packet_is_done(buf) ) { 
-		_delay_ms(1);
+		delayms(1);
 	}
 }
 

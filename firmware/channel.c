@@ -26,8 +26,8 @@
 
 #include <stdio.h>
 #include <inttypes.h>
-#include <util/delay.h>
 
+#include "delay.h"
 #include "packet.h"
 #include "channel.h"
 #include "provider.h"
@@ -130,7 +130,7 @@ static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
 	}
 	if (wait) {
 		while (chan->pull_state == PULL_PRELOAD) {
-			_delay_ms(1);
+			delayms(1);
 		}
 	}
 	if (chan->pull_state == PULL_ONECONV) {
@@ -223,7 +223,7 @@ void channel_close(int8_t channel_no) {
 		// if it's not PUSH_FILLONE, then it is in the process
 		// of being pushed
 		while (chan->push_state != PUSH_FILLONE) {
-			_delay_ms(1);
+			delayms(1);
 		}
 
 		packet_t *curpack = &chan->buf[chan->current];
@@ -236,7 +236,7 @@ void channel_close(int8_t channel_no) {
 
                	// wait until the packet has been sent and been responded to
       	 	while (chan->push_state == PUSH_FILLONE) {
-                       	_delay_ms(1);
+                       	delayms(1);
 		}	
 	}
 	channel_close_int(chan, 0);
@@ -260,7 +260,7 @@ volatile channel_t* channel_refill(volatile channel_t *chan) {
 
 		// wait until available	
 		while(chan->pull_state == PULL_PULL2ND) {
-			_delay_ms(1);
+			delayms(1);
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
@@ -322,7 +322,7 @@ volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush
 
 		// wait until the other packet has been replied to
 		while (chan->push_state != PUSH_FILLONE) {
-			_delay_ms(1);
+			delayms(1);
 		}
 
 		// note that we pushed one and are filling the second

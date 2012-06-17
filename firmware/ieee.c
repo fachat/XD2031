@@ -28,7 +28,6 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -336,16 +335,21 @@ static inline void set_eoi_state(uint8_t x)
   {
     IEEE_D_DDR = 0;                 // Data ports as input
     IEEE_D_PORT = 0xff;             // Enable pull-ups for data lines
-    IEEE_DDR_ATN  &= (uint8_t) ~_BV(IEEE_PIN_ATN);  // ATN as input
+
     IEEE_DDR_DAV  &= (uint8_t) ~_BV(IEEE_PIN_DAV);  // DAV as input
-    IEEE_DDR_EOI  &= (uint8_t) ~_BV(IEEE_PIN_EOI);  // EOI as input
-    IEEE_DDR_NDAC &= (uint8_t) ~_BV(IEEE_PIN_NDAC); // NDAC as input
-    IEEE_DDR_NRFD &= (uint8_t) ~_BV(IEEE_PIN_NRFD); // NRFD as input
-    IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);             // Enable pull-up for ATN
     IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);             // Enable pull-up for DAV
+
+    IEEE_DDR_EOI  &= (uint8_t) ~_BV(IEEE_PIN_EOI);  // EOI as input
     IEEE_PORT_EOI |= _BV(IEEE_PIN_EOI);             // Enable pull-up for EOI
+
+    IEEE_DDR_NDAC &= (uint8_t) ~_BV(IEEE_PIN_NDAC); // NDAC as input
     IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);           // Enable pull-up for NDAC
+
+    IEEE_DDR_NRFD &= (uint8_t) ~_BV(IEEE_PIN_NRFD); // NRFD as input
     IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);           // Enable pull-up for NRFD
+
+    IEEE_DDR_ATN  &= (uint8_t) ~_BV(IEEE_PIN_ATN);  // ATN as input
+    IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);             // Enable pull-up for ATN
   }
 
 //  static void ieee_ports_listen (void) {
@@ -371,7 +375,7 @@ void ieee_init(void) {
 
   /* Read the hardware-set device address */
 //  device_hw_address_init();
-  _delay_ms(1);
+  delayms(1);
 //  device_address = device_hw_address();
   device_address = 8;
 
@@ -514,7 +518,7 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
 
   // check if ATN has been activated
   if(!IEEE_ATN) return ATN_POLLED;
-  _delay_us(11);    /* Allow data to settle */
+  delayus(11);    /* Allow data to settle */
   if(!IEEE_ATN) return ATN_POLLED;
 
   /* Wait for NRFD high , check timeout */
@@ -534,12 +538,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
   // signal data available
   set_dav_state(0);
 
-  _delay_us(11);    /* Allow data to settle */
+  delayus(11);    /* Allow data to settle */
 
   // NOTE: As the PET timeout handling is BROKEN, we actually should 
   // make sure _here_ that we have enough data for the next byte
   // and get the data if not.
-  channel_preload(chan);
+  // The only place where the PET reliably waits without a timeout is
+  // when it waits for DAV to go high, i.e. here...
+  channel_preloadp(chan);
   
   /* Wait for NRFD low, check timeout *
   timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
@@ -569,7 +575,7 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
   set_eoi_state(1);
 
   // let the lines settle
-  _delay_us(11);
+  delayus(11);
 
   /* Wait for NDAC lo , check timeout */
   timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
@@ -729,7 +735,7 @@ static uint8_t ieee_talk_handler (void)
     }
   }
 
-  channel_preload(chan);
+  channel_preloadp(chan);
 
   while (channel_has_more(chan)) {
 
