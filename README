@@ -13,6 +13,13 @@ Currently this hardware is supported:
 
 For more information see the README files in the subdirectories
 
+Notes
+-----
+
+- With the XS1541 hardware it seems that at least drives that are attached
+  to the IEEE488 bus must be switched on. But it works without another drive
+  attached.
+
 Copyright
 ---------
 
@@ -30,9 +37,6 @@ TODO
 ----
 
 Fix bugs:
-	- has problems with my IEEE488 setup, only works with the SFD1001 switched on
-	  (but there is another - switched off - PET on the IEEE488 chain, and cables 
-	  are long...)
 	- no drive commands
 	- ...
 
