@@ -4,6 +4,11 @@ This file describes how to build and use the XD-2031 firmware.
 Currently supported hardware:
 	- XS-1541
 
+Note that there are some subdirectories for "avr", or "xs1541", which apply
+to the architecture (like "avr") or the device (like "xs1541"). A device 
+implies an architecture, but with the "avr" directory, this code is reusable
+by other devices of the same architecture.
+
 BUILD
 -----
 

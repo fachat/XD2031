@@ -21,14 +21,13 @@
 
 /**
  * LED hardware layer
+ *
+ * Takes the LED_PORT, LED_DDR and LED_BIT definitions from config.h
  */
 
 #include <avr/io.h>
 
-// these need to go into config.h or elswhere
-#define LED_DDR               DDRC
-#define LED_PORT              PORTC
-#define LED_BIT               PC0
+#include "config.h"
 
 static inline void led_init() {
 	// set data direction

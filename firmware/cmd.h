@@ -30,8 +30,7 @@
 #include <stdint.h>
 
 #include "errormsg.h"
-#include "xs1541.h"
-
+#include "config.h"
 
 typedef struct {
 	uint8_t 		command_length;

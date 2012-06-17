@@ -122,6 +122,7 @@ uint8_t channel_has_more(volatile channel_t *chan);
 volatile channel_t* channel_refill(volatile channel_t *chan);
 
 void channel_preload(int8_t channelno);
+void channel_preloadp(volatile channel_t *chan);
 
 volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush);
 

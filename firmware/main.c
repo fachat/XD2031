@@ -47,7 +47,6 @@
 //#include "iec.h"
 
 // STRUCTS
-st_config	conf;
 
 // STATICS
 
@@ -96,9 +95,6 @@ void init()
 
 	//GLOBALS
 	fDevice	= 0;
-
-	conf.led	= 2;
-	conf.echo	= 1;
 }
 
 

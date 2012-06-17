@@ -162,6 +162,10 @@ void channel_preload(int8_t chan) {
 	}
 }
 
+void channel_preloadp(volatile channel_t *chan) {
+	channel_preload_int(chan, 1);
+}
+
 char channel_current_byte(volatile channel_t *chan) {
 	channel_preload_int(chan, 1);
         return packet_peek_data(&chan->buf[chan->current]);

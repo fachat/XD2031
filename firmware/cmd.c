@@ -17,7 +17,6 @@
 
 */
 
-#include "xs1541.h"
 #include "cmd.h"
 #include "debug.h"
 

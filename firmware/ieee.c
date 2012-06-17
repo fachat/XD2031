@@ -29,7 +29,6 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include "atomic.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

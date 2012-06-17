@@ -23,13 +23,21 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-
-
-
 #define	VERSION_STR		"0.02.01"
 
+// LED configuration
+#define LED_DDR               DDRC
+#define LED_PORT              PORTC
+#define LED_BIT               PC0
+
+// buffer sizes
+#define CONFIG_COMMAND_BUFFER_SIZE      120
+#define CONFIG_ERROR_BUFFER_SIZE        46
 
 
+
+
+#if 0
 /*
 //#define IEC_TEST
 #define IEC_SEPARATE_OUT				// For separate Input/Output lines
@@ -46,7 +54,7 @@
 #define OLIMEX2  						// negative logic for LED
 //#define EMBEDIT 						// Embedit Prototype Board (LED)
 
-
+#endif
 
 #if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ ||  \
 			__AVR_ATmega324__ || defined __AVR_ATmega324P__ 

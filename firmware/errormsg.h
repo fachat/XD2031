@@ -35,7 +35,7 @@
 
 #include <stdint.h>
 
-#include "xs1541.h"
+#include "config.h"
 
 
 //typedef void errormsg_t;
