@@ -506,9 +506,6 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
 
 //debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
 
-  // switch ports to talk
-  ieee_ports_talk();
-
   // make sure those are high
   set_dav_state (1);
   set_eoi_state (1);
@@ -719,6 +716,9 @@ static uint8_t ieee_talk_handler (void)
   uint8_t c;
   uint8_t res;	// result from a ieee_putc, i.e. either ATN_POLLED or TIMEOUT_ABORT
   uint8_t eof;
+
+  // switch ports to talk
+  ieee_ports_talk();
 
   chan = channel_find(ieee_secaddr_to_channel(ieee_data.secondary_address));
   if(chan == NULL) {
