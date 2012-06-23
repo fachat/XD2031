@@ -20,7 +20,7 @@ CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -Os -funsigned-char -funsig
 
 all: $(TARGET).hex
 
-fw: $(FILES) $(DEPS) $(ARCHDEPS) $(DEVICEDEPS)
+fw: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
 	$(CC) $(CFLAGS) -o $(TARGET) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
