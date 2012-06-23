@@ -818,6 +818,7 @@ term_putcrlf();
 static void _cmd_callback(int8_t errnum) {
     ieee_data.bus_state = BUS_CMDPROCESS;
     ieee_data.errnum = errnum;
+//led_toggle();
 }
 
 static void cmd_handler (void)
@@ -1035,7 +1036,7 @@ void ieee_mainloop_iteration(void) {
             debug_putcrlf();
 #endif
 	    uint8_t t = ieee_talk_handler();
-	    debug_puthex(t); debug_putcrlf();
+	    //debug_puthex(t); debug_putcrlf();
             if(t == TIMEOUT_ABORT) {
               ieee_data.device_state = DEVICE_IDLE;
             }

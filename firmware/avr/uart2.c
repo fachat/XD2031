@@ -42,7 +42,7 @@
 #include "petscii.h"
 
 #include "debug.h"
-//#include "led.h"
+#include "led.h"
 
 /***********************************************************************************
  * UART stuff
@@ -91,8 +91,8 @@ static int8_t			rxstate;
 static int8_t			current_channelno;
 static int8_t			current_channelpos;
 static packet_t			*current_rxpacket;
-static uint8_t			current_data_left;
-static uint8_t			current_is_eoi;
+static int8_t			current_data_left;
+static int8_t			current_is_eoi;
 
 /*****************************************************************************
  * conversion routines between wire format and packet format
@@ -359,6 +359,8 @@ ISR(USART_RXC_vect)
 			current_is_eoi = rxdata;
 			// start a reply handling
 			rxstate = RX_LEN;
+		} else {
+			//led_toggle();
 		}
 		break;
 	case RX_LEN:
@@ -370,8 +372,8 @@ ISR(USART_RXC_vect)
 		rxstate = RX_IGNORE;	// fallback
 		// find the current receive buffer
 		for (uint8_t i = 0; i < NUMBER_OF_SLOTS; i++) {
-//if (current_data_left > 1) led_on();
 			if (rx_channels[i].channelno == current_channelno) {
+//if (current_is_eoi == FS_EOF && current_data_left == 0) led_toggle();
 				current_channelpos = i;
 				current_rxpacket = rx_channels[current_channelpos].rxpacket;
 				if (packet_set_write(current_rxpacket, current_channelno,
@@ -381,7 +383,14 @@ ISR(USART_RXC_vect)
 				break;
 			}
 		}
-		// well, FS_IGNORE should not happen, but we have no means of telling anyone here
+		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
+		if (current_data_left == 0) {
+			// we are actually already done. do callback and set status to idle
+			rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0);
+			rx_channels[current_channelpos].channelno = -1;
+			rxstate = RX_IDLE;
+		}
 		break;
 	case RX_DATA:
 		packet_write_char(current_rxpacket, rxdata);

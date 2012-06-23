@@ -26,8 +26,8 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-//#define	DEBUG 1
-#define	DEBUG 0
+#define	DEBUG 1
+//#define	DEBUG 0
 
 #if DEBUG 
 

@@ -277,7 +277,9 @@ volatile channel_t* channel_refill(volatile channel_t *chan) {
 
 			chan->pull_state = PULL_ONEREAD;
 
-			channel_pull(chan, 1-other);
+			if (!packet_is_eof(&chan->buf[chan->current])) {
+				channel_pull(chan, 1-other);
+			}
 			return chan;
 		}
 	}
