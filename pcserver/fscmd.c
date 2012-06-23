@@ -268,7 +268,10 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 	}
 
 
-	write(fd, retbuf, retbuf[FSP_LEN]);
+	int e = write(fd, retbuf, retbuf[FSP_LEN]);
+	if (e < 0) {
+		printf("Error on write: %d\n", errno);
+	}
 #if 0
 	printf("write %02x %02x %02x:", retbuf[0], retbuf[1],
 			retbuf[2] );

@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (device != NULL) {
-		fdesc = open(device, O_RDWR | O_NOCTTY ); /* | O_NDELAY);*/
+		fdesc = open(device, O_RDWR | O_NOCTTY); // | O_NDELAY);
 		if (fdesc < 0) {
 		  /* error */
 		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
