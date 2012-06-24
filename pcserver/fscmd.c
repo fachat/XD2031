@@ -64,6 +64,28 @@ void cmd_init() {
         }
 }
 
+void log_errno(const char *msg) {
+	printf(">> %s: errno=%d: %s\n", msg, errno, strerror(errno));
+}
+
+void close_fds(int tfd) {
+	int er = 0;
+	if (files[tfd].fp != NULL) {
+		er = fclose(files[tfd].fp);
+		if (er < 0) {
+			log_errno("Error closing fd");
+		}
+		files[tfd].fp = NULL;
+	}
+	if (files[tfd].dp != NULL) {
+		er = closedir(files[tfd].dp);
+		if (er < 0) {
+			log_errno("Error closing dp");
+		}
+		files[tfd].dp = NULL;
+	}
+}
+
 void cmd_loop(int readfd, int writefd) {
 
         char buf[8192];
@@ -161,6 +183,10 @@ void do_cmd(char *buf, int fd) {
 		if(*nm=='/') nm++;
 		if(strchr(nm, '/')) break;
 
+		// close the currently open files
+		// so we don't loose references to open files
+		close_fds(tfd);
+
 		fp = open_first_match(nm, "wb");
 printf("OPEN_WD(%s)=%p\n",buf+FSP_DATA,fp);
 		if(fp) {
@@ -169,7 +195,13 @@ printf("OPEN_WD(%s)=%p\n",buf+FSP_DATA,fp);
 		  retbuf[FSP_DATA] = 0;
 		}
 		break;
+
 	case FS_OPEN_DR:
+
+		// close the currently open files
+		// so we don't loose references to open files
+		close_fds(tfd);
+
 		// save pattern for later comparisons
 		strcpy(files[tfd].dirpattern, buf+FSP_DATA);
 		dp = opendir("." /*buf+FSP_DATA*/);
@@ -184,6 +216,10 @@ printf("OPEN_DR(%s)=%p\n",buf+FSP_DATA,dp);
 	case FS_OPEN_RD:
 		/* no directory separators - security rules! */
 		if(strchr((char*)buf+FSP_DATA, '/')) break;
+
+		// close the currently open files
+		// so we don't loose references to open files
+		close_fds(tfd);
 
 		fp = open_first_match((char*)buf+FSP_DATA, "rb");
 printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
@@ -206,8 +242,7 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		    break;
 		  }
 		  if(!files[tfd].de) {
-		    closedir(dp);
-		    files[tfd].dp = NULL;
+		    close_fds(tfd);
 		    retbuf[FSP_CMD] = FS_EOF;
 		    int l = dir_fill_disk(retbuf + FSP_DATA);
 		    retbuf[FSP_LEN] = FSP_DATA + l;
@@ -226,8 +261,7 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		  retbuf[FSP_LEN] = n+FSP_DATA;
 		  if(n<MAX_BUFFER_SIZE) {
 		    retbuf[FSP_CMD] = FS_EOF;
-		    fclose(fp);
-		    files[tfd].fp = NULL;
+		    close_fds(tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
@@ -253,16 +287,12 @@ printf("OPEN_RD(%s)=%p\n",buf+FSP_DATA,fp);
 		  }
 		  retbuf[FSP_DATA] = 0;
 		  if(cmd == FS_EOF) {
-		    fclose(fp);
-		    files[tfd].fp = NULL;
+		    close_fds(tfd);
 		  }
 		}
 		break;
 	case FS_CLOSE:
-		if(fp) fclose(fp);
-		if(dp) closedir(dp);
-		files[tfd].fp = NULL;
-		files[tfd].dp = NULL;
+		close_fds(tfd);
 		retbuf[FSP_DATA] = 0;
 		break;
 	}
