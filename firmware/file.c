@@ -76,6 +76,14 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	// to be atomic as we modify static variables
 
 	parse_filename(command, &nameinfo, 0);
+
+	// post-parse
+	// check for default drive (here is the place to set the last used one)
+	if (nameinfo.drive == 0xff) {
+		// there currently only is a single drive, 0
+		nameinfo.drive = 0;
+	}
+
 	// check filename
 	if (nameinfo.cmd != 0 && nameinfo.cmd != '$') {
 		// command name during open

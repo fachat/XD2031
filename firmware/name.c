@@ -23,6 +23,8 @@
  * This file contains the file name parser
  */
 
+#define	DEBUG_NAME 0
+
 #include "ctype.h"
 
 #include "cmd.h"
@@ -49,7 +51,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	uint8_t len = in->command_length;
 
 	// init output
-	result->drive = 0;
+	result->drive = 0xff;
 	result->cmd = 0;	// no command
 	result->type = 0;	// PRG
 	result->access = 'R';	// read
@@ -142,11 +144,12 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 //		result->namelen = 0;
 //	}
 
-	debug_puts("CMD="); debug_putc(result->cmd); debug_putcrlf();
-	debug_puts("DRIVE="); debug_putc(result->drive); debug_putcrlf();
+#if DEBUG_NAME
+	debug_printf("CMD=%c\n", result->cmd == 0 ? '-' : result->cmd);
+	debug_printf("DRIVE=%c\n", result->drive == 0xff ? '-' : result->drive + 0x30);
 	debug_puts("NAME="); debug_puts((char*)result->name); debug_putcrlf();
-	debug_puts("ACCSS="); debug_putc(result->access); debug_putcrlf();
+	debug_puts("ACCESS="); debug_putc(result->access); debug_putcrlf();
 	debug_puts("TYPE="); debug_putc(result->type); debug_putcrlf();
-
+#endif
 }
 
