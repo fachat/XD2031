@@ -1,4 +1,3 @@
-
 This file describes how to build and use the XD-2031 firmware.
 
 Currently supported hardware:
@@ -42,8 +41,5 @@ Missing features:
 	- a RESET command to tell the server that the device has been reset, to clean up
 
 Bugs:
-	- one in particularly nasty: when doing a DIR, each line is got with a separate TALK
-	  command, and it seems the first char goes missing sometimes - not any more?
-	- load "test3a", then try to load another prg - hangs..
 	- Sure. Many.
  
