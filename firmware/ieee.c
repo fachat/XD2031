@@ -45,6 +45,8 @@
 #include "xs1541.h"
 
 #define	DEBUG_IEEE	0
+#define	DEBUG_IEEEX	1
+#define	DEBUG_IEEE_DATA	0
 
 /*
   Debug output:
@@ -68,8 +70,8 @@
 
 #define EOI_RECVD       (1<<0)
 #define COMMAND_RECVD   (1<<1)
-#define ATN_POLLED      0xfd	// -3      // 0xfd
-#define TIMEOUT_ABORT   0xfc	//-4      // 0xfc
+#define ATN_POLLED      0xfffd	// -3      // 0xfd
+#define TIMEOUT_ABORT   0xfffc	//-4      // 0xfc
 
 /* ------------------------------------------------------------------------- */
 /*  Global variables                                                         */
@@ -428,6 +430,15 @@ static inline uint8_t ieee_is_atn(uint8_t value) {
 int16_t ieee_getc(int under_atn) {
   int c = 0;
 
+  // wait until computer has completed previous transfer cycle
+  do {              /* wait for controller to remove data from bus */
+	// check ATN but only when not under ATN
+	if ((!under_atn) && (!IEEE_ATN)) {
+		// yes, then exit
+		return ATN_POLLED;
+	}
+  } while (!IEEE_DAV);
+
   set_ndac_state(0);            /* data not yet accepted */
   set_nrfd_state(1);            /* ready for new data */
 
@@ -442,15 +453,15 @@ int16_t ieee_getc(int under_atn) {
 	}
   }		
 
-  /* Wait for DAV low, check timeout */
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+  /* Wait for DAV low */
+//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   /* wait for data valid */
   do {   
 	// check timeout                       
-    	if(time_after(getticks(), timeout)) {
-		return TIMEOUT_ABORT;
-	}
-	// also check ATN
+//    	if(time_after(getticks(), timeout)) {
+//		return TIMEOUT_ABORT;
+//	}
+	// check ATN
 	if (!ieee_is_atn(under_atn)) {
 		// yes, then exit
 		return ATN_POLLED;
@@ -470,18 +481,22 @@ int16_t ieee_getc(int under_atn) {
   //
   // For now we just hope we're fast enough
 
-  /* Wait for DAV high, check timeout */
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
-  do {              /* wait for controller to remove data from bus */
-    if(time_after(getticks(), timeout)) {
-	return TIMEOUT_ABORT;
-    }
-  } while (!IEEE_DAV);
+  if (!under_atn) {
+    /* Wait for DAV high, check timeout */
+//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+    do {              /* wait for controller to remove data from bus */
+//    if(time_after(getticks(), timeout)) {
+//	return TIMEOUT_ABORT;
+//    }
+	// check ATN but only when not under ATN
+	if ((!under_atn) && (!IEEE_ATN)) {
+		// yes, then exit
+		return ATN_POLLED;
+	}
+    } while (!IEEE_DAV);
 
-  // set NDAC low, but only if not under ATN
-  // under ATN this is done after interpreting the commands
-  if (under_atn) {
-  	set_ndac_state(0);            /* next data not yet accepted */
+    // set NDAC low
+    set_ndac_state(0);            /* next data not yet accepted */
   }
 
   return c;
@@ -502,7 +517,7 @@ int16_t ieee_getc(int under_atn) {
  * On negative returns, the caller should return to the IEEE main loop.
  */
 
-static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_t *chan) {
+static uint16_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_t *chan) {
 
 //debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
 
@@ -519,14 +534,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
   if(!IEEE_ATN) return ATN_POLLED;
 
   /* Wait for NRFD high , check timeout */
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
     }
-    if(time_after(getticks(), timeout)) {
-	return TIMEOUT_ABORT;
-    }
+//    if(time_after(getticks(), timeout)) {
+//	return TIMEOUT_ABORT;
+//    }
   } while (!IEEE_NRFD);
 
   // set EOI state
@@ -557,14 +572,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
 */
 
   /* Wait for NDAC high , check timeout */
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
     }
-    if(time_after(getticks(), timeout)) {
-	return TIMEOUT_ABORT;
-    }
+//    if(time_after(getticks(), timeout)) {
+//	return TIMEOUT_ABORT;
+//    }
   } while (!IEEE_NDAC);
 
   // clear dav/eoi lines
@@ -575,14 +590,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
   delayus(11);
 
   /* Wait for NDAC lo , check timeout */
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
     }
-    if(time_after(getticks(), timeout)) {
-	return TIMEOUT_ABORT;
-    }
+//    if(time_after(getticks(), timeout)) {
+//	return TIMEOUT_ABORT;
+//    }
   } while (IEEE_NDAC);
 
   return 0;
@@ -595,7 +610,7 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel_
 static int16_t ieee_listen_handler (uint8_t cmd)
 /* Receive characters from IEEE-bus and write them to the
    listen buffer adressed by ieee_data.secondary_address.
-   If a new command is received (ATN set), return it
+   If ATN is polled, return with ATN_POLLED
 */
 {
   volatile channel_t *chan;
@@ -652,11 +667,11 @@ static int16_t ieee_listen_handler (uint8_t cmd)
       ieee_data.ieeeflags &= ~EOI_RECVD;
     }
 
-#if DEBUG_IEEE
+#if DEBUG_IEEE_DATA
     debug_puthex(c); debug_putc(' ');
 #endif
     c &= 0xff; /* needed for isprint */
-#if DEBUG_IEEE
+#if DEBUG_IEEE_DATA
     if(isprint(c)) debug_putc(c); else debug_putc('?');
     debug_putcrlf();
 #endif
@@ -714,7 +729,7 @@ static uint8_t ieee_talk_handler (void)
   volatile channel_t *chan;
   //uint8_t finalbyte;
   uint8_t c;
-  uint8_t res;	// result from a ieee_putc, i.e. either ATN_POLLED or TIMEOUT_ABORT
+  uint16_t res;	// result from a ieee_putc, i.e. either ATN_POLLED or TIMEOUT_ABORT
   uint8_t eof;
 
   // switch ports to talk
@@ -735,7 +750,7 @@ static uint8_t ieee_talk_handler (void)
     }
   }
 
-  channel_preloadp(chan);
+  //channel_preloadp(chan);
 
   while (channel_has_more(chan)) {
 
@@ -744,7 +759,7 @@ static uint8_t ieee_talk_handler (void)
     do {
       c = channel_current_byte(chan);
       eof = channel_current_is_eof(chan);
-#if DEBUG_IEEE
+#if DEBUG_IEEE_DATA
 debug_puthex(c);
 #endif
       res = ieee_putc(c, eof, chan);
@@ -773,7 +788,7 @@ debug_puthex(c);
 #endif
         return 1;
       } else {
-#if DEBUG_IEEE
+#if DEBUG_IEEE_DATA
         debug_putc(eof ? '-' : '>');
         debug_puthex(c); debug_putc(' ');
         if(isprint(c)) debug_putc(c); else debug_putc('?');
@@ -932,6 +947,8 @@ void ieee_set_online() {
 
 void ieee_mainloop_iteration(void) {
 
+    int newcmd = 0;
+
     switch(ieee_data.bus_state) {
       case BUS_SLEEP:                               /* BUS_SLEEP */
 	// do nothing
@@ -949,26 +966,23 @@ void ieee_mainloop_iteration(void) {
 	// fall-through on ATN
       case BUS_FOUNDATN:                            /* BUS_FOUNDATN */
         ieee_data.bus_state = BUS_ATNPROCESS;
-        cmd = ieee_getc(1);
-	// fall-through
-      case BUS_ATNPROCESS:                          /* BUS_ATNPROCESS */
-        if(cmd < 0) {
+        newcmd = ieee_getc(1);
+        if(newcmd < 0) {
 #if DEBUG_IEEE
           debug_putc('c');
 #endif
 	  ieee_set_idle();
-          //ieee_data.bus_state = BUS_IDLE;
           break;
         } else {
-	  cmd &= 0xFF;
+	  cmd = newcmd & 0xFF;
         }
+	// fall-through
+      case BUS_ATNPROCESS:                          /* BUS_ATNPROCESS */
 #if DEBUG_IEEE
-        debug_putps("ATN "); debug_puthex(cmd);
-        debug_putcrlf();
+	if (1 || cmd == 0xf0) {
+		debug_printf("ATN %x\n", cmd);
+	}
 #endif
-//term_putcrlf();
-//_delay_ms(10);
-
         if (cmd == 0x3f) {                           /* UNLISTEN */
           if(ieee_data.device_state == DEVICE_LISTEN) {
             ieee_data.device_state = DEVICE_IDLE;
@@ -987,8 +1001,6 @@ void ieee_mainloop_iteration(void) {
             debug_putps("UNTALK");
 	    debug_putcrlf();
 #endif
-//term_putcrlf();
-//_delay_ms(10);
           }
           ieee_data.bus_state = BUS_IDLE;
           break;
@@ -1021,7 +1033,7 @@ void ieee_mainloop_iteration(void) {
           while(!IEEE_ATN);
 
           if(ieee_data.device_state == DEVICE_LISTEN) {
-            uint8_t v = ieee_listen_handler(cmd);
+            uint16_t v = ieee_listen_handler(cmd);
 	    if (v == ATN_POLLED) {
           	ieee_data.bus_state = BUS_FOUNDATN;
             	cmd_handler();
@@ -1035,7 +1047,9 @@ void ieee_mainloop_iteration(void) {
             debug_puthex(ieee_data.secondary_address);
             debug_putcrlf();
 #endif
-	    uint8_t t = ieee_talk_handler();
+            while(!IEEE_ATN);
+
+	    uint16_t t = ieee_talk_handler();
 	    //debug_puthex(t); debug_putcrlf();
             if(t == TIMEOUT_ABORT) {
               ieee_data.device_state = DEVICE_IDLE;
@@ -1057,30 +1071,25 @@ void ieee_mainloop_iteration(void) {
         } else if ((cmd & 0xf0) == 0xe0) {                  /* CLOSE */
           ieee_data.secondary_address = cmd & 0x0f;
 #if DEBUG_IEEE
-          debug_putps("CLOSE ");
-          debug_puthex(ieee_data.secondary_address);
-          debug_putcrlf();
+	  debug_printf("CLOSE %x\n", ieee_data.secondary_address);
+//          debug_putps("CLOSE ");
+//          debug_puthex(ieee_data.secondary_address);
+//          debug_putcrlf();
 #endif
           /* Close all buffers if sec. 15 is closed */
           if(ieee_data.secondary_address == 15) {
 	    ieee_channel_close_all();
-            //free_multiple_buffers(FMB_USER_CLEAN);
           } else {
             /* Close a single buffer */
 	    channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
-#if 0
-            buffer_t *buf;
-            buf = find_buffer (ieee_data.secondary_address);
-            if (buf != NULL) {
-              buf->cleanup(buf);
-              free_buffer(buf);
-            }
-#endif
           }
           ieee_data.bus_state = BUS_IDLE;
           break;
         } else if ((cmd & 0xf0) == 0xf0) {                  /* OPEN */
-          uint8_t v = ieee_listen_handler(cmd);
+
+          while(!IEEE_ATN);
+
+          uint16_t v = ieee_listen_handler(cmd);
 	  if (v == ATN_POLLED) {
 		ieee_data.bus_state = BUS_FOUNDATN;
           	cmd_handler();
@@ -1097,7 +1106,7 @@ void ieee_mainloop_iteration(void) {
 	// and sets it back to BUS_CMDPROCESS
 	break;
       case BUS_CMDPROCESS:
-debug_puts("cmdprocess error: "); debug_puthex(ieee_data.errnum); debug_putcrlf();
+//debug_puts("cmdprocess error: "); debug_puthex(ieee_data.errnum); debug_putcrlf();
 	if (ieee_data.errnum != 0) {
 		set_error(&error, ieee_data.errnum);
 		channel_close(ieee_secaddr_to_channel(ieee_data.secondary_address));
@@ -1105,7 +1114,7 @@ debug_puts("cmdprocess error: "); debug_puthex(ieee_data.errnum); debug_putcrlf(
 		// really only does something on read-only channels
 		channel_preload(ieee_secaddr_to_channel(ieee_data.secondary_address));
 	}
-	ieee_data.bus_state = BUS_ATNPROCESS;
+	ieee_data.bus_state = BUS_IDLE; //BUS_ATNPROCESS;
 	break;
     }   /* switch   */
 //  }     /* for()    */
