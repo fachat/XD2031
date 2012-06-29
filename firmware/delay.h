@@ -1,12 +1,17 @@
 /****************************************************************************
 
-    XD-2031 - Serial line filesystem server for CBMs
+    Serial line filesystem server
     Copyright (C) 2012 Andre Fachat
+
+    Derived from:
+    OS/A65 Version 1.3.12
+    Multitasking Operating System for 6502 Computers
+    Copyright (C) 1989-1997 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation;
-    version 2 of the License ONLY.
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,26 +24,25 @@
 
 ****************************************************************************/
 
-/**
- * This file implements the central communication channels between the
- * IEEE layer and the provider layers
- */
-
 #ifndef DELAY_H
 #define DELAY_H
 
-#include <util/delay.h>
+#include "delayhw.h"
 
-// note that using the static inline versions below breaks the timing!
-#define	delayms(a)	_delay_ms(a)
-#define	delayus(a)	_delay_us(a)
+void serial_delay();
 
-//static inline void delayms(uint16_t len) {
-//	_delay_ms(len);
-//}
+static inline void delayms(uint8_t t) {
+	uint8_t ms = t;	
+	while (ms > 0) {
+		serial_delay();
+		delayhw_ms(1);
+		ms--;	
+	}
+}
 
-//static inline void delayus(uint16_t len) {
-//	_delay_us(len);
-//}
+static inline void delayus(uint8_t us) {
+	delayhw_us(us);
+}
 
 #endif
+

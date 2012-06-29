@@ -38,6 +38,8 @@
  * types, and are reused here for compatibility.
  * The zero and the negative numbers below are added as needed here.
  */
+#define   FS_SYNC        127    /* sync character, ignored until real buffer comes */
+
 #define	  FS_TERM	 0	/* print out */
 
 #define   FS_OPEN_RD     1	/* open file for reading (only) */

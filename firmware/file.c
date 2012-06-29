@@ -25,7 +25,7 @@
 #include "channel.h"
 #include "file.h"
 #include "name.h"
-#include "uart2.h"
+#include "serial.h"
 #include "wireformat.h"
 
 #include "debug.h"
@@ -144,7 +144,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
 	// the two bus systems
-	provider_t *provider = &uart_provider;
+	provider_t *provider = &serial_provider;
 
 	// prepare request data
 	packet_init(&activeslot->txbuf, nameinfo.namelen, nameinfo.name);
@@ -161,6 +161,16 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	// open channel
 	uint8_t writetype = (type == FS_OPEN_WR || type == FS_OPEN_AP) ? 1 : 0;
 	int8_t (*converter)(volatile packet_t*) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
+
+	channel_t *channel = channel_find(channel_no);
+	if (channel != NULL) {
+		debug_puts("FILE OPEN ERROR");
+		debug_putcrlf();
+		set_error(command->errormsg, ERROR_NO_CHANNEL);
+		// clean up
+		channel_close(channel_no);
+		return -1;
+	}
 
 	int8_t e = channel_open(channel_no, writetype, provider, converter);
 	if (e < 0) {

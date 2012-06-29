@@ -22,13 +22,12 @@
 ****************************************************************************/
 
 /**
- * UART backend provider for the channels
+ * high level serial line driver - adapting the packets to send and receive
+ * to the hardware-specific uart drivers
  */
 
-#ifndef UART2_H
-#define	UART2_H
-
-#include <inttypes.h>
+#ifndef SERIAL_H
+#define	SERIAL_H
 
 #include "provider.h"
 
@@ -41,12 +40,22 @@
 /**
  * initialize the UART 
  */
-void uart_init();
+void serial_init();
+
+/**
+ * sync with the server
+ */
+void serial_sync();
 
 /**
  * flush the data out the UART 
  */
-void uart_flush();
+void serial_flush();
+
+/**
+ * send/receive data while waiting for some delay
+ */
+void serial_delay();
 
 /**
  * submit the contents of a buffer to the UART
@@ -56,7 +65,7 @@ void uart_flush();
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
  */
-void uart_submit(volatile packet_t *buf);
+//void serial_submit(volatile packet_t *buf);
 
 /*****************************************************************************
  * submit a channel rpc call to the UART
@@ -70,11 +79,11 @@ void uart_submit(volatile packet_t *buf);
  * callback is called from interrupt context when the response has been
  * received
  */
-void uart_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
+//void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+//                void (*callback)(int8_t channelno, int8_t errnum));
 
 
-extern provider_t uart_provider;
+extern provider_t serial_provider;
 
 #endif
 

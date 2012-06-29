@@ -24,6 +24,8 @@
 
 ****************************************************************************/
 
+#ifndef WIREFORMAT_H
+#define WIREFORMAT_H
 
 /* data struct exchanged between client and server */
 #define FSP_CMD         0	/* command, see the FS_* defines below */
@@ -38,6 +40,8 @@
  * types, and are reused here for compatibility.
  * The zero and the negative numbers below are added as needed here.
  */
+#define	  FS_SYNC	 127	/* sync character, ignored until real buffer comes */
+
 #define	  FS_TERM	 0	/* print out */
 
 #define   FS_OPEN_RD     1	/* open file for reading (only) */
@@ -86,4 +90,5 @@
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
 
+#endif
 

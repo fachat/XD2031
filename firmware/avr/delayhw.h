@@ -20,29 +20,25 @@
 ****************************************************************************/
 
 /**
- * definitions for a backend provider (of which currently only a UART provider
- * exists.
+ * This file implements the central communication channels between the
+ * IEEE layer and the provider layers
  */
 
+#ifndef DELAYHW_H
+#define DELAYHW_H
 
-#ifndef PROVIDER_H
-#define	PROVIDER_H
+#include <util/delay.h>
 
-#include <inttypes.h>
-#include "packet.h"
+// note that using the static inline versions below breaks the timing!
+#define	delayhw_ms(a)	_delay_ms(a)
+#define	delayhw_us(a)	_delay_us(a)
 
-typedef struct {
-	void (*submit)(volatile packet_t *buf);
-	void (*submit_call)(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
-	// convert the directory entry from the provider to the CBM codepage
-	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(volatile packet_t *p);
-	// convert a packet from CBM codepage to provider
-	// used only for open and commands!
-	// return -1 if packet is too small to hold converted value
-	int8_t (*to_provider)(packet_t *p);
-} provider_t;
+//static inline void delayms(uint16_t len) {
+//	_delay_ms(len);
+//}
+
+//static inline void delayus(uint16_t len) {
+//	_delay_us(len);
+//}
 
 #endif
-

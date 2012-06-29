@@ -36,10 +36,12 @@
 #include <alloca.h>
 
 #include "config.h"
+#include "version.h"
 #include "timer.h"
 #include "main.h"
 #include "packet.h"
-#include "uart2.h"
+#include "serial.h"
+#include "uarthw.h"
 #include "ieee.h"
 #include "led.h"
 #include "term.h"
@@ -60,7 +62,7 @@ extern uint8_t		rcvBcr;				// CR flag
 
 
 //---------------------------
-// LIST XS-1541 VERSIONSTRING
+// LIST XD-2031 VERSIONSTRING
 void ListVersion()
 {
 	term_putcrlf();
@@ -68,7 +70,7 @@ void ListVersion()
 
 	term_putcrlf();
 	
-	term_puts("### "HW_NAME" v"VERSION_STR" ###");
+	term_puts("### "HW_NAME"/"SW_NAME" v"VERSION" ###");
 	term_putcrlf();
 }
 
@@ -104,14 +106,16 @@ int main()
 {
 	init(); 				// Initialisierungen
 	led_init();
-	uart_init();
+	uarthw_init();
+	serial_init();
 	term_init();
 	file_init();
 	channel_init();
 	//timer_init();			// Timer Interrupt initialisieren
 	ieee_init();
-
 	sei();
+
+	serial_sync();		// sync with the server
 
   	ListVersion();
 
@@ -121,9 +125,10 @@ int main()
 	term_putcrlf();
 
 	ieee_mainloop_init();
-
 	while (1)  			// Mainloop-Begin
 	{
+		serial_delay();
+
 		ieee_mainloop_iteration();
 	}
 }

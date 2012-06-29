@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "delay.h"
 #include "timer.h"
 #include "debug.h"
 #include "channel.h"

@@ -1,14 +1,17 @@
 /****************************************************************************
 
-    XD-2031 - Serial line filesystem server for CBMs
+    Serial line filesystem server
     Copyright (C) 2012 Andre Fachat
 
-    Inspired by uart.c from XS-1541, but rewritten in the end.
+    Derived from:
+    OS/A65 Version 1.3.12
+    Multitasking Operating System for 6502 Computers
+    Copyright (C) 1989-1997 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation;
-    version 2 of the License ONLY.
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,18 +24,23 @@
 
 ****************************************************************************/
 
-/**
- * UART backend provider for the channels
- */
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-#include <util/delay.h>
 
+#include "version.h"
+#include "packet.h"
+#include "provider.h"
+#include "wireformat.h"
+#include "serial.h"
+#include "uarthw.h"
+#include "petscii.h"
+
+#include "debug.h"
+#include "led.h"
+
+
+/*
 #include "version.h"
 #include "compat.h"
 #include "packet.h"
@@ -42,18 +50,43 @@
 #include "petscii.h"
 
 #include "debug.h"
-#include "led.h"
+*/
 
 /***********************************************************************************
  * UART stuff
  */
 
+/**
+ * submit the contents of a buffer to the UART
+ * If buffer slot is available, return immediately.
+ * Otherwise wait until slot is available
+ *
+ * Note: submitter must check buf_is_empty() for true or buf_wait_free()
+ * before reuse or freeing the memory!
+ */
+void serial_submit(volatile packet_t *buf);
+
+/*****************************************************************************
+ * submit a channel rpc call to the UART
+ * If buffer slot is available, return immediately.
+ * Otherwise wait until slot is available, then return
+ * (while data is transferred in the background)
+ *
+ * Note: submitter must check buf_is_empty() for true or buf_wait_free()
+ * before reuse or freeing the memory!
+ *
+ * callback is called from interrupt context when the response has been
+ * received
+ */
+void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                void (*callback)(int8_t channelno, int8_t errnum));
+
 static int8_t directory_converter(volatile packet_t *p);
 static int8_t to_provider(packet_t *p);
 
-provider_t uart_provider  = {
-        uart_submit,
-        uart_submit_call,
+provider_t serial_provider  = {
+        serial_submit,
+        serial_submit_call,
 	directory_converter,
 	to_provider
 };
@@ -197,7 +230,6 @@ static int8_t directory_converter(volatile packet_t *p) {
 		}
 	}
 
-//return -1;
 	// add file type
 	if (type == FS_DIR_MOD_NAM) {
 		// file name entry
@@ -229,7 +261,6 @@ static int8_t directory_converter(volatile packet_t *p) {
 		debug_puts("CONVERSION NOT POSSIBLE!"); debug_puthex(len); debug_putcrlf();
 		return -1;	// conversion not possible
 	}
-//return -1;
 
 #if DEBUG
 	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
@@ -264,7 +295,7 @@ static int8_t to_provider(packet_t *p) {
 }
 
 /*****************************************************************************
- * Interrupt routines
+ * communication with the low level interrupt routines
  */
 
 // returns the next byte to send - first the packet type, then the data length
@@ -304,7 +335,10 @@ static int16_t read_char_from_packet(packet_t *buf) {
         return rv;
 }
 
-static void _uart_advance_slots() {
+/*
+ * TODO: make that a ring buffer of slots!
+ */
+static void advance_slots() {
 	uint8_t i = 0;
 	slots_used--;
 	while (i < slots_used) {
@@ -314,43 +348,29 @@ static void _uart_advance_slots() {
 	txstate = TX_TYPE;
 }
 
-static void _uart_send(void) {
+static void send(void) {
 
-	while (slots_used > 0) {
+	while (slots_used > 0 && uarthw_can_send()) {
 		// read data
 		int16_t data = read_char_from_packet(slots[0]);
+
 		if (data >= 0) {
 			// send it
-			UDR = data;
-			return;
+			uarthw_send(data);
+			//led_on();
+		} else {
+			// packet empty, so get next slot
+			advance_slots();
 		}
-		// packet empty, so get next slot
-		_uart_advance_slots();
-	}
-
-	// no slot left, i.e. no data left to be sent
-	// Disable ISR
-	UCSRB &= ~_BV(UDRIE);
+	}	
 }
 
-static void _uart_enable_sendisr() {
-        UCSRB |= (1<<UDRIE);          // UDRE Interrupt ein
-}
-
-/**
- * interrupt for data send register empty
- */
-ISR(USART_UDRE_vect) {
-	_uart_send();
-}
 
 /**
  * interrupt for received data
  */
-ISR(USART_RXC_vect)
+static void push_data_to_packet(int8_t rxdata)
 {
-        int8_t rxdata = UDR;
-
 	switch(rxstate) {
 	case RX_IDLE:
 		// no current packet
@@ -411,12 +431,27 @@ ISR(USART_RXC_vect)
 }
 
 /*****************************************************************************
+ * try to send data to the uart ring buffer, or try to receive something
+ */
+void serial_delay() {
+	// can we receive?
+	int16_t data = uarthw_receive();
+	while (data >= 0) {
+		push_data_to_packet(0xff & data);
+		// try next byte
+		data = uarthw_receive();
+	}
+	// try to send
+	send();
+}
+
+/*****************************************************************************
  * wait until everything has been flushed out - for debugging, to make
  * sure all messages have been sent
  */
-void uart_flush() {
+void serial_flush() {
 	while (slots_used > 0) {
-		_delay_ms(1);
+		serial_delay();
 	}
 }
 
@@ -429,16 +464,16 @@ void uart_flush() {
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
  */
-void uart_submit(volatile packet_t *buf) {
-	
+void serial_submit(volatile packet_t *buf) {
+
 	// wait for slot free
 	while (slots_used >= (NUMBER_OF_SLOTS-1)) {
-		_delay_ms(1);
+		serial_delay();
 	}
 
 
 	// protect slot* by disabling the interrupt
-	cli();
+	//cli();	 - as slots are not handled in irq anymore
 	// note: slots_used can only decrease until here, as this is the
 	// only place to increase it, so there is no race from the while()
 	// above to setting it here.	
@@ -446,12 +481,12 @@ void uart_submit(volatile packet_t *buf) {
 	slots_used++;
 	if (slots_used == 1) {
 		// no packet before, so need to start sending
-		_uart_enable_sendisr();
 		txstate = TX_TYPE;
-		_uart_send();
+		send();
+		//led_on();
 	}
 	// enable interrupts again
-	sei();
+	//sei();	 - as slots are not handled in irq anymore
 }
 
 /*****************************************************************************
@@ -466,7 +501,7 @@ void uart_submit(volatile packet_t *buf) {
  * callback is called from interrupt context when the response has been
  * received
  */
-void uart_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
+void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
 		void (*callback)(int8_t channelno, int8_t errnum)) {
 
 	// check rx slot
@@ -479,7 +514,7 @@ void uart_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 				break;
 			}
 		}
-		_delay_ms(1);
+		serial_delay();
 	}
 
 	rx_channels[channelpos].channelno = channelno;
@@ -487,13 +522,13 @@ void uart_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 	rx_channels[channelpos].callback = callback;
 
 	// send request
-	uart_submit(txbuf);
+	serial_submit(txbuf);
 }
 
 /*****************************************************************************
- * initialize the UART code
- */   
-void uart_init() {
+* initialize the UART code
+*/
+void serial_init() {
 	slots_used = 0;
 
 	for (int8_t i = NUMBER_OF_SLOTS-1; i >= 0; i--) {
@@ -502,17 +537,19 @@ void uart_init() {
 
 	rxstate = RX_IDLE;
 	txstate = TX_IDLE;
+}
 
-	// init UART
-        UCSRB = _BV(TXEN);                      // TX aktiv
-        UCSRB |= _BV(RXEN);             // RX aktivieren
+/*****************************************************************************
+ * sync with the server
+ */
+void serial_sync() {
 
-        UBRRL = (uint8_t)(F_CPU/(BAUD*16L))-1;          // Baudrate festlegen
-        UBRRH = (uint8_t)((F_CPU/(BAUD*16L))-1)>>8;     // Baudrate festlegen
-
-        UCSRB |= _BV(RXCIE);            // UART Interrupt bei Datenempfang komplett
-        //UCSRB |= _BV(UDRIE);          // UART Interrupt bei Senderegister leer
-        //UCSRB |= _BV(TXCIE);          // UART Interrupt bei Sendevorgang beendet
+	// sync with the pc server
+	// by sending 128 FS_SYNC bytes
+	for (uint8_t cnt = 128; cnt > 0; cnt--) {
+		while (!uarthw_can_send());
+		uarthw_send(FS_SYNC);
+	}
 }
 
 

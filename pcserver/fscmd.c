@@ -89,15 +89,15 @@ void close_fds(int tfd) {
 void cmd_loop(int readfd, int writefd) {
 
         char buf[8192];
-        int wrp,rdp,plen;
+        int wrp,rdp,plen, cmd;
         int n;
 
             /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
 
         while((n=read(readfd, buf+wrp, 8192-wrp))!=0) {
-//printf("read %d bytes: ",n);
-//for(int i=0;i<n;i++) printf("%02x ",buf[wrp+i]); printf("\n");
+printf("read %d bytes: ",n);
+for(int i=0;i<n;i++) printf("%02x ",buf[wrp+i]); printf("\n");
 
               if(n<0) {
                 fprintf(stderr,"fstcp: read error %d (%s)\n",errno,strerror(errno));
@@ -118,8 +118,15 @@ void cmd_loop(int readfd, int writefd) {
               while(wrp-rdp > FSP_LEN) {
                 // first byte in packet is command, second is length of packet
                 plen = 255 & buf[rdp+FSP_LEN];	//  AND with 255 to fix sign
+                cmd = 255 & buf[rdp+FSP_CMD];	//  AND with 255 to fix sign
 //printf("wrp-rdp=%d, plen=%d\n",wrp-rdp,plen);
                 // full packet received already?
+                if (cmd == FS_SYNC || plen < 3) {
+		  // a packet is at least 3 bytes
+		  // or the byte is the FS_SYNC command
+		  // so ignore byte and shift one in buffer position
+		  rdp++;
+		} else 
                 if(wrp-rdp >= plen) {
                   // yes, then execute
                   do_cmd(buf+rdp, writefd);

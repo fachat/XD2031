@@ -3,8 +3,8 @@
 # AVR ATMega Architecture
 #
 
-ARCHFILES=avr/timer.c avr/arch-timer.c avr/uart2.c
-ARCHDEPS=avr/timer.h avr/arch-timer.h avr/atomic.h avr/compat.h avr/led.h avr/delay.h
+ARCHFILES=avr/timer.c avr/arch-timer.c avr/uarthw.c
+ARCHDEPS=avr/timer.h avr/arch-timer.h avr/atomic.h avr/compat.h avr/led.h avr/delayhw.h avr/uarthw.h
 
 ARCH=avr
 
@@ -16,7 +16,7 @@ ARCHINCLUDE=-I/opt/cross/avr/include -I$(ARCH)
 ARCHDEVICE=-mmcu=atmega644p
 
 # F_CPU represents the clock frequency and is used to compute the delay loop times in util/delay.h
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
 
 all: $(TARGET).hex
 

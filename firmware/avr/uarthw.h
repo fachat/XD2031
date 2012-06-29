@@ -1,7 +1,10 @@
-/****************************************************************************
+
+/***************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
     Copyright (C) 2012 Andre Fachat
+
+    Inspired by uart.c from XS-1541, but rewritten in the end.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,29 +23,40 @@
 ****************************************************************************/
 
 /**
- * definitions for a backend provider (of which currently only a UART provider
- * exists.
+ * interface from serial code to uart low level interrupt driver
  */
 
+#ifndef UARTHW_H
+#define	UARTHW_H
 
-#ifndef PROVIDER_H
-#define	PROVIDER_H
 
-#include <inttypes.h>
-#include "packet.h"
+/***********************************************************************************
+ * UART stuff
+ */
 
-typedef struct {
-	void (*submit)(volatile packet_t *buf);
-	void (*submit_call)(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
-	// convert the directory entry from the provider to the CBM codepage
-	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(volatile packet_t *p);
-	// convert a packet from CBM codepage to provider
-	// used only for open and commands!
-	// return -1 if packet is too small to hold converted value
-	int8_t (*to_provider)(packet_t *p);
-} provider_t;
+#define  BAUD    115200
+
+/**
+ * initialize the UART 
+ */
+void uarthw_init();
+
+/**
+ * when returns true, there is space in the uart send buffer,
+ * so uarthw_send(...) can be called with a byte to send
+ */
+int8_t uarthw_can_send();
+
+/**
+ * submit a byte to the send buffer
+ */
+void uarthw_send(int8_t data);
+
+/**
+ * receive a byte from the receive buffer
+ * Returns -1 when no byte available
+ */
+int16_t uarthw_receive();
 
 #endif
 

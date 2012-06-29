@@ -30,8 +30,10 @@
 
 #include "packet.h"
 #include "term.h"
-#include "uart2.h"
+#include "serial.h"
 #include "wireformat.h"
+
+#include "led.h"
 
 #define	TERM_BUFFER_LENGTH	129
 
@@ -45,12 +47,12 @@ static void send() {
 	// tell the packet what's in the buffer to be read
 	// nchars are in the buffer to be sent; channel is -1 (for terminal)
 	packet_set_filled(&termpack, 0xff, FS_TERM, nchars);
-	uart_submit(&termpack);
+	serial_provider.submit(&termpack);
 	nchars = 0;
 }
 
 void term_flush() {
-	uart_flush();
+	serial_flush();
 }
 
 void term_putc(char c) {
