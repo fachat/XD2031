@@ -4,7 +4,7 @@
 #
 
 ARCHFILES=avr/timer.c avr/arch-timer.c avr/uarthw.c
-ARCHDEPS=avr/timer.h avr/arch-timer.h avr/atomic.h avr/compat.h avr/led.h avr/delayhw.h avr/uarthw.h
+ARCHDEPS=avr/timer.h avr/arch-timer.h avr/atomic.h avr/compat.h avr/led.h avr/delayhw.h avr/uarthw.h avr/ints.o
 
 ARCH=avr
 
@@ -15,13 +15,15 @@ ARCHINCLUDE=-I/opt/cross/avr/include -I$(ARCH)
 #ARCHDEVICE=-mmcu=atmega644p -D__AVR_ATmega644P__
 ARCHDEVICE=-mmcu=atmega644p
 
+ASMFLAGS=
+
 # F_CPU represents the clock frequency and is used to compute the delay loop times in util/delay.h
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
 
 all: $(TARGET).hex
 
 fw: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(FILES) $(ARCHFILES) $(DEVICEFILES)
+	$(CC) $(CFLAGS) -o $(TARGET) ints.o $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
 $(TARGET).hex : $(TARGET)
@@ -32,4 +34,10 @@ load:
 
 clean:
 	rm $(TARGET) $(TARGET).hex
+
+## Assembler files
+## Hier folgt eine Liste der gelinkten Dateien, darunter einfügen:
+avr/ints.o: avr/ints.S
+	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
+
 

@@ -96,8 +96,8 @@ void cmd_loop(int readfd, int writefd) {
         wrp = rdp = 0;
 
         while((n=read(readfd, buf+wrp, 8192-wrp))!=0) {
-printf("read %d bytes: ",n);
-for(int i=0;i<n;i++) printf("%02x ",buf[wrp+i]); printf("\n");
+//printf("read %d bytes: ",n);
+//for(int i=0;i<n;i++) printf("%02x ",buf[wrp+i]); printf("\n");
 
               if(n<0) {
                 fprintf(stderr,"fstcp: read error %d (%s)\n",errno,strerror(errno));

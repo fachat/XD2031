@@ -546,10 +546,10 @@ void serial_sync() {
 
 	// sync with the pc server
 	// by sending 128 FS_SYNC bytes
-	for (uint8_t cnt = 128; cnt > 0; cnt--) {
+//	for (uint8_t cnt = 128; cnt > 0; cnt--) {
 		while (!uarthw_can_send());
 		uarthw_send(FS_SYNC);
-	}
+//	}
 }
 
 

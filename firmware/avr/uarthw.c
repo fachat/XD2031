@@ -48,15 +48,15 @@
 // prototypes
 static void _uart_enable_sendisr();
 
-// receive ring buffer
-static volatile int8_t 		rxbuf[BUFFER_SIZE];
-static volatile uint8_t 	rx_wp;
-static volatile uint8_t 	rx_rp;
-
 // send ring buffer
-static volatile int8_t 		txbuf[BUFFER_SIZE];
-static volatile uint8_t 	tx_wp;
-static volatile uint8_t 	tx_rp;
+volatile int8_t 	txbuf[BUFFER_SIZE];
+volatile uint8_t 	tx_wp;
+volatile uint8_t 	tx_rp;
+
+// receive ring buffer
+volatile int8_t 	rxbuf[BUFFER_SIZE];
+volatile uint8_t 	rx_wp;
+volatile uint8_t 	rx_rp;
 
 
 /*****************************************************************************
@@ -115,7 +115,7 @@ static void _uart_enable_sendisr() {
  *
  * That means that this interrupt, plus all other interrupt routines
  * must be short enough to be done between two of the UDRE interrupts
- */
+ *
 ISR(USART_UDRE_vect) {
 	if (tx_wp != tx_rp) {
 		UDR = txbuf[tx_rp];
@@ -133,6 +133,7 @@ ISR(USART_UDRE_vect) {
 		UCSRB &= ~_BV(UDRIE);
 	}
 }
+*/
 
 /**
  * interrupt for received data
