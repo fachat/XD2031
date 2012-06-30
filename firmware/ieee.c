@@ -392,17 +392,19 @@ void ieee_init(void) {
    at falling edge of ATN. If pin change interrupts are used, we have to
    check for rising or falling edge in software first! */
 // Note: translates to ISR(PCINT3_vect)
+/*
 IEEE_ATN_HANDLER {
 #ifdef IEEE_PCMSK
   if(!IEEE_ATN) {
 #else
   {
 #endif
-    ddr_change_by_atn();        /* Switch NDAC+NRFD to outputs */
-    set_ndac_state(0);          /* Set NDAC and NRFD low */
+    ddr_change_by_atn();        // Switch NDAC+NRFD to outputs 
+    set_ndac_state(0);          // Set NDAC and NRFD low 
     set_nrfd_state(0);
   }
 }
+*/
 
 /* ------------------------------------------------------------------------- */
 /*  Byte transfer routines                                                   */

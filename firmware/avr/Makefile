@@ -5,6 +5,7 @@
 
 ARCHFILES=avr/timer.c avr/arch-timer.c avr/uarthw.c
 ARCHDEPS=avr/timer.h avr/arch-timer.h avr/atomic.h avr/compat.h avr/led.h avr/delayhw.h avr/uarthw.h avr/ints.o
+ARCHASMOBJ=ints.o
 
 ARCH=avr
 
@@ -23,7 +24,7 @@ CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -O1 -funsigned-char -funsig
 all: $(TARGET).hex
 
 fw: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
-	$(CC) $(CFLAGS) -o $(TARGET) ints.o $(FILES) $(ARCHFILES) $(DEVICEFILES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
 $(TARGET).hex : $(TARGET)
@@ -36,7 +37,6 @@ clean:
 	rm $(TARGET) $(TARGET).hex
 
 ## Assembler files
-## Hier folgt eine Liste der gelinkten Dateien, darunter einfügen:
 avr/ints.o: avr/ints.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
 

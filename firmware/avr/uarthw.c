@@ -57,6 +57,7 @@ volatile uint8_t 	tx_rp;
 volatile int8_t 	rxbuf[BUFFER_SIZE];
 volatile uint8_t 	rx_wp;
 volatile uint8_t 	rx_rp;
+volatile uint8_t 	rx_err;
 
 
 /*****************************************************************************
@@ -140,7 +141,7 @@ ISR(USART_UDRE_vect) {
  *
  * Again note that this interrupt routine runs without other interrupts
  * blocked. 
- */
+ *
 ISR(USART_RXC_vect)
 {
 	rxbuf[rx_wp] = UDR;
@@ -152,11 +153,13 @@ ISR(USART_RXC_vect)
 	uint8_t tmp = BUFFER_NEXT(rx_wp);
 	if (tmp == rx_rp) {
 		// buffer overflow
+		rx_err++;
 		led_on();
 	} else {
 		rx_wp = tmp;
 	}
 }
+*/
 
 /*****************************************************************************
  * initialize the UART code
