@@ -147,7 +147,7 @@ nocarry:
 
 	rjmp 	endirq								; 2
 										;===
-										; 31
+										; 33
 done:				; no more data
 	lds	r16, UCSR0B	; UART control register
 	andi	r16, 255-_BV(UDRIE0)
