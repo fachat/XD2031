@@ -36,6 +36,8 @@
 #include "wireformat.h"
 #include "delay.h"
 
+#include "debug.h"
+
 /***********************************************************************************
  * packet stuff 
  *
@@ -94,16 +96,18 @@ static inline volatile uint8_t* packet_get_buffer(volatile packet_t *packet) {
 }
 
 static inline void packet_init(volatile packet_t *packet, uint8_t len, uint8_t *buffer) {
+
 	packet->buffer = buffer;
 	packet->len = len;
-	packet->chan = -1;
+	packet->chan = -3;
 	packet->rp = 0;
 	packet->wp = 0;
 }
 
-static inline void packet_reset(volatile packet_t *packet) {
+static inline void packet_reset(volatile packet_t *packet, uint8_t channo) {
 	packet->rp = 0;
 	packet->wp = 0;
+	packet->chan = channo;
 }
 
 static inline bool packet_is_done(volatile packet_t *buf) {

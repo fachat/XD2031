@@ -40,17 +40,7 @@
 #include "led.h"
 
 
-/*
-#include "version.h"
-#include "compat.h"
-#include "packet.h"
-#include "uart2.h"
-#include "wireformat.h"
-#include "provider.h"
-#include "petscii.h"
-
-#include "debug.h"
-*/
+#undef DEBUG_SERIAL
 
 /***********************************************************************************
  * UART stuff
@@ -262,7 +252,7 @@ static int8_t directory_converter(volatile packet_t *p) {
 		return -1;	// conversion not possible
 	}
 
-#if DEBUG
+#if DEBUG_SERIAL
 	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
 	for (uint8_t j = 0; j < len; j++) {
 		debug_putc(' '); debug_puthex(out[j]);
@@ -503,6 +493,13 @@ void serial_submit(volatile packet_t *buf) {
  */
 void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
 		void (*callback)(int8_t channelno, int8_t errnum)) {
+
+	if (channelno < 0) {
+		debug_printf("!!!! submit with channelno=%d\n", channelno);
+	}
+	if (txbuf->chan < 0) {
+		debug_printf("!!!! submit with packet->chan=%d\n", txbuf->chan);
+	}
 
 	// check rx slot
 	// wait / loop until receive buffer is being freed by interrupt routine

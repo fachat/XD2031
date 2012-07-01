@@ -46,7 +46,7 @@ static void send() {
 
 	// tell the packet what's in the buffer to be read
 	// nchars are in the buffer to be sent; channel is -1 (for terminal)
-	packet_set_filled(&termpack, 0xff, FS_TERM, nchars);
+	packet_set_filled(&termpack, 0xfe, FS_TERM, nchars);
 	serial_provider.submit(&termpack);
 	nchars = 0;
 }

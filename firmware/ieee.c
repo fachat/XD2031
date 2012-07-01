@@ -46,7 +46,6 @@
 #include "xs1541.h"
 
 #define	DEBUG_IEEE	0
-#define	DEBUG_IEEEX	1
 #define	DEBUG_IEEE_DATA	0
 
 /*
@@ -344,23 +343,40 @@ static inline void set_eoi_state(uint8_t x)
 
     IEEE_DDR_EOI  &= (uint8_t) ~_BV(IEEE_PIN_EOI);  // EOI as input
     IEEE_PORT_EOI |= _BV(IEEE_PIN_EOI);             // Enable pull-up for EOI
-
+if (IEEE_ATN) {
     IEEE_DDR_NDAC &= (uint8_t) ~_BV(IEEE_PIN_NDAC); // NDAC as input
     IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);           // Enable pull-up for NDAC
 
     IEEE_DDR_NRFD &= (uint8_t) ~_BV(IEEE_PIN_NRFD); // NRFD as input
     IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);           // Enable pull-up for NRFD
-
+}
     IEEE_DDR_ATN  &= (uint8_t) ~_BV(IEEE_PIN_ATN);  // ATN as input
     IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);             // Enable pull-up for ATN
   }
 
-//  static void ieee_ports_listen (void) {
-//    ieee_bus_idle();
-//  }
-
   static void ieee_ports_talk (void) {
     ieee_bus_idle();
+  }
+
+/**
+ * switch the ports so that we are able to listen from it,
+ * set NRFD/NDAC low, so host waits for us
+ */
+  static void ieee_ports_listen (void) {
+    IEEE_D_DDR = 0;                 // Data ports as input
+    IEEE_D_PORT = 0xff;             // Enable pull-ups for data lines
+
+    IEEE_DDR_DAV  &= (uint8_t) ~_BV(IEEE_PIN_DAV);  // DAV as input
+    IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);             // Enable pull-up for DAV
+
+    IEEE_DDR_EOI  &= (uint8_t) ~_BV(IEEE_PIN_EOI);  // EOI as input
+    IEEE_PORT_EOI |= _BV(IEEE_PIN_EOI);             // Enable pull-up for EOI
+
+    IEEE_PORT_NRFD &= (uint8_t)~_BV(IEEE_PIN_NRFD);   // NRFD low
+    IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);    // NRFD as output
+
+    IEEE_PORT_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);   // NDAC low
+    IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);              // NDAC as output
   }
 
 # define ddr_change_by_atn() do { } while (0)
@@ -435,8 +451,8 @@ int16_t ieee_getc(int under_atn) {
 
   // wait until computer has completed previous transfer cycle
   do {              /* wait for controller to remove data from bus */
-	// check ATN but only when not under ATN
-	if ((!under_atn) && (!IEEE_ATN)) {
+	// check ATN 
+	if (!ieee_is_atn(under_atn)) {
 		// yes, then exit
 		return ATN_POLLED;
 	}
@@ -485,14 +501,10 @@ int16_t ieee_getc(int under_atn) {
   // For now we just hope we're fast enough
 
   if (!under_atn) {
-    /* Wait for DAV high, check timeout */
-//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+    /* Wait for DAV high */
     do {              /* wait for controller to remove data from bus */
-//    if(time_after(getticks(), timeout)) {
-//	return TIMEOUT_ABORT;
-//    }
-	// check ATN but only when not under ATN
-	if ((!under_atn) && (!IEEE_ATN)) {
+	// check ATN 
+	if (!IEEE_ATN) {
 		// yes, then exit
 		return ATN_POLLED;
 	}
@@ -524,36 +536,35 @@ static uint16_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel
 
 //debug_puts("with_eoi="); debug_puthex(with_eoi); debug_putcrlf();
 
-  // make sure those are high
-  set_dav_state (1);
-  set_eoi_state (1);
-
-  // set data
-  set_ieee_data (data);
-
-  // check if ATN has been activated
-  if(!IEEE_ATN) return ATN_POLLED;
-  delayus(11);    /* Allow data to settle */
-  if(!IEEE_ATN) return ATN_POLLED;
-
-  /* Wait for NRFD high , check timeout */
-//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+  /* Wait for NDAC lo */
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
     }
-//    if(time_after(getticks(), timeout)) {
-//	return TIMEOUT_ABORT;
-//    }
-  } while (!IEEE_NRFD);
+  } while (IEEE_NDAC);
+
+  // make sure DAV is high
+  set_dav_state (1);
+
+  // set data
+  set_ieee_data (data);
 
   // set EOI state
   set_eoi_state (!with_eoi);
 
+  // check if ATN has been activated
+  if(!IEEE_ATN) return ATN_POLLED;
+  delayus(5);    /* Allow data to settle */
+
+  /* Wait for NRFD high */
+  do {
+    if(!IEEE_ATN) {
+	return ATN_POLLED;
+    }
+  } while (!IEEE_NRFD);
+
   // signal data available
   set_dav_state(0);
-
-  delayus(11);    /* Allow data to settle */
 
   // NOTE: As the PET timeout handling is BROKEN, we actually should 
   // make sure _here_ that we have enough data for the next byte
@@ -561,47 +572,32 @@ static uint16_t ieee_putc(uint8_t data, const uint8_t with_eoi, volatile channel
   // The only place where the PET reliably waits without a timeout is
   // when it waits for DAV to go high, i.e. here...
   channel_preloadp(chan);
-  
-  /* Wait for NRFD low, check timeout *
-  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+
+#if DEBUG_IEEE_DATA
+        debug_putc(with_eoi ? '-' : '>');
+        debug_puthex(data); debug_putc(' ');
+        if(isprint(data)) debug_putc(data); else debug_putc('?');
+        debug_putcrlf();
+#endif
+ 
+  /* Wait for NRFD low, */
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
-    }
-    if(time_after(getticks(), timeout)) {
-	return TIMEOUT_ABORT;
     }
   } while (IEEE_NRFD);
-*/
 
-  /* Wait for NDAC high , check timeout */
-//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
+  /* Wait for NDAC high */
   do {
     if(!IEEE_ATN) {
 	return ATN_POLLED;
     }
-//    if(time_after(getticks(), timeout)) {
-//	return TIMEOUT_ABORT;
-//    }
   } while (!IEEE_NDAC);
+
 
   // clear dav/eoi lines
   set_dav_state(1);
   set_eoi_state(1);
-
-  // let the lines settle
-  delayus(11);
-
-  /* Wait for NDAC lo , check timeout */
-//  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
-  do {
-    if(!IEEE_ATN) {
-	return ATN_POLLED;
-    }
-//    if(time_after(getticks(), timeout)) {
-//	return TIMEOUT_ABORT;
-//    }
-  } while (IEEE_NDAC);
 
   return 0;
 }
@@ -650,7 +646,7 @@ static int16_t ieee_listen_handler (uint8_t cmd)
 
   c = -1;
   for(;;) {
-    /* Get a character ignoring timeout but but watching ATN */
+    /* Get a character ignoring timeout but watching ATN */
     c = ieee_getc(0);
     //while((c = ieee_getc(0)) < 0);
     // break out of the loop on ATN
@@ -663,8 +659,6 @@ static int16_t ieee_listen_handler (uint8_t cmd)
 #if DEBUG_IEEE
       debug_putps("EOI ");
 #endif
-//_delay_ms(10);
-//term_putcrlf(); 
       ieee_data.ieeeflags |= EOI_RECVD;
     } else {
       ieee_data.ieeeflags &= ~EOI_RECVD;
@@ -678,8 +672,6 @@ static int16_t ieee_listen_handler (uint8_t cmd)
     if(isprint(c)) debug_putc(c); else debug_putc('?');
     debug_putcrlf();
 #endif
-//_delay_ms(10);
-//term_putcrlf();
 
     if((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
       if (command.command_length < CONFIG_COMMAND_BUFFER_SIZE) {
@@ -696,38 +688,11 @@ static int16_t ieee_listen_handler (uint8_t cmd)
       if (chan == NULL) {
 	return -2;
       }
-#if 0
-      /* Flush buffer if full */
-      if (buf->mustflush) {
-        if (buf->refill(buf)) return -2;
-        /* Search the buffer again,                     */
-        /* it can change when using large buffers       */
-        buf = find_buffer(ieee_data.secondary_address);
-      }
-
-      buf->data[buf->position] = c;
-      mark_buffer_dirty(buf);
-
-      if (buf->lastused < buf->position) {
-	buf->lastused = buf->position;
-      }
-      buf->position++;
-
-      /* Mark buffer for flushing if position wrapped */
-      if (buf->position == 0) {
-	buf->mustflush = 1;
-      }
-
-      /* REL files must be syncronized on EOI */
-      if(buf->recordlen && (ieee_data.ieeeflags & EOI_RECVD)) {
-        if (buf->refill(buf)) return -2;
-      }
-#endif
-    }   /* else-buffer */
+    }
   }     /* for(;;) */
 }
 
-static uint8_t ieee_talk_handler (void)
+static uint16_t ieee_talk_handler (void)
 {
   volatile channel_t *chan;
   //uint8_t finalbyte;
@@ -753,63 +718,30 @@ static uint8_t ieee_talk_handler (void)
     }
   }
 
-  //channel_preloadp(chan);
-
   while (channel_has_more(chan)) {
-
 //led_on();
     // send all bytes that are currently in the channel buffer
     do {
       c = channel_current_byte(chan);
       eof = channel_current_is_eof(chan);
-#if DEBUG_IEEE_DATA
-debug_puthex(c);
-#endif
+
       res = ieee_putc(c, eof, chan);
-#if 0
-      finalbyte = (buf->position == buf->lastused);
-      c = buf->data[buf->position];
-      if (finalbyte && buf->sendeoi) {
-        /* Send with EOI */
-        res = ieee_putc(c, 1);
-        if(!res) { 
-	  debug_puts("EOI: ");
-	}
-      } else {
-        /* Send without EOI */
-        res = ieee_putc(c, 0);
-      }
-#endif
       if(res) {
 #if DEBUG_IEEE
         if(res==TIMEOUT_ABORT) {
           debug_putps("*** TIMEOUT ABORT***"); debug_putcrlf();
-        }
+        } else
         if(res!=ATN_POLLED) {
           debug_putc('c'); debug_puthex(res);
         }
 #endif
-        return 1;
-      } else {
-#if DEBUG_IEEE_DATA
-        debug_putc(eof ? '-' : '>');
-        debug_puthex(c); debug_putc(' ');
-        if(isprint(c)) debug_putc(c); else debug_putc('?');
-        debug_putcrlf();
-#endif
-//_delay_us(200);
-/*
-term_putc(eof ? '-' : '>');
-term_putc(' ');
-term_putc(' ');
-term_puts("   "); term_puts("___"); 
-term_putcrlf();
-*/
+        return res;
       }
       // channel_next() commits the byte that has been transferred
       // advances to the next byte and returns -1 if there is no next
       // byte in the current buffer. (there may be further bytes in a
       // further buffer)
+led_off();
     } while (channel_next(chan));
     // now channel buffer is empty
 #if DEBUG_IEEE    
@@ -843,24 +775,9 @@ static void cmd_handler (void)
 {
   /* Handle commands and filenames */
   if (ieee_data.ieeeflags & COMMAND_RECVD) {
-# if 0	/* def HAVE_HOTPLUG */
-    /* This seems to be a nice point to handle card changes */
-    /* No. */
-    if (disk_state != DISK_OK) {
-      set_busy_led(1);
-      /* If the disk was changed the buffer contents are useless */
-      if (disk_state == DISK_CHANGED || disk_state == DISK_REMOVED) {
-        free_multiple_buffers(FMB_ALL);
-        change_init();
-        fatops_init(0);
-      } else {
-        /* Disk state indicated an error, try to recover by initialising */
-        fatops_init(1);
-      }
-      update_leds();
-    }
-# endif
+
     if (ieee_data.secondary_address == 0x0f) {
+
       doscommand(&command);                   /* Command channel */
 
       // open/prepare the status channel
@@ -880,13 +797,6 @@ static void cmd_handler (void)
     command.command_length = 0;
     ieee_data.ieeeflags &= (uint8_t) ~COMMAND_RECVD;
   } /* COMMAND_RECVD */
-
-  /* We're done, clean up unused buffers */
-  // should be done in doscommand / file_open
-  //free_multiple_buffers(FMB_UNSTICKY);
-  /* oops.
-  d64_bam_commit();
-  */
 }
 
 
@@ -974,10 +884,12 @@ void ieee_mainloop_iteration(void) {
 #if DEBUG_IEEE
           debug_putc('c');
 #endif
+	  // do not set to listen, as we just lost ATN
 	  ieee_set_idle();
           break;
         } else {
 	  cmd = newcmd & 0xFF;
+	  ieee_ports_listen();
         }
 	// fall-through
       case BUS_ATNPROCESS:                          /* BUS_ATNPROCESS */
@@ -994,7 +906,7 @@ void ieee_mainloop_iteration(void) {
 	    debug_putcrlf();
 #endif
           }
-          ieee_data.bus_state = BUS_IDLE;
+          ieee_data.bus_state = BUS_FOUNDATN;
           break;
         } else 
         if (cmd == 0x5f) {                           /* UNTALK */
@@ -1005,7 +917,7 @@ void ieee_mainloop_iteration(void) {
 	    debug_putcrlf();
 #endif
           }
-          ieee_data.bus_state = BUS_IDLE;
+          ieee_data.bus_state = BUS_FOUNDATN;
           break;
         } else 
         if (cmd == (0x40 + device_address)) {        /* TALK */
@@ -1016,7 +928,7 @@ void ieee_mainloop_iteration(void) {
           ieee_data.device_state = DEVICE_TALK;
           /* disk drives never talk immediatly after TALK, so stay idle
              and wait for a secondary address given by 0x60-0x6f DATA */
-          ieee_data.bus_state = BUS_IDLE;
+          ieee_data.bus_state = BUS_FOUNDATN;
           break;
         } else 
         if (cmd == (0x20 + device_address)) {        /* LISTEN */
@@ -1025,7 +937,7 @@ void ieee_mainloop_iteration(void) {
           debug_putps("LISTEN ");
           debug_puthex(device_address); debug_putcrlf();
 #endif
-          ieee_data.bus_state = BUS_IDLE;
+          ieee_data.bus_state = BUS_FOUNDATN;
           break;
         } else 
         if ((cmd & 0xf0) == 0x60) {                  /* DATA */
@@ -1038,6 +950,7 @@ void ieee_mainloop_iteration(void) {
           if(ieee_data.device_state == DEVICE_LISTEN) {
             uint16_t v = ieee_listen_handler(cmd);
 	    if (v == ATN_POLLED) {
+		ieee_ports_listen();
           	ieee_data.bus_state = BUS_FOUNDATN;
             	cmd_handler();
 	    }
@@ -1053,16 +966,18 @@ void ieee_mainloop_iteration(void) {
             while(!IEEE_ATN);
 
 	    uint16_t t = ieee_talk_handler();
-	    //debug_puthex(t); debug_putcrlf();
             if(t == TIMEOUT_ABORT) {
               ieee_data.device_state = DEVICE_IDLE;
-            }
-	    ieee_set_idle();
-            //ieee_data.bus_state = BUS_IDLE;
+	      ieee_set_idle();
+            } else
+	    if (t == ATN_POLLED) {
+	      ieee_ports_listen();
+	    } else {
+	      ieee_set_idle();
+	    }
             break;
           } else {
 	    ieee_set_idle();
-            //ieee_data.bus_state = BUS_IDLE;
             break;
           }
         } else 
@@ -1094,6 +1009,7 @@ void ieee_mainloop_iteration(void) {
 
           uint16_t v = ieee_listen_handler(cmd);
 	  if (v == ATN_POLLED) {
+		ieee_ports_listen();
 		ieee_data.bus_state = BUS_FOUNDATN;
           	cmd_handler();
 	  }

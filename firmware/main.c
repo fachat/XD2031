@@ -43,8 +43,11 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "ieee.h"
-#include "led.h"
+#include "ieeehw.h"
+#include "ieeehwi.h"
 #include "term.h"
+
+#include "led.h"
 //#include "iec.h"
 
 // STRUCTS
@@ -112,6 +115,8 @@ int main()
 	file_init();
 	channel_init();
 	//timer_init();			// Timer Interrupt initialisieren
+	ieeehw_init();
+	ieeehwi_init();
 	ieee_init();
 	sei();
 
@@ -124,7 +129,6 @@ int main()
 	term_putcrlf();
 	term_putcrlf();
 
-	ieee_mainloop_init();
 	while (1)  			// Mainloop-Begin
 	{
 		serial_delay();

@@ -33,6 +33,7 @@
 #include "provider.h"
 
 //#include "led.h"
+//#include "debug.h"
 
 #define	MAX_CHANNELS	8		// number of maximum open channels
 
@@ -69,6 +70,8 @@ static void _pull_callback(int8_t channel_no, int8_t errorno) {
 static void channel_pull(volatile channel_t *c, uint8_t slot) {
 	packet_t *p = &c->buf[slot];
 
+	//debug_printf("pull: chan=%p, channo=%d\n", c, c->channel_no);
+
 	// prepare to write a buffer with length 0
 	packet_set_filled(p, c->channel_no, FS_READ, 0);
 
@@ -93,6 +96,9 @@ static void channel_pull(volatile channel_t *c, uint8_t slot) {
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
 int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*dirconv)(volatile packet_t *)) {
+
+//debug_printf("channel_open: chan=%d\n", chan);
+
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
 		if (channels[i].channel_no < 0) {
 			channels[i].channel_no = chan;
@@ -103,7 +109,7 @@ int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*d
 			// note: we should not channel_pull() here, as file open has not yet even been sent
 			// the pull is done in the open callback for a read-only channel
 			for (uint8_t j = 0; j < 2; j++) {
-				packet_reset(&channels[i].buf[j]);
+				packet_reset(&channels[i].buf[j], chan);
 			}
 			return 0;
 		}
@@ -121,6 +127,7 @@ volatile channel_t* channel_find(int8_t chan) {
 }
 
 static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
+
 	// TODO:fix for read/write
 	if (chan->writetype != WTYPE_READONLY) return;
 
@@ -157,6 +164,7 @@ static void channel_preload_int(volatile channel_t *chan, uint8_t wait) {
  */
 void channel_preload(int8_t chan) {
 	volatile channel_t *channel = channel_find(chan);
+
 	if (channel != NULL) {
 		channel_preload_int(channel, 1);	
 	}
@@ -209,6 +217,7 @@ static void channel_close_int(volatile channel_t *chan, uint8_t force) {
 	// do nothing but mostly invalidate channel_no,
 	// as we do not currently support FS_OPEN_RW yet, which
 	// would require an explicit close on the server
+
 	chan->channel_no = -1;
 	chan->pull_state = PULL_OPEN;
 	chan->push_state = PUSH_OPEN;
@@ -335,7 +344,7 @@ volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush
 
 		// switch
 		chan->current = 1-chan->current;
-		packet_reset(&chan->buf[chan->current]);
+		packet_reset(&chan->buf[chan->current], channo);
 	}
 	return chan;
 }

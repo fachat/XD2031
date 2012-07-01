@@ -31,6 +31,8 @@
 #include "debug.h"
 #include "led.h"
 
+#undef DEBUG_FILE
+
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2
 
@@ -64,7 +66,7 @@ void file_init(void) {
 int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t errnum), uint8_t is_save) {
 
 
-#if DEBUG
+#if DEBUG_FILE
 	debug_putps("OPEN FILE: FOR CHAN:");
 	debug_puthex(channel_no);
 	debug_putps(" WITH NAME: ");
