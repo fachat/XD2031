@@ -26,5 +26,5 @@ run:
 
 debug:
 	echo "Start with: run -d /dev/ttyUSB0 ../sample"
-	gdb ./fsser 
+	sudo gdb ./fsser 
 

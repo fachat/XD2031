@@ -3,8 +3,6 @@
     XD-2031 - Serial line filesystem server for CBMs
     Copyright (C) 2012 Andre Fachat
 
-    Inspired by uart.c from XS-1541, but rewritten in the end.
-
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation;
