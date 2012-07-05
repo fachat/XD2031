@@ -86,7 +86,7 @@ IEEE_ATN_HANDLER {
 
 void ieeehw_setup() {
 	// clear IEEE lines
-	atnalo();
+	atnahi();
 	clrd();
 	davhi();
 	nrfdhi();

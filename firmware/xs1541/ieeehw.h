@@ -62,7 +62,7 @@ static inline uint8_t atnishi() {
 }
 
 // NDAC & NRFD handling
-// Note the order of method definition depends on dependencies
+// Note the order of method definition in this file depends on dependencies
 
 static inline void ndaclo() {
       	IEEE_PORT_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);   // NDAC low
@@ -77,24 +77,30 @@ static inline void nrfdlo() {
 }
 
 static inline void ndachi() {
-	if (atnislo() && !is_atna) {
-		// do not overwrite ATN acknowledge when ATNA is not set
-		nrfdlo();
-	} else {
+	// disable interrupt to avoid race condition
+	// of ATN irq between the atnishi() check and
+	// setting NDAC lo
+	cli();	
+	if (atnishi() || is_atna) {
 	      	IEEE_DDR_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);    // NDAC as input
       		IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);             // Enable pull-up
 	}
+	// allow interrupt again
+	sei();
 	is_ndacout = 1;
 }
 
 static inline void nrfdhi() {
-	if (atnislo() && !is_atna) {
-		// do not overwrite ATN acknowledge when ATNA is not set
-		nrfdlo();
-	} else {
+	// disable interrupt to avoid race condition
+	// of ATN irq between the atnishi() check and
+	// setting NDAC lo
+	cli();	
+	if (atnishi() || is_atna) {
 	      	IEEE_DDR_NRFD &= (uint8_t)~_BV(IEEE_PIN_NRFD);    // NRFD as input
 	      	IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);             // Enable pull-up
 	}
+	// allow interrupt again
+	sei();
 	is_nrfdout = 1;
 }
 
@@ -158,6 +164,7 @@ static inline uint8_t eoiishi() {
 // ATNA handling
 // (ATN acknowledge logic)
 
+// acknowledge ATN
 static inline void atnahi() {
 	is_atna = 0;
 }
@@ -204,7 +211,17 @@ static inline void settx(void) {
 	eoihi();
 }
 
+// switch hardware to idle (same as settx here, but maybe different
+// with different hardware
+static inline void setidle(void) {
+	nrfdhi();
+	ndachi();
+	davhi();
+	eoihi();
+}
+
 // switch hardware from transmit to receive (after talk)
+// this happens after ATN, so nrfd and ndac are already low
 static inline void setrx(void) {
 	davhi();
 	eoihi();
