@@ -19,6 +19,10 @@
 
 ****************************************************************************/
 
+#ifndef BUS_H
+#define	BUS_H
+
+
 /*
  * IEEE488 impedance layer
  *
@@ -27,10 +31,47 @@
  * calls to the channel framework, open calls etc.
  */
 
-int16_t bus_receivebyte(uint8_t *c, uint8_t newbyte);
+// these are the runtime variables for a bus end point like
+// the IEEE488 or the serial IEC bus.
+typedef struct {
+	// configuration
+	uint8_t 	device_address;	// Current device address 
+	uint8_t		secaddr_offset;	// offset to use on secondary address to get channel no
+					// to avoid collisions with other busses
+	// runtime for the bus
+	channel_t       *channel;	// current open file channel
 
-int16_t bus_attention(uint8_t cmd);
+	uint8_t         device;		// primary command byte, includes dev addr and TALK/LISTEN/...
+	uint8_t         secondary;	// secondary command byte, includes sec addr and OPEN/CLOSE/...
 
-int16_t bus_sendbyte(uint8_t cmd, uint8_t with_eoi);
+	// interrupt callback handling for commands and opens
+	uint8_t         cmd_done;	// set on a callback from the irq
+  	int8_t 		errnum; 	// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
 
+	// command channel
+	cmd_t		command;	// command buffer
+	errormsg_t	error;		// error message
+} bus_t;
+
+// init
+// needs to be called before any concrete bus instance init
+void bus_init();
+
+// IEEE/IEC protocol routines
+int16_t bus_receivebyte(bus_t *bus, uint8_t *c, uint8_t newbyte);
+
+int16_t bus_attention(bus_t *bus, uint8_t cmd);
+
+int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t with_eoi);
+
+// init the bus_t structure
+void bus_init_bus(bus_t *bus);
+
+// helper method
+
+static inline uint8_t bus_secaddr_adjust(bus_t *bus, uint8_t secaddr) {
+	return secaddr + bus->secaddr_offset;
+}
+
+#endif
 

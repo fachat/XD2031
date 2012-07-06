@@ -30,6 +30,7 @@
 
 void ieeehwi_init(uint8_t deviceno);
 
+void ieee_mainloop_iteration(void);
 
 #endif
 

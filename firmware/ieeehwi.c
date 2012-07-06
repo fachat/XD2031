@@ -26,8 +26,10 @@
 
 #include <ctype.h>
 
-#include "ieee.h"
 #include "ieeehw.h"
+#include "errormsg.h"
+#include "cmd.h"
+#include "channel.h"
 #include "bus.h"
 
 #include "debug.h"
@@ -43,6 +45,10 @@ void listenloop(void);
 #define isListening()   ((par_status&0xf000)==0x2000)
 #define isTalking()     ((par_status&0xf000)==0x4000)
 
+// bus state
+static bus_t bus;
+
+// TODO: make that ... different...
 static int16_t par_status = 0;
 
 
@@ -96,7 +102,7 @@ atn:
 void listenloop() {
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            par_status = bus_sendbyte(c, er & E_EOI);
+            par_status = bus_sendbyte(&bus, c, er & E_EOI);
         }
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
@@ -128,7 +134,7 @@ void talkloop()
             } while( nrfdislo() );
 
             /* write data & eoi */
-            par_status = bus_receivebyte(&c, 1);
+            par_status = bus_receivebyte(&bus, &c, 1);
             if(par_status & 0x40)
             {
                 eoilo();
@@ -161,7 +167,7 @@ void talkloop()
 
             davhi();
             eoihi();
-            par_status = bus_receivebyte(&c, 0);
+            par_status = bus_receivebyte(&bus, &c, 0);
 
             /* wait ndac lo */
             if( par_status & 0xff ) {
@@ -233,7 +239,7 @@ void ieee_mainloop_iteration(void)
 	    // ack with ndac hi
             ndachi();
 
-            par_status = bus_attention(cmd);
+            par_status = bus_attention(&bus, cmd);
 
 	    // wait until DAV goes up
 //	    do {
@@ -281,6 +287,9 @@ cmd:
  */
 void ieeehwi_init(uint8_t deviceno) {
         ieeehw_setup();
+
+	// register bus instance
+	bus_init_bus(&bus);
 }
 
 

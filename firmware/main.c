@@ -42,7 +42,6 @@
 #include "packet.h"
 #include "serial.h"
 #include "uarthw.h"
-#include "ieee.h"
 #include "ieeehw.h"
 #include "ieeehwi.h"
 #include "term.h"
@@ -56,12 +55,8 @@
 
 
 // GLOBALS
-uint8_t	fDevice;								// 0=IEEE, 1=IEC
-//uint8_t iec_device = 8;						// current device#
-
 
 // EXTERNALS
-extern uint8_t		rcvBcr;				// CR flag
 
 
 //---------------------------
@@ -88,42 +83,46 @@ uint16_t BytesFree()
 }
 
 
-//------------------------------------------------------------------------
-// Initialisierungen
-//------------------------------------------------------------------------
-void init()
-{
-	//TIMSK0 = 0;			// maskiere alle INT
-
-	// Ports initialisieren
-
-	//GLOBALS
-	fDevice	= 0;
-}
-
 
 /////////////////////////////////////////////////////////////////////////////
 // Main-Funktion
 /////////////////////////////////////////////////////////////////////////////
 int main()
 {
-	init(); 				// Initialisierungen
-	led_init();
-	uarthw_init();
-	serial_init();
-	term_init();
-	file_init();
-	channel_init();
+	// Initialisierungen
+	//
+	// first some basic hardware infrastructure
+	
 	//timer_init();			// Timer Interrupt initialisieren
-	ieeehw_init();
-	ieeehwi_init(8);
-	ieee_init();
+	led_init();
+
+	// server communication
+	uarthw_init();			// first hardware
+	serial_init();			// then logic layer
+
+	// debug output via "terminal"
+	term_init();
+
+	// init file handling (active open calls)
+	file_init();
+	// init main channel handling
+	channel_init();
+
+	// bus init	
+	bus_init();			// first the general bus (with bus counter)
+	// IEEE488 bus
+	ieeehw_init();			// hardware
+	ieeehwi_init(8);		// hardware-independent part; registers as bus
+
+	// enable interrupts
 	sei();
 
-	serial_sync();		// sync with the server
+	// sync with the server
+	serial_sync();		
 
+	// show our version...
   	ListVersion();
-
+	// ... and some system info
 	term_printf((" %u Bytes free"), BytesFree());
 	term_printf((", %d kHz"), (int32_t)(F_CPU/1000));
 	term_putcrlf();
@@ -131,8 +130,10 @@ int main()
 
 	while (1)  			// Mainloop-Begin
 	{
+		// keep data flowing on the serial line
 		serial_delay();
 
+		// handle IEEE488 bus
 		ieee_mainloop_iteration();
 	}
 }
