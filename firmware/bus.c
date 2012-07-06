@@ -230,7 +230,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 #ifdef DEBUG_SERIAL_DATA
     debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
-delayus(45);
+//delayus(45);
 
     if((bus->secondary & 0x0f) == 0x0f || (bus->secondary & 0xf0) == 0xf0) {
       if (bus->command.command_length < CONFIG_COMMAND_BUFFER_SIZE) {
