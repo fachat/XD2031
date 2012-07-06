@@ -33,11 +33,12 @@ void serial_delay();
 
 static inline void delayms(uint8_t t) {
 	uint8_t ms = t;	
-	while (ms > 0) {
+	do {
 		serial_delay();
 		delayhw_ms(1);
 		ms--;	
 	}
+	while (ms > 0);
 }
 
 static inline void delayus(uint8_t us) {
