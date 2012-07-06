@@ -30,6 +30,11 @@
 #include "ieeehw.h"
 #include "bus.h"
 
+#include "debug.h"
+#include "led.h"
+
+#undef DEBUG_BUS
+
 // Prototypes
 
 void talkloop(void);
@@ -231,6 +236,12 @@ void ieee_mainloop_iteration(void)
             par_status = bus_attention(cmd);
 
 	    // wait until DAV goes up
+//	    do {
+//		if (atnishi()) {
+//		    // ATN hi, end loop
+//		    goto cmd;
+//		}
+//	    }
             while(davislo());
         }
 
@@ -239,6 +250,9 @@ void ieee_mainloop_iteration(void)
 	// parallelattention has set status what to do
 	// now transfer the data
 cmd:
+#ifdef DEBUG_BUS
+	debug_printf("stat=%04x", par_status); debug_putcrlf();
+#endif
 
 	if(isListening())
         {

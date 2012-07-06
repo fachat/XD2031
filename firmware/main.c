@@ -115,6 +115,7 @@ int main()
 	file_init();
 	channel_init();
 	//timer_init();			// Timer Interrupt initialisieren
+	ieeehw_init();
 	ieeehwi_init(8);
 	ieee_init();
 	sei();
