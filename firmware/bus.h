@@ -27,10 +27,10 @@
  * calls to the channel framework, open calls etc.
  */
 
-int16_t parallelreceivebyte(uint8_t *c, uint8_t newbyte);
+int16_t bus_receivebyte(uint8_t *c, uint8_t newbyte);
 
-int16_t parallelattention(uint8_t cmd);
+int16_t bus_attention(uint8_t cmd);
 
-int16_t parallelsendbyte(uint8_t cmd, uint8_t with_eoi);
+int16_t bus_sendbyte(uint8_t cmd, uint8_t with_eoi);
 
 

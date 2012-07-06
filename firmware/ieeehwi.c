@@ -32,8 +32,8 @@
 
 // Prototypes
 
-int talkloop(void);
-int listenloop(void);
+void talkloop(void);
+void listenloop(void);
 
 #define isListening()   ((par_status&0xf000)==0x2000)
 #define isTalking()     ((par_status&0xf000)==0x4000)
@@ -88,22 +88,22 @@ atn:
         return E_ATN;
 }
 
-int listenloop() {
+void listenloop() {
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            par_status = parallelsendbyte(c, er & E_EOI);
+            par_status = bus_sendbyte(c, er & E_EOI);
         }
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
 	if (er != E_ATN) {
 	    setidle();
 	}
-        return 0;
+        return;
 }
 
 /***************************************************************************/
 
-int talkloop()
+void talkloop()
 {
         int16_t er /*,sec*/;
         uint8_t c;
@@ -123,7 +123,7 @@ int talkloop()
             } while( nrfdislo() );
 
             /* write data & eoi */
-            par_status = parallelreceivebyte(&c, 1);
+            par_status = bus_receivebyte(&c, 1);
             if(par_status & 0x40)
             {
                 eoilo();
@@ -156,7 +156,7 @@ int talkloop()
 
             davhi();
             eoihi();
-            par_status = parallelreceivebyte(&c, 0);
+            par_status = bus_receivebyte(&c, 0);
 
             /* wait ndac lo */
             if( par_status & 0xff ) {
@@ -171,17 +171,17 @@ int talkloop()
         }
 	// no ATN, so set bus to idle
 	setidle();
-        return(er&(E_EOI));
+        return; //(er&(E_EOI));
 
 atn:
 	// sets IEEE488 back to receive mode
         setrx();
-        return(er&(E_EOI));
+        return; //(er&(E_EOI));
 
 idle:
 	// after EOF we set bus to idle
 	setidle();
-        return(er&(E_EOI));
+        return; //(er&(E_EOI));
 }
 
 /***************************************************************************
@@ -228,7 +228,7 @@ void ieee_mainloop_iteration(void)
 	    // ack with ndac hi
             ndachi();
 
-            par_status = parallelattention(cmd);
+            par_status = bus_attention(cmd);
 
 	    // wait until DAV goes up
             while(davislo());
@@ -265,7 +265,7 @@ cmd:
 /***************************************************************************
  * Init code
  */
-void ieeehwi_init(void) {
+void ieeehwi_init(uint8_t deviceno) {
         ieeehw_setup();
 }
 

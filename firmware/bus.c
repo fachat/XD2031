@@ -26,9 +26,12 @@
 /*
  * IEEE488 impedance layer
  *
- * provides the parallelsendbyte, parallelreceivebyte and parallelattention
+ * provides the bus_sendbyte, bus_receivebyte and bus_attention
  * methods called by the IEEE loop, and translates these into 
  * calls to the channel framework, open calls etc.
+ *
+ * Uses a struct with state info, so can be called from both
+ * IEEE488 as well as IEC bus
  */
 
 #include "config.h"
@@ -77,6 +80,8 @@ static channel_t 	*channel;
 
 static uint8_t		device;		// primary command byte, includes dev addr and TALK/LISTEN/...
 static uint8_t		secondary;	// secondary command byte, includes sec addr and OPEN/CLOSE/...
+
+static uint8_t 		cmd_done = 0;	// set on a callback from the irq
 
 /**
  * struct ieeeflags_t - Bitfield of various flags, mostly IEEE-related
@@ -170,7 +175,6 @@ void ieee_init(void) {
  * command buffer and command execution
  */
 
-static uint8_t cmd_done = 0;
 
 static void _cmd_callback(int8_t errnum) {
     ieee_data.errnum = errnum;
@@ -230,7 +234,7 @@ static int16_t cmd_handler (void)
  */
 
 // called during listenloop to send bytes to the server
-int16_t parallelsendbyte(uint8_t data, uint8_t with_eoi) {
+int16_t bus_sendbyte(uint8_t data, uint8_t with_eoi) {
 
     int16_t st = 0;
 //led_on();
@@ -256,7 +260,7 @@ delayus(45);
 // called during talkloop to receive bytes from the server
 // If the preload parameter is set, the data byte is set,
 // but the read pointers are not advanced (used to be named "fake"...)
-int16_t parallelreceivebyte(uint8_t *data, uint8_t preload) {
+int16_t bus_receivebyte(uint8_t *data, uint8_t preload) {
 
 	int16_t st = 0;
 
@@ -295,7 +299,7 @@ int16_t parallelreceivebyte(uint8_t *data, uint8_t preload) {
 }
 
 /* These routines work for IEEE488 emulation on both C64 and PET.  */
-static int parallelcommand(void)
+static int bus_command(void)
 {
     uint8_t b;
     int8_t secaddr;
@@ -308,6 +312,11 @@ static int parallelcommand(void)
 
     /* which device ? */
     //p = &serialdevices[TrapDevice & 0x0f];
+    
+    if ((device & 0x0f) != device_address) {
+	return 0x80;	// device not present
+    }
+
 
     secaddr = secondary & 0x0f;
 
@@ -325,7 +334,7 @@ static int parallelcommand(void)
 	  }
           if ((!st) && ((device & 0xf0) == 0x40)) {
 	      	// if we should TALK, prepare the first data byte
-              	st = parallelreceivebyte(&b, 1) & 0xbf;   /* any error, except eof */
+              	st = bus_receivebyte(&b, 1) & 0xbf;   /* any error, except eof */
           }
           break;
       case 0xE0:
@@ -351,7 +360,7 @@ static int parallelcommand(void)
     return (st);
 }
 
-int16_t parallelattention(uint8_t b) {
+int16_t bus_attention(uint8_t b) {
     int16_t st = 0;
 
     // UNLISTEN and it is either open or the command channel
@@ -359,14 +368,17 @@ int16_t parallelattention(uint8_t b) {
         && (((secondary & 0xf0) == 0xf0)
             || ((secondary & 0x0f) == 0x0f))) {
 	// then process the command
-        st = parallelcommand();
-    } else
+        st = bus_command();
+    } else {
+
 	// not open, not command:
         switch (b & 0xf0) {
           case 0x20:
           case 0x40:
 	      // store device number plus LISTEN/TALK info
-              device = b;
+	      if ((b & 0x0f) == device_address) {
+              	device = b;
+	      }
               break;
 
           case 0x60:
@@ -374,24 +386,28 @@ int16_t parallelattention(uint8_t b) {
 	      // secondary address (open DATA channel, or CLOSE)
               secondary = b;
 	      // process a command if necessary
-              st |= parallelcommand();
+              st = bus_command();
               break;
 
           case 0xf0:            /* Open File needs the filename first */
               secondary = b;
 	      // TODO: close previously opened file
               break;
+	  default:
+	      // falls through e.g. for unlisten/untalk
+	      break;
         }
-
-    if (device_address != (device & 0x0f)) {
-	// not this device
-        st |= 0x80;
     }
 
     if ((b == 0x3f) || (b == 0x5f)) {
 	// unlisten, untalk
         device = 0;
         secondary = 0;
+    } else {
+    	if (device_address != (device & 0x0f)) {
+		// not this device
+        	st |= 0x80;
+    	}
     }
 
 #ifdef DEBUG_SERIAL

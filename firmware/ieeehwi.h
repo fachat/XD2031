@@ -28,7 +28,7 @@
 
 // general functions
 
-void ieeehwi_init();
+void ieeehwi_init(uint8_t deviceno);
 
 
 #endif
