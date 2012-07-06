@@ -67,7 +67,7 @@ typedef struct {
 	uint8_t		current;
 	uint8_t		writetype;
 	provider_t	*provider;
-	int8_t		(*directory_converter)(volatile packet_t *packet);
+	int8_t		(*directory_converter)(packet_t *packet);
 	// channel pull state - only one can be pulled at a time
 	int8_t		pull_state;
 	int8_t		last_pull_errorno;
@@ -90,41 +90,41 @@ void channel_init(void);
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*dirconverter)(volatile packet_t *));
+int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*dirconverter)(packet_t *));
 
-volatile channel_t* channel_find(int8_t chan);
+channel_t* channel_find(int8_t chan);
 
-static inline int8_t channel_is_writable(volatile channel_t *chan) {
+static inline int8_t channel_is_writable(channel_t *chan) {
 	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;
 }
 
-static inline uint8_t channel_is_rel(volatile channel_t *chan) {
+static inline uint8_t channel_is_rel(channel_t *chan) {
 	// check recordlen > 0 for REL files
 	return 0;	// we don't support REL files so far
 }
 
-char channel_current_byte(volatile channel_t *chan);
+char channel_current_byte(channel_t *chan);
 
-static inline uint8_t channel_is_eof(volatile channel_t *chan) {
+static inline uint8_t channel_is_eof(channel_t *chan) {
         // return buf->sendeoi && (buf->position == buf->lastused);
         return packet_is_eof(&chan->buf[chan->current]);
 }       
 
-static inline uint8_t channel_current_is_eof(volatile channel_t *chan) {
+static inline uint8_t channel_current_is_eof(channel_t *chan) {
         // return buf->sendeoi && (buf->position == buf->lastused);
         return packet_current_is_eof(&chan->buf[chan->current]);
 }       
 
-uint8_t channel_next(volatile channel_t *chan);
+uint8_t channel_next(channel_t *chan);
 
-uint8_t channel_has_more(volatile channel_t *chan);
+uint8_t channel_has_more(channel_t *chan);
 
-volatile channel_t* channel_refill(volatile channel_t *chan);
+channel_t* channel_refill(channel_t *chan);
 
 void channel_preload(int8_t channelno);
-void channel_preloadp(volatile channel_t *chan);
+void channel_preloadp(channel_t *chan);
 
-volatile channel_t* channel_put(volatile channel_t *chan, char c, int forceflush);
+channel_t* channel_put(channel_t *chan, char c, int forceflush);
 
 void channel_close(int8_t secondary_address);
 

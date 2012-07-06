@@ -40,7 +40,7 @@
 static char buf[TERM_BUFFER_LENGTH];
 static uint8_t nchars;
 
-static volatile packet_t termpack;
+static packet_t termpack;
 
 static void send() {
 

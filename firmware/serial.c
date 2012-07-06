@@ -51,10 +51,10 @@
  * If buffer slot is available, return immediately.
  * Otherwise wait until slot is available
  *
- * Note: submitter must check buf_is_empty() for true or buf_wait_free()
+ * Note: submitter must check packet_is_done() or friends
  * before reuse or freeing the memory!
  */
-void serial_submit(volatile packet_t *buf);
+void serial_submit(packet_t *buf);
 
 /*****************************************************************************
  * submit a channel rpc call to the UART
@@ -71,7 +71,7 @@ void serial_submit(volatile packet_t *buf);
 void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum));
 
-static int8_t directory_converter(volatile packet_t *p);
+static int8_t directory_converter(packet_t *p);
 static int8_t to_provider(packet_t *p);
 
 provider_t serial_provider  = {
@@ -85,10 +85,10 @@ provider_t serial_provider  = {
 
 // ----------------------------------
 // send variables
-volatile static packet_t	*slots[NUMBER_OF_SLOTS];
-volatile static uint8_t		slots_used = 0;
+static packet_t		*slots[NUMBER_OF_SLOTS];
+static uint8_t		slots_used = 0;
 
-volatile static int8_t		txstate;
+static int8_t		txstate;
 
 #define	TX_TYPE		0
 #define	TX_LEN		1
@@ -98,7 +98,7 @@ volatile static int8_t		txstate;
 
 // ----------------------------------
 // receive variables
-volatile static struct {
+static struct {
 	int8_t		channelno;	// -1 is unused
 	packet_t	*rxpacket;
 	void		(*callback)(int8_t channelno, int8_t errnum);
@@ -148,8 +148,8 @@ static uint8_t *append(uint8_t *outp, const char *to_append) {
  */
 static uint8_t out[64];
 
-static int8_t directory_converter(volatile packet_t *p) {
-	volatile uint8_t *inp = NULL;
+static int8_t directory_converter(packet_t *p) {
+	uint8_t *inp = NULL;
 	uint8_t *outp = &(out[0]);
 
 	if (p == NULL) {
@@ -454,7 +454,7 @@ void serial_flush() {
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
  */
-void serial_submit(volatile packet_t *buf) {
+void serial_submit(packet_t *buf) {
 
 	// wait for slot free
 	while (slots_used >= (NUMBER_OF_SLOTS-1)) {
@@ -543,10 +543,10 @@ void serial_sync() {
 
 	// sync with the pc server
 	// by sending 128 FS_SYNC bytes
-//	for (uint8_t cnt = 128; cnt > 0; cnt--) {
+	for (uint8_t cnt = 128; cnt > 0; cnt--) {
 		while (!uarthw_can_send());
 		uarthw_send(FS_SYNC);
-//	}
+	}
 }
 
 

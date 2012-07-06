@@ -75,27 +75,27 @@ typedef struct {
 	int8_t		chan;		// channel number
 } packet_t;
 
-static inline int8_t packet_get_chan(volatile packet_t *packet) {
+static inline int8_t packet_get_chan(packet_t *packet) {
 	return packet->chan;
 }
 
-static inline int8_t packet_get_type(volatile packet_t *packet) {
+static inline int8_t packet_get_type(packet_t *packet) {
 	return packet->type;
 }
 
-static inline int8_t packet_get_contentlen(volatile packet_t *packet) {
+static inline int8_t packet_get_contentlen(packet_t *packet) {
 	return packet->wp;
 }
 
-static inline int8_t packet_get_capacity(volatile packet_t *packet) {
+static inline int8_t packet_get_capacity(packet_t *packet) {
 	return packet->len;
 }
 
-static inline volatile uint8_t* packet_get_buffer(volatile packet_t *packet) {
+static inline uint8_t* packet_get_buffer(packet_t *packet) {
 	return packet->buffer;
 }
 
-static inline void packet_init(volatile packet_t *packet, uint8_t len, uint8_t *buffer) {
+static inline void packet_init(packet_t *packet, uint8_t len, uint8_t *buffer) {
 
 	packet->buffer = buffer;
 	packet->len = len;
@@ -104,31 +104,31 @@ static inline void packet_init(volatile packet_t *packet, uint8_t len, uint8_t *
 	packet->wp = 0;
 }
 
-static inline void packet_reset(volatile packet_t *packet, uint8_t channo) {
+static inline void packet_reset(packet_t *packet, uint8_t channo) {
 	packet->rp = 0;
 	packet->wp = 0;
 	packet->chan = channo;
 }
 
-static inline bool packet_is_done(volatile packet_t *buf) {
+static inline bool packet_is_done(packet_t *buf) {
 	return buf->wp == buf->rp;
 }
 
-static inline bool packet_is_full(volatile packet_t *buf) {
+static inline bool packet_is_full(packet_t *buf) {
 	return buf->wp == buf->len;
 }
 
-static inline void packet_wait_done(volatile packet_t *buf) {
+static inline void packet_wait_done(packet_t *buf) {
 	while( ! packet_is_done(buf) ) { 
 		delayms(1);
 	}
 }
 
-static inline void packet_set_read(volatile packet_t *packet) {
+static inline void packet_set_read(packet_t *packet) {
 	packet->rp = 0;
 }
 
-static inline int8_t packet_set_write(volatile packet_t *packet, int8_t chan, uint8_t type, uint8_t datalen) {
+static inline int8_t packet_set_write(packet_t *packet, int8_t chan, uint8_t type, uint8_t datalen) {
 	if (datalen > packet->len) {
 		return -1;
 	}
@@ -142,14 +142,14 @@ static inline int8_t packet_set_write(volatile packet_t *packet, int8_t chan, ui
  * tell the packet that it has been filled "out of band", e.g. by directly writing to 
  * the buffer the packet points to.
  */
-static inline void packet_set_filled(volatile packet_t *packet, int8_t chan, uint8_t type, uint8_t datalen) {
+static inline void packet_set_filled(packet_t *packet, int8_t chan, uint8_t type, uint8_t datalen) {
 	packet->type = type;
 	packet->chan = chan;
 	packet->wp = datalen;
 	packet_set_read(packet);
 }
 
-static inline void packet_update_wp(volatile packet_t *packet, int8_t datalen) {
+static inline void packet_update_wp(packet_t *packet, int8_t datalen) {
 	packet->wp = datalen;
 }
 
@@ -157,17 +157,17 @@ static inline void packet_update_wp(volatile packet_t *packet, int8_t datalen) {
  * writes a byte into the buffer.
  * Note: no bounds check!
  */
-static inline void packet_write_char(volatile packet_t *buf, uint8_t ch) {
+static inline void packet_write_char(packet_t *buf, uint8_t ch) {
 	buf->buffer[buf->wp++] = ch;
 }
 
-static inline uint8_t packet_read_char(volatile packet_t *buf) {
+static inline uint8_t packet_read_char(packet_t *buf) {
 	return buf->buffer[buf->rp++];
 }
 
 
 // interface for IEEE side. Ignores the type and packet bytes
-static inline uint8_t packet_peek_data(volatile packet_t *buf) {
+static inline uint8_t packet_peek_data(packet_t *buf) {
 	return buf->buffer[buf->rp];
 }
 
@@ -181,22 +181,22 @@ static inline uint8_t packet_peek_data(volatile packet_t *buf) {
 //  buf->read = 0;
 //}
 // return buf->position++ < buf->lastused;
-static inline uint8_t packet_next(volatile packet_t *buf) {
+static inline uint8_t packet_next(packet_t *buf) {
 	buf->rp++;
 	return (buf->rp < buf->wp) ? 1 : 0;
 }
 
-static inline uint8_t packet_is_eof(volatile packet_t *buf) {
+static inline uint8_t packet_is_eof(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
 	return (buf->type == ((uint8_t)(FS_EOF & 0xff))) && (buf->rp >= buf->wp);
 }
 
-static inline uint8_t packet_current_is_eof(volatile packet_t *buf) {
+static inline uint8_t packet_current_is_eof(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
 	return (buf->type == ((uint8_t)(FS_EOF & 0xff))) && ((buf->rp + 1) >= buf->wp);
 }
 
-static inline bool packet_has_data(volatile packet_t *buf) {
+static inline bool packet_has_data(packet_t *buf) {
 	return (buf->rp < buf->wp) ? 1 : 0;
 }
 

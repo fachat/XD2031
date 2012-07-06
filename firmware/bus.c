@@ -205,7 +205,7 @@ static int16_t cmd_handler (bus_t *bus)
 	}
 	// result of the open
         if (bus_for_irq->errnum != 0) {
-                set_error(&(bus_for_irq->error), bus_for_irq->errnum);
+                set_error(&(bus->error), bus_for_irq->errnum);
                 channel_close(bus_secaddr_adjust(bus, secaddr));
         } else {
                 // really only does something on read-only channels

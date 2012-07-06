@@ -32,12 +32,12 @@
 #include "packet.h"
 
 typedef struct {
-	void (*submit)(volatile packet_t *buf);
+	void (*submit)(packet_t *buf);
 	void (*submit_call)(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(volatile packet_t *p);
+	int8_t (*directory_converter)(packet_t *p);
 	// convert a packet from CBM codepage to provider
 	// used only for open and commands!
 	// return -1 if packet is too small to hold converted value

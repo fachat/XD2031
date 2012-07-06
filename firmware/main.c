@@ -45,6 +45,9 @@
 #include "ieeehw.h"
 #include "ieeehwi.h"
 #include "term.h"
+#include "file.h"
+#include "channel.h"
+#include "bus.h"
 
 #include "led.h"
 //#include "iec.h"
