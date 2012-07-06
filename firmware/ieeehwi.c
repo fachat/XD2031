@@ -28,7 +28,7 @@
 
 #include "ieee.h"
 #include "ieeehw.h"
-#include "ieee3.h"
+#include "bus.h"
 
 // Prototypes
 
@@ -96,7 +96,7 @@ int listenloop() {
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
 	if (er != E_ATN) {
-	    //setidle();
+	    setidle();
 	}
         return 0;
 }

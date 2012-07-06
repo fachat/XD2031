@@ -41,7 +41,7 @@
 #include "status.h"
 #include "errormsg.h"
 #include "ieee.h"
-#include "ieee3.h"
+#include "bus.h"
 #include "cmd.h"
 
 #include "led.h"

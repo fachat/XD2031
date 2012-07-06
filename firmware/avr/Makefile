@@ -21,8 +21,11 @@ ASMFLAGS=
 # F_CPU represents the clock frequency and is used to compute the delay loop times in util/delay.h
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
 
-all: $(TARGET).hex
+clean: archclean deviceclean
 
+distclean: clean
+	rm $(TARGET) $(TARGET).hex
+	
 fw: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
 	$(CC) $(CFLAGS) -o $(TARGET) $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
@@ -33,8 +36,8 @@ $(TARGET).hex : $(TARGET)
 load:
 	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(TARGET).hex:i
 
-clean:
-	rm $(TARGET) $(TARGET).hex
+archclean:
+	rm -f ints.o
 
 ## Assembler files
 avr/ints.o: avr/ints.S

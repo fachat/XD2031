@@ -38,6 +38,10 @@ void ieee_init(void);
 void ieee_mainloop_init(void);
 void ieee_mainloop_iteration(void);
 
+/**
+ * the following functions are ieee-internal actually.
+ */
+
 static inline uint8_t ieee_secaddr_to_channel(uint8_t secaddr) {
 	return secaddr + IEEE_SECADDR_OFFSET;
 }

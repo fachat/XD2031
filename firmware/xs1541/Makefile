@@ -11,4 +11,6 @@ DEVICEASMOBJ=atn.o
 xs1541/atn.o: xs1541/atn.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
 
+deviceclean:
+	rm -f atn.o
 
