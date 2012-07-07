@@ -41,7 +41,7 @@
 #include "fscmd.h"
 #include "dir.h"
 
-#undef DEBUG_READ
+#define DEBUG_READ
 
 #define	MAX_BUFFER_SIZE	64
 

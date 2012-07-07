@@ -183,7 +183,11 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 
 	activeslot->callback = callback;
 
-	// no more error here
+	// no more error here, just the submit.
+	// so callers can be sure if this function returns <0, they do not need
+	// to close the channel, as it has not been opened
+	// If this function returns 0, a callback must be received and handled,
+	// and the channel is already opened.
 		
 	activeslot->channel_no = channel_no;
 

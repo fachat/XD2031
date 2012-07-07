@@ -52,7 +52,7 @@
 
 #include "xs1541.h"
 
-#undef	DEBUG_SERIAL
+#define	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
 /*
@@ -91,7 +91,9 @@ static cmd_t command = {
 static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum)) {
 
+#ifdef DEBUG_SERIAL
 	debug_puts("IEEE Status refill"); debug_putcrlf();
+#endif
 
 	if (packet_get_type(txbuf) != FS_READ) {
 		// should not happen
@@ -133,6 +135,8 @@ static uint8_t secaddr_offset_counter;
 
 void bus_init() {
 	secaddr_offset_counter = 0;
+
+	set_error(&error, ERROR_DOSVERSION);
 }
 
 /* Init IEEE bus */
@@ -176,6 +180,8 @@ static int16_t cmd_handler (bus_t *bus)
       /* Handle commands */
 
       doscommand(&(bus->command));                   /* Command channel */
+
+
     } else {
 
       /* Handle filenames */
@@ -194,6 +200,8 @@ static int16_t cmd_handler (bus_t *bus)
 	// open ran into an error
 	// -- errormsg should be already set, so nothing left to do here
 	// TODO
+	debug_printf("Received direct error number on open: %d\n", rv);
+        set_error(&error, 74);
 	st = 2;
       }	else {
 	// as this code is not (yet?) prepared for async operation, we 
@@ -203,9 +211,10 @@ static int16_t cmd_handler (bus_t *bus)
 		// TODO this should be reworked more backend (serial) independent
 		serial_delay();
 	}
+	debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
 	// result of the open
         if (bus_for_irq->errnum != 0) {
-                set_error(&(bus->error), bus_for_irq->errnum);
+                set_error(&error, bus_for_irq->errnum);
                 channel_close(bus_secaddr_adjust(bus, secaddr));
         } else {
                 // really only does something on read-only channels
@@ -257,6 +266,16 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	channel_t *channel = bus->channel;
 
 	if (channel == NULL) {
+		if (secaddr == 15) {
+      			channel_open(bus_secaddr_adjust(bus, secaddr), WTYPE_READONLY, &ieee_status_provider, NULL);
+			channel = channel_find(bus_secaddr_adjust(bus, secaddr));
+			bus->channel = channel;
+		}
+	}
+
+	if (channel == NULL) {
+		// if still NULL, error
+		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = 0x83;
 	} else {
 #ifdef DEBUG_SERIAL

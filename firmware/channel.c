@@ -32,6 +32,8 @@
 #include "channel.h"
 #include "provider.h"
 
+#include "serial.h"
+
 //#include "led.h"
 //#include "debug.h"
 
@@ -331,12 +333,15 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 	if (packet_is_full(curpack) || forceflush) {
 		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
 
-		// wait until the other packet has been replied to
-		while (chan->push_state != PUSH_FILLONE) {
+		// wait until the other packet has been replied to,
+		// i.e. it has been sent, the buffer is free again 
+		// which we need for the next channel_put
+		while (chan->push_state == PUSH_FILLTWO) {
 			delayms(1);
+			//serial_delay();
 		}
 
-		// note that we pushed one and are filling the second
+		// note that we pushed one and are now filling the second
 		chan->push_state = PUSH_FILLTWO;
 
 		// use same packet as rx/tx buffer

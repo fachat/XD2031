@@ -50,7 +50,7 @@ typedef struct {
 
 	// command channel
 	cmd_t		command;	// command buffer
-	errormsg_t	error;		// error message
+	//errormsg_t	error;		// error message - is currently shared between busses
 } bus_t;
 
 // init

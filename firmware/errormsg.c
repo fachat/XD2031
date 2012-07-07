@@ -30,6 +30,8 @@
 #include "version.h"		/* for LONGVERSION */
 #include "xs1541.h"		/* for HW_NAME */
 
+#undef	DEBUG_ERROR
+
 /// Version number string, will be added to message 73
 const char PROGMEM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
 
@@ -41,7 +43,7 @@ const char PROGMEM longverstr[] = LONGVERSION;
 #define EC(x) x+0x80
 
 /// Abbreviations used in the main error strings
-static const uint8_t abbrevs[] = {
+static const uint8_t PROGMEM abbrevs[] = {
   EC(0), 'F','I','L','E',
   EC(1), 'R','E','A','D',
   EC(2), 'W','R','I','T','E',
@@ -59,7 +61,7 @@ static const uint8_t abbrevs[] = {
 };
 
 /// Error string table
-static const uint8_t messages[] = {
+static const uint8_t PROGMEM messages[] = {
   EC(00),
     ' ','O','K',
   EC(01),
@@ -256,7 +258,14 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
   *msg++ = ',';
 
   msg = appendnumber(msg,sector);
-  *msg = 13;
+  *msg++ = 13;
+
+  // end string marker
+  *msg = 0;
+
+#ifdef DEBUG_ERROR
+debug_printf("Set status to: %s\n", err->error_buffer);
+#endif
 
   //channel_status_set(err->error_buffer, msg-err->error_buffer);
 
