@@ -32,7 +32,7 @@
 /* Note: not really used at themoment, only F_FREE is set in the init */
 #define F_FREE          0	/* must be 0 */
 
-#define MAXFILES        4
+#define MAXFILES        16
 
 
 void cmd_init();

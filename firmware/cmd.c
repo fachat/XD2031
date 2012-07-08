@@ -17,7 +17,10 @@
 
 */
 
+#include <ctype.h>
+
 #include "cmd.h"
+#include "file.h"
 #include "name.h"
 #include "wireformat.h"
 
@@ -93,7 +96,8 @@ const char *command_to_name(command_t cmd) {
 }
 
 
-int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum)) {
+int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
+					void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
 	debug_putps("COMMAND: ");
 	debug_puts((char*)&(command->command_buffer));
@@ -104,9 +108,9 @@ int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg,
 #ifdef DEBUG_CMD
         debug_printf("CMD=%s\n", nameinfo.cmd == CMD_NONE ? "-" : command_to_name(nameinfo.cmd));
         debug_printf("DRIVE=%c\n", nameinfo.drive == 0xff ? '-' : nameinfo.drive + 0x30);
-        debug_puts("NAME="); debug_puts((char*)nameinfo.name); debug_putcrlf();
-        debug_puts("ACCESS="); debug_putc(nameinfo.access); debug_putcrlf();
-        debug_puts("TYPE="); debug_putc(nameinfo.type); debug_putcrlf();
+        debug_printf("NAME=%s\n", (char*)nameinfo.name);
+        debug_puts("ACCESS="); debug_putc(isprint(nameinfo.access) ? nameinfo.access : '-'); debug_putcrlf();
+        debug_puts("TYPE="); debug_putc(isprint(nameinfo.type) ? nameinfo.type : '-'); debug_putcrlf();
 #endif
         // post-parse
 

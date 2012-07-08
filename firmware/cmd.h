@@ -78,7 +78,8 @@ command_t command_find(uint8_t *buf);
 
 const char* command_to_name(command_t cmd);
 
-int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum));
+int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
+						void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
 #endif

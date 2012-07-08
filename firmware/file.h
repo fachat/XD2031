@@ -38,10 +38,10 @@ void file_init(void);
 //
 // returns -1 on error, with an error message in cmd_t->error
 int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
-					void (*callback)(int8_t errnum), uint8_t is_save);
+					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save);
 
 // submit a call to the provider
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
- 			               void (*callback)(int8_t errnum)) ;
+ 			               void (*callback)(int8_t errnum, uint8_t *rxdata)) ;
 
 #endif

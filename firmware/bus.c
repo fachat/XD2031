@@ -158,72 +158,81 @@ void bus_init_bus(bus_t *bus) {
 
 static volatile bus_t *bus_for_irq;
 
-static void _cmd_callback(int8_t errnum) {
-    bus_for_irq->errnum = errnum;
-    bus_for_irq->cmd_done = 1;
+static void _cmd_callback(int8_t errnum, uint8_t *rxdata) {
+    	bus_for_irq->errnum = errnum;
+    	if (errnum == 1) {
+		if (rxdata != NULL) {
+			bus_for_irq->errparam = rxdata[1];
+		} else {
+			bus_for_irq->errparam = 0;
+		}
+    	}
+    	bus_for_irq->cmd_done = 1;
 }
 
 static int16_t cmd_handler (bus_t *bus)
 {
 
-    int16_t st = 0;
+	int16_t st = 0;
 
-    bus->cmd_done = 0;
+	bus->cmd_done = 0;
    
-    uint8_t secaddr = bus->secondary & 0x0f;
+	uint8_t secaddr = bus->secondary & 0x0f;
 
-    int8_t rv = 0;
+	int8_t rv = 0;
 
-    // prepare for callback from interrupt
-    bus_for_irq = bus;
-    bus_for_irq->cmd_done = 0;
+	// prepare for callback from interrupt
+	bus_for_irq = bus;
+	bus_for_irq->cmd_done = 0;
 
-    if (secaddr == 0x0f) {
-      /* Handle commands */
-
-      rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
+	if (secaddr == 0x0f) {
+      		/* Handle commands */
+      		rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback);
-    } else {
-
-      /* Handle filenames */
+    	} else {
+      		/* Handle filenames */
 
 #ifdef DEBUG_SERIAL
-      debug_printf("Open file secaddr=%02x, name='%s'\n",
-         secaddr, bus->command.command_buffer);
+      		debug_printf("Open file secaddr=%02x, name='%s'\n",
+         		secaddr, bus->command.command_buffer);
 #endif
 
-      rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
+      		rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback, secaddr == 1);
-    }
-      if (rv < 0) {
-	// open ran into an error
-	// -- errormsg should be already set, so nothing left to do here
-	// TODO
-	debug_printf("Received direct error number on open: %d\n", rv);
-        set_error(&error, 74);
-	st = 2;
-      }	else {
-	// as this code is not (yet?) prepared for async operation, we 
-	// need to wait here until the response from the server comes
-	// Note: use bus_for_irq here, as it is volatile
-	while (bus_for_irq->cmd_done == 0) {
-		// TODO this should be reworked more backend (serial) independent
-		serial_delay();
-	}
-	debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
-	// result of the open
-        if (bus_for_irq->errnum != 0) {
-                set_error(&error, bus_for_irq->errnum);
-                channel_close(bus_secaddr_adjust(bus, secaddr));
-        } else {
-                // really only does something on read-only channels
-                channel_preload(bus_secaddr_adjust(bus, secaddr));
-	}
-      }
+    	}
+      	if (rv < 0) {
+		// open ran into an error
+		// -- errormsg should be already set, so nothing left to do here
+		// TODO
+		debug_printf("Received direct error number on open: %d\n", rv);
+        	set_error(&error, 74);
+		st = 2;
+      	}	else {
+		// as this code is not (yet?) prepared for async operation, we 
+		// need to wait here until the response from the server comes
+		// Note: use bus_for_irq here, as it is volatile
+		while (bus_for_irq->cmd_done == 0) {
+			// TODO this should be reworked more backend (serial) independent
+			serial_delay();
+		}
+		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
+		// result of the open
+        	if (bus_for_irq->errnum != 0) {
+			if (bus_for_irq->errnum == 1) {
+				set_error_ts(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0);
+			} else {
+        	        	set_error(&error, bus_for_irq->errnum);
+			}
+        	        channel_close(bus_secaddr_adjust(bus, secaddr));
+        	} else {
+                	// really only does something on read-only channels
+                	channel_preload(bus_secaddr_adjust(bus, secaddr));
+		}
+      	}
 
-    bus->command.command_length = 0;
+    	bus->command.command_length = 0;
 
-    return st;
+    	return st;
 }
 
 

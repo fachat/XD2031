@@ -43,7 +43,7 @@ typedef struct {
 	packet_t	txbuf;
 	packet_t	rxbuf;
 	uint8_t		rxdata[OPEN_RX_DATA_LEN];
-	void		(*callback)(int8_t errnum);
+	void		(*callback)(int8_t errnum, uint8_t *rxdata);
 } open_t;
 
 static volatile open_t active[MAX_ACTIVE_OPEN];
@@ -63,7 +63,7 @@ void file_init(void) {
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
 //
-int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum), uint8_t is_save) {
+int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
 
 
 #if DEBUG_FILE
@@ -119,7 +119,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void 
 }
 
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
-		void (*callback)(int8_t errnum)) {
+		void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
 
 	// check for default drive (here is the place to set the last used one)
@@ -218,13 +218,13 @@ static void _file_open_callback(int8_t channelno, int8_t errnum) {
 		if (active[i].channel_no == channelno) {
 			if (errnum < 0) {
 				// we did not receive the packet!
-				active[i].callback(ERROR_DRIVE_NOT_READY);
+				active[i].callback(ERROR_DRIVE_NOT_READY, NULL);
 			} else {
 				// we did receive the reply packet
 				// TODO: translate into errormsg code
 				// NOTE: rxdata[0] is actually rxdata[FSP_DATA], as first
 				// byte of reply packet is the error number
-				active[i].callback(active[i].rxdata[0]);
+				active[i].callback(active[i].rxdata[0], active[i].rxdata);
 			}
 			active[i].channel_no = -1;
 			break;

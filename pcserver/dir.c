@@ -41,9 +41,9 @@
 #define min(a,b)        (((a)<(b))?(a):(b))
 
 /**
- *  * fopen the first matching directory entry, using the given
- *   * options string
- *    */
+ *  fopen the first matching directory entry, using the given
+ *  options string
+ */
 FILE *open_first_match(const char *pattern, const char *options) {
 	DIR *dp;
 	FILE *fp;
@@ -71,6 +71,50 @@ FILE *open_first_match(const char *pattern, const char *options) {
 		
 	}
 	return NULL;
+}
+
+/**
+ *  calls the callback on every matching file, returning the number of matches
+ *  The callback gets the match count as first parameter (starting with one),
+ *  and if it returns != 0 then the loop is exited.
+ */
+int dir_call_matches(const char *pattern, int (*callback)(const int num_of_match, const char *name)) {
+	int matches = 0;
+	DIR *dp;
+	int rv;
+	struct dirent *de;
+	int onlyone = 0;
+
+	// shortcut - if we don't have wildcards, just open it
+	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+		onlyone = 1;
+	}
+
+
+	dp = opendir(".");
+	if (dp) {
+		de = readdir(dp);
+
+		while (de != NULL) {
+			if (compare_pattern(de->d_name, pattern)) {
+				// match
+				matches ++;
+				rv = callback(matches, de->d_name);
+				if (rv || onlyone) {
+					// either callback tells us to stop
+					// or there are no wildcards, so this has to be it
+					closedir(dp);
+					// if rv < 0 then some kind of error happened, return it
+					// instead of the number of matches
+					return (rv < 0) ? rv : matches;
+				}
+			}
+			de = readdir(dp);
+		}
+		
+	}
+	closedir(dp);
+	return matches;
 }
 
 
