@@ -32,14 +32,53 @@
 #include "errormsg.h"
 #include "config.h"
 
+typedef enum {
+        // Default
+        //
+        CMD_NONE,
+        CMD_SYNTAX,
+        CMD_DIR,
+        //
+        // CBM DOS commands
+        //
+        CMD_INITIALIZE,
+        CMD_RENAME,
+        CMD_SCRATCH,
+	//
+        // unsupported
+        //
+        // CMD_VALIDATE,
+        // CMD_COPY,
+        // CMD_DUPLICATE,
+        // CMD_NEW,
+        // CMD_POSITION,
+        // CMD_BLOCKREAD,
+        // CMD_BLOCKWRITE,
+        // CMD_UX,
+        // CMD_MEM_READ,
+        // CMD_MEM_WRITE,
+        // CMD_MEM_EXEC,
+        //
+        // new commands
+        //
+        CMD_CD,
+        CMD_MKDIR,
+        CMD_RMDIR,
+        CMD_ASSIGN
+} command_t;
+
 typedef struct {
 	uint8_t 		command_length;
 	// command buffer
 	uint8_t 		command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
-	errormsg_t	*errormsg;
+//	errormsg_t	*errormsg;
 } cmd_t;
 
-void doscommand(cmd_t *command);
+command_t command_find(uint8_t *buf);
+
+const char* command_to_name(command_t cmd);
+
+int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum));
 
 
 #endif

@@ -19,17 +19,29 @@
 
 ****************************************************************************/
 
+#ifndef NAME_H
+#define NAME_H
+
+#include "cmd.h"		// for command_t
+
 /**
  * Structures and definitions for the file name handler
  */
 
+
 typedef struct {
 	uint8_t	drive;		// starts from 0 (real zero, not $30 = ASCII "0")
-	uint8_t cmd;		// command, "$" for directory open
+	command_t cmd;		// command, "$" for directory open
 	uint8_t	type;		// file type requested ("S", "P", ...)
 	uint8_t access;		// access type requested ("R", "W", ...)
 	uint8_t *name;		// pointer to the actual name
 	uint8_t	namelen;	// length of remaining file name
 } nameinfo_t;
 
+// shared global variable to be used in parse_filename, as long as it's threadsafe
+extern nameinfo_t nameinfo;
+
 void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command);
+
+#endif
+

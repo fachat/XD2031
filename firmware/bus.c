@@ -52,7 +52,7 @@
 
 #include "xs1541.h"
 
-#define	DEBUG_SERIAL
+#undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
 /*
@@ -82,10 +82,6 @@ static errormsg_t error = {
 
 static void set_ieee_ok(void) {
 	set_error(&error, 0);
-};
-
-static cmd_t command = {
-	0, "", &error
 };
 
 static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
@@ -176,26 +172,29 @@ static int16_t cmd_handler (bus_t *bus)
    
     uint8_t secaddr = bus->secondary & 0x0f;
 
+    int8_t rv = 0;
+
+    // prepare for callback from interrupt
+    bus_for_irq = bus;
+    bus_for_irq->cmd_done = 0;
+
     if (secaddr == 0x0f) {
       /* Handle commands */
 
-      doscommand(&(bus->command));                   /* Command channel */
-
-
+      rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
+									_cmd_callback);
     } else {
 
       /* Handle filenames */
 
 #ifdef DEBUG_SERIAL
-    debug_printf("Open file secaddr=%02x, name='%s'\n",
+      debug_printf("Open file secaddr=%02x, name='%s'\n",
          secaddr, bus->command.command_buffer);
 #endif
 
-      // prepare for callback from interrupt
-      bus_for_irq = bus;
-      bus_for_irq->cmd_done = 0;
-
-      int8_t rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), _cmd_callback, secaddr == 1);
+      rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
+									_cmd_callback, secaddr == 1);
+    }
       if (rv < 0) {
 	// open ran into an error
 	// -- errormsg should be already set, so nothing left to do here
@@ -221,7 +220,7 @@ static int16_t cmd_handler (bus_t *bus)
                 channel_preload(bus_secaddr_adjust(bus, secaddr));
 	}
       }
-    }
+
     bus->command.command_length = 0;
 
     return st;
@@ -313,7 +312,7 @@ static int16_t bus_command(bus_t *bus)
 {
     uint8_t b;
     int8_t secaddr;
-    int i, st = 0;
+    int st = 0;
 
 #ifdef DEBUG_SERIAL
     debug_printf("***ParallelCommand %02x %02x\n",

@@ -47,13 +47,13 @@ typedef struct {
 } open_t;
 
 static volatile open_t active[MAX_ACTIVE_OPEN];
-static nameinfo_t nameinfo;
 
 void file_init(void) {
 	for (uint8_t i = 0; i < MAX_ACTIVE_OPEN; i++) {
 		active[i].channel_no = -1;
 	}
 }
+
 
 // opens the file, registers an error code in command->error if necessary
 // If the open was successful, setup a channel for the given channel number
@@ -63,7 +63,7 @@ void file_init(void) {
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
 //
-int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t errnum), uint8_t is_save) {
+int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum), uint8_t is_save) {
 
 
 #if DEBUG_FILE
@@ -80,6 +80,48 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	parse_filename(command, &nameinfo, 0);
 
 	// post-parse
+
+	if (nameinfo.cmd != CMD_NONE && nameinfo.cmd != CMD_DIR) {
+		// command name during open
+		// this is in fact ignored by CBM DOS as checked with VICE's true drive emulation
+		debug_puts("NO CORRECT CMD: "); debug_puts(command_to_name(nameinfo.cmd)); debug_putcrlf();
+		nameinfo.cmd = 0;
+	}
+	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P') {
+		// not set, or set as not sequential and not program
+		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
+		set_error(errormsg, ERROR_FILE_TYPE_MISMATCH);
+		return -1;
+	}
+	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
+			&& nameinfo.access != 'A') {
+		debug_puts("UNKOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
+		// not set, or set as not read, write, or append
+		set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
+		return -1;
+	}
+	if (nameinfo.cmd == CMD_DIR && (nameinfo.access != 0 && nameinfo.access != 'R')) {
+		// trying to write to a directory
+		debug_puts("WRITE TO DIRECTORY!"); debug_putcrlf();
+		set_error(errormsg, ERROR_FILE_EXISTS);
+		return -1;
+	}
+
+	uint8_t type = FS_OPEN_RD;
+	// either ",W" or secondary address is one, i.e. save
+	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
+	if (nameinfo.access == 'A') type = FS_OPEN_AP;
+	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
+
+
+	return file_submit_call(channel_no, type, errormsg, callback);
+
+}
+
+uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
+		void (*callback)(int8_t errnum)) {
+
+
 	// check for default drive (here is the place to set the last used one)
 	if (nameinfo.drive == 0xff) {
 		// there currently only is a single drive, 0
@@ -87,35 +129,10 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	}
 
 	// check filename
-	if (nameinfo.cmd != 0 && nameinfo.cmd != '$') {
-		// command name during open
-		// this is in fact ignored by CBM DOS as checked with VICE's true drive emulation
-		debug_puts("NO CORRECT CMD: "); debug_putc(nameinfo.cmd); debug_putcrlf();
-		nameinfo.cmd = 0;
-	}
 	if (nameinfo.drive != 0) {
 		// here would be a place to handle multiple drives in a device..
 		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
-		set_error(command->errormsg, ERROR_DRIVE_NOT_READY);
-		return -1;
-	}
-	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P') {
-		// not set, or set as not sequential and not program
-		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
-		set_error(command->errormsg, ERROR_FILE_TYPE_MISMATCH);
-		return -1;
-	}
-	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
-			&& nameinfo.access != 'A') {
-		debug_puts("UNKOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
-		// not set, or set as not read, write, or append
-		set_error(command->errormsg, ERROR_SYNTAX_UNKNOWN);
-		return -1;
-	}
-	if (nameinfo.cmd == '$' && (nameinfo.access != 0 && nameinfo.access != 'R')) {
-		// trying to write to a directory
-		debug_puts("WRITE TO DIRECTORY!"); debug_putcrlf();
-		set_error(command->errormsg, ERROR_FILE_EXISTS);
+		set_error(errormsg, ERROR_DRIVE_NOT_READY);
 		return -1;
 	}
 
@@ -133,15 +150,9 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	if (activeslot == NULL) {
 		debug_puts("NO OPEN SLOT FOR OPEN!");
 		debug_putcrlf();
-		set_error(command->errormsg, ERROR_NO_CHANNEL);
+		set_error(errormsg, ERROR_NO_CHANNEL);
 		return -1;
 	}
-
-	uint8_t type = FS_OPEN_RD;
-	// either ",W" or secondary address is one, i.e. save
-	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
-	if (nameinfo.access == 'A') type = FS_OPEN_AP;
-	if (nameinfo.cmd == '$') type = FS_OPEN_DR;
 
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
@@ -156,7 +167,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 		// converting the file name to the provider exceeded the buffer space
 		debug_puts("NAME CONVERSION EXCEEDS BUFFER!");
 		debug_putcrlf();
-		set_error(command->errormsg, ERROR_SYNTAX_NONAME);
+		set_error(errormsg, ERROR_SYNTAX_NONAME);
 		return -1;
 	}
 
@@ -168,7 +179,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	if (channel != NULL) {
 		debug_puts("FILE OPEN ERROR");
 		debug_putcrlf();
-		set_error(command->errormsg, ERROR_NO_CHANNEL);
+		set_error(errormsg, ERROR_NO_CHANNEL);
 		// clean up
 		channel_close(channel_no);
 		return -1;
@@ -177,7 +188,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, void (*callback)(int8_t err
 	int8_t e = channel_open(channel_no, writetype, provider, converter);
 	if (e < 0) {
 		debug_puts("E="); debug_puthex(e); debug_putcrlf();
-		set_error(command->errormsg, ERROR_NO_CHANNEL);
+		set_error(errormsg, ERROR_NO_CHANNEL);
 		return -1;
 	}
 

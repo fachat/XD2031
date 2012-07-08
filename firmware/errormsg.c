@@ -30,7 +30,7 @@
 #include "version.h"		/* for LONGVERSION */
 #include "xs1541.h"		/* for HW_NAME */
 
-#undef	DEBUG_ERROR
+#define	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
 const char PROGMEM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
