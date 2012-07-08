@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "cmd.h"
 #include "name.h"
@@ -48,6 +49,10 @@ nameinfo_t nameinfo;
 /*
  * not sure if I should break that into a parser for file names and a parser for 
  * commands...
+ *
+ * Note that some functionality relies on that the resulting name pointer is 
+ * within the cmd_t command buffer! So the result has to be taken from "in place"
+ * of what has been given
  */
 void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
@@ -160,6 +165,20 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 //		result->cmd = cmd;
 //		result->namelen = 0;
 //	}
+
+	// insert the drive (as endpoint address) as first byte of the file name
+        // prepare request data
+        if (result->name == in->command_buffer) {
+                // we used a default, and need to insert the endpoint in front
+                // of the name
+                memmove(result->name+1, result->name, result->namelen);
+                result->namelen++;
+        } else {
+                // parser has left some space before the name
+                result->namelen++;
+                result->name--;
+        }
+        result->name[0] = result->drive;
 
 #if DEBUG_NAME
 	debug_printf("CMD=%s\n", result->cmd == CMD_NONE ? '-' : command_to_name(result->cmd));

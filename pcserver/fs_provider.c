@@ -38,6 +38,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
+#include <stdlib.h>
 
 #include "wireformat.h"
 #include "dir.h"
@@ -61,21 +62,47 @@ typedef struct {
 	unsigned int	is_first :1;	// is first directory entry?
 } File;
 
-File files[MAXFILES];
-
+typedef struct {
+	// derived from endpoint_t
+	struct provider_t 	*ptype;
+	// payload
+	File files[MAXFILES];
+} fs_endpoint_t;
 
 void fsp_init() {
+}
+
+extern provider_t fs_provider;
+
+endpoint_t *fsp_new(const char *path) {
+
+	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
+
+	fsep->ptype = (struct provider_t *) &fs_provider;
+
 	int i;
         for(i=0;i<MAXFILES;i++) {
-          files[i].state = F_FREE;
+          fsep->files[i].state = F_FREE;
         }
+	return (endpoint_t*) fsep;
+}
+
+static void close_fds(endpoint_t *ep, int tfd);
+
+void fsp_free(endpoint_t *ep) {
+	int i;
+        for(i=0;i<MAXFILES;i++) {
+		close_fds(ep, i);
+        }
+	free(ep);
 }
 
 // ----------------------------------------------------------------------------------
 // commands as sent from the device
 
 // close a file descriptor
-static void close_fds(int tfd) {
+static void close_fds(endpoint_t *ep, int tfd) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 	int er = 0;
 	if (files[tfd].fp != NULL) {
 		er = fclose(files[tfd].fp);
@@ -94,7 +121,8 @@ static void close_fds(int tfd) {
 }
 
 // open a file for reading, writing, or appending
-static int open_file(int tfd, const char *buf, const char *mode) {
+static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 		/* no directory separators - security rules! */
 		char *nm = (char*)buf;
 		if(*nm=='/') nm++;
@@ -106,10 +134,10 @@ static int open_file(int tfd, const char *buf, const char *mode) {
 
 		// close the currently open files
 		// so we don't loose references to open files
-		close_fds(tfd);
+		close_fds(ep, tfd);
 
 		FILE *fp = open_first_match(nm, mode);
-printf("OPEN_RD/AP/WR(%s: %s)=%p\n",mode, buf,(void*)fp);
+printf("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)fp);
 		if(fp) {
 		  files[tfd].fp = fp;
 		  files[tfd].dp = NULL;
@@ -120,10 +148,11 @@ printf("OPEN_RD/AP/WR(%s: %s)=%p\n",mode, buf,(void*)fp);
 }
 
 // open a directory read
-static int open_dr(int tfd, const char *buf) {
+static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 		// close the currently open files
 		// so we don't loose references to open files
-		close_fds(tfd);
+		close_fds(ep, tfd);
 
 		// save pattern for later comparisons
 		strcpy(files[tfd].dirpattern, buf);
@@ -140,7 +169,8 @@ printf("OPEN_DR(%s)=%p\n",buf,(void*)dp);
 }
 
 // read directory
-static int read_dir(int tfd, char *retbuf, int *eof) {
+static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int *eof) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 		int rv = 0;
 		  if (files[tfd].is_first) {
 		    files[tfd].is_first = 0;
@@ -150,7 +180,7 @@ static int read_dir(int tfd, char *retbuf, int *eof) {
 		    return rv;
 		  }
 		  if(!files[tfd].de) {
-		    close_fds(tfd);
+		    close_fds(ep, tfd);
 		    *eof = 1;
 		    int l = dir_fill_disk(retbuf);
 		    rv = l;
@@ -164,7 +194,8 @@ static int read_dir(int tfd, char *retbuf, int *eof) {
 }
 
 // read file data
-static int read_file(int tfd, char *retbuf, int len, int *eof) {
+static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 
 		int rv = 0;
 
@@ -174,7 +205,7 @@ static int read_file(int tfd, char *retbuf, int len, int *eof) {
 		  rv = n;
 		  if(n<MAX_BUFFER_SIZE) {
 		    *eof = 1;
-		    close_fds(tfd);
+		    close_fds(ep, tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
@@ -182,7 +213,7 @@ static int read_file(int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
-		      close_fds(tfd);
+		      close_fds(ep, tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
 		      ungetc(eofc, fp);
@@ -193,7 +224,8 @@ static int read_file(int tfd, char *retbuf, int len, int *eof) {
 }
 
 // write file data
-static int write_file(int tfd, char *buf, int len, int is_eof) {
+static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 		FILE *fp = files[tfd].fp;
 		if(fp) {
 		  if (len > FSP_DATA) {
@@ -201,7 +233,7 @@ static int write_file(int tfd, char *buf, int len, int is_eof) {
 		    int n = fwrite(buf+FSP_DATA, 1, len-FSP_DATA, fp);
 		  }
 		  if(is_eof) {
-		    close_fds(tfd);
+		    close_fds(ep, tfd);
 		  }
 		  return 0;
 		}
@@ -229,7 +261,8 @@ static int _delete_callback(const int num_of_match, const char *name) {
 	return 0;	
 }
 
-static int fs_delete(char *buf, int *outdeleted) {
+static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 
 	int matches = 0;
 	char *p = buf+FSP_DATA;
@@ -261,15 +294,16 @@ static int fs_delete(char *buf, int *outdeleted) {
 
 // ----------------------------------------------------------------------------------
 
-static int readfile(int chan, char *retbuf, int len, int *eof) {
+static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
+	File *files = ((fs_endpoint_t*)ep)->files;
 	int rv = 0;
 	File *f = &files[chan];
 	if (f->dp) {
-		rv = read_dir(chan, retbuf, eof);
+		rv = read_dir(ep, chan, retbuf, eof);
 	} else
 	if (f->fp) {
 		// read a file
-		rv = read_file(chan, retbuf, len, eof);
+		rv = read_file(ep, chan, retbuf, len, eof);
 	}
 	return rv;
 }
@@ -278,6 +312,8 @@ static int readfile(int chan, char *retbuf, int len, int *eof) {
 provider_t fs_provider = {
 	"fs",
 	fsp_init,
+	fsp_new,
+	fsp_free,
 	close_fds,
 	open_file,
 	open_dr,

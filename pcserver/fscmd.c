@@ -44,22 +44,115 @@
 #include "provider.h"
 #include "log.h"
 
-#define DEBUG_READ
-#define DEBUG_WRITE
+#define DEBUG_CMD
+#undef DEBUG_READ
+#undef DEBUG_WRITE
 
-#define	MAX_BUFFER_SIZE	64
+#define	MAX_BUFFER_SIZE			64
+#define	MAX_NUMBER_OF_ENDPOINTS		10		// max 10 drives
 
 extern provider_t fs_provider;
 
+//------------------------------------------------------------------------------------
+// Mapping from drive number, which is given on open and commands, to endpoint
+// provider
+
+typedef struct {
+	int		epno;
+	endpoint_t	*ep;
+} ep_t;
+
+ep_t eptable[MAX_NUMBER_OF_ENDPOINTS];
+
+
+void ep_init() {
+	int i;
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+          eptable[i].epno = -1;
+        }
+
+	// manually handle the initial provider
+	fs_provider.init();
+
+	eptable[0].epno = 0;		// drive 0
+	eptable[0].ep = fs_provider.newep(".");
+
+	// test
+	eptable[4].epno = 6;		// drive 6
+	eptable[4].ep = fs_provider.newep("..");
+}
+
+endpoint_t *drive_to_endpoint(int drive) {
+	int i;
+	
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+          	if (eptable[i].epno == drive) {
+			return eptable[i].ep;
+		}
+        }
+	return NULL;
+}
+
+//------------------------------------------------------------------------------------
+// Mapping from channel number for open files to endpoint providers
+// These are set when the channel is opened
+
+typedef struct {
+	int		channo;
+	endpoint_t	*ep;
+} chan_t;
+
+chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
+
+
+void chan_init() {
+	int i;
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+          chantable[i].channo = -1;
+        }
+}
+
+endpoint_t *chan_to_endpoint(int chan) {
+	
+	int i;
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+          	if (chantable[i].channo == chan) {
+			return chantable[i].ep;
+		}
+        }
+	return NULL;
+}
+
+void free_chan(int channo) {
+	int i;
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+          	if (chantable[i].channo == channo) {
+			chantable[i].channo = -1;
+			chantable[i].ep = NULL;
+		}
+        }
+}
+
+void set_chan(int channo, endpoint_t *ep) {
+	int i;
+        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+		// we overwrite existing entries, to "heal" leftover cruft
+		// just in case...
+          	if (chantable[i].channo == -1 || chantable[i].channo == channo) {
+			chantable[i].channo = channo;
+			chantable[i].ep = ep;
+		}
+        }
+}
+
+//------------------------------------------------------------------------------------
+//
 
 void cmd_init() {
-//	int i;
-//        for(i=0;i<MAXFILES;i++) {
-//          files[i].state = F_FREE;
-//        }
-
-	fs_provider.init();
+	ep_init();
+	chan_init();
 }
+
 
 void cmd_loop(int readfd, int writefd) {
 
@@ -143,6 +236,14 @@ void do_cmd(char *buf, int fd) {
 		return;
 	}
 
+#ifdef DEBUG_CMD
+	{
+		int n = buf[FSP_LEN];
+		printf("cmd: %d bytes @%p: ",n, buf);
+		for(int i=0;i<n;i++) printf("%02x ",buf[i]); printf("\n");
+	}
+#endif
+
 	// not on FS_TERM
 	tfd = buf[FSP_FD];
 	if (tfd < 0 || tfd >= MAXFILES) {
@@ -152,7 +253,8 @@ void do_cmd(char *buf, int fd) {
 
 	buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
 
-	provider_t *prov = &fs_provider;
+	provider_t *prov = NULL; //&fs_provider;
+	endpoint_t *ep = NULL;
 
 #if 0
 	printf("got cmd=%d, fd=%d, name=%s",cmd,tfd,
@@ -171,46 +273,91 @@ void do_cmd(char *buf, int fd) {
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
-		rv = prov->open(tfd, buf + FSP_DATA, "wb");
-		retbuf[FSP_DATA] = rv;
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "wb");
+			retbuf[FSP_DATA] = rv;
+			if (rv == 0) {
+				set_chan(tfd, ep);
+			}
+		}
 		break;
 	case FS_OPEN_DR:
-		rv = prov->opendir(tfd, buf + FSP_DATA);
-		retbuf[FSP_DATA] = rv;
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->opendir(ep, tfd, buf + FSP_DATA + 1);
+			retbuf[FSP_DATA] = rv;
+			if (rv == 0) {
+				set_chan(tfd, ep);
+			}
+		}
 		break;
 	case FS_OPEN_RD:
-		rv = prov->open(tfd, buf + FSP_DATA, "rb");
-		retbuf[FSP_DATA] = rv;
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "rb");
+			retbuf[FSP_DATA] = rv;
+			if (rv == 0) {
+				set_chan(tfd, ep);
+			}
+		}
 		break;
 	case FS_OPEN_AP:
-		rv = prov->open(tfd, buf + FSP_DATA, "ab");
-		retbuf[FSP_DATA] = rv;
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "ab");
+			retbuf[FSP_DATA] = rv;
+			if (rv == 0) {
+				set_chan(tfd, ep);
+			}
+		}
 		break;
 	case FS_READ:
-		rv = prov->readfile(tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE, &eof);
-		retbuf[FSP_LEN] = FSP_DATA + rv;
-		if (eof) {
-			retbuf[FSP_CMD] = FS_EOF;
+		ep = chan_to_endpoint(tfd);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE, &eof);
+			retbuf[FSP_LEN] = FSP_DATA + rv;
+			if (eof) {
+				retbuf[FSP_CMD] = FS_EOF;
+			}
 		}
 		break;
 	case FS_WRITE:
 	case FS_EOF:
-		rv = prov->writefile(tfd, buf, len, cmd == FS_EOF);
-		retbuf[FSP_DATA] = rv;
+		ep = chan_to_endpoint(tfd);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->writefile(ep, tfd, buf, len, cmd == FS_EOF);
+			retbuf[FSP_DATA] = rv;
+		}
 		break;
 	case FS_CLOSE:
-		prov->close(tfd);
-		retbuf[FSP_DATA] = 0;
+		ep = chan_to_endpoint(tfd);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			prov->close(ep, tfd);
+			free_chan(tfd);
+			retbuf[FSP_DATA] = 0;
+		}
 		break;
 
 		// command operations
 	case FS_DELETE:
-		rv = prov->scratch(buf, &outdeleted);
-		if (rv == 1) {
-			retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
-			retbuf[FSP_LEN] = FSP_DATA + 2;
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			rv = prov->scratch(ep, buf, &outdeleted);
+			if (rv == 1) {
+				retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
+				retbuf[FSP_LEN] = FSP_DATA + 2;
+			}
+			retbuf[FSP_DATA] = rv;
 		}
-		retbuf[FSP_DATA] = rv;
 		break;
 	}
 
@@ -219,7 +366,7 @@ void do_cmd(char *buf, int fd) {
 	if (e < 0) {
 		printf("Error on write: %d\n", errno);
 	}
-#ifdef DEBUG_WRITE
+#if defined DEBUG_WRITE || defined DEBUG_CMD
 	printf("write %02x %02x %02x:", retbuf[0], retbuf[1],
 			retbuf[2] );
 	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", retbuf[i]);
