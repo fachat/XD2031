@@ -3,11 +3,6 @@
     Serial line filesystem server
     Copyright (C) 2012 Andre Fachat
 
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
-
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -28,9 +23,35 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 
 void log_errno(const char *msg) {
         printf(">> %s: errno=%d: %s\n", msg, errno, strerror(errno));
 }
+
+void log_warn(const char *msg, ...) {
+       va_list args;
+       va_start(args, msg);
+
+       printf("WARN:");
+        vprintf(msg, args);
+}
+
+void log_error(const char *msg, ...) {
+       va_list args;
+       va_start(args, msg);
+
+       printf("ERR :");
+        vprintf(msg, args);
+}
+
+void log_info(const char *msg, ...) {
+       va_list args;
+       va_start(args, msg);
+
+       printf("INFO:");
+        vprintf(msg, args);
+}
+
 
 

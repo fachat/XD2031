@@ -40,7 +40,6 @@
 #include <strings.h>
 #include <stdlib.h>
 
-#include "wireformat.h"
 #include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
@@ -169,7 +168,7 @@ printf("OPEN_DR(%s)=%p\n",buf,(void*)dp);
 }
 
 // read directory
-static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int *eof) {
+static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	File *files = ((fs_endpoint_t*)ep)->files;
 		int rv = 0;
 		  if (files[tfd].is_first) {
@@ -186,7 +185,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int *eof) {
 		    rv = l;
 		    return rv;
 		  }
-		  int l = dir_fill_entry(retbuf, files[tfd].de, MAX_BUFFER_SIZE-FSP_DATA);
+		  int l = dir_fill_entry(retbuf, files[tfd].de, len);
 		  rv = l;
 		  // prepare for next read (so we know if we're done)
 		  files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
@@ -228,10 +227,8 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *files = ((fs_endpoint_t*)ep)->files;
 		FILE *fp = files[tfd].fp;
 		if(fp) {
-		  if (len > FSP_DATA) {
-		    // TODO: evaluate return value
-		    int n = fwrite(buf+FSP_DATA, 1, len-FSP_DATA, fp);
-		  }
+		  // TODO: evaluate return value
+		  int n = fwrite(buf, 1, len, fp);
 		  if(is_eof) {
 		    close_fds(ep, tfd);
 		  }
@@ -265,7 +262,7 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	File *files = ((fs_endpoint_t*)ep)->files;
 
 	int matches = 0;
-	char *p = buf+FSP_DATA;
+	char *p = buf;
 
 	do {
 		// comma is file pattern separator
@@ -294,12 +291,25 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 
 // ----------------------------------------------------------------------------------
 
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
+       return open_file(ep, tfd, buf, "rb");
+}
+
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
+       return open_file(ep, tfd, buf, "wb");
+}
+
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
+       return open_file(ep, tfd, buf, "ab");
+}
+
+
 static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 	File *files = ((fs_endpoint_t*)ep)->files;
 	int rv = 0;
 	File *f = &files[chan];
 	if (f->dp) {
-		rv = read_dir(ep, chan, retbuf, eof);
+		rv = read_dir(ep, chan, retbuf, len, eof);
 	} else
 	if (f->fp) {
 		// read a file
@@ -315,7 +325,10 @@ provider_t fs_provider = {
 	fsp_new,
 	fsp_free,
 	close_fds,
-	open_file,
+	open_file_rd,
+	open_file_wr,
+	open_file_ap,
+	NULL, //open_file_rw,
 	open_dr,
 	readfile,
 	write_file,

@@ -52,6 +52,8 @@
 #define	MAX_NUMBER_OF_ENDPOINTS		10		// max 10 drives
 
 extern provider_t fs_provider;
+extern provider_t ftp_provider;
+extern provider_t http_provider;
 
 //------------------------------------------------------------------------------------
 // Mapping from drive number, which is given on open and commands, to endpoint
@@ -80,6 +82,10 @@ void ep_init() {
 	// test
 	eptable[4].epno = 6;		// drive 6
 	eptable[4].ep = fs_provider.newep("..");
+
+	// test
+	eptable[6].epno = 7;		// drive 7
+	eptable[4].ep = ftp_provider.newep("zimmers.net/pub/cbm");
 }
 
 endpoint_t *drive_to_endpoint(int drive) {
@@ -276,7 +282,7 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "wb");
+			rv = prov->open_wr(ep, tfd, buf + FSP_DATA + 1);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
@@ -298,7 +304,7 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "rb");
+			rv = prov->open_rd(ep, tfd, buf + FSP_DATA + 1);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
@@ -309,7 +315,7 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open(ep, tfd, buf + FSP_DATA + 1, "ab");
+			rv = prov->open_ap(ep, tfd, buf + FSP_DATA + 1);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
@@ -320,7 +326,7 @@ void do_cmd(char *buf, int fd) {
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE, &eof);
+			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
 			retbuf[FSP_LEN] = FSP_DATA + rv;
 			if (eof) {
 				retbuf[FSP_CMD] = FS_EOF;
@@ -332,7 +338,7 @@ void do_cmd(char *buf, int fd) {
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->writefile(ep, tfd, buf, len, cmd == FS_EOF);
+			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
 			retbuf[FSP_DATA] = rv;
 		}
 		break;
@@ -351,7 +357,7 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->scratch(ep, buf, &outdeleted);
+			rv = prov->scratch(ep, buf+FSP_DATA, &outdeleted);
 			if (rv == 1) {
 				retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
 				retbuf[FSP_LEN] = FSP_DATA + 2;
