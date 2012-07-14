@@ -41,10 +41,23 @@ Fix bugs:
 	  well. Need to more specifically define error codes;
 	  also a print# to the command channel after open fails.
 
-	- RENAME is not yet implemented
+	- error channel result does not update as it should
+
+	- RENAME is not yet implemented in the fs provider
+	
+	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
+	  and commands (CHDIR would be good...)
 
 	- The ASSIGN command is still missing, to allow management of
 	  drive assignments e.g. to internet servers or host directories
+
+	- PET BASIC4 still hangs on file not found (run/stop works though)
+
+	- SCRATCH (and maybe other) BASIC commands don't work even though
+	  they work on a normal OPEN
+
+	- fs_provider does not honor initial start path (always starts in
+	  working dir)
 
 	- ...
 

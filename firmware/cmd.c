@@ -47,7 +47,11 @@ command_t command_find(uint8_t *input) {
 		return CMD_SCRATCH;
 		break;
 	case 'C':
-		return CMD_CD;
+		if (*(input+1) == 'D' || *(input+1) == 'H') {
+			return CMD_CD;
+		}
+		// this would be the COPY command
+		return CMD_SYNTAX;
 		break;
 	case 'M':
 		return CMD_MKDIR;
