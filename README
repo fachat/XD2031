@@ -59,7 +59,34 @@ Fix bugs:
 	- fs_provider does not honor initial start path (always starts in
 	  working dir)
 
+	- fs_provider does not free() curpath and realpath on freeing
+
 	- ...
+
+
+ROADMAP
+--------
+
+Here are some ideas about what can be implemented.
+
+With the ASSIGN command it is (will be) possible to assign drive numbers (like the "0" in "$0") 
+to different service providers. Some of those will be in the atmega, some will be on the PC side.
+Currently there is only one in the atmega, the one that connects via RS232-over-USB. On the PC
+side there currently are three, filesystem, FTP and HTTP. All those providers basically implement
+the "wireformat" protocol, so it is a clearly separated responsibility. If you are willing to 
+help with one of these ideas, feel free to contact me!
+
+In the future these providers can be implemented:
+
+	- A D64 provider on the PC side, to use D64/D80/D82 etc files
+	- An sdcard provider on the atmega side to use files on an SD card
+	- An iec provider - so a PET can "call out" to a serial IEC floppy
+	- And vice versa, an ieee provider and a serial iec bus interface to
+	  allow e.g. the C64 to use an IEEE488 disk
+	- A remote FS provider on the PC side: connect to a remote "wireformat" server
+
+On the XS1541 I'm actually willing to sacrifice the parallel user port connector (for C64 fastloaders)
+in favour of a device number switch, an SD card interface, and maybe a serial configuration PROM.
 
 
 REFERENCES
