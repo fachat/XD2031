@@ -60,7 +60,11 @@ typedef struct {
 	int		(*writefile)(endpoint_t *ep, int chan, char *buf, int len, int is_eof);	// write a file
 
 	// command channel
-	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);	// delete
+	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete
+	int		(*rename)(endpoint_t *ep, char *name);			// rename a file or dir
+	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
+	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
+	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 
 	
 } provider_t;

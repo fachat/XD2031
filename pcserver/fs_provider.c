@@ -38,7 +38,10 @@
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
+#include <limits.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "dir.h"
 #include "fscmd.h"
@@ -53,7 +56,7 @@
 //#define	min(a,b)	(((a)<(b))?(a):(b))
 
 typedef struct {
-	int		state;		/* note: currently not really used */
+	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
 	char		dirpattern[MAX_BUFFER_SIZE];
@@ -65,7 +68,9 @@ typedef struct {
 	// derived from endpoint_t
 	struct provider_t 	*ptype;
 	// payload
-	File files[MAXFILES];
+	char			*basepath;			// malloc'd base path
+	char			*curpath;			// malloc'd current path
+	File 			files[MAXFILES];
 } fs_endpoint_t;
 
 void fsp_init() {
@@ -73,27 +78,100 @@ void fsp_init() {
 
 extern provider_t fs_provider;
 
+static void init_fp(File *fp) {
+
+	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
+
+        fp->chan = -1;
+}
+
 endpoint_t *fsp_new(const char *path) {
 
 	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
 
 	fsep->ptype = (struct provider_t *) &fs_provider;
 
+	// malloc's a buffer and stores the canonical real path in it
+	fsep->basepath = realpath(path, NULL);
+	// copy into current path
+	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
+	strcpy(fsep->curpath, fsep->basepath);
+
+	log_info("FS provider set to real path '%s'\n", fsep->basepath);
+
 	int i;
         for(i=0;i<MAXFILES;i++) {
-          fsep->files[i].state = F_FREE;
+		init_fp(&(fsep->files[i]));
         }
 	return (endpoint_t*) fsep;
 }
 
-static void close_fds(endpoint_t *ep, int tfd);
+// close a file descriptor
+static int close_fd(File *file) {
+	int er = 0;
+	if (file->fp != NULL) {
+		er = fclose(file->fp);
+		if (er < 0) {
+			log_errno("Error closing fd");
+		}
+		file->fp = NULL;
+	}
+	if (file->dp != NULL) {
+		er = closedir(file->dp);
+		if (er < 0) {
+			log_errno("Error closing dp");
+		}
+		file->dp = NULL;
+	}
+	init_fp(file);
+	return er;
+}
+
 
 void fsp_free(endpoint_t *ep) {
-	int i;
+        fs_endpoint_t *cep = (fs_endpoint_t*) ep;
+        int i;
         for(i=0;i<MAXFILES;i++) {
-		close_fds(ep, i);
+                close_fd(&(cep->files[i]));
         }
-	free(ep);
+        free(ep);
+}
+
+
+// ----------------------------------------------------------------------------------
+//
+
+static File *reserve_file(endpoint_t *ep, int chan) {
+        fs_endpoint_t *cep = (fs_endpoint_t*) ep;
+
+        for (int i = 0; i < MAXFILES; i++) {
+                if (cep->files[i].chan == chan) {
+                        close_fd(&(cep->files[i]));
+                }
+                if (cep->files[i].chan < 0) {
+                        File *fp = &(cep->files[i]);
+                        init_fp(fp);
+                        fp->chan = chan;
+
+			//log_debug("reserving file %p for chan %d\n", fp, chan);
+
+                        return &(cep->files[i]);
+                }
+        }
+        log_warn("Did not find free curl session for channel=%d\n", chan);
+        return NULL;
+}
+
+static File *find_file(endpoint_t *ep, int chan) {
+        fs_endpoint_t *cep = (fs_endpoint_t*) ep;
+
+        for (int i = 0; i < MAXFILES; i++) {
+                if (cep->files[i].chan == chan) {
+                        return &(cep->files[i]);
+                }
+        }
+        log_warn("Did not find curl session for channel=%d\n", chan);
+        return NULL;
 }
 
 // ----------------------------------------------------------------------------------
@@ -101,27 +179,19 @@ void fsp_free(endpoint_t *ep) {
 
 // close a file descriptor
 static void close_fds(endpoint_t *ep, int tfd) {
-	File *files = ((fs_endpoint_t*)ep)->files;
-	int er = 0;
-	if (files[tfd].fp != NULL) {
-		er = fclose(files[tfd].fp);
-		if (er < 0) {
-			log_errno("Error closing fd");
-		}
-		files[tfd].fp = NULL;
-	}
-	if (files[tfd].dp != NULL) {
-		er = closedir(files[tfd].dp);
-		if (er < 0) {
-			log_errno("Error closing dp");
-		}
-		files[tfd].dp = NULL;
+	File *file = find_file(ep, tfd); // ((fs_endpoint_t*)ep)->files;
+	if (file != NULL) {
+		close_fd(file);
+		init_fp(file);
 	}
 }
 
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
-	File *files = ((fs_endpoint_t*)ep)->files;
+
+        File *file = reserve_file(ep, tfd);
+
+	if (file != NULL) {
 		/* no directory separators - security rules! */
 		char *nm = (char*)buf;
 		if(*nm=='/') nm++;
@@ -131,74 +201,85 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 			return -1;
 		}
 
-		// close the currently open files
-		// so we don't loose references to open files
-		close_fds(ep, tfd);
-
 		FILE *fp = open_first_match(nm, mode);
-printf("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)fp);
+
+		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)fp);
+
 		if(fp) {
-		  files[tfd].fp = fp;
-		  files[tfd].dp = NULL;
+		  file->fp = fp;
+		  file->dp = NULL;
 		  return 0;
 		}
 		// TODO: open error (maybe depending on errno?)
-		return -1;
+	}
+	return -1;
 }
 
 // open a directory read
 static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
-	File *files = ((fs_endpoint_t*)ep)->files;
-		// close the currently open files
-		// so we don't loose references to open files
-		close_fds(ep, tfd);
+
+        File *file = reserve_file(ep, tfd);
+	
+	if (file != NULL) {
 
 		// save pattern for later comparisons
-		strcpy(files[tfd].dirpattern, buf);
+		strcpy(file->dirpattern, buf);
 		DIR *dp = opendir("." /*buf+FSP_DATA*/);
-printf("OPEN_DR(%s)=%p\n",buf,(void*)dp);
+
+		log_info("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
+							tfd, (void*)file, (void*)dp);
+
 		if(dp) {
-		  files[tfd].fp = NULL;
-		  files[tfd].dp = dp;
-		  files[tfd].is_first = 1;
+		  file->fp = NULL;
+		  file->dp = dp;
+		  file->is_first = 1;
 		  return 0;
 		}
 		// TODO: open error (maybe depending on errno?)
-		return -1;
+	}
+	return -1;
 }
 
 // read directory
 static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-	File *files = ((fs_endpoint_t*)ep)->files;
+
+	File *file = find_file(ep, tfd);
+
+	//log_debug("read_dir: file=%p\n", file);
+
+	if (file != NULL) {
 		int rv = 0;
-		  if (files[tfd].is_first) {
-		    files[tfd].is_first = 0;
-		    int l = dir_fill_header(retbuf, 0, files[tfd].dirpattern);
+		  if (file->is_first) {
+		    file->is_first = 0;
+		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
 		    rv = l;
-		    files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
+		    file->de = dir_next(file->dp, file->dirpattern);
 		    return rv;
 		  }
-		  if(!files[tfd].de) {
+		  if(!file->de) {
 		    close_fds(ep, tfd);
 		    *eof = 1;
 		    int l = dir_fill_disk(retbuf);
 		    rv = l;
 		    return rv;
 		  }
-		  int l = dir_fill_entry(retbuf, files[tfd].de, len);
+		  int l = dir_fill_entry(retbuf, file->de, len);
 		  rv = l;
 		  // prepare for next read (so we know if we're done)
-		  files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
+		  file->de = dir_next(file->dp, file->dirpattern);
 		  return rv;
+	}
+	return -22;
 }
 
 // read file data
 static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-	File *files = ((fs_endpoint_t*)ep)->files;
+	File *file = find_file(ep, tfd);
 
+	if (file != NULL) {
 		int rv = 0;
 
-		  FILE *fp = files[tfd].fp;
+		  FILE *fp = file->fp;
 
 		  int n = fread(retbuf, 1, len, fp);
 		  rv = n;
@@ -219,13 +300,18 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		      // do not send EOF
 		    }
 		  }
-		  return rv;
+		return rv;
+	}
+	return -22;
 }
 
 // write file data
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
-	File *files = ((fs_endpoint_t*)ep)->files;
-		FILE *fp = files[tfd].fp;
+	File *file = find_file(ep, tfd);
+
+	if (file != NULL) {
+
+		FILE *fp = file->fp;
 		if(fp) {
 		  // TODO: evaluate return value
 		  int n = fwrite(buf, 1, len, fp);
@@ -234,7 +320,8 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		  }
 		  return 0;
 		}
-		return -1;
+	}
+	return -1;
 }
 
 // ----------------------------------------------------------------------------------
@@ -259,7 +346,6 @@ static int _delete_callback(const int num_of_match, const char *name) {
 }
 
 static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
-	File *files = ((fs_endpoint_t*)ep)->files;
 
 	int matches = 0;
 	char *p = buf;
@@ -287,6 +373,73 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	return 1;	// FILES SCRATCHED message
 }	
 
+static int fs_rename(endpoint_t *ep, char *buf) {
+}
+
+
+static int fs_cd(endpoint_t *ep, char *buf) {
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	log_debug("Change dir to: %s\n", buf);
+
+	//  concat new path to current path
+	char *newpath = malloc(strlen(fsep->curpath) + strlen(buf) + 2);
+	strcpy(newpath, fsep->curpath);
+	strcat(newpath, "/");
+	strcat(newpath, buf);
+
+	// canonicalize it
+	char *newreal = realpath(newpath, NULL);
+
+	// free buffer so we don't forget it
+	free(newpath);
+
+	// check if the new path is still under the base path
+	if (strstr(newreal, fsep->basepath) == newreal) {
+		// the needle base path is found at the start of the new real path
+		// -> ok
+		int rv = chdir(newreal);
+		if (rv < 0) {
+			log_errno("Error changing directory");
+			free(newreal);
+			return -22;
+		} 
+		free(fsep->curpath);
+		fsep->curpath = newreal;
+	} else {
+		// needle (base path) is not in haystack (new path)
+		// -> security error
+		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
+		free(newreal);
+		return -22;
+	}
+	return 0;
+}
+
+
+static int fs_mkdir(endpoint_t *ep, char *buf) {
+
+	int rv = mkdir(buf, 0557);
+
+	if (rv < 0) {
+		log_errno("Error trying to make a directory");
+		return -22;
+	}
+	return 0;
+}
+
+
+static int fs_rmdir(endpoint_t *ep, char *buf) {
+
+	int rv = rmdir(buf);
+
+	if (rv < 0) {
+		log_errno("Error trying to remove a directory");
+		return -22;
+	}
+	return 0;
+}
+
 
 
 // ----------------------------------------------------------------------------------
@@ -305,9 +458,14 @@ static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
 
 
 static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
-	File *files = ((fs_endpoint_t*)ep)->files;
+
+	File *f = find_file(ep, chan); // ((fs_endpoint_t*)ep)->files;
+
+	//log_debug("read_dir chan %d: file=%p (fp=%p, dp=%p)\n", 
+	//	chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp);
+
 	int rv = 0;
-	File *f = &files[chan];
+
 	if (f->dp) {
 		rv = read_dir(ep, chan, retbuf, len, eof);
 	} else
@@ -332,7 +490,11 @@ provider_t fs_provider = {
 	open_dr,
 	readfile,
 	write_file,
-	fs_delete
+	fs_delete,
+	fs_rename,
+	fs_cd,
+	fs_mkdir,
+	fs_rmdir
 };
 
 

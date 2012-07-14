@@ -619,33 +619,6 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 	return -22;
 }
 
-// read directory
-static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int *eof) {
-#if 0
-	File *files = ((fs_endpoint_t*)ep)->files;
-		int rv = 0;
-		  if (files[tfd].is_first) {
-		    files[tfd].is_first = 0;
-		    int l = dir_fill_header(retbuf, 0, files[tfd].dirpattern);
-		    rv = l;
-		    files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
-		    return rv;
-		  }
-		  if(!files[tfd].de) {
-		    close_fds(ep, tfd);
-		    *eof = 1;
-		    int l = dir_fill_disk(retbuf);
-		    rv = l;
-		    return rv;
-		  }
-		  int l = dir_fill_entry(retbuf, files[tfd].de, MAX_BUFFER_SIZE-FSP_DATA);
-		  rv = l;
-		  // prepare for next read (so we know if we're done)
-		  files[tfd].de = dir_next(files[tfd].dp, files[tfd].dirpattern);
-		  return rv;
-#endif
-}
-
 
 // write file data
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
@@ -687,6 +660,10 @@ provider_t ftp_provider = {
 	open_dr,
 	read_file,
 	write_file,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 
@@ -704,6 +681,10 @@ provider_t http_provider = {
 	NULL, //open_dr,
 	read_file,
 	write_file,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 	NULL
 };
 

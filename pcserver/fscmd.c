@@ -360,12 +360,54 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->scratch(ep, buf+FSP_DATA, &outdeleted);
-			if (rv == 1) {
-				retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
-				retbuf[FSP_LEN] = FSP_DATA + 2;
+			if (prov->scratch != NULL) {
+				rv = prov->scratch(ep, buf+FSP_DATA+1, &outdeleted);
+				if (rv == 1) {
+					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
+					retbuf[FSP_LEN] = FSP_DATA + 2;
+				}
+				retbuf[FSP_DATA] = rv;
 			}
-			retbuf[FSP_DATA] = rv;
+		}
+		break;
+	case FS_RENAME:
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->rename != NULL) {
+				rv = prov->rename(ep, buf+FSP_DATA+1);
+				retbuf[FSP_DATA] = rv;
+			}
+		}
+		break;
+	case FS_CHDIR:
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->cd != NULL) {
+				rv = prov->cd(ep, buf+FSP_DATA+1);
+				retbuf[FSP_DATA] = rv;
+			}
+		}
+		break;
+	case FS_MKDIR:
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->mkdir != NULL) {
+				rv = prov->mkdir(ep, buf+FSP_DATA+1);
+				retbuf[FSP_DATA] = rv;
+			}
+		}
+		break;
+	case FS_RMDIR:
+		ep = drive_to_endpoint(buf[FSP_DATA]);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->rmdir != NULL) {
+				rv = prov->rmdir(ep, buf+FSP_DATA+1);
+				retbuf[FSP_DATA] = rv;
+			}
 		}
 		break;
 	}
