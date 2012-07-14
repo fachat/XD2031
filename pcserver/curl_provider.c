@@ -42,7 +42,7 @@
 #include "provider.h"
 #include "log.h"
 
-#undef DEBUG_CURL
+#define DEBUG_CURL
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -76,7 +76,7 @@ typedef struct File {
 	int	bufdatalen;		// transfer buffer content length (for callback)
 	int	bufrp;			// buffer read pointer
 	// directory read state
-	int	read_state;		// data for read_converter
+	int	read_state;		// data for read_converter / read_file
 	char	*name_buffer;		// malloc'd buffer for dir path
 } File;
 
@@ -241,10 +241,12 @@ static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
 	File *fp = (File*) user;
 
+	fp->bufdatalen = 0;
+
 	long inlen = size * nmemb;
 
 #ifdef DEBUG_CURL
-printf("write_cb-> %d (buffer is %d): ", inlen, fp->buflen);
+printf("write_cb-> %ld (buffer is %d): ", inlen, fp->buflen);
 if (fp->buflen > 0) {
 	printf("%02x ", ptr[0]);
 }
@@ -275,35 +277,35 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 	return 0;
 }
 
-static int reply_with_data(File *fp, char *retbuf, int len) {
-	// we already have some data to give back
-	int datalen = fp->bufdatalen - fp->bufrp;
-	if (datalen > len) {
-		// we have more data than requested
-		datalen = len;
-	}
-	memcpy(retbuf, &(fp->buffer[fp->bufrp]), datalen);
-	fp->bufrp += datalen;
-	return datalen;
-}
-
 static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	int running_handles = 0;
+	
+	*eof = 0;
+	fp->bufdatalen = 0;
+	fp->bufrp = 0;
 
 	CURLMcode rv = CURLM_OK;
 	do {
 		rv = curl_multi_perform(fp->multi, &running_handles);
 #ifdef DEBUG_CURL
-		printf("curl read file returns: %d, running=%d\n", rv, running_handles);
+		if (rv != 0 || running_handles != 1) {
+			printf("curl read file returns: %d, running=%d\n", rv, running_handles);
+		}
 #endif
 	} while (rv == CURLM_CALL_MULTI_PERFORM);
+
+	if (running_handles == 0) {
+		// no more data will be available
+		log_debug("pull_data sets EOF (running=0), rv=%d, datalen=%d\n", rv, fp->bufdatalen);
+		*eof = 1;
+	}
 
 	int msgs_in_queue = 0;
 	CURLMsg *cmsg = NULL;
 	while ((cmsg = curl_multi_info_read(fp->multi, &msgs_in_queue)) != NULL) {
-		
-		//printf("cmsg=%p, in queue=%d\n", cmsg, msgs_in_queue);
-	
+#ifdef DEBUG_CURL	
+		printf("cmsg=%p, in queue=%d\n", cmsg, msgs_in_queue);
+#endif	
 		// we only added one easy handle, so easy_handle is known
 		CURLMSG msg = cmsg->msg;
 		if (msg == CURLMSG_DONE) {
@@ -312,6 +314,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 			if (cc != CURLE_OK) {
 				log_error("errorbuffer = %s\n", cep->error_buffer);
 			}
+			log_debug("pull_data sets EOF (err msg)\n");
 			*eof = 1;
 			break;
 		}
@@ -319,9 +322,40 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	return rv;
 }
 
+static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+	// we already have some data to give back
+	int datalen = fp->bufdatalen - fp->bufrp;
+	if (datalen > len) {
+		// we have more data than requested
+		datalen = len;
+	}
+	memcpy(retbuf, &(fp->buffer[fp->bufrp]), datalen);
+	fp->bufrp += datalen;
+
+	if (fp->bufdatalen <= fp->bufrp) {
+		// reached the end of the buffer
+		CURLMcode rv = CURLM_OK;
+		if (!fp->read_state) {		// set from previous pull_data
+			// try to pull in more, so we see if eof should be sent
+			CURLMcode rv = pull_data(cep, fp, &(fp->read_state));
+			if (rv != CURLM_OK) {
+				log_debug("reply_with_data sets EOF rv=%d, datalen=%d\n", rv, fp->bufdatalen);
+				*eof = 1;
+			}
+		}
+
+		if (fp->read_state && fp->bufdatalen <= fp->bufrp) {
+			log_debug("reply with data sets EOF (2)\n");
+			*eof = 1;
+		}
+	}
+	return datalen;
+}
+
 // read file data
 static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
+	int rv = 0;
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = find_file(ep, tfd);
@@ -337,14 +371,17 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 #ifdef DEBUG_CURL
 			printf("Got some data already: datalen=%d\n", fp->bufdatalen);
 #endif
-			return reply_with_data(fp, retbuf, len);
+			return reply_with_data(cep, fp, retbuf, len, eof);
 		}
 		// we don't have enough data to send something
-		CURLMcode rv = pull_data(cep, fp, eof);
+		CURLMcode rv = pull_data(cep, fp, &(fp->read_state));
 
 		if (fp->bufdatalen > fp->bufrp) {
 			// we should now have some data to give back
-			return reply_with_data(fp, retbuf, len);
+#ifdef DEBUG_CURL
+			printf("Pulled some data: datalen=%d, eof=%d\n", fp->bufdatalen, *eof);
+#endif
+			return reply_with_data(cep, fp, retbuf, len, eof);
 		}
 
 		if (rv == CURLM_OK) {
@@ -421,6 +458,8 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
 		// set for receiving
 		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
 
+// HTTP
+//  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 		// protocol specific stuff	
 		//if (fp->protocol == FTP) {
 		// 	// FTP append

@@ -29,32 +29,33 @@
 extern provider_t ftp_provider;
 extern provider_t http_provider;
 
-void ftpget_test();
-void httpget_test();
+void ftp_test();
+void http_test();
 
 void get_test(provider_t *prov, const char *rootpath, const char *name);
 void dir_test(provider_t *prov, const char *rootpath, const char *name);
 
 int main(int argc, char *argv[]) {
 
-	ftpget_test();
+	ftp_test();
 
-	//httpget_test();
+	http_test();
 
 }
 
 
-void ftpget_test() {
+void ftp_test() {
 
 	provider_t *prov = &ftp_provider;
 
 	//get_test(prov, "anonymous:fachat_at_web.de@ftp.zimmers.net/pub/cbm", "00INDEX");
 	//get_test(prov, "ftp.zimmers.net/pub/cbm", "00INDEX");
+	get_test(prov, "ftp.zimmers.net/pub/cbm", "index.html");
 
-	dir_test(prov, "ftp.zimmers.net/pub/cbm", "");
+	//dir_test(prov, "ftp.zimmers.net/pub/cbm", "");
 }
 
-void httpget_test() {
+void http_test() {
 
 	provider_t *prov = &http_provider;
 
@@ -83,7 +84,7 @@ void dir_test(provider_t *prov, const char *rootpath, const char *name) {
 	do {
 		rv = prov->readfile(ep, 1, buffer, 100, &eof);
 
-		if (rv != 0) printf("readfile -> %d\n", rv);
+		if (rv != 0) printf("readfile -> %d, eof=%d\n", rv, eof);
 
 		if (rv > 0) {
 			printf("---> %d: ", rv);
@@ -123,7 +124,7 @@ void get_test(provider_t *prov, const char *rootpath, const char *name) {
 	do {
 		rv = prov->readfile(ep, 1, buffer, 100, &eof);
 
-		if (rv != 0) printf("readfile -> %d\n", rv);
+		if (rv != 0) printf("readfile -> %d, eof=%d\n", rv, eof);
 
 		if (rv > 0) {
 			buffer[rv] = 0;
