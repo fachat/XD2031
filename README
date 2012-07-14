@@ -51,15 +51,11 @@ Fix bugs:
 	- The ASSIGN command is still missing, to allow management of
 	  drive assignments e.g. to internet servers or host directories
 
-	- PET BASIC4 still hangs on file not found (run/stop works though)
-
 	- SCRATCH (and maybe other) BASIC commands don't work even though
 	  they work on a normal OPEN
 
 	- fs_provider does not honor initial start path (always starts in
 	  working dir)
-
-	- fs_provider does not free() curpath and realpath on freeing
 
 	- ...
 
