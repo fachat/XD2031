@@ -195,7 +195,7 @@ uint8_t channel_next(channel_t *chan) {
 	// pull in the "other" buffer in the background
 	uint8_t other = 1-chan->current;
 	//if (packet_is_done(&chan->buf[other]) && (!packet_is_eoi(&chan->buf[chan->current]))) {
-	if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_eof(&chan->buf[chan->current]))) {
+	if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_last(&chan->buf[chan->current]))) {
 		// if the other packet is free ("done"), and the current packet is not the last one ("eoi")
 		// We should only do this on "standard" files though, not relative or others
 		channel_pull(chan, other);
@@ -263,7 +263,7 @@ channel_t* channel_refill(channel_t *chan) {
 	// buf = find_buffer(...)
 	//
 	uint8_t other = 1-chan->current;
-	if (!packet_is_eof(&chan->buf[chan->current])) {
+	if (!packet_is_last(&chan->buf[chan->current])) {
 		// current packet is not last one
 		// other packet should have been pulled in channel_next()
 		// so it is either empty (request, or FS_EOF), or has data
@@ -288,7 +288,7 @@ channel_t* channel_refill(channel_t *chan) {
 
 			chan->pull_state = PULL_ONEREAD;
 
-			if (!packet_is_eof(&chan->buf[chan->current])) {
+			if (!packet_is_last(&chan->buf[chan->current])) {
 				channel_pull(chan, 1-other);
 			}
 			return chan;

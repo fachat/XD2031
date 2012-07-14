@@ -186,6 +186,11 @@ static inline uint8_t packet_next(packet_t *buf) {
 	return (buf->rp < buf->wp) ? 1 : 0;
 }
 
+static inline uint8_t packet_is_last(packet_t *buf) {
+//debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
+	return (buf->type == ((uint8_t)(FS_EOF & 0xff)));
+}
+
 static inline uint8_t packet_is_eof(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
 	return (buf->type == ((uint8_t)(FS_EOF & 0xff))) && (buf->rp >= buf->wp);
