@@ -215,7 +215,9 @@ static int16_t cmd_handler (bus_t *bus)
 			// TODO this should be reworked more backend (serial) independent
 			serial_delay();
 		}
+#ifdef DEBUG_SERIAL
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
+#endif
 		// result of the open
         	if (bus_for_irq->errnum != 0) {
 			if (bus_for_irq->errnum == 1) {
@@ -294,7 +296,9 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 		*data = channel_current_byte(channel);
 		if (channel_current_is_eof(channel)) {
+#ifdef DEBUG_SERIAL
 			debug_printf("EOF!\n");
+#endif
 			st |= 0x40;
 		}
 
@@ -335,7 +339,6 @@ static int16_t bus_command(bus_t *bus)
 	return 0x80;	// device not present
     }
 
-
     secaddr = bus->secondary & 0x0f;
 
     switch (bus->secondary & 0xf0) {
@@ -346,9 +349,16 @@ static int16_t bus_command(bus_t *bus)
 		debug_printf("Did not find channel!\n");
 		st |= 0x40;	// TODO correct code?
 	  }
-          if ((!st) && ((bus->device & 0xf0) == 0x40)) {
+          if ((bus->device & 0xf0) == 0x40) {
 	      	// if we should TALK, prepare the first data byte
-              	st = bus_receivebyte(bus, &b, 1) & 0xbf;   /* any error, except eof */
+	      	if (!st) {
+              		st = bus_receivebyte(bus, &b, 1) & 0xbf;   /* any error, except eof */
+			//debug_printf("receive gets st=%04x\n", st);
+		} else {
+			// cause a FILE NOT FOUND
+			debug_printf("FILE NOT FOUND\n");
+			bus->device = 0;
+		}
           }
           break;
       case 0xE0:

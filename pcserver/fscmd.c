@@ -44,7 +44,7 @@
 #include "provider.h"
 #include "log.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_READ
 #undef DEBUG_WRITE
 
@@ -126,6 +126,7 @@ endpoint_t *chan_to_endpoint(int chan) {
 			return chantable[i].ep;
 		}
         }
+	log_info("Did not find ep for channel %d\n", chan);
 	return NULL;
 }
 
@@ -144,11 +145,13 @@ void set_chan(int channo, endpoint_t *ep) {
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
 		// we overwrite existing entries, to "heal" leftover cruft
 		// just in case...
-          	if (chantable[i].channo == -1 || chantable[i].channo == channo) {
+          	if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
 			chantable[i].channo = channo;
 			chantable[i].ep = ep;
+			return;
 		}
         }
+	log_error("Did not find free ep slot for channel %d\n", channo);
 }
 
 //------------------------------------------------------------------------------------
@@ -252,7 +255,7 @@ void do_cmd(char *buf, int fd) {
 
 	// not on FS_TERM
 	tfd = buf[FSP_FD];
-	if (tfd < 0 || tfd >= MAXFILES) {
+	if (tfd < 0) {
 		printf("Illegal file descriptor: %d\n", tfd);
 		return;
 	}
@@ -328,10 +331,12 @@ void do_cmd(char *buf, int fd) {
 	case FS_READ:
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
+			eof = 0;	// default just in case
 			prov = (provider_t*) ep->ptype;
 			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
 			retbuf[FSP_LEN] = FSP_DATA + rv;
 			if (eof) {
+				//printf("fscmd: setting EOF\n");
 				retbuf[FSP_CMD] = FS_EOF;
 			}
 		}
@@ -339,6 +344,7 @@ void do_cmd(char *buf, int fd) {
 	case FS_WRITE:
 	case FS_EOF:
 		ep = chan_to_endpoint(tfd);
+		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);

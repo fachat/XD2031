@@ -134,6 +134,8 @@ void fsp_free(endpoint_t *ep) {
         for(i=0;i<MAXFILES;i++) {
                 close_fd(&(cep->files[i]));
         }
+	free(cep->basepath);
+	free(cep->curpath);
         free(ep);
 }
 
@@ -203,7 +205,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 
 		FILE *fp = open_first_match(nm, mode);
 
-		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)fp);
+		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)file);
 
 		if(fp) {
 		  file->fp = fp;
@@ -245,7 +247,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 	File *file = find_file(ep, tfd);
 
-	//log_debug("read_dir: file=%p\n", file);
+	//log_debug("read_dir: file=%p, is_first=%d\n", file, (file == NULL) ? -1 : file->is_first);
 
 	if (file != NULL) {
 		int rv = 0;
@@ -283,7 +285,8 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 		  int n = fread(retbuf, 1, len, fp);
 		  rv = n;
-		  if(n<MAX_BUFFER_SIZE) {
+		  if(n<len) {
+		    // short read, so either error or eof
 		    *eof = 1;
 		    close_fds(ep, tfd);
 		  } else {
@@ -293,6 +296,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
+		      //printf("Setting EOF!\n");
 		      close_fds(ep, tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
@@ -309,6 +313,8 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
+	//log_debug("write_file: file=%p\n", file);
+
 	if (file != NULL) {
 
 		FILE *fp = file->fp;
@@ -316,6 +322,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		  // TODO: evaluate return value
 		  int n = fwrite(buf, 1, len, fp);
 		  if(is_eof) {
+		    log_debug("Write file received an EOF\n");
 		    close_fds(ep, tfd);
 		  }
 		  return 0;
@@ -460,10 +467,10 @@ static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
 static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 
 	File *f = find_file(ep, chan); // ((fs_endpoint_t*)ep)->files;
-
-	//log_debug("read_dir chan %d: file=%p (fp=%p, dp=%p)\n", 
-	//	chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp);
-
+#ifdef DEBUG_READ
+	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, eof=%d)\n", 
+		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, *eof);
+#endif
 	int rv = 0;
 
 	if (f->dp) {
