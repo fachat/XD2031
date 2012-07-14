@@ -37,7 +37,15 @@ TODO
 ----
 
 Fix bugs:
-	- no drive commands
+	- Error handling and command channel handling does not work
+	  well. Need to more specifically define error codes;
+	  also a print# to the command channel after open fails.
+
+	- RENAME is not yet implemented
+
+	- The ASSIGN command is still missing, to allow management of
+	  drive assignments e.g. to internet servers or host directories
+
 	- ...
 
 
@@ -49,5 +57,9 @@ XS-1541: The currently supported hardware by T. Winkler is described here:
 
 sd2iec:	Some files in this firmware are derived from the sd2iec project by I. Korb
 	http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
+
+cURL:	The cURL library is used to implement internet communication, esp.
+	the HTTP and FTP protocols. You can find it at
+	http://curl.haxx.se/
 
 
