@@ -133,31 +133,46 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 	// TODO:fix for read/write
 	if (chan->writetype != WTYPE_READONLY) return;
 
-	if (chan->pull_state == PULL_OPEN) {
+	do {
+	    if (chan->pull_state == PULL_OPEN) {
 		chan->current = 0;
 		channel_pull(chan, 0);
-	}
-	if (wait) {
+	    }
+	    if (wait) {
 		while (chan->pull_state == PULL_PRELOAD) {
 			delayms(1);
 		}
-	}
-	if (chan->pull_state == PULL_ONECONV) {
-		if (chan->directory_converter != NULL) {
-			//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
-			//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
-			chan->directory_converter(&chan->buf[chan->current]);
+	    }
+	    if (chan->pull_state == PULL_ONECONV) {
+		packet_t *curpack = &(chan->buf[chan->current]);
+		if ((!packet_has_data(curpack)) && (!packet_is_last(curpack))) {
+			// zero length packet received
+			chan->pull_state = PULL_OPEN;
+		} else {
+			if (chan->directory_converter != NULL) {
+				//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
+				//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
+				chan->directory_converter(&chan->buf[chan->current]);
+			}
+			chan->pull_state = PULL_ONEREAD;
 		}
-		chan->pull_state = PULL_ONEREAD;
-	}
-	if (chan->pull_state == PULL_TWOCONV) {
-		if (chan->directory_converter != NULL) {
-			//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-			//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
-			chan->directory_converter(&chan->buf[1-chan->current]);
+	    }
+	    if (chan->pull_state == PULL_TWOCONV) {
+		packet_t *opack = &(chan->buf[1-chan->current]);
+		if ((!packet_has_data(opack)) && (!packet_is_last(opack))) {
+			// zero length packet received
+			chan->pull_state = PULL_ONEREAD;
+		} else {
+			if (chan->directory_converter != NULL) {
+				//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
+				//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
+				chan->directory_converter(&chan->buf[1-chan->current]);
+			}
+			chan->pull_state = PULL_TWOREAD;
 		}
-		chan->pull_state = PULL_TWOREAD;
+	    }
 	}
+	while (chan->pull_state == PULL_OPEN);
 //led_on();
 }
 
