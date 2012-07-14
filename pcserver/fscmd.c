@@ -85,7 +85,7 @@ void ep_init() {
 
 	// test
 	eptable[6].epno = 7;		// drive 7
-	eptable[4].ep = ftp_provider.newep("zimmers.net/pub/cbm");
+	eptable[6].ep = ftp_provider.newep("zimmers.net/pub/cbm");
 }
 
 endpoint_t *drive_to_endpoint(int drive) {
@@ -293,10 +293,13 @@ void do_cmd(char *buf, int fd) {
 		ep = drive_to_endpoint(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->opendir(ep, tfd, buf + FSP_DATA + 1);
-			retbuf[FSP_DATA] = rv;
-			if (rv == 0) {
-				set_chan(tfd, ep);
+			// not all providers support directory operation
+			if (prov->opendir != NULL) {
+				rv = prov->opendir(ep, tfd, buf + FSP_DATA + 1);
+				retbuf[FSP_DATA] = rv;
+				if (rv == 0) {
+					set_chan(tfd, ep);
+				}
 			}
 		}
 		break;

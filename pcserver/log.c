@@ -33,7 +33,7 @@ void log_warn(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("WARN:");
+       printf("WRN:");
         vprintf(msg, args);
 }
 
@@ -41,7 +41,7 @@ void log_error(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("ERR :");
+       printf("ERR:");
         vprintf(msg, args);
 }
 
@@ -49,7 +49,15 @@ void log_info(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("INFO:");
+       printf("INF:");
+        vprintf(msg, args);
+}
+
+void log_debug(const char *msg, ...) {
+       va_list args;
+       va_start(args, msg);
+
+       printf("DBG:");
         vprintf(msg, args);
 }
 

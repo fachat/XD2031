@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #include "provider.h"
+#include "wireformat.h"
 
 extern provider_t ftp_provider;
 extern provider_t http_provider;
@@ -32,6 +33,7 @@ void ftpget_test();
 void httpget_test();
 
 void get_test(provider_t *prov, const char *rootpath, const char *name);
+void dir_test(provider_t *prov, const char *rootpath, const char *name);
 
 int main(int argc, char *argv[]) {
 
@@ -47,7 +49,9 @@ void ftpget_test() {
 	provider_t *prov = &ftp_provider;
 
 	//get_test(prov, "anonymous:fachat_at_web.de@ftp.zimmers.net/pub/cbm", "00INDEX");
-	get_test(prov, "ftp.zimmers.net/pub/cbm", "00INDEX");
+	//get_test(prov, "ftp.zimmers.net/pub/cbm", "00INDEX");
+
+	dir_test(prov, "ftp.zimmers.net/pub/cbm", "");
 }
 
 void httpget_test() {
@@ -55,6 +59,46 @@ void httpget_test() {
 	provider_t *prov = &http_provider;
 
 	get_test(prov, "www.zimmers.net/anonftp/pub/cbm", "index.html");
+}
+
+void dir_test(provider_t *prov, const char *rootpath, const char *name) {
+
+	printf("dirprov=%p\n", prov);
+
+	prov->init();
+
+	printf("prov init done\n");
+
+	// get endpoint for base URL
+	endpoint_t *ep = prov->newep(rootpath);
+
+	printf("ep=%p\n", ep);
+
+	int rv = prov->opendir(ep, 1, name);
+
+	printf("open -> %d\n", rv);
+
+	char *buffer = malloc(8192 * sizeof(char));
+	int eof = 0;
+	do {
+		rv = prov->readfile(ep, 1, buffer, 100, &eof);
+
+		if (rv != 0) printf("readfile -> %d\n", rv);
+
+		if (rv > 0) {
+			printf("---> %d: ", rv);
+			for (int i = 0; i < FS_DIR_NAME; i++) {
+				printf("%02x ", buffer[i]);
+			}
+			printf(": %s\n", buffer+FS_DIR_NAME);
+		}
+	}
+	while (rv >= 0 && eof == 0);
+
+	free(buffer);
+	
+	prov->close(ep, 1);
+
 }
 
 void get_test(provider_t *prov, const char *rootpath, const char *name) {
@@ -79,7 +123,7 @@ void get_test(provider_t *prov, const char *rootpath, const char *name) {
 	do {
 		rv = prov->readfile(ep, 1, buffer, 100, &eof);
 
-		printf("readfile -> %d\n", rv);
+		if (rv != 0) printf("readfile -> %d\n", rv);
 
 		if (rv > 0) {
 			buffer[rv] = 0;

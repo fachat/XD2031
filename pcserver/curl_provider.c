@@ -38,6 +38,7 @@
 #include <stdio.h>
 
 
+#include "wireformat.h"
 #include "provider.h"
 #include "log.h"
 
@@ -62,15 +63,21 @@ typedef enum {
 	PROTO_HTTPS
 } proto_t;
 
-typedef struct {
+struct curl_endpoint_t;
+
+typedef struct File {
 	int	chan;			// channel
 	CURL 	*session;		// curl session info
 	CURLM 	*multi;			// curl session info
+	int	(*read_converter)(struct curl_endpoint_t *cep, struct File *fp, char *retbuf, int len, int *eof);
 
-	char	*buffer;		// transfer buffer (for callback)
+	char	*buffer;		// transfer buffer (for callback) - malloc'd
 	int	buflen;			// transfer buffer length (for callback)
 	int	bufdatalen;		// transfer buffer content length (for callback)
 	int	bufrp;			// buffer read pointer
+	// directory read state
+	int	read_state;		// data for read_converter
+	char	*name_buffer;		// malloc'd buffer for dir path
 } File;
 
 typedef struct {
@@ -101,6 +108,9 @@ static void init_fp(File *fp) {
 	fp->buflen = 0;
 	fp->bufdatalen = 0;
 	fp->bufrp = 0;
+	fp->read_converter = NULL;
+	fp->read_state = 0;
+	fp->name_buffer = NULL;
 }
 
 
@@ -174,6 +184,10 @@ static void close_fd(File *fp) {
 		}
 		init_fp(fp);
 	}
+	if (fp->name_buffer != NULL) {
+		free(fp->name_buffer);
+		fp->name_buffer = NULL;
+	}
 }
 
 static File *reserve_file(endpoint_t *ep, int chan) {
@@ -227,9 +241,15 @@ static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
 	File *fp = (File*) user;
 
-	size_t inlen = size * nmemb;
+	long inlen = size * nmemb;
 
-//printf("write_cb-> %d (buffer is %d)\n", inlen, fp->buflen);
+#ifdef DEBUG_CURL
+printf("write_cb-> %d (buffer is %d): ", inlen, fp->buflen);
+if (fp->buflen > 0) {
+	printf("%02x ", ptr[0]);
+}
+printf("\n");
+#endif
 
 	if (inlen > fp->buflen) {
 		free(fp->buffer);	// fp->buffer NULL is ok, nothing is done
@@ -255,6 +275,50 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 	return 0;
 }
 
+static int reply_with_data(File *fp, char *retbuf, int len) {
+	// we already have some data to give back
+	int datalen = fp->bufdatalen - fp->bufrp;
+	if (datalen > len) {
+		// we have more data than requested
+		datalen = len;
+	}
+	memcpy(retbuf, &(fp->buffer[fp->bufrp]), datalen);
+	fp->bufrp += datalen;
+	return datalen;
+}
+
+static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
+	int running_handles = 0;
+
+	CURLMcode rv = CURLM_OK;
+	do {
+		rv = curl_multi_perform(fp->multi, &running_handles);
+#ifdef DEBUG_CURL
+		printf("curl read file returns: %d, running=%d\n", rv, running_handles);
+#endif
+	} while (rv == CURLM_CALL_MULTI_PERFORM);
+
+	int msgs_in_queue = 0;
+	CURLMsg *cmsg = NULL;
+	while ((cmsg = curl_multi_info_read(fp->multi, &msgs_in_queue)) != NULL) {
+		
+		//printf("cmsg=%p, in queue=%d\n", cmsg, msgs_in_queue);
+	
+		// we only added one easy handle, so easy_handle is known
+		CURLMSG msg = cmsg->msg;
+		if (msg == CURLMSG_DONE) {
+			CURLcode cc = cmsg->data.result;
+			//printf("cc = %d\n", cc);
+			if (cc != CURLE_OK) {
+				log_error("errorbuffer = %s\n", cep->error_buffer);
+			}
+			*eof = 1;
+			break;
+		}
+	}
+	return rv;
+}
+
 // read file data
 static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
@@ -262,60 +326,25 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = find_file(ep, tfd);
 
-
 	if (fp != NULL) {
+		if (fp->read_converter != NULL) {
+			// mostly used for directory
+			// I'll never understand where I need a "struct" ...
+			return fp->read_converter((struct curl_endpoint_t*)cep, fp, retbuf, len, eof);
+		}
+
 		if (fp->bufdatalen > fp->bufrp) {
 #ifdef DEBUG_CURL
 			printf("Got some data already: datalen=%d\n", fp->bufdatalen);
 #endif
-			// we already have some data to give back
-			int datalen = fp->bufdatalen - fp->bufrp;
-			if (datalen > len) {
-				// we have more data than requested
-				datalen = len;
-			}
-			memcpy(retbuf, &(fp->buffer[fp->bufrp]), datalen);
-			fp->bufrp += datalen;
-			return datalen;
+			return reply_with_data(fp, retbuf, len);
 		}
 		// we don't have enough data to send something
-		int running_handles = 0;
-
-		CURLMcode rv = CURLM_OK;
-		do {
-			rv = curl_multi_perform(fp->multi, &running_handles);
-#ifdef DEBUG_CURL
-			printf("curl read file returns: %d, running=%d\n", rv, running_handles);
-#endif
-		} while (rv == CURLM_CALL_MULTI_PERFORM);
-
-		int msgs_in_queue = 0;
-		CURLMsg *cmsg = NULL;
-		while ((cmsg = curl_multi_info_read(fp->multi, &msgs_in_queue)) != NULL) {
-		
-			printf("cmsg=%p, in queue=%d\n", cmsg, msgs_in_queue);
-	
-			// we only added one easy handle, so easy_handle is known
-			CURLMSG msg = cmsg->msg;
-			if (msg == CURLMSG_DONE) {
-				CURLcode cc = cmsg->data.result;
-				printf("cc = %d\n", cc);
-				printf("errorbuffer = %s\n", cep->error_buffer);
-				*eof = 1;
-				break;
-			}
-		}
+		CURLMcode rv = pull_data(cep, fp, eof);
 
 		if (fp->bufdatalen > fp->bufrp) {
 			// we should now have some data to give back
-			int datalen = fp->bufdatalen - fp->bufrp;
-			if (datalen > len) {
-				// we have more data than requested
-				datalen = len;
-			}
-			memcpy(retbuf, &(fp->buffer[fp->bufrp]), datalen);
-			fp->bufrp += datalen;
-			return datalen;
+			return reply_with_data(fp, retbuf, len);
 		}
 
 		if (rv == CURLM_OK) {
@@ -329,7 +358,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 
 // open a file for reading, writing, or appending
-static File *open_file(endpoint_t *ep, int tfd, const char *buf) {
+static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = reserve_file(ep, tfd);
@@ -362,9 +391,13 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf) {
 		// prepare name
 		strcpy(cep->name_buffer, ((provider_t*)(cep->ptype))->name);
 		strcpy(cep->name_buffer + strlen(cep->name_buffer), "://");
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), &(cep->path_buffer));
+		strcpy(cep->name_buffer + strlen(cep->name_buffer), cep->path_buffer);
 		strcpy(cep->name_buffer + strlen(cep->name_buffer), "/");
 		strcpy(cep->name_buffer + strlen(cep->name_buffer), buf);
+		if (is_dir) {
+			// end with a slash "/" to indicate a dir list
+			strcpy(cep->name_buffer + strlen(cep->name_buffer), "/");
+		}
 
 		log_info("curl URL: %s\n", cep->name_buffer);
 
@@ -382,7 +415,7 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf) {
 
 static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
 
-	File *fp = open_file(ep, tfd, buf);
+	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {
 
 		// set for receiving
@@ -404,27 +437,147 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
 	return -22;
 }
 
-// open a directory read
-static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
-#if 0
-	File *files = ((fs_endpoint_t*)ep)->files;
-		// close the currently open files
-		// so we don't loose references to open files
-		close_fds(ep, tfd);
+/**
+ * converts the list of file names from an FTP NLST command
+ * to a wireformat dir entry.
+ */
+int dir_nlst_read_converter(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
 
-		// save pattern for later comparisons
-		strcpy(files[tfd].dirpattern, buf);
-		DIR *dp = opendir("." /*buf+FSP_DATA*/);
-printf("OPEN_DR(%s)=%p\n",buf,(void*)dp);
-		if(dp) {
-		  files[tfd].fp = NULL;
-		  files[tfd].dp = dp;
-		  files[tfd].is_first = 1;
-		  return 0;
+	if (len < FS_DIR_NAME + 1) {
+		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
+				len, FS_DIR_NAME+1);
+		return -22;
+	}
+
+	// prepare dir entry
+	memset(retbuf, 0, FS_DIR_NAME+1);	
+	
+	int l = 0;
+	char *namep = retbuf + FS_DIR_NAME;
+	switch(fp->read_state) {
+	case 0:		// disk name
+		retbuf[FS_DIR_MODE] = FS_DIR_MOD_NAM;
+		l = strlen(fp->name_buffer);
+		if (len < FS_DIR_NAME + l + 1) {
+			log_error("read buffer too small for dir name (is %d, need at least %d)\n",
+				len, l+FS_DIR_NAME+1);
+			return -22;
 		}
-		// TODO: open error (maybe depending on errno?)
-		return -1;
+		strncpy(retbuf, fp->name_buffer, l+1);
+		l = l + FS_DIR_NAME + 1;
+		fp->read_state++;
+		break;
+	case 1:
+		// file names
+#ifdef DEBUG_CURL
+		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
+			fp->bufdatalen, fp->bufrp, *eof);
 #endif
+
+		l = FS_DIR_NAME;
+		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FIL;
+		do {
+			while ((fp->bufdatalen <= fp->bufrp) && (*eof == 0)) {
+
+				//log_debug("Trying to pull...\n");
+
+				CURLMcode rv = pull_data(cep, fp, eof);
+
+				if (rv != CURLM_OK) {
+					log_error("Error retrieving directory data (%d)\n", rv);
+					return -22;
+				}
+			}
+			// find length of name
+			
+			while (fp->bufrp < fp->bufdatalen) {
+				char c = fp->buffer[fp->bufrp];
+				fp->bufrp ++;
+				if (c == 13) {
+					// ignore
+				} else
+				if (c != 10) {
+					*namep = c;
+					namep++;
+					l++;
+				} else {
+					// end of name
+					*namep = 0;
+					l++;
+#ifdef DEBUG_CURL
+					log_debug("bufrp=%d, datalen=%d\n", fp->bufrp, fp->bufdatalen);
+#endif
+					break;
+				}
+				if (len < FS_DIR_NAME + l + 1) {
+					log_error("read buffer too small for dir name (is %d, need at least %d)\n",
+						len, l+FS_DIR_NAME+1);
+					return -22;
+				}
+			}
+			if (*eof != 0) {
+				log_debug("end of dir read\n");
+				fp->read_state++;
+				*namep = 0;
+			}
+		}
+		while (*namep != 0 && *eof == 0);	// not null byte, then not done
+		*eof = 0;
+		if (l > FS_DIR_NAME) {
+			break;
+		}
+		// otherwise fall through
+	case 2:
+		log_debug("final dir entry\n");
+		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FRE;
+		retbuf[FS_DIR_NAME] = 0;
+		l = FS_DIR_NAME + 1;
+		*eof = 1;
+		fp->read_state++;
+		break;
+	}
+#if 1 //def DEBUG_CURL
+	printf("Got some dir data : datalen=%d\n", l);
+        for (int i = 0; i < FS_DIR_NAME; i++) {
+	        printf("%02x ", retbuf[i]);
+        }
+        printf(": %s\n", retbuf+FS_DIR_NAME);
+#endif
+	return l;
+}
+
+
+static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
+
+	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
+	File *fp = open_file(ep, tfd, buf, 1);
+	if (fp != NULL) {
+		int namelen = strlen(buf);
+		fp->name_buffer = malloc(namelen + 1);
+		strncpy(fp->name_buffer, buf, namelen + 1);
+
+		fp->read_converter = &dir_nlst_read_converter;	// do DIR conversion
+	
+		// set for receiving
+		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
+
+		// TODO: support for MLST/MLSD FTP commands,
+		// only they are so new, I still need to find a running one for tests
+		//
+		// NLST is the "name list" without other data
+		strcpy(cep->name_buffer, "NLST ");
+		strcpy(cep->name_buffer + strlen(cep->name_buffer), buf);
+		// custom FTP command to make info more grokable
+		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, &(cep->name_buffer));
+
+		//add to multi session
+		CURLMcode rv = curl_multi_add_handle(fp->multi, fp->session);
+
+		printf("multi add returns %d\n", rv);
+
+		return 0;
+	}
+	return -22;
 }
 
 // read directory
@@ -481,25 +634,6 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 
 // ----------------------------------------------------------------------------------
 
-static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
-	return read_file(ep, chan, retbuf, len, eof);
-
-#if 0
-	File *files = ((fs_endpoint_t*)ep)->files;
-	int rv = 0;
-	File *f = &files[chan];
-	if (f->dp) {
-		rv = read_dir(ep, chan, retbuf, eof);
-	} else
-	if (f->fp) {
-		// read a file
-		rv = read_file(ep, chan, retbuf, len, eof);
-	}
-	return rv;
-#endif
-}
-
-
 provider_t ftp_provider = {
 	"ftp",
 	curl_init,
@@ -511,8 +645,8 @@ provider_t ftp_provider = {
 	NULL, //open_ftp_wr,
 	NULL, //open_ftp_ap,
 	NULL, //open_ftp_rw,
-	NULL, //open_ftp_dr,
-	readfile,
+	open_dr,
+	read_file,
 	write_file,
 	NULL
 };
@@ -528,8 +662,8 @@ provider_t http_provider = {
 	NULL, //open_ftp_wr,
 	NULL, //open_ftp_ap,
 	NULL, //open_ftp_rw,
-	NULL, //open_ftp_dr,
-	readfile,
+	NULL, //open_dr,
+	read_file,
 	write_file,
 	NULL
 };
