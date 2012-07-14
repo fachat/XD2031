@@ -43,7 +43,7 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "ieeehw.h"
-#include "ieeehwi.h"
+#include "ieee.h"
 #include "term.h"
 #include "file.h"
 #include "channel.h"
