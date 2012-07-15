@@ -525,7 +525,7 @@ void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 /*****************************************************************************
 * initialize the UART code
 */
-void serial_init() {
+void serial_init(uint8_t is_default) {
 	slots_used = 0;
 
 	for (int8_t i = NUMBER_OF_SLOTS-1; i >= 0; i--) {
@@ -534,6 +534,8 @@ void serial_init() {
 
 	rxstate = RX_IDLE;
 	txstate = TX_IDLE;
+
+	provider_register("fs", &serial_provider, is_default);
 }
 
 /*****************************************************************************

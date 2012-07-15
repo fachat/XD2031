@@ -99,9 +99,12 @@ int main()
 	//timer_init();			// Timer Interrupt initialisieren
 	led_init();
 
+	provider_init();		// needs to be in the beginning, as other
+					// modules like serial register here
+
 	// server communication
 	uarthw_init();			// first hardware
-	serial_init();			// then logic layer
+	serial_init(1);			// then logic layer
 
 	// debug output via "terminal"
 	term_init();

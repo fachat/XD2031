@@ -29,7 +29,9 @@
 #define	PROVIDER_H
 
 #include <inttypes.h>
+
 #include "packet.h"
+#include "errormsg.h"
 
 typedef struct {
 	void (*submit)(packet_t *buf);
@@ -43,6 +45,14 @@ typedef struct {
 	// return -1 if packet is too small to hold converted value
 	int8_t (*to_provider)(packet_t *p);
 } provider_t;
+
+int8_t provider_assign(uint8_t drive, const char *name);
+
+provider_t* provider_lookup(uint8_t drive);
+
+uint8_t provider_register(const char *name, provider_t *provider, uint8_t is_default);
+
+void provider_init(void);
 
 #endif
 

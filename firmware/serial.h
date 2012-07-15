@@ -40,7 +40,7 @@
 /**
  * initialize the UART 
  */
-void serial_init();
+void serial_init(uint8_t is_default_provider);
 
 /**
  * sync with the server

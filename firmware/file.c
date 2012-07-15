@@ -130,24 +130,21 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		nameinfo.name[0] = 0;
 	}
 
-	// check filename
-
-	// TODO: keep a local end point registry just in case...
-	// So the drive number could select the provider (which is currently fixed
-	// as serial_provider below
-	// For now just allow all drive numbers to be passed as endpoint numbers
-//	if (nameinfo.drive != 0) {
-//		// here would be a place to handle multiple drives in a device..
-//		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
-//		set_error(errormsg, ERROR_DRIVE_NOT_READY);
-//		return -1;
-//	}
-
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
 	// the two bus systems. This could be done depending on the drive number
 	// and be managed with the ASSIGN call.
-	provider_t *provider = &serial_provider;
+	//provider_t *provider = &serial_provider;
+	provider_t *provider = provider_lookup(nameinfo.drive);
+
+	// check the validity of the drive (note that in general provider_lookup
+	// returns a default provider - serial-over-USB to the PC, which then 
+	// may do further checks
+	if (provider == NULL) {
+		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
+		set_error(errormsg, ERROR_DRIVE_NOT_READY);
+		return -1;
+	}
 
 	// find open slot
 	//int8_t slot = -1;
