@@ -9,7 +9,9 @@ DEPS=ieee.h bus.h main.h errormsg.h channel.h status.h debug.h cmd.h term.h pack
 
 all:$(TARGET).hex
 
+# Uncomment one of the following lines to select your device:
 include xs1541/Makefile
+#include petSD/Makefile
 
 include avr/Makefile
 
