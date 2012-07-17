@@ -25,6 +25,8 @@
 
 #define	VERSION_STR		"0.02.01"
 
+#define F_CPU                 14745600UL
+
 // LED configuration
 #define LED_DDR               DDRC
 #define LED_PORT              PORTC

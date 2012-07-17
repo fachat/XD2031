@@ -27,6 +27,7 @@
 #ifndef DELAYHW_H
 #define DELAYHW_H
 
+#include "config.h"         // F_CPU
 #include <util/delay.h>
 
 // note that using the static inline versions below breaks the timing!

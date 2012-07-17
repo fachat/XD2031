@@ -50,7 +50,7 @@
 #include "led.h"
 #include "debug.h"
 
-#include "xs1541.h"
+#include "device.h"
 
 #undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA

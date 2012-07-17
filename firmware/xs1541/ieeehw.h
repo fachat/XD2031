@@ -28,7 +28,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "xs1541.h"
+#include "device.h"
 
 // IEEE hw code error codes
 

@@ -13,13 +13,10 @@ DUDE=/opt/cross/bin/avrdude
 
 CC=avr-gcc
 ARCHINCLUDE=-I/opt/cross/avr/include -I$(ARCH) 
-#ARCHDEVICE=-mmcu=atmega644p -D__AVR_ATmega644P__
-ARCHDEVICE=-mmcu=atmega644p
 
 ASMFLAGS=
 
-# F_CPU represents the clock frequency and is used to compute the delay loop times in util/delay.h
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -DF_CPU=14745600UL -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
 
 clean: archclean deviceclean
 

@@ -28,7 +28,7 @@
 #include "errormsg.h"
 #include "channel.h"
 #include "version.h"		/* for LONGVERSION */
-#include "xs1541.h"		/* for HW_NAME */
+#include "device.h"		/* for HW_NAME */
 
 #define	DEBUG_ERROR
 
