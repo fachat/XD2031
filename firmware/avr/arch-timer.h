@@ -28,6 +28,7 @@
 #ifndef ARCH_TIMER_H
 #define ARCH_TIMER_H
 
+#include "config.h"         // for F_CPU needed by util/delay.h
 #include <util/delay.h>
 #include <avr/io.h>
 
