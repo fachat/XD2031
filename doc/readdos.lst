@@ -1,0 +1,23 @@
+
+
+readdos1 ==0401==
+   15 rem disk unit
+   16 print"dos disk unit:";:input u
+   18 open1,u,15
+   61 print "save filename:";:input f$
+   62 print "save unit:";:input u2
+ 12011 open2,u2,1,f$
+ 12020 for b =64 to 127:rem 64*256 byte
+ 12030 for c = 0 to 7:rem 4 * 32 byte
+ 12040 c$="m-r" + chr$(c*32) + chr$(128+b) + chr$(32)
+ 12050 print#1,c$: c$=""
+ 12060 for i = 0 to 31: rem read byte
+ 12070 get#1, a$
+ 12080 if a$="" then a$=chr$(0)
+ 12090 c$=c$+a$
+ 12105 next i
+ 12107 print#2,c$;
+ 12110 next c
+ 12120 next b
+ 12200 close2
+

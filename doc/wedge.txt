@@ -1,0 +1,130 @@
+CBM wedge
+
+Issuing arbitrary Commodore DOS commands to a connected disk drive directly
+from the BASIC command line
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Home | Downloads | Mail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The wedge is compatible with Commdodore BASIC 4 only and consumes approx. 400
+bytes RAM.
+
+Installation
+
+Load the wedge like any other program, then run it, e.g. LOAD"WEDGE",8 or
+dL"wedge followed by RUN. The wedge installs itselfs by moving the wedge code
+to the top of the memory. It lowers the internal MEMSIZE zero page pointer, so
+it stays resident and available after NEW.
+
+Command descriptions
+
+[ ] Square brackets are used to enclose information which is optional to the
+command syntax. The brackets themselves are not part of the command.
+
+< > Angle brackets act as a placeholder that will be replaced by an applicable
+value. The brackets themselves are not part of the command.
+
+... Three dots indicate that the last parameter can given several times.
+Usually this applies for filenames where the operation can applied to a single
+file or multiple files.
+
+Device - usually a floppy disk drive connected to your PET using the IEEE bus.
+In this context, device means the unique address address that is used to
+communicate with the device. If you load a program by LOAD "PRG",8 your device
+has the address 8. A device may contain a single drive like the 2031, or two
+drives like the 8050.
+
+Drive - a dual floppy like the 8050 is a single device with two drives.
+
+Wedge activation sign
+
+Wedge commands are only available in direct mode. You cannot use them in your
+programs. The wedge is a BASIC extension that is activated by a magic character
+at the beginning of the line when you enter a command in direct mode. The
+greater than > has the same function as the at @, so e.g. @$ and >$ do the
+same. In the following text, only the @ is used to simplify things.
+
+Leading spaces are ommited.
+
+Setting the default device
+
+@#<unit number> sets the default drive,
+@# without unit number shows the current default drive.
+
+The default device is initialized with 8.
+
+@#9 sets the default drive to 9.
+
+@# will show you the default drive was really set to 9.
+
+@#8 sets the default drive back to 8.
+
+Displaying the directory
+
+@$[ [drive] :filename ] displays the disk directory.
+
+Typing @$ with no filename displays the entire directory. @$ followed by a
+colon and a filename will display the specified file in the directory listing
+(if it exists). A selective listing can be displayed by using pattern patching
+or wild cards as part of the filename.
+
+Press space bar to pause the listing and any other key to continue it. Pressing
+STOP aborts the listing.
+
+@$ displays the entire directory.
+
+@$1: displays the directory of default's device drive 1 only. Do not confuse
+drive and device.
+
+@$:N* displays all files having a "N" as the first letter in their filename.
+
+Reading the disk drive error channel
+
+@ without any parameters reads and displays the disk drive error message
+channel. If everything is okay, you'll get your DOS version at startup and 00,
+OK, 00, 00 afterwards.
+
+Loading a program
+
+/filename loads a program.
+
+/GARY loads the program called GARY, but doesn't start it. So you can list end
+edit it afterwards.
+
+Loading and running a program
+
+↑GAME loads and runs a game. Probably. But it wouldn't be very clever to save
+it on disk using this name.
+
+Sending DOS commands
+
+@<DOS command string> sends your command to the device's command channel. This
+text is not interpreted by the wedge, so the result depends on what your drive
+understands.
+
+Usually this are the Commodore DOS commands:
+
+@C:newfile=existingfile Copy a file on the same diskette
+@I Initialize the disk drive. Rarely needed as the drive usually does this on
+its own if it has a door switch.
+@N:diskname New a disk that was already formatted
+@N:diskname,id Format (new) a diskette, giving it an index at your choice
+@R:newname=oldname Rename a file
+@S:file1[,file2 ...] Scratch a file (or files). Wild cards are allowed! Read
+the status channel with @ to see how many files were scratched.
+@UJ Reset the disk drive. Read the status channel with @ to get the DOS version
+string.
+@V Validate a disk: reconcile the BAM with the disk directory, allocate all
+used blocks and free all blocks not being used by files, and delete all
+unclosed files from the directory.
+@D1=0 Duplicate an entire disk. Only available in dual drive units. The target
+(!) drive number comes first, then the source drive number.
+
+Downloads
+
+wedge.zip, zipped source and binary.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Home | Mail | first edit 2011-07-05, last edit 2012-02-25
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

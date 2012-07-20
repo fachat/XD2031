@@ -1,0 +1,66 @@
+
+
+dsk2file.prg ==0401==
+    0 rem 1541/cbm disk to .d64/dump-file
+    1 rem (c) 1998 andre fachat
+    2 rem
+    6 if peek(65532) =226 then bu=49152: goto10 :rem c64
+    7 if peek(65532) =22 then bu=32768: goto10 :rem pet basic 4
+    8 print "unknown computer!"
+    9 end
+   10 rem
+   30 gosub 2100
+   40 ne=0
+  200 rem
+  201 dr = 0: dw = 0: ur =8: uw = 9
+  204 input"unit to read from";ur:if ur<8 or ur>15 then 200
+  205 input"drive to read from";dr
+  210 input"unit to write to";uw:if uw<8 or uw>15 then 210
+  215 input"drive to write to";dw
+  220 input"filename to create";fi$
+  230 open1,uw,1,chr$(48+dw)+":"+fi$
+  235 open2,uw,15:input#2,a,b$,c,d:printa;b$;c;d:close2
+  237 if a then print"error opening dump file!":end
+  240 open2,ur,15,"i0:":open3,ur,3,"#"
+  250 for t=1 to 100:for s=0 to 100
+  255 gosub 1000
+  260 if a<66 then nexts
+  270 if a<70 and s>0 then next t
+  280 close1:close2:close3
+  290 print"done!":print"got";ne;" bad blocks"
+  300 end
+ 1000 print#2,"u1";3;dr;t;s
+ 1010 print"track"t" sector"s" :";
+ 1020 input#2,a,b$,c,d
+ 1030 if a then 1200
+ 1035 print#2,"b-p";3;0
+ 1040 poke lf,3:sys rx:rem rx from lf=3
+ 1090 rem print" read"
+ 1100 goto 1300
+ 1200 print a;b$;c;d
+ 1210 if a>=66 then return:rem invalid
+ 1215 rem on error write empty block
+ 1220 poke bu,0:pokebu+1,0
+ 1230 poke bu+2,int(a/10)+48:pokebu+3,a-int(a/10)*10+48
+ 1240 for i=0 to len(b$)-1
+ 1250 poke bu+4+i,asc(mid$(b$,i+1,1))
+ 1260 next
+ 1270 ne =ne + 1
+ 1300 rem save the sector
+ 1310 poke lf,1:sys tx:rem tx to lf=1
+ 1315 print" read &{$a0}written"
+ 1320 return
+ 2000 data  76 , 68 , 3 , 76 , 88 , 3 , 8 , 98
+ 2010 data  174 , 66 , 3 , 32 , 201 , 255 , 160 , 0
+ 2020 data  185 , 0 ,-192 , 32 , 210 , 255 , 200 , 208
+ 2030 data  247 , 76 , 204 , 255 , 174 , 66 , 3, 32
+ 2040 data  198 , 255 , 160 , 0 , 32 , 207 , 255 , 153
+ 2050 data  0 ,-192 , 200 , 208 , 247 , 76 , 204 , 255
+ 2100 for i = 828 to 828+47: read a
+ 2110 if a<0 then a =bu/256
+ 2120 poke i,a
+ 2130 next
+ 2140 tx=828
+ 2150 rx=tx+3:lf=tx+6
+ 2160 return
+

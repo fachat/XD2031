@@ -1,0 +1,25 @@
+
+
+readfdc7 ==0401==
+    1 rem: this program reads a 6530 rom from device 9 and writes it to device 8
+   10 dim a$(3,255)
+   20 data 162,0,189,0,252,157,0,12
+   21 data 189,0,253,157,0,13
+   22 data 189,0,254,157,0,14
+   23 data 189,0,255,157,0,15
+   24 data 202,208,229,142,4,4,240,254
+   30 open1,9,15:input#1,a,b$,c,d:printa;b$;c;d
+   40 fori=0to33:reada:print#1,"m-w"chr$(i)chr$(18)chr$(1)chr$(a);:next
+   45 print#1,"m-w"chr$(4)chr$(16)chr$(1)chr$(224);
+   47 input#1,a,b$,c,d:printa;b$;c;d
+   49 rem wait till ready
+   50 print#1,"m-r"chr$(4)chr$(16);:get#1,x$:if x$<>"" then 50
+   55 fork=0to3:print k
+   70 fori=0to255:print#1,"m-r"chr$(i)chr$(48+k);:get#1,a$(k,i):next:next
+   71 close1:print"please reset drive and press key"
+   72 getx$:ifx$=""then72
+   73 print"saving"
+   75 open1,8 ,1,"fdcrom"
+   80 fork=0to3:fori=0to255:ifa$(k,i)=""thena$(k,i)=chr$(0)
+   90 print#1,a$(k,i);:next:next:close1
+

@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" 
+		"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>CBM wedge</title>
+  <link rel="stylesheet" type="text/css" href="http://home.germany.net/nils.eilers/nils.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <meta name="author" content="Nils Eilers">
+  <meta name="description" content="The CBM wedge allows issuing Commodore
+  DOS commands to a connected disk drive directly from the BASIC command
+  line">
+  <meta name="keywords" content="Commodore, CBM, PET, wedge, doswedge">
+  <meta http-equiv="expires" content="0">
+  <meta http-equiv="cache-control" content="no-cache">
+  <meta http-equiv="pragma" content="no-cache">
+</head>
+<body>
+<a name="top"></a>
+<h1>CBM wedge</h1>
+<p>Issuing arbitrary Commodore DOS commands to a connected disk drive
+directly from the BASIC command line</p>
+<hr>
+<a href="index.htm">Home</a> | 
+<a href="#down">Downloads</a> |
+<!--
+<a href="#links">Links</a> |
+-->
+<a href="email.htm">Mail</a> 
+<!-- 
+| 
+<a href="en_chips.htm"><img border="0" alt="English version" width="16" height="10" src="flage.gif"></a> 
+<a href="en_chips.htm">English language</a>
+-->
+<hr>
+<p>The wedge is compatible with Commdodore BASIC 4 only and consumes approx. 400
+bytes RAM.</p>
+<h4>Installation</h4>
+<p>Load the wedge like any other program, then run it, e.g.
+<code>LOAD"WEDGE",8</code> or <code>dL"wedge</code> followed by
+<code>RUN</code>. The wedge installs itselfs by moving the wedge code to
+the top of the memory. It lowers the internal MEMSIZE zero page pointer, 
+so it stays resident and available after NEW.</p>
+
+<h4>Command descriptions</h4>
+<p><b>[ ]</b> Square brackets are used to enclose information which is optional to
+the command syntax. The brackets themselves are not part of the
+command.</p>
+<p><b>&lt; &gt;</b> Angle brackets act as a placeholder that will be replaced by
+an applicable value. The brackets themselves are not part of the command.</p>
+<p><b>...</b> Three dots indicate that the last parameter can given several
+times. Usually this applies for filenames where the operation can applied
+to a single file or multiple files.</p>
+<p><i>Device</i> - usually a floppy disk drive connected to
+your PET using the IEEE bus. In this context, <i>device</i> means the
+unique <i>address address</i> that is used to communicate with the device. 
+If you load a program by <code>LOAD "PRG",8</code> your device has the address 8. 
+A <i>device</i> may contain a single <i>drive</i> like the 2031, or two <i>drives</i> 
+like the 8050.</p>
+<p><i>Drive</i> - a dual floppy like the 8050 is a single
+<i>device</i> with two <i>drives</i>.</p>
+
+<h4>Wedge activation sign</h4>
+<p>Wedge commands are only available in direct mode. You cannot use them in
+your programs. The wedge is a BASIC extension that is activated by a magic
+character at the beginning of the line when you enter a command in direct
+mode. The <i>greater than</i> <b>&gt;</b> has the same function
+as the <i>at</i> @, so e.g. @$ and &gt;$ do the same. In the following text,
+only the @ is used to simplify things.</p>
+<p>Leading spaces are ommited.</p>
+
+<h4>Setting the default device</h4>
+<p><b>@#</b><i>&lt;unit number&gt;</i> sets the default drive,<br>
+<b>@#</b> without unit number shows the current default drive.</p>
+<p>The default device is initialized with 8.</p>
+<p><b>@#9</b> sets the default drive to 9.</p>
+<p><b>@#</b> will show you the default drive was really set to 9.</p>
+<p><b>@#8</b> sets the default drive back to 8.</p>
+
+<h4>Displaying the directory</h4>
+<p><b>@$</b><i>[ [drive] :filename ]</i> displays the disk directory.</p>
+<p>Typing @$ with
+no filename displays the entire directory. @$ followed by a colon and a
+filename will display the specified file in the directory listing (if it
+exists). A selective listing can be displayed by using pattern patching or
+wild cards as part of the filename.</p>
+<p>Press space bar to pause the listing and any other key to continue it.
+Pressing STOP aborts the listing.</p>
+<p><b>@$</b> displays the entire directory.</p>
+<p><b>@$1:</b> displays the directory of default's device drive 1 only. 
+Do not confuse <i>drive</i> and <i>device</i>.</p>
+<p><b>@$:N*</b> displays all files having a "N" as the first letter in 
+their filename.</p>
+
+<h4>Reading the disk drive error channel</h4>
+<p><b>@</b> without any parameters reads and displays the disk drive error
+message channel. If everything is okay, you'll get your DOS version at
+startup and <code>00, OK, 00, 00</code> afterwards.</p>
+
+<h4>Loading a program</h4>
+<p><b>/</b><i>filename</i> loads a program.</p>
+<p><b>/GARY</b> loads the program called GARY, but doesn't start it. So you
+can list end edit it afterwards.</p>
+
+<h4>Loading and running a program</h4>
+<p><b>&uarr;GAME</b> loads and runs a game. Probably. But it wouldn't be
+very clever to save it on disk using this name.</p>
+
+<h4>Sending DOS commands</h4>
+<p><b>@</b><i>&lt;DOS command string&gt;</i> sends your command to the
+device's command channel. This text is not interpreted by the wedge, so the
+result depends on what your drive understands.</p>
+<p>Usually this are the Commodore DOS commands:</p>
+<p><b>@C:newfile=existingfile</b> Copy a file on the same diskette<br>
+<b>@I</b> Initialize the disk drive. Rarely needed as the drive usually
+does this on its own if it has a door switch.<br>
+<b>@N:diskname</b> New a disk that was already formatted<br>
+<b>@N:diskname,id</b> Format (new) a diskette, giving it an index at your
+choice<br>
+<b>@R:newname=oldname</b> Rename a file<br>
+<b>@S:file1[,file2 ...]</b> Scratch a file (or files). Wild cards are
+allowed! Read the status channel with @ to see how many files were
+scratched.<br>
+<b>@UJ</b> Reset the disk drive. Read the status channel with @ to get the
+DOS version string.<br>
+<b>@V</b> Validate a disk: reconcile the BAM with the disk directory,
+allocate all used blocks and free all blocks not being used by files, and
+delete all unclosed files from the directory.<br>
+<b>@D1=0</b> Duplicate an entire disk. Only available in dual drive units. 
+The target(!) drive number comes first, then the source drive number.<br>
+</p>
+<a name="down"></a>
+<h4>Downloads</h4>
+<p><a href="wedge.zip" type="application/zip">wedge.zip</a>, zipped source and binary.</p>
+<hr>
+<a href="index.htm">Home</a> | 
+<a href="email.htm">Mail</a> | 
+first edit 2011-07-05, last edit 2012-02-25
+<hr>
+</body>
+</html>

@@ -1,0 +1,37 @@
+
+XD-2031 firmware
+================
+
+
+Tools
+=====
+
+This section describes the files in the tools directory of the XD-2031 distribution.
+If not mentioned otherwise, the same name with the ending ".lst" is the source code
+as text file, located in the doc subdirectory
+
+wedge
+	A DOS wedge for BASIC4 written and thankfully provided by Nils Eilers.
+	See the wegde.htm file for more info and wegde.zip for the source code
+
+readdos
+	Read the upper 16k of the DOS CPU address space from a dual processor drive. 
+	This includes the ROM image and is large enough for all dual CPU DOS versions.
+readfdc
+	Read the FDC ROM from a dual processor drive. As after the reading the 
+	FDC CPU is stuck in an endless loop, the drive must be reset during execution.
+
+emuutil
+	EMUTIL is a disk image archiver for the Commodore 64 and 16K+ CBM/PET computers. 
+	It supports all known Commodore disk drives, of all capacities. It also 
+	supports all CMD HD and RL Native partitions. Programmed by Bo Zimmerman and 
+	André Fachat.(See also emutil.readme)
+
+dsk2file
+	A BASIC/ML program to convert any CBM disk to a dump file (like VC1541 disk 
+	to .d64) for a PET or C64. The dump file should be written to a device larger 
+	than the dumped disk (although the program can be tailored to split an image).
+file2dsk
+	A BASIC/ML program to restore any CBM disk from a fitting disk image (like 
+	.d64 restore to a VC1541).
+

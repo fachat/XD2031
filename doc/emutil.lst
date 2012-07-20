@@ -1,0 +1,150 @@
+
+
+emutil.prg ==0401==
+    1 ifpeek(65532)=226thenpoke45,0:poke46,40:goto10
+    2 ifpeek(65532)=22thenpoke42,0:poke43,40:goto10
+    3 print"unknown computer!":stop
+   10 clr:ml=8192:mv=ml+(3*4):sp$="                               ":gosub3300
+   20 su=8:sd$="0":du=8:dd$="0":f1$="Single  ":f2$="Normal   ":mn=1
+   30 print"{clr}{down}{down}{down}{down}{down}{swlc}Emutil v2.0":print"Bo Zimmerman":print"Andre Fachat"
+   40 print"{down}...Planet Ink.":gosub50:goto100
+   50 ti$="000000"
+   60 ifti<200then60
+   70 return
+  100 print"{clr}{down}Emutil Menu":print"{S} Source Device:";su;", ";sd$
+  110 print"{D} Destination Device:";du;", ";dd$
+  120 print"{F} Format: ";f1$;" / ";f2$
+  130 print"{U} Unpack an image":print"{P} Pack an image":m1$="{down}{up}"+chr$(13)
+  140 print"{I} Disk interface":print"{X} Exit to BASIC":mn$="SDFUPIX":m1=len(mn$)
+  150 gosub200:goto220
+  200 print"{home}{down}{down}";:fori=1tom1:o=0:ifi=mntheno=asc("{rvon}")
+  210 print"{rght}";chr$(o);mid$(mn$,i,1);"{rvof}":nexti:return
+  220 x$=mn$+m1$:gosub400
+  300 ifo=m1+2andmn>1thenmn=mn-1:goto150
+  310 ifo=m1+1andmn<len(mn$)thenmn=mn+1:goto150
+  320 ifo=m1+3theno=mn
+  330 ifo>m1then220
+  335 mn=o:gosub200:o=mn
+  340 o2=o:onogoto500,600,700,1000,2000,800:end
+  400 o=0:geta$:ifa$=""then400
+  410 a=asc(a$):fori=1tolen(x$):b=asc(mid$(x$,i,1)):ifa=bor(aor128)=bando=0theno=i
+  420 nexti:ifo=0then400
+  430 return
+  500 b$="Source ":x=su:x$=sd$:gosub550:su=x:sd$=x$:goto100
+  550 print"{down}"b$"Unit :"+str$(x):print"{up}"spc(14);:open1,0:input#1,a$:close1
+  560 print:x=val(a$):ifx<7orx>30thenprint"{up}{up}";:goto550
+  570 print"{down}"b$"Drive: "+x$:print"{up}"spc(14);:open1,0:input#1,a$:close1
+  580 print:x$=mid$(str$(val(a$)),2):return
+  600 b$="Dest.  ":x=du:x$=dd$:gosub550:du=x:dd$=x$:goto100
+  700 print"{down}{S}ingle or {M}ulti-File: {rvon} {rvof}{left}";:x$="SM"+chr$(13):gosub400
+  710 f1$=mid$("Single  Multiple"+f1$+"   ",((o-1)*8)+1,8):printf1$:print
+  720 print"{N}ormal or {C}ompressed: {rvon} {rvof}{left}";:x$="NC"+chr$(13):gosub400
+  730 f2$=mid$("Normal    Compressed"+f2$+"     ",((o-1)*10)+1,10):printf2$:print
+  740 print"Hit return: {rvon} {rvof}";:x$=chr$(13):gosub400:goto100
+  800 d0=su:ifsu=duthen810
+  805 print"{down}{S}ource or {D}est.: {rvon}S{rvof}{left}";:x$="SD"+chr$(13):gosub400:ifo<>2then810
+  807 print"{rvon}D{rvof}";:d0=du
+  810 print:print"{down}Disk interface:":open1,0
+  820 printd0;"{left}>{rvon} {rvof}{left}";:co$=""
+  830 geta$:ifa$=""then830
+  840 a=asc(a$):ifa=13then900
+  850 ifa=20andco$>""thenprint" "a$a$"{rvon} {rvof}{left}";:co$=left$(co$,len(co$)-1):goto830
+  860 ifa>31anda<96thenco$=co$+a$:printa$;"{rvon} {rvof}{left}";:goto830
+  870 ifa>191anda<218thenco$=co$+a$:printa$;"{rvon} {rvof}{left}";:goto830
+  880 goto830
+  900 close1:print:print"{up}"sp$:print"{up}{up}";
+  905 ifco$=""then100
+  906 ifleft$(co$,1)="$"thenopen2,d0,0,co$:gosub960:close2:print:goto950
+  910 ifval(co$)thenpd=val(co$):ifpd>7andpd<30thend0=pd:print:print:goto950
+  920 print:open1,d0,15,co$
+  930 input#1,e1,e1$,e2,e3:close1:printe1;",";e1$;",";e2;",";e3;">"
+  940 geta$:ifa$=""then940
+  950 print"{up}"sp$"{up}":goto820
+  960 get#2,a$:get#2,a$
+  970 get#2,a$:get#2,a$:ifst>0thenx=fre(0):return
+  980 get#2,a$:get#2,b$:x=asc(a$+chr$(0))+256*asc(b$+chr$(0)):printx;
+  990 get#2,a$:ifa$=""thenprintchr$(13);:goto970
+  995 printa$;:goto990
+  996 open1,du,0,"$"+dd$+":z=u":fori=1to35:get#1,a$:next:get#1,b$:close1
+  997 x=asc(a$+chr$(0))+256*asc(b$+chr$(0)):return
+ 1000 gosub1900:vl=0:iff$=""then100
+ 1005 f$=f$+",s,r":open2,du,15,"i"+dd$+":":open15,su,15,"i"+sd$+":"
+ 1010 d0=su:d0$=sd$:gosub1800:ifethen1700
+ 1020 open3,du,3,"#":v1=0:ef=0:t=1:s=0:tt=0:e=0
+ 1040 ifefthenprint:print"Done.":gosub50:goto1600
+ 1050 ifv1then1200
+ 1060 ef=0:print:print"{up}";sp$:print"{up}Track";t;" Sector";s;
+ 1070 pokemv+1,3:ifleft$(f2$,1)="N"thenpokemv+1,255
+ 1080 pokemv,1:sys(ml+(2*3)):ef=st
+ 1085 ifpeek(mv)=255thenprint"Invalid Archive!":goto1700
+ 1090 print#2,"b-p";3;0:pokemv+1,3:sys(ml+(3*3)):v1=1
+ 1200 print#2,"u2";3;val(dd$);t;s:input#2,e,e$,e1,e2:ife=0thenv1=0:goto1250
+ 1210 ife<66thenprinte,e$,e1,e2:ne=ne+1:v1=0
+ 1250 tt=tt+1:iftt>200andleft$(f1$,1)="M"thengosub1800:tt=0:ef=0
+ 1260 ife<66ands<255thens=s+1:goto1040
+ 1270 ife<70ands>0thent=t+1:s=0:goto1040
+ 1280 goto1700
+ 1600 print#2,"i"+dd$+":":print#15,"i"+sd$
+ 1700 close1:close15:close2:close3
+ 1710 print:print"Hit return: {rvon} {rvof}";
+ 1720 geta$:ifa$<>chr$(13)then1720
+ 1730 goto100
+ 1800 vl$="":e=0:vl=vl+1:ifleft$(f1$,1)="M"theniw$=mid$(str$(vl),2)+"-"
+ 1810 ifleft$(f1$,1)="S"orvl=1then1850
+ 1820 ifright$(f$,1)="r"then1850
+ 1825 close1:gosub996:ifx>200then1850
+ 1830 print:print"Insert disk for volume"+str$(vl)
+ 1840 geta$:ifa$=""then1840
+ 1850 close1:open1,d0,d0,d0$+":"+iw$+f$
+ 1860 input#15,e,e$,e1,e2:ife=63andright$(f$,1)="r"thene=0
+ 1869 ifeandvl>1then1830
+ 1870 ifethenprint"Error opening archive.":gosub50
+ 1880 return
+ 1900 f$="":ifsu=duandsd$=dd$thenprint"Drives must differ!":gosub50:return
+ 1910 print"{down}Filename: ";:x$=left$(f1$,1):ifx$="M"thenprint"?-";
+ 1920 open1,0:input#1,f$:close1:x=len(f$):print
+ 1930 ifx>16or(x$="M"andx>14)thenprint"Filename too long!":print"{up}{up}{up}";:goto1900
+ 1940 return
+ 2000 gosub1900:vl=0:iff$=""then100
+ 2005 f$=f$+",s,w":open2,su,15,"i"+sd$+":":open15,du,15,"i"+dd$+":"
+ 2010 d0=du:d0$=dd$:gosub1800:ifethen1700
+ 2020 open3,su,3,"#":v1=0:ef=0:t=1:s=0:tt=0:e=0
+ 2040 print#2,"u1";3;val(sd$);t;s
+ 2050 ef=0:print:print"{up}";sp$:print"{up}Track";t;" Sector";s;
+ 2060 input#2,e,e$,e1,e2:ife>=66then2110
+ 2065 ifethenprint:printe,e$,e1,e2:print:goto2100
+ 2070 pokemv+1,3:ifleft$(f2$,1)="N"thenpokemv+1,255
+ 2080 print#2,"b-p";3;0:pokemv,3:sys(ml+(0*3))
+ 2085 ifpeek(mv)=255thenprint"Compress Error!":goto1700
+ 2100 pokemv+1,1:sys(ml+(1*3))
+ 2110 tt=tt+1:iftt>200andleft$(f1$,1)="M"thengosub1800:tt=0
+ 2120 ife<66ands<255thens=s+1:goto2040
+ 2130 ife<70ands>0thent=t+1:s=0:goto2040
+ 2140 print:print"{down}Done!":goto1700
+ 3000 data"embgcaemnmcbemaiccemjaccaaaaaaaaaaaaaaaaaaaakoamcacamgppkaaacampppjj"
+ 3010 data"keccjjkecdminapekoancaoappnaankjceinbdcakjkeinbccaemmmppkjcdifppkjke"
+ 3020 data"ifpokjaainaocainbecakjaainbecakmaocaljkecckaabjbpoimbbcaimapcaooaoca"
+ 3030 data"naadembhcbkmaocanaadembhcbooaocaljkecckmapcamijbpoiinbpopadikjaainbe"
+ 3040 data"caknbbcamjialaanmjiapaajooapcaoobbcaemglcakaaaknbbcajbpomoaocaooapca"
+ 3050 data"knapcabigfpoifpoknbacagfppifppemeocaoobecaknbbcamjiapanhmjibjaakmjpp"
+ 3060 data"pampoobbcaemglcamjabnaapknbbcabigjibinbbcaemglcalifalgmjacnabaknbeca"
+ 3070 data"mjaclaogooapcaoobbcaemglcaknbecamjacjapamobbcamobbcamoapcamoapcamoao"
+ 3080 data"camoaocalifamnkaaaknbbcajbpoooapcaknapcabigfpoifpoknbacagfppifppkfpp"
+ 3090 data"inbdcakfpoinbccacaeacbemmmppkjcdifppkjkeifpokjaainapcakaaalbpoogpona"
+ 3100 data"acogppinbbcamjiblacokaaalbpoogponaacogppkmapcaooapcanjkeccpaademmecb"
+ 3110 data"mobbcanaodkfppmnbdcanaafkfpomnbccaladklifambknbbcadiojiainbbcakaaalb"
+ 3120 data"poogponaacogppkmapcaooapcanjkeccpaademmecbmobbcanaonkfppmnbdcanaafkf"
+ 3130 data"pomnbccalaadlifaikgakjppinamcaknapcainancaknbacainbdcaknapcainbccaga"
+ 3140 data"koancacamjppkjcdifppkjkeifpokaaalbpocancppogponaacogppkfppmnbdcanaaf"
+ 3150 data"kfpomnbccajaofemmmppkoamcacamgppkjccifppkjkeifpokoancaoappnaaokaaaca"
+ 3160 data"mpppjjkeccminaphemmmppcampppinbbcamjiblacmcampppkaaajbpoogponaacogpp"
+ 3170 data"mobbcanaookfppmjcdnaaekfpomjkejanipadicammppkjppinamcainancagaknbbca"
+ 3180 data"diojiainbbcacampppinapcakaaajbpoogponaacogppmobbcanapdkfppmjcdnaaekf"
+ 3190 data"pomjkejakanamiemmmppkoancacamjppkaaaljkecccancppminaphemmmppaaaaaaaa"
+ 3200 data"x"
+ 3300 p=ml:restore:ifpeek(8192)=76thenreturn
+ 3305 print"reading data..."
+ 3310 reada$:ifa$="x"thenreturn
+ 3320 fori=1tolen(a$)step2:x=16*(asc(mid$(a$,i,1))-65)+(asc(mid$(a$,i+1,1))-65)
+ 3330 pokep,x:p=p+1:next:goto3310
+

@@ -1,0 +1,70 @@
+
+
+file2dsk.prg ==0401==
+    0 rem .d64/dump file to 1541/cbm disk
+    1 rem (c) 1998 andre fachat
+    2 rem
+    6 if peek(65532) =226 then bu=49152: goto10 :rem c64
+    7 if peek(65532) =22 then bu=32768: goto10 :rem pet basic 4
+    8 print "unknown computer!"
+    9 end
+   10 rem
+   30 gosub 2100
+   40 ne=0
+  200 rem
+  201 dr = 0: dw = 0: ur = 8: uw = 9
+  204 input"unit to read from"; ur:if ur<8 or ur>15 then 204
+  205 input"drive to read from"; dr
+  210 input"unit to write to";uw:if uw<8 or uw>15 then 210
+  215 input"drive to write to"; dw
+  220 input"filename to read";fi$
+  230 open1,ur,0,chr$(48+dr)+":"+fi$
+  235 open2,ur,15:input#2,a,b$,c,d:printa;b$;c;d:close2
+  237 if a then print"error opening dump file!":end
+  240 open2,uw,15,"i0:":open3,uw,3,"#"
+  245 vl = 0: ef = 0
+  250 for t=1 to 100:for s=0 to 100
+  251 if ef then 280
+  252 if vl=0 then gosub 1300
+  255 gosub 1000
+  260 if a<66 then nexts
+  270 if a<70 and s>0 then next t
+  280 close1:close2:close3
+  290 print"done!":print"got";ne;" bad blocks"
+  300 end
+ 1000 rem
+ 1020 print#2,"u2";3;dw;t;s
+ 1030 input#2,a,b$,c,d
+ 1040 if a then 1200
+ 1090 print"written to s=";s;", t=";t
+ 1095 vl = 0
+ 1100 return
+ 1200 rem
+ 1210 if a>=66 then return:rem invalid
+ 1260 print a;b$;c;d
+ 1270 ne =ne + 1
+ 1275 vl = 0
+ 1280 return
+ 1300 rem read the sector
+ 1305 ef = 0
+ 1310 print "block ";
+ 1315 poke lf,1:sys rx:rem rx from lf=1
+ 1317 ef = st
+ 1320 print#2,"b-p";3;0
+ 1325 poke lf,3:sys tx:rem tx to lf=3
+ 1330 vl = 1
+ 1335 return
+ 2000 data  76 , 68 , 3 , 76 , 88 , 3 , 8 , 98
+ 2010 data  174 , 66 , 3 , 32 , 201 , 255 , 160 , 0
+ 2020 data  185 , 0 ,-192 , 32 , 210 , 255 , 200 , 208
+ 2030 data  247 , 76 , 204 , 255 , 174 , 66 , 3, 32
+ 2040 data  198 , 255 , 160 , 0 , 32 , 207 , 255 , 153
+ 2050 data  0 ,-192 , 200 , 208 , 247 , 76 , 204 , 255
+ 2100 for i = 828 to 828+47: read a
+ 2110 if a<0 then a =bu/256
+ 2120 poke i,a
+ 2130 next
+ 2140 tx=828
+ 2150 rx=tx+3:lf=tx+6
+ 2160 return
+
