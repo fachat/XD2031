@@ -78,14 +78,16 @@ static void channel_pull(channel_t *c, uint8_t slot) {
 	// prepare to write a buffer with length 0
 	packet_set_filled(p, c->channel_no, FS_READ, 0);
 
+	endpoint_t *endpoint = c->endpoint;
+
 	// not irq-protected, as exlusive state conditions
 	if (c->pull_state == PULL_OPEN) {
 		c->pull_state = PULL_PRELOAD;
-		c->provider->submit_call(c->channel_no, p, p, _pull_callback);
+		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
 	} else
 	if (c->pull_state == PULL_ONEREAD && c->writetype == WTYPE_READONLY) {
 		c->pull_state = PULL_PULL2ND;
-		c->provider->submit_call(c->channel_no, p, p, _pull_callback);
+		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
 	}
 
 //led_on();
@@ -98,7 +100,7 @@ static void channel_pull(channel_t *c, uint8_t slot) {
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*dirconv)(packet_t *)) {
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(packet_t *)) {
 
 //debug_printf("channel_open: chan=%d\n", chan);
 
@@ -107,7 +109,7 @@ int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*d
 			channels[i].channel_no = chan;
 			channels[i].current = 0;
 			channels[i].writetype = writetype;
-			channels[i].provider = prov;
+			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
 			// note: we should not channel_pull() here, as file open has not yet even been sent
 			// the pull is done in the open callback for a read-only channel
@@ -259,7 +261,9 @@ void channel_close(int8_t channel_no) {
 		// even if l==0, send an EOF packet to close the file
 	        packet_set_filled(curpack, channel_no, FS_EOF, l);
 
-                chan->provider->submit_call(channel_no, curpack, curpack, _push_callback);
+		endpoint_t *endpoint = chan->endpoint;
+                endpoint->provider->submit_call(endpoint->provdata, 
+			channel_no, curpack, curpack, _push_callback);
 
                	// wait until the packet has been sent and been responded to
       	 	while (chan->push_state == PUSH_FILLONE) {
@@ -361,7 +365,9 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 		chan->push_state = PUSH_FILLTWO;
 
 		// use same packet as rx/tx buffer
-		chan->provider->submit_call(channo, curpack, curpack, _push_callback);
+		endpoint_t *endpoint = chan->endpoint;
+		endpoint->provider->submit_call(endpoint->provdata, 
+			channo, curpack, curpack, _push_callback);
 
 		// switch
 		chan->current = 1-chan->current;

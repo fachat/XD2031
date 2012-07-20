@@ -29,6 +29,7 @@
 #include "channel.h"
 #include "version.h"		/* for LONGVERSION */
 #include "device.h"		/* for HW_NAME */
+#include "debug.h"
 
 #define	DEBUG_ERROR
 

@@ -22,7 +22,9 @@
 #ifndef TERM_H
 #define TERM_H
 
-void term_init(void);
+#include "provider.h"
+
+void term_init(endpoint_t *ep);
 void term_flush(void);
 void term_putc(char c);
 void term_putcrlf(void);

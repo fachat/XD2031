@@ -44,6 +44,9 @@
 
 /***********************************************************************************
  * UART stuff
+ *
+ * Note that using the endpoint->provdata information given to the submit methods
+ * it would even be possible to use different UARTs at the same time.
  */
 
 /**
@@ -54,7 +57,7 @@
  * Note: submitter must check packet_is_done() or friends
  * before reuse or freeing the memory!
  */
-void serial_submit(packet_t *buf);
+void serial_submit(void *epdata, packet_t *buf);
 
 /*****************************************************************************
  * submit a channel rpc call to the UART
@@ -68,13 +71,25 @@ void serial_submit(packet_t *buf);
  * callback is called from interrupt context when the response has been
  * received
  */
-void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum));
 
 static int8_t directory_converter(packet_t *p);
 static int8_t to_provider(packet_t *p);
 
+// dummy
+static void *prov_assign(const char *name) {
+	return NULL;
+}
+
+// dummy
+static void prov_free(void *epdata) {
+	return;
+}
+
 provider_t serial_provider  = {
+	prov_assign,
+	prov_free,
         serial_submit,
         serial_submit_call,
 	directory_converter,
@@ -454,7 +469,7 @@ void serial_flush() {
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
  */
-void serial_submit(packet_t *buf) {
+void serial_submit(void *epdata, packet_t *buf) {
 
 	// wait for slot free
 	while (slots_used >= (NUMBER_OF_SLOTS-1)) {
@@ -491,7 +506,7 @@ void serial_submit(packet_t *buf) {
  * callback is called from interrupt context when the response has been
  * received
  */
-void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
+void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
 		void (*callback)(int8_t channelno, int8_t errnum)) {
 
 	if (channelno < 0) {
@@ -519,13 +534,13 @@ void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 	rx_channels[channelpos].callback = callback;
 
 	// send request
-	serial_submit(txbuf);
+	serial_submit(epdata, txbuf);
 }
 
 /*****************************************************************************
 * initialize the UART code
 */
-void serial_init(uint8_t is_default) {
+provider_t *serial_init() {
 	slots_used = 0;
 
 	for (int8_t i = NUMBER_OF_SLOTS-1; i >= 0; i--) {
@@ -535,7 +550,9 @@ void serial_init(uint8_t is_default) {
 	rxstate = RX_IDLE;
 	txstate = TX_IDLE;
 
-	provider_register("fs", &serial_provider, is_default);
+	provider_register("fs", &serial_provider);
+
+	return &serial_provider;
 }
 
 /*****************************************************************************

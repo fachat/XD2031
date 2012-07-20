@@ -23,53 +23,144 @@
 #include <stdio.h>
 
 #include "provider.h"
+#include "debug.h"
 
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
 // all 10 drives can be used
 #define	MAX_DRIVES	10
 
-static provider_t 	*default_provider;
+static endpoint_t 	default_provider;
 
 static struct {
-	char		*name;
+	const char	*name;
 	provider_t	*provider;
 	uint8_t		is_default;
 } provs[MAX_PROV];
 
 static struct {
 	int8_t		drive;
-	provider_t	*provider;
+	endpoint_t	endpoint;
 } drives[MAX_DRIVES];
 
+/**
+ * The assign process assigns the drive to a provider. I.e. the 
+ * drive is so far unused (or will be overwritten), and the code
+ * has to determine just from the name, which provider to use.
+ *
+ * The name starts with an alphanumeric string, followed by a colon.
+ * After that, it depends on the provider. If that string is a digit,
+ * it is the notation relative to an existing drive's provider.
+ * Relative here means that for example a subdirectory can by used.
+ * If the string is not a digit, it will be looked up in the list
+ * of registered providers. If found, the whole name will be used
+ * to retrieve a new endpoint provider. Note that the whole name
+ * is used to allow one provider handle/use multiple endpoints e.g.
+ * in terms of subdirectory. 
+ *
+ * If no provider is found, this code returns an error, and the 
+ * calling code forwards the request to the default provider that is
+ * always returned when no assignment can be found.
+ *
+ * Note that if an assigned drive is used to assign a new name, the
+ * assignment of that drive is removed. This enables the use of the
+ * default provider when the assign returns after error, to forward
+ * the assign command. Also this enables the use of a server-based
+ * provider that is not hidden by an old definition on this device.
+ */
 int8_t provider_assign(uint8_t drive, const char *name) {
-	// TODO not implemented yet
-	return -1;
-}
 
-provider_t* provider_lookup(uint8_t drive) {
+	int8_t rv = -1;
 
-	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
-		if (drives[i].drive == drive) {
-			return drives[i].provider;
+	debug_printf("ASSIGN: drive %d to '%s'\n", drive, name);
+
+	// first find the colon
+	uint8_t p = 0;
+	while (name[p] != 0 && name[p] != ':') {
+		p++;
+	}
+	if (name[p] == 0) {
+		// not colon found
+		return -22;	// Syntax (TODO)
+	}
+
+	provider_t *newprov = NULL;
+	void *provdata = NULL;
+
+	// now check each provider in turn, if the name fits
+	for (int8_t i = MAX_PROV-1; i >= 0; i--) {
+		uint8_t j;
+		for (j = 0; j < p; j++) {
+			if (provs[i].name[j] != name[j]) {
+				// name does not match
+				break;
+			}
+		}
+		if ((j == p) && (provs[j].name[p] == 0)) {
+			// found it
+			debug_printf("Found new provider: %p in slot %d\n", p, i);
+			newprov = provs[j].provider;
+			// new get the runtime data
+			provdata = newprov->prov_assign(name);
+			break;
 		}
 	}
-	return default_provider;
+
+	// when we are going to return, remove
+	// the old assign mapping
+	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
+		if (drives[i].drive == drive) {
+			drives[i].drive = -1;
+			drives[i].endpoint.provider = NULL;
+			break;
+		}
+	}
+
+	if (newprov != NULL) {
+		// got one, so register it
+		for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
+			if (drives[i].drive == -1) {
+				drives[i].drive = drive;
+				drives[i].endpoint.provider = newprov;
+				drives[i].endpoint.provdata = provdata;
+				rv = 0;	
+				break;
+			}
+		}
+	}
+	
+	return rv;
 }
 
-uint8_t provider_register(const char *name, provider_t *provider, uint8_t is_default) {
+endpoint_t* provider_lookup(uint8_t drive) {
+
+	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
+		if (drives[i].drive == drive && drives[i].endpoint.provider != NULL) {
+			return &(drives[i].endpoint);
+		}
+	}
+	return &default_provider;
+}
+
+uint8_t provider_register(const char *name, provider_t *provider) {
+
+	debug_printf("Register provider %p for '%s'\n", provider, name);
+
 	for (int8_t i = MAX_PROV-1; i >= 0; i--) {
 		if (provs[i].name == NULL) {
 			provs[i].name = name;
 			provs[i].provider = provider;
 
-			if (is_default) {
-				default_provider = provider;
-			}
+			debug_printf("Registered in slot %d\n", i);
 			break;
 		}
 	}
 	return 0;
+}
+
+void provider_set_default(provider_t *prov, void *epdata) {
+	default_provider.provider = prov;
+	default_provider.provdata = epdata;
 }
 
 void provider_init(void) {
@@ -78,7 +169,7 @@ void provider_init(void) {
 		provs[i].name = NULL;
 	}
 	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
-		drives[i].provider = NULL;
+		drives[i].endpoint.provider = NULL;
 		drives[i].drive = -1;
 	}
 }

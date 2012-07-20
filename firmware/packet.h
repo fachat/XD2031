@@ -37,7 +37,7 @@
 #include "wireformat.h"
 #include "delay.h"
 
-#include "debug.h"
+//#include "debug.h"
 
 /***********************************************************************************
  * packet stuff 

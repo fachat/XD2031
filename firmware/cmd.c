@@ -155,7 +155,7 @@ int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg,
 	}
 	if (nameinfo.cmd == CMD_ASSIGN) {
 		
-		if (provider_assign(nameinfo.drive, nameinfo.name) < 0) {
+		if (provider_assign(nameinfo.drive, (char*) nameinfo.name) < 0) {
 			
 			return file_submit_call(channel_no, FS_ASSIGN, errormsg, callback);
 		}

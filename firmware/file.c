@@ -137,16 +137,17 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	// the two bus systems. This could be done depending on the drive number
 	// and be managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
-	provider_t *provider = provider_lookup(nameinfo.drive);
+	endpoint_t *endpoint = provider_lookup(nameinfo.drive);
 
 	// check the validity of the drive (note that in general provider_lookup
 	// returns a default provider - serial-over-USB to the PC, which then 
 	// may do further checks
-	if (provider == NULL) {
+	if (endpoint == NULL) {
 		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
 		set_error(errormsg, ERROR_DRIVE_NOT_READY);
 		return -1;
 	}
+	provider_t *provider = endpoint->provider;
 
 	// find open slot
 	//int8_t slot = -1;
@@ -154,7 +155,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	for (uint8_t i = 0; i < MAX_ACTIVE_OPEN; i++) {
 		if (active[i].channel_no < 0) {
 			//slot = i;
-			activeslot = &active[i];
+			activeslot = (open_t*) &active[i];
 			break;
 		}
 	}
@@ -191,7 +192,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		return -1;
 	}
 
-	int8_t e = channel_open(channel_no, writetype, provider, converter);
+	int8_t e = channel_open(channel_no, writetype, endpoint, converter);
 	if (e < 0) {
 		debug_puts("E="); debug_puthex(e); debug_putcrlf();
 		set_error(errormsg, ERROR_NO_CHANNEL);
@@ -211,7 +212,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	// prepare response buffer
 	packet_init(&activeslot->rxbuf, OPEN_RX_DATA_LEN, activeslot->rxdata);
 	
-	provider->submit_call(channel_no, &activeslot->txbuf, &activeslot->rxbuf, _file_open_callback);
+	provider->submit_call(endpoint->provdata, channel_no, &activeslot->txbuf, 
+			&activeslot->rxbuf, _file_open_callback);
 
 	return 0;
 }

@@ -67,7 +67,7 @@ typedef struct {
 	int8_t		channel_no;
 	uint8_t		current;
 	uint8_t		writetype;
-	provider_t	*provider;
+	endpoint_t	*endpoint;
 	int8_t		(*directory_converter)(packet_t *packet);
 	// channel pull state - only one can be pulled at a time
 	int8_t		pull_state;
@@ -91,7 +91,7 @@ void channel_init(void);
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, provider_t *prov, int8_t (*dirconverter)(packet_t *));
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconverter)(packet_t *));
 
 channel_t* channel_find(int8_t chan);
 

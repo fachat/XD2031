@@ -40,6 +40,7 @@
 static char buf[TERM_BUFFER_LENGTH];
 static uint8_t nchars;
 
+static endpoint_t *endpoint;
 static packet_t termpack;
 
 static void send() {
@@ -47,7 +48,7 @@ static void send() {
 	// tell the packet what's in the buffer to be read
 	// nchars are in the buffer to be sent; channel is -1 (for terminal)
 	packet_set_filled(&termpack, 0xfe, FS_TERM, nchars);
-	serial_provider.submit(&termpack);
+	endpoint->provider->submit(endpoint->provdata, &termpack);
 	nchars = 0;
 }
 
@@ -111,7 +112,10 @@ void term_printf(const char *format, ...)
     term_puts(pbuf);
 }
 
-void term_init(void) {
+void term_init(endpoint_t *_endpoint) {
+
+	endpoint = _endpoint;
+
 	nchars = 0;
 
 	packet_init(&termpack, TERM_BUFFER_LENGTH, (uint8_t*)buf);

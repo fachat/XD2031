@@ -35,8 +35,14 @@
 #include "errormsg.h"
 
 typedef struct {
-	void (*submit)(packet_t *buf);
-	void (*submit_call)(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+	// get a new void data pointer to be given to submit() for each ASSIGN
+	void *(*prov_assign)(const char *name);
+	// free the ASSIGN-related data structure
+	void (*prov_free)(void *);
+	// submit a fire-and-forget packet (log_*, terminal)
+	void (*submit)(void *pdata, packet_t *buf);
+	// submit a request/response packet
+	void (*submit_call)(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
@@ -47,11 +53,18 @@ typedef struct {
 	int8_t (*to_provider)(packet_t *p);
 } provider_t;
 
+typedef struct {
+	provider_t 	*provider;
+	void		*provdata;
+} endpoint_t;
+
 int8_t provider_assign(uint8_t drive, const char *name);
 
-provider_t* provider_lookup(uint8_t drive);
+endpoint_t* provider_lookup(uint8_t drive);
 
-uint8_t provider_register(const char *name, provider_t *provider, uint8_t is_default);
+uint8_t provider_register(const char *name, provider_t *provider);
+
+void provider_set_default(provider_t *prov, void *epdata);
 
 void provider_init(void);
 

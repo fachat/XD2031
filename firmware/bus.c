@@ -84,7 +84,7 @@ static void set_ieee_ok(void) {
 	set_error(&error, 0);
 };
 
-static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+static void ieee_submit_status_refill(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum)) {
 
 #ifdef DEBUG_SERIAL
@@ -101,11 +101,11 @@ static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_
 	uint8_t *buf = packet_get_buffer(rxbuf);
 	uint8_t len = packet_get_capacity(rxbuf);
 
-	strncpy(buf, error.error_buffer, len);
+	strncpy((char*)buf, (char*)error.error_buffer, len);
 	buf[len-1] = 0;	// avoid buffer overflow
 
 	// overwrite with actual length
-	len = strlen(buf);
+	len = strlen((char*)buf);
 
 	// fixup packet	
 	packet_set_filled(rxbuf, channelno, FS_EOF, len);
@@ -119,11 +119,17 @@ static void ieee_submit_status_refill(int8_t channelno, packet_t *txbuf, packet_
 
 static provider_t ieee_status_provider = {
 	NULL,
+	NULL,
+	NULL,
 	ieee_submit_status_refill,
 	NULL,
 	NULL
 };
 
+static endpoint_t ieee_status_endpoint = {
+	&ieee_status_provider,
+	NULL
+};
 
 /********************************************************************************/
 
@@ -277,7 +283,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 	if (channel == NULL) {
 		if (secaddr == 15) {
-      			channel_open(bus_secaddr_adjust(bus, secaddr), WTYPE_READONLY, &ieee_status_provider, NULL);
+      			channel_open(bus_secaddr_adjust(bus, secaddr), WTYPE_READONLY, &ieee_status_endpoint, NULL);
 			channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 			bus->channel = channel;
 		}

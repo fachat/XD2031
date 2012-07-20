@@ -86,6 +86,7 @@ uint16_t BytesFree()
 }
 
 
+static endpoint_t term_endpoint;
 
 /////////////////////////////////////////////////////////////////////////////
 // Main-Funktion
@@ -104,10 +105,20 @@ int main()
 
 	// server communication
 	uarthw_init();			// first hardware
-	serial_init(1);			// then logic layer
+	provider_t *serial = serial_init();	// then logic layer
+
+	// now prepare for terminal etc
+	// (note: in the future the assign parameter could be used
+	// to distinguish different UARTs for example)
+	void *epdata = serial->prov_assign(NULL);
+	term_endpoint.provider = serial;
+	term_endpoint.provdata = epdata;
+
+	// and set as default
+	provider_set_default(serial, epdata);
 
 	// debug output via "terminal"
-	term_init();
+	term_init(&term_endpoint);
 
 	// init file handling (active open calls)
 	file_init();
