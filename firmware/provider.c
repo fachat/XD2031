@@ -25,6 +25,8 @@
 #include "provider.h"
 #include "debug.h"
 
+#define	DEBUG_PROVIDER
+
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
 // all 10 drives can be used
@@ -72,16 +74,14 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 
 	int8_t rv = -1;
 
+#ifdef DEBUG_PROVIDER
 	debug_printf("ASSIGN: drive %d to '%s'\n", drive, name);
+#endif
 
 	// first find the colon
 	uint8_t p = 0;
 	while (name[p] != 0 && name[p] != ':') {
 		p++;
-	}
-	if (name[p] == 0) {
-		// not colon found
-		return -22;	// Syntax (TODO)
 	}
 
 	provider_t *newprov = NULL;
@@ -90,19 +90,25 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 	// now check each provider in turn, if the name fits
 	for (int8_t i = MAX_PROV-1; i >= 0; i--) {
 		uint8_t j;
-		for (j = 0; j < p; j++) {
-			if (provs[i].name[j] != name[j]) {
-				// name does not match
+		if (provs[i].name != NULL) {
+			//debug_printf("Compare with %s\n",provs[i].name);	
+			for (j = 0; j < p; j++) {
+				if (provs[i].name[j] != name[j]) {
+					// name does not match
+					//debug_printf("name does not match at i=%d, j=%d (%02x vs. %02x\n", 
+					//		i, j, provs[i].name[j], name[j]);
+					break;
+				}
+			}
+			//debug_printf("j=%d, p=%d, %02x\n", j, p, provs[i].name[p]);
+			if ((j == p) && (provs[i].name[p] == 0)) {
+				// found it
+				//debug_printf("Found new provider: %p in slot %d\n", p, i);
+				newprov = provs[i].provider;
+				// new get the runtime data
+				provdata = newprov->prov_assign(name);
 				break;
 			}
-		}
-		if ((j == p) && (provs[j].name[p] == 0)) {
-			// found it
-			debug_printf("Found new provider: %p in slot %d\n", p, i);
-			newprov = provs[j].provider;
-			// new get the runtime data
-			provdata = newprov->prov_assign(name);
-			break;
 		}
 	}
 
@@ -123,6 +129,10 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 				drives[i].drive = drive;
 				drives[i].endpoint.provider = newprov;
 				drives[i].endpoint.provdata = provdata;
+#ifdef DEBUG_PROVIDER
+				debug_printf("Register prov %p for drive %d with data %p in slot %d\n",
+					newprov, drive, provdata, i);
+#endif
 				rv = 0;	
 				break;
 			}
@@ -134,24 +144,34 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 
 endpoint_t* provider_lookup(uint8_t drive) {
 
+#ifdef DEBUG_PROVIDER
+	debug_printf("provider_lookup for drive %d\n", drive);
+#endif
 	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
-		if (drives[i].drive == drive && drives[i].endpoint.provider != NULL) {
+		if ((drives[i].drive == drive) && (drives[i].endpoint.provider != NULL)) {
+#ifdef DEBUG_PROVIDER
+			debug_printf("found %p in slot %d (default=%p)\n", 
+				drives[i].endpoint.provider, i, default_provider.provider);
+#endif
 			return &(drives[i].endpoint);
 		}
 	}
+#ifdef DEBUG_PROVIDER
+	debug_printf("not found, returning default\n");
+#endif
 	return &default_provider;
 }
 
 uint8_t provider_register(const char *name, provider_t *provider) {
 
+#ifdef DEBUG_PROVIDER
 	debug_printf("Register provider %p for '%s'\n", provider, name);
+#endif
 
 	for (int8_t i = MAX_PROV-1; i >= 0; i--) {
 		if (provs[i].name == NULL) {
 			provs[i].name = name;
 			provs[i].provider = provider;
-
-			debug_printf("Registered in slot %d\n", i);
 			break;
 		}
 	}

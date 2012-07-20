@@ -154,11 +154,16 @@ int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg,
 		return file_submit_call(channel_no, type, errormsg, callback);
 	}
 	if (nameinfo.cmd == CMD_ASSIGN) {
+	
+		// the +1 on the name skips the endpoint number stored in position 0	
+		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
 		
-		if (provider_assign(nameinfo.drive, (char*) nameinfo.name) < 0) {
-			
 			return file_submit_call(channel_no, FS_ASSIGN, errormsg, callback);
+		} else {
+			// need to unlock the called by calling the callback function
+			callback(0, NULL);
 		}
+		return 0;
 	}
 
 	return -1;

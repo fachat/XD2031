@@ -103,6 +103,9 @@ int main()
 	provider_init();		// needs to be in the beginning, as other
 					// modules like serial register here
 
+	term_init();			// does not need endpoint/provider yet
+					// but can take up to a buffer of text
+
 	// server communication
 	uarthw_init();			// first hardware
 	provider_t *serial = serial_init();	// then logic layer
@@ -118,7 +121,7 @@ int main()
 	provider_set_default(serial, epdata);
 
 	// debug output via "terminal"
-	term_init(&term_endpoint);
+	term_set_endpoint(&term_endpoint);
 
 	// init file handling (active open calls)
 	file_init();

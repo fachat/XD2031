@@ -67,7 +67,9 @@ void term_putc(char c) {
 	}
 
 	if (nchars >= TERM_BUFFER_LENGTH) {
-		send();
+		if (endpoint != NULL) {
+			send();
+		}
 	}
 }
 
@@ -78,7 +80,9 @@ void term_putcrlf() {
 	if (nchars > 0) {
 		// has not been sent with the last char
 		// flush
-		send();
+		if (endpoint != NULL) {
+			send();
+		}
 	}
 }
 
@@ -90,6 +94,10 @@ void term_puts(const char *str) {
 	uint8_t len = strlen(str);
 
 	if ((nchars + len) >= TERM_BUFFER_LENGTH) {
+		if (endpoint == NULL) {
+			// no way we can print that now
+			return;
+		}
 		send();
 	}
 	packet_wait_done(&termpack);
@@ -112,9 +120,13 @@ void term_printf(const char *format, ...)
     term_puts(pbuf);
 }
 
-void term_init(endpoint_t *_endpoint) {
-
+void term_set_endpoint(endpoint_t *_endpoint) {
 	endpoint = _endpoint;
+}
+
+void term_init() {
+
+	endpoint = NULL;
 
 	nchars = 0;
 

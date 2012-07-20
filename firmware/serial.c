@@ -550,7 +550,10 @@ provider_t *serial_init() {
 	rxstate = RX_IDLE;
 	txstate = TX_IDLE;
 
-	provider_register("fs", &serial_provider);
+	// we should not register (at least for now, as when we are being
+	// selected, the remote end does not know about it currently, as we
+	// do not notify it. So open requests will be returned with an error
+	//provider_register("FS", &serial_provider);
 
 	return &serial_provider;
 }
