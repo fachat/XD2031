@@ -35,3 +35,6 @@ file2dsk
 	A BASIC/ML program to restore any CBM disk from a fitting disk image (like 
 	.d64 restore to a VC1541).
 
+petieee
+	An implementation of the PET IEEE488 protocol in Commodore BASIC
+

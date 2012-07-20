@@ -1,0 +1,106 @@
+
+
+;petieee ==0401==
+  900 print"device:";:input dv
+ 1000 a0 = 0:rem init
+ 1005 ef = 0:rem set status
+ 1010 rem  dv = 9:rem device 8
+ 1015 v = 0:rem verbose
+ 1019 rem goto 1100
+ 1020 gosub 10100: rem listen device dv
+ 1030 ac = 96 + 15:rem secaddr $6f
+ 1040 gosub 12000: rem seclisten
+ 1050 ac = asc("m")
+ 1060 gosub 13000: rem iecout
+ 1070 gosub 12400:rem unlisten
+ 1090 rem end
+ 1100 gosub 10000: rem talk
+ 1110 ac = 96 + 15:rem secaddr $6f
+ 1120 gosub 12100: rem sectalk
+ 1130 gosub 14000: rem iecin
+ 1140 printchr$(ac);
+ 1150 if ef = 0 then 1130
+ 1160 gosub 12300:rem untalk
+ 1200 end
+ 10000 rem talk
+ 10001 if v then print "talk ";dv
+ 10010 ac=64:goto 10115
+ 10100 rem listen
+ 10101 if v then print "listen ";dv
+ 10110 ac=32
+ 10115 bt = ac
+ 10200 poke 59456,peek(59456) or 2: rem nrfd hi
+ 10210 poke 59425,60:rem ndac hi
+ 10220 if a0 = 0 then 10270
+ 10230 poke 59409,52:rem set eoi
+ 10240 gosub 11000:rem byte out
+ 10250 a0 = 0
+ 10260 poke 59409, 60:rem reset eoi
+ 10270 a5 = bt or dv
+ 10275 rem print "by=";by;", dv=";dv;", a5=";a5
+ 10280 ac = peek(59456):if ac < 128 then 10280
+ 10290 poke 59456, ac and 251
+ 11000 rem byte out
+ 11001 if v then print "byte out ";a5
+ 11010 poke 59427,60 :rem dav hi
+ 11020 ac = peek(59456)
+ 11030 if (ac and 65) = 65 then 19000:rem device not pesent
+ 11040 poke 59426, 255-a5:rem set data byte
+ 11050 if (peek(59456) and 64) = 0 then 11050
+ 11060 poke 59427, 52:rem dav lo
+ 11070 if (peek(59456) and 1)= 0 then 11070
+ 11080 poke 59427, 60:rem dav hi
+ 11090 poke 59426, 255:rem data lines high
+ 11100 return
+ 12000 rem seclisten
+ 12001 if v then print "seclisten";ac
+ 12020 a5 = ac
+ 12030 gosub 11000
+ 12040 poke 59456, peek(59456) or 4:rem atn hi
+ 12050 return
+ 12100 rem sectalk
+ 12101 if v then print "sectalk ";ac
+ 12110 a5 = ac
+ 12120 gosub 11000
+ 12130 gosub 12200
+ 12140 goto 12040
+ 12200 rem nrfd/ndac lo
+ 12210 poke 59456, peek(59456)and 253: rem nrfd lo
+ 12220 poke 59425, 52:rem ndac lo
+ 12230 return
+ 12300 rem untalk
+ 12301 if v then print "untalk"
+ 12310 poke 59456, peek(59456) and 251:rem atn lo
+ 12320 ac = 95
+ 12330 goto 12420
+ 12400 rem unlisten
+ 12401 if v then print "unlisten"
+ 12410 ac = 63
+ 12420 gosub 10115
+ 12430 goto 12040
+ 13000 rem iecout
+ 13010 if a0 > 127 then 13040
+ 13020 a0 = a0-1:if a0 < 0 then a0 = 255
+ 13030 goto 13070
+ 13040 by = ac
+ 13050 gosub 11000
+ 13060 ac = by
+ 13070 a5 = ac
+ 13080 return
+ 14000 rem iecin
+ 14010 poke 59425, 52:rem ndac lo
+ 14020 poke 59456, peek(59456) or 2: rem nrfd hi
+ 14030 if peek(59456) > 127 then 14030:rem wait dav  lo
+ 14040 poke 59456, peek(59456) and 253: rem nrfd lo
+ 14050 if (peek(59408) and 64) = 64 then 14070
+ 14060 ef = ef or 64: rem set eoi flag
+ 14070 ac = 255-peek(59424): rem data byte
+ 14080 by = ac
+ 14090 poke 59425, 60:rem ndac hi
+ 14100 if peek(59456) < 128 then 14100:rem wait dav hi
+ 14110 poke 59425, 52:rem ndac lo
+ 14120 return
+ 19000 rem device not present
+ 19010 print "device not present error"
+ 19020 end
+
