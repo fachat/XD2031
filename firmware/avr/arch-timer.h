@@ -29,13 +29,9 @@
 #define ARCH_TIMER_H
 
 #include "config.h"         // for F_CPU needed by util/delay.h
+#include "compat.h"
 #include <util/delay.h>
 #include <avr/io.h>
-
-/* no idea how this got generated in sd2iec */
-/* from asmconfig.h */
-#define TCNT0 _SFR_IO8(0X26)
-#define TOV0 0
 
 #define SYSTEM_TICK_HANDLER ISR(TIMER1_COMPA_vect)
 

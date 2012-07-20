@@ -23,7 +23,7 @@
 #ifndef COMPAT_H
 #define COMPAT_H
 
-#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #  define RXC   RXC0
 #  define RXEN  RXEN0
 #  define TXC   TXC0

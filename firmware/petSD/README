@@ -1,0 +1,17 @@
+*****   B A D   F U S E S   S E T T I N G S   *****
+
+petSDs shipped until July 2012 had AVR fuse settings that may cause
+data loss over the serial line. 
+If you purchased your petSD before this time, you probably won't be 
+able to run the new XD-2031 firmware before changing the fuses first.
+Unfortunately, this cannot be made with the SD-card boot loader update. 
+
+Changing the fuses requires an in-system-programmer like a STK-200 or
+AVRISPmkII. Use AVRDUDE and run:
+
+avrdude -p m1284p -v -y -U lfuse:w:0xf7:m -U hfuse:w:0xd2:m -U efuse:w:0xff:m
+
+WARNING:   IF YOU DON'T KNOW WHAT YOU'RE DOING, YOU MAY BRICK YOUR DEVICE!
+========   Please feel free to email nils.eilers@gmx.de for further advice.
+
+
