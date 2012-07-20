@@ -2,7 +2,7 @@
 CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
 
-COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c
+COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c
 COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h
 
 #output of `curl-config --libs`

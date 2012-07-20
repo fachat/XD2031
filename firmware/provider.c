@@ -87,8 +87,26 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 	provider_t *newprov = NULL;
 	void *provdata = NULL;
 
-	// now check each provider in turn, if the name fits
-	for (int8_t i = MAX_PROV-1; i >= 0; i--) {
+	if ((isdigit(name[0])) && (p == 1)) {
+		// we have a drive digit
+		uint8_t drv = name[0] & 0x0f;
+		endpoint_t *ep = provider_lookup(drv);
+		if (ep == NULL) {
+			debug_printf("Drive %d not used, cannot do relative assign!\n", drv);
+			return -1;
+		}
+		if (ep == &default_provider) {
+			debug_printf("Default is not registered, forwarding to server\n");
+			return -1;
+		}
+		newprov = ep->provider;
+		// currently a relative assignment is not supported
+		provdata = newprov->prov_assign(name);
+	}
+
+	if (newprov == NULL) {
+	    // now check each provider in turn, if the name fits
+	    for (int8_t i = MAX_PROV-1; i >= 0; i--) {
 		uint8_t j;
 		if (provs[i].name != NULL) {
 			//debug_printf("Compare with %s\n",provs[i].name);	
@@ -110,6 +128,7 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 				break;
 			}
 		}
+	    }
 	}
 
 	// when we are going to return, remove

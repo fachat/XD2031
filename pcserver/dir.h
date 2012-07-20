@@ -31,14 +31,14 @@
  * fopen the first matching directory entry, using the given
  * options string
  */
-FILE *open_first_match(const char *pattern, const char *options);
+FILE *open_first_match(const char *dir, const char *pattern, const char *options);
 
 /**
  * calls the callback on every matching file, returning the number of matches
  * The callback gets the match count as first parameter (starting with one),
  * and if it returns != 0 then the loop is exited.
  */
-int dir_call_matches(const char *pattern, int (*callback)(const int num_of_match, const char *name));
+int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const int num_of_match, const char *name));
 
 /**
  * fill the buffer with a header entry, using the driveno as line number

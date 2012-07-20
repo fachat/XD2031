@@ -138,7 +138,7 @@ static curl_endpoint_t *_new(const char *path) {
 	return fsep;
 }
 
-static endpoint_t *ftp_new(const char *path) {
+static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 
 	curl_endpoint_t *fsep = _new(path);
 
@@ -150,7 +150,7 @@ static endpoint_t *ftp_new(const char *path) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *http_new(const char *path) {
+static endpoint_t *http_new(endpoint_t *parent, const char *path) {
 
 	curl_endpoint_t *fsep = _new(path);
 
@@ -480,7 +480,7 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
  * converts the list of file names from an FTP NLST command
  * to a wireformat dir entry.
  */
-int dir_nlst_read_converter(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
 
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
@@ -520,7 +520,7 @@ int dir_nlst_read_converter(curl_endpoint_t *cep, File *fp, char *retbuf, int le
 
 				//log_debug("Trying to pull...\n");
 
-				CURLMcode rv = pull_data(cep, fp, eof);
+				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, eof);
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
@@ -575,7 +575,7 @@ int dir_nlst_read_converter(curl_endpoint_t *cep, File *fp, char *retbuf, int le
 		fp->read_state++;
 		break;
 	}
-#if 1 //def DEBUG_CURL
+#ifdef DEBUG_CURL
 	printf("Got some dir data : datalen=%d\n", l);
         for (int i = 0; i < FS_DIR_NAME; i++) {
 	        printf("%02x ", retbuf[i]);
@@ -637,6 +637,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		}
 		return -1;
 #endif
+	return -1;
 }
 
 // ----------------------------------------------------------------------------------

@@ -31,12 +31,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "dir.h"
 #include "name.h"
 #include "fscmd.h"
 #include "wireformat.h"
+#include "log.h"
 
 #define min(a,b)        (((a)<(b))?(a):(b))
 
@@ -44,25 +46,45 @@
  *  fopen the first matching directory entry, using the given
  *  options string
  */
-FILE *open_first_match(const char *pattern, const char *options) {
+FILE *open_first_match(const char *dir, const char *pattern, const char *options) {
 	DIR *dp;
 	FILE *fp;
 	struct dirent *de;
 
 	// shortcut - if we don't have wildcards, just open it
 	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
-		return fopen(pattern, options);
+		char *namebuf = malloc(strlen(dir) + 2 + strlen(pattern));
+		strcpy(namebuf, dir);
+		strcat(namebuf, "/");	// TODO dir separation char
+		strcat(namebuf, pattern);
+
+		log_info("opening file with name %s\n",namebuf);
+
+		fp = fopen(namebuf, options);
+
+		free(namebuf);
+		return fp;
 	}
 
 
-	dp = opendir(".");
+	dp = opendir(dir);
 	if (dp) {
 		de = readdir(dp);
 
 		while (de != NULL) {
 			if (compare_pattern(de->d_name, pattern)) {
 				// match
-				fp = fopen(de->d_name, options);
+
+				char *namebuf = malloc(strlen(dir) + 2 + strlen(pattern));
+				strcpy(namebuf, dir);
+				strcat(namebuf, "/");	// TODO dir separation char
+				strcat(namebuf, de->d_name);
+
+				log_info("opening file with name %s\n",namebuf);
+
+				fp = fopen(namebuf, options);
+
+				free(namebuf);
 				closedir(dp);
 				return fp;
 			}
@@ -78,7 +100,7 @@ FILE *open_first_match(const char *pattern, const char *options) {
  *  The callback gets the match count as first parameter (starting with one),
  *  and if it returns != 0 then the loop is exited.
  */
-int dir_call_matches(const char *pattern, int (*callback)(const int num_of_match, const char *name)) {
+int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const int num_of_match, const char *name)) {
 	int matches = 0;
 	DIR *dp;
 	int rv;
@@ -91,7 +113,7 @@ int dir_call_matches(const char *pattern, int (*callback)(const int num_of_match
 	}
 
 
-	dp = opendir(".");
+	dp = opendir(dir);
 	if (dp) {
 		de = readdir(dp);
 

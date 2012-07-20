@@ -44,121 +44,75 @@
 #include "provider.h"
 #include "log.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_READ
 #undef DEBUG_WRITE
 
 #define	MAX_BUFFER_SIZE			64
-#define	MAX_NUMBER_OF_ENDPOINTS		10		// max 10 drives
-
-extern provider_t fs_provider;
-extern provider_t ftp_provider;
-extern provider_t http_provider;
 
 //------------------------------------------------------------------------------------
-// Mapping from drive number, which is given on open and commands, to endpoint
-// provider
-
-typedef struct {
-	int		epno;
-	endpoint_t	*ep;
-} ep_t;
-
-ep_t eptable[MAX_NUMBER_OF_ENDPOINTS];
-
-
-void ep_init() {
-	int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          eptable[i].epno = -1;
-        }
-
-	// manually handle the initial provider
-	fs_provider.init();
-
-	eptable[0].epno = 0;		// drive 0
-	eptable[0].ep = fs_provider.newep(".");
-
-	// test
-	eptable[4].epno = 6;		// drive 6
-	eptable[4].ep = fs_provider.newep("..");
-
-	// test
-	eptable[6].epno = 7;		// drive 7
-	eptable[6].ep = ftp_provider.newep("zimmers.net/pub/cbm");
-}
-
-endpoint_t *drive_to_endpoint(int drive) {
-	int i;
-	
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          	if (eptable[i].epno == drive) {
-			return eptable[i].ep;
-		}
-        }
-	return NULL;
-}
+//
 
 //------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
 // These are set when the channel is opened
 
 typedef struct {
-	int		channo;
-	endpoint_t	*ep;
+       int             channo;
+       endpoint_t      *ep;
 } chan_t;
 
 chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
 
 
 void chan_init() {
-	int i;
+       int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
           chantable[i].channo = -1;
         }
 }
 
 endpoint_t *chan_to_endpoint(int chan) {
-	
-	int i;
+
+       int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          	if (chantable[i].channo == chan) {
-			return chantable[i].ep;
-		}
+               if (chantable[i].channo == chan) {
+                       return chantable[i].ep;
+               }
         }
-	log_info("Did not find ep for channel %d\n", chan);
-	return NULL;
+       log_info("Did not find ep for channel %d\n", chan);
+       return NULL;
 }
 
 void free_chan(int channo) {
-	int i;
+       int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          	if (chantable[i].channo == channo) {
-			chantable[i].channo = -1;
-			chantable[i].ep = NULL;
-		}
+               if (chantable[i].channo == channo) {
+                       chantable[i].channo = -1;
+                       chantable[i].ep = NULL;
+               }
         }
 }
 
 void set_chan(int channo, endpoint_t *ep) {
-	int i;
+       int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-		// we overwrite existing entries, to "heal" leftover cruft
-		// just in case...
-          	if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
-			chantable[i].channo = channo;
-			chantable[i].ep = ep;
-			return;
-		}
+               // we overwrite existing entries, to "heal" leftover cruft
+               // just in case...
+               if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
+                       chantable[i].channo = channo;
+                       chantable[i].ep = ep;
+                       return;
+               }
         }
-	log_error("Did not find free ep slot for channel %d\n", channo);
+       log_error("Did not find free ep slot for channel %d\n", channo);
 }
 
 //------------------------------------------------------------------------------------
 //
 
 void cmd_init() {
-	ep_init();
+	provider_init();
 	chan_init();
 }
 
@@ -282,7 +236,7 @@ void do_cmd(char *buf, int fd) {
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->open_wr(ep, tfd, buf + FSP_DATA + 1);
@@ -293,7 +247,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_DR:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
@@ -307,7 +261,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_RD:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->open_rd(ep, tfd, buf + FSP_DATA + 1);
@@ -318,7 +272,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_AP:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->open_ap(ep, tfd, buf + FSP_DATA + 1);
@@ -363,7 +317,7 @@ void do_cmd(char *buf, int fd) {
 
 		// command operations
 	case FS_DELETE:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
@@ -377,7 +331,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_RENAME:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
@@ -387,7 +341,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_CHDIR:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
@@ -397,7 +351,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_MKDIR:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
@@ -407,7 +361,7 @@ void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_RMDIR:
-		ep = drive_to_endpoint(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
@@ -415,6 +369,20 @@ void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 			}
 		}
+		break;
+	case FS_ASSIGN:
+		// assign an endpoint number (i.e. a drive number for the PET)
+		// to a filesystem provider and path
+		// The drive number in buf[FSP_DATA] is the one to assign,
+		// while the rest of the name determines which provider to use
+		//
+		// A provider can be determines relative to an existing one. In 
+		// this case the provider name is the endpoint (drive) number,
+		// and the path is interpreted as relative to an existing endpoint.
+		// If the provider name is a real name, the path is absolute.
+		//
+		rv = provider_assign(buf[FSP_DATA], buf+FSP_DATA+1);
+		retbuf[FSP_DATA] = rv;
 		break;
 	}
 

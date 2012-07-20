@@ -1,7 +1,8 @@
 
 The code in this directory is derived from an old TCP/IP filesystem server I
 built for my TCIP/IP over Serial implementation in the GeckOS operating system.
-It is in fact almost unchanged.
+In the beginning it was in fact almost unchanged, but has evolved a lot since
+then.
 
 
 BUILD

@@ -39,14 +39,16 @@
 // state struct definition
 //
 
-typedef struct {
-	struct provider_t	*ptype;
-} endpoint_t;
+#define MAX_NUMBER_OF_ENDPOINTS         10              // max 10 drives
+
+#define MAX_NUMBER_OF_PROVIDERS         10              // max 10 different providers
+
+typedef struct _endpoint endpoint_t;
 
 typedef struct {
 	const char	*name;			// provider name, used in ASSIGN as ID
 	void		(*init)(void);			// initialization routine
-	endpoint_t* 	(*newep)(const char *par);	// create a new endpoint instance
+	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	// create a new endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
 	// file-related	
@@ -65,9 +67,19 @@ typedef struct {
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
-
-	
 } provider_t;
+
+struct _endpoint {
+	provider_t	*ptype;
+};
+
+int provider_assign(int drive, const char *name);
+
+endpoint_t* provider_lookup(int drive);
+
+int provider_register(provider_t *provider);
+
+void provider_init(void);
 
 #endif
 

@@ -85,14 +85,34 @@ static void init_fp(File *fp) {
         fp->chan = -1;
 }
 
-endpoint_t *fsp_new(const char *path) {
+endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
+	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
 	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
 
 	fsep->ptype = (struct provider_t *) &fs_provider;
 
+	int l = (parentep == NULL) ? 0 : strlen(parentep->curpath);
+	l += (path == NULL) ? 3 : strlen(path) + 2;
+
+	char *dirpath = malloc(l);
+	dirpath[0] = 0;
+	if (parentep != NULL) {
+		strcat(dirpath, parentep->curpath);
+		strcat(dirpath, "/");	// TODO dir separator char
+	}
+	if (path != NULL) {
+		strcat(dirpath, path);
+	} else {
+		strcat(dirpath, ".");
+	}
+	log_info("Calculate new dir path: %s\n", dirpath);
+
 	// malloc's a buffer and stores the canonical real path in it
-	fsep->basepath = realpath(path, NULL);
+	fsep->basepath = realpath(dirpath, NULL);
+
+	free(dirpath);
+
 	// copy into current path
 	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
 	strcpy(fsep->curpath, fsep->basepath);
@@ -191,6 +211,10 @@ static void close_fds(endpoint_t *ep, int tfd) {
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
 
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
+
         File *file = reserve_file(ep, tfd);
 
 	if (file != NULL) {
@@ -203,9 +227,9 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 			return -1;
 		}
 
-		FILE *fp = open_first_match(nm, mode);
+		FILE *fp = open_first_match(fsep->curpath, nm, mode);
 
-		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p\n",mode, buf, buf, (void*)file);
+		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, buf, buf, (void*)file, (void*)fp);
 
 		if(fp) {
 		  file->fp = fp;
@@ -220,13 +244,15 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 // open a directory read
 static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
         File *file = reserve_file(ep, tfd);
 	
 	if (file != NULL) {
 
 		// save pattern for later comparisons
 		strcpy(file->dirpattern, buf);
-		DIR *dp = opendir("." /*buf+FSP_DATA*/);
+		DIR *dp = opendir(fsep->curpath /*buf+FSP_DATA*/);
 
 		log_info("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
 							tfd, (void*)file, (void*)dp);
@@ -357,6 +383,8 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	int matches = 0;
 	char *p = buf;
 
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
 	do {
 		// comma is file pattern separator
 		char *pnext = index(p, ',');
@@ -364,7 +392,7 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 			*pnext = 0;	// write file name terminator (replacing the ',')
 		}
 		
-		int rv = dir_call_matches(p, _delete_callback);	
+		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);	
 		if (rv < 0) {
 			// error happened
 			return -rv;
