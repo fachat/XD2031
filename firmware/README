@@ -2,6 +2,7 @@ This file describes how to build and use the XD-2031 firmware.
 
 Currently supported hardware:
 	- XS-1541
+	- petSD
 
 Note that there are some subdirectories for "avr", or "xs1541", which apply
 to the architecture (like "avr") or the device (like "xs1541"). A device 
