@@ -146,7 +146,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	if (fsep->basepath == NULL) {
 		// some problem with dirpath - maybe does not exist...
 		log_errno("Could not resolve path for assign");
-		fsp_free(fsep);
+		fsp_free((endpoint_t*)fsep);
 		return NULL;
 	}
 
@@ -158,7 +158,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 			// so we throw an error
 			log_error("ASSIGN broke out of container (%s), was trying %s\n",
 				parentep->basepath, fsep->basepath);
-			fsp_free(fsep);
+			fsp_free((endpoint_t*)fsep);
 				
 			return NULL;
 		}
@@ -425,6 +425,63 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 }	
 
 static int fs_rename(endpoint_t *ep, char *buf) {
+
+	int er = -23;
+
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	// first find the two names separated by "="
+	int p = 0;
+	while (buf[p] != 0 && buf[p] != '=') {
+		p++;
+	}
+	if (buf[p] == 0) {
+		// not found
+		log_error("Did not find '=' in rename command %s\n", buf);
+		return -22;
+	}
+
+	buf[p] = 0;
+	char *from = buf+p+1;
+	char *to = buf;
+
+	if (index(to, '/') != NULL) {
+		// no separator char
+		log_error("target file name contained dir separator\n");
+		return -22;
+	}
+
+	char *frompath = malloc_path(fsep->curpath, from);
+	char *topath = malloc_path(fsep->curpath, to);
+
+	char *fromreal = realpath(frompath, NULL);
+	free(frompath);
+	char *toreal = realpath(topath, NULL);
+
+	if (toreal != NULL) {
+		// target already exists
+		er = -63;
+	} else {
+		// check both paths against container boundaries
+		if ((strstr(fromreal, fsep->basepath) == fromreal)
+			&& (strstr(topath, fsep->basepath) == topath)) {
+			// ok
+
+			int rv = rename(fromreal, topath);
+
+			if (rv < 0) {
+				er = -22;
+				log_errno("Error renaming a file\n");
+			} else {
+				er = 0;
+			}
+		}
+	}
+	free(topath);
+	free(toreal);
+	free(fromreal);
+
+	return er;
 }
 
 
@@ -579,7 +636,7 @@ provider_t fs_provider = {
 	readfile,
 	write_file,
 	fs_delete,
-	NULL, //fs_rename,
+	fs_rename,
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir
