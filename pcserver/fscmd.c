@@ -45,7 +45,7 @@
 #include "provider.h"
 #include "log.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_READ
 #undef DEBUG_WRITE
 

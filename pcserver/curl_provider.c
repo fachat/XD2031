@@ -35,6 +35,7 @@
 #include <curl/curl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 
 
@@ -87,6 +88,7 @@ typedef struct {
 	proto_t			protocol;	// type of provider
 	char			error_buffer[CURL_ERROR_SIZE];
 	char			name_buffer[2 * MAX_BUFFER_SIZE + MAX_PROTO_SIZE];
+	char			host_buffer[MAX_BUFFER_SIZE];
 	char			path_buffer[MAX_BUFFER_SIZE];
 	File			files[MAX_SESSIONS];
 
@@ -124,7 +126,20 @@ static curl_endpoint_t *new_endpoint(const char *path) {
 
 	fsep->error_buffer[0] = 0;
 	fsep->name_buffer[0] = 0;
-	strncpy(fsep->path_buffer, path, MAX_BUFFER_SIZE);
+	fsep->path_buffer[0] = 0;
+	fsep->host_buffer[0] = 0;
+	// separate host from path
+	// if hostend is NULL, then we only have the host
+	char *hostend=index(path, '/');
+
+	int hostlen = strlen(path);
+	if (hostend != NULL) {
+		hostlen = hostend - path;
+	}
+	strncpy(fsep->host_buffer, path, hostlen);
+	fsep->host_buffer[hostlen] = 0;
+
+	strncpy(fsep->path_buffer, path+hostlen+1, MAX_BUFFER_SIZE);
 	fsep->path_buffer[MAX_BUFFER_SIZE-1] = 0;
 
 	return fsep;
@@ -271,13 +286,6 @@ printf("\n");
 
 	return inlen;
 }
-
-#if 0
-static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
-
-	return 0;
-}
-#endif
 
 static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	int running_handles = 0;
@@ -427,10 +435,12 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 
 		// prepare name
 		strcpy(cep->name_buffer, ((provider_t*)(cep->ptype))->name);
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), "://");
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), cep->path_buffer);
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), "/");
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), buf);
+		strcat(cep->name_buffer, "://");
+		strcat(cep->name_buffer, cep->host_buffer);
+		strcat(cep->name_buffer, "/");
+		strcat(cep->name_buffer, cep->path_buffer);
+		strcat(cep->name_buffer, "/");
+		strcat(cep->name_buffer, buf);
 		if (is_dir) {
 			// end with a slash "/" to indicate a dir list
 			strcpy(cep->name_buffer + strlen(cep->name_buffer), "/");
@@ -621,8 +631,8 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
 
 // write file data
-static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 #if 0
+static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *files = ((fs_endpoint_t*)ep)->files;
 		FILE *fp = files[tfd].fp;
 		if(fp) {
@@ -636,13 +646,76 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		  return 0;
 		}
 		return -1;
-#endif
 	return -1;
 }
+#endif
 
 // ----------------------------------------------------------------------------------
 // command channel
 
+int do_chdir(endpoint_t *ep, char *name) {
+	// change into new dir
+	
+	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
+
+	log_debug("CHDIR: Current path is '%s', name is '%s'\n", cep->path_buffer, name);
+
+	// path buffer is a static buffer, so we can check it in-place
+	char *curpath = cep->path_buffer;
+	
+	if (name[0] == '/') {
+		// absolute path - just copy over old path
+		strncpy(cep->path_buffer, name, MAX_BUFFER_SIZE);
+		cep->path_buffer[MAX_BUFFER_SIZE-1] = 0;
+		return 0;
+	}
+	
+	// pointer in name
+	char *p = name;
+
+	do {
+	    int plen = strlen(p);
+	    int l = strlen(cep->path_buffer);
+	    if ( ((plen > 1) && p[0] == '.' && p[1] == '.')
+		&& (plen == 2 || p[2] == '/')) {
+		// one dir up
+
+		// remove the last path element
+		while (l > 0) {
+			if (cep->path_buffer[l] == '/') {
+				break;
+			}
+			l--;
+		}
+		cep->path_buffer[l] = 0;
+
+		// advance to next path part
+		plen = (plen > 2) ? 3 : 2;
+	    } else {
+		// append new path part
+		// find end of next part
+		for (plen = 0; p[plen] != 0; plen++) {
+			if (p[plen] == '/') {
+				break;
+			}
+		}
+		if (plen + l + 1 > MAX_BUFFER_SIZE) {
+			log_error("new path for chdir too long: %d\n", plen+l+1);
+			return -1;
+		}
+		strcat(cep->path_buffer, "/");
+		strncat(cep->path_buffer, p, plen);
+		cep->path_buffer[MAX_BUFFER_SIZE-1] = 0;
+		
+		if(p[plen] == '/') plen++;
+	    }
+	    p = p+plen;
+	} while(*p != 0);
+
+	log_debug("CHDIR: New path is '%s'\n", cep->path_buffer);
+
+	return 0;
+}
 
 
 // ----------------------------------------------------------------------------------
@@ -660,12 +733,12 @@ provider_t ftp_provider = {
 	NULL, //open_ftp_rw,
 	open_dr,
 	read_file,
-	write_file,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	NULL, // write_file,
+	NULL, // do_scratch,
+	NULL, // do_rename,
+	do_chdir,
+	NULL, // do_mkdir,
+	NULL  // do_rmdir
 };
 
 provider_t http_provider = {
@@ -681,12 +754,12 @@ provider_t http_provider = {
 	NULL, //open_ftp_rw,
 	NULL, //open_dr,
 	read_file,
-	write_file,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	NULL, // write_file,
+	NULL, // do_scratch,
+	NULL, // do_rename,
+	do_chdir,
+	NULL, // do_mkdir,
+	NULL  // do_rmdir
 };
 
 
