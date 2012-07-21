@@ -51,9 +51,6 @@
 #define	MAX_BUFFER_SIZE			64
 
 //------------------------------------------------------------------------------------
-//
-
-//------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
 // These are set when the channel is opened
 

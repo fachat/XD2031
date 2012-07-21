@@ -9,16 +9,23 @@ BUILD
 -----
 
 Just type
+
 	make
-on a Linux box with gcc installed.
+
+on a Linux box with gcc installed. You need to have "libcurl" installed
+for the FTP and HTTP protocol support.
+
 Note that you may need to enter your sudo password to allow to Setuid the
 executables and chown them to root. 
+
 
 RUN
 ---
 
 Type
+
 	make run
+
 to start the server, publishing the samples directory. 
 The XS1541 device must be connected to /dev/ttyUSB0
 The code drops privileges as soon as it has aquired and configured
@@ -34,4 +41,6 @@ TODO
 
 	- check with systems where char is two-byte (are there?)
 	  Anyway, the signedness stuff is a mess
+	- Code is partly cruft from 20 years ago. Coding style has
+	  changed a lot since then...
 

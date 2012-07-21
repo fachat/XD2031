@@ -67,5 +67,11 @@ int dir_fill_entry(char *dest, struct dirent *de, int maxsize);
  */
 int dir_fill_disk(char *dest);
 
+/**
+ * malloc a new path, and copy the given base path and name to it,
+ * with a separating char
+ */
+char *malloc_path(const char *base, const char *name);
+
 #endif
 

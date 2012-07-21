@@ -9,13 +9,18 @@ COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
 LIBS=-lcurl
 
+# fstcp builds a version that listens on a TCP/IP port - but there is not
+# device (yet) to use it
 all: fstcp fsser
+#all: fsser
 
 fstcp: fstcp.c $(COMMONC) $(COMMONH)
 	# Note: $LIBS must be at the end for curl/libs to be found
 	${CC} ${CFLAGS} fstcp.c $(COMMONC) -o fstcp ${LIBS}
-	sudo chown root $@
-	sudo chmod u+s $@
+	# The following lines are only necessary if you want to listen on
+	# privileged ports (<1024)
+	#sudo chown root $@
+	#sudo chmod u+s $@
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: $LIBS must be at the end for curl/libs to be found
@@ -28,7 +33,7 @@ clean:
 
 
 run:
-	./fsser -d /dev/ttyUSB0 ../sample
+	MALLOC_CHECK_=1 ./fsser -d /dev/ttyUSB0 ../sample
 
 debug:
 	echo "Start with: run -d /dev/ttyUSB0 ../sample"

@@ -53,15 +53,15 @@ FILE *open_first_match(const char *dir, const char *pattern, const char *options
 
 	// shortcut - if we don't have wildcards, just open it
 	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
-		char *namebuf = malloc(strlen(dir) + 2 + strlen(pattern));
-		strcpy(namebuf, dir);
-		strcat(namebuf, "/");	// TODO dir separation char
-		strcat(namebuf, pattern);
+		char *namebuf = malloc_path(dir, pattern);
 
 		log_info("opening file with name %s\n",namebuf);
 
 		fp = fopen(namebuf, options);
 
+		if (fp == NULL) {
+			log_errno("Error opening file with first match");
+		}
 		free(namebuf);
 		return fp;
 	}
@@ -75,14 +75,14 @@ FILE *open_first_match(const char *dir, const char *pattern, const char *options
 			if (compare_pattern(de->d_name, pattern)) {
 				// match
 
-				char *namebuf = malloc(strlen(dir) + 2 + strlen(pattern));
-				strcpy(namebuf, dir);
-				strcat(namebuf, "/");	// TODO dir separation char
-				strcat(namebuf, de->d_name);
+				char *namebuf = malloc_path(dir, de->d_name);
 
 				log_info("opening file with name %s\n",namebuf);
 
 				fp = fopen(namebuf, options);
+				if (fp == NULL) {
+					log_errno("Error opening file with match");
+				}
 
 				free(namebuf);
 				closedir(dp);
@@ -121,7 +121,12 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
 			if (compare_pattern(de->d_name, pattern)) {
 				// match
 				matches ++;
-				rv = callback(matches, de->d_name);
+
+				// get full path
+				char *namebuf = malloc_path(dir, de->d_name);
+				rv = callback(matches, namebuf);
+				// free memory
+				free(namebuf);
 				if (rv || onlyone) {
 					// either callback tells us to stop
 					// or there are no wildcards, so this has to be it
@@ -240,4 +245,27 @@ int dir_fill_disk(char *dest) {
 	return FS_DIR_NAME + 1;
 }
 
+/**
+ * malloc a new path and copy the given base path and name, concatenating
+ * them with the path separator
+ */
+char *malloc_path(const char *base, const char *name) {
+        int l = (base == NULL) ? 0 : strlen(base);
+        l += (name == NULL) ? 0 : strlen(name);
+        l += 3; // dir separator, terminating zero, optional "."
+
+        char *dirpath = malloc(l);
+        dirpath[0] = 0;
+        if (base != NULL) {
+                strcat(dirpath, base);
+                strcat(dirpath, "/");   // TODO dir separator char
+        }
+        if (name != NULL) {
+                strcat(dirpath, name);
+        }
+
+        log_info("Calculate new dir path: %s\n", dirpath);
+
+        return dirpath;
+}
 

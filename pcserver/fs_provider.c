@@ -83,48 +83,10 @@ static void init_fp(File *fp) {
 	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
         fp->chan = -1;
+	fp->fp = NULL;
+	fp->dp = NULL;
 }
 
-endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
-
-	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
-	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
-
-	fsep->ptype = (struct provider_t *) &fs_provider;
-
-	int l = (parentep == NULL) ? 0 : strlen(parentep->curpath);
-	l += (path == NULL) ? 3 : strlen(path) + 2;
-
-	char *dirpath = malloc(l);
-	dirpath[0] = 0;
-	if (parentep != NULL) {
-		strcat(dirpath, parentep->curpath);
-		strcat(dirpath, "/");	// TODO dir separator char
-	}
-	if (path != NULL) {
-		strcat(dirpath, path);
-	} else {
-		strcat(dirpath, ".");
-	}
-	log_info("Calculate new dir path: %s\n", dirpath);
-
-	// malloc's a buffer and stores the canonical real path in it
-	fsep->basepath = realpath(dirpath, NULL);
-
-	free(dirpath);
-
-	// copy into current path
-	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
-	strcpy(fsep->curpath, fsep->basepath);
-
-	log_info("FS provider set to real path '%s'\n", fsep->basepath);
-
-	int i;
-        for(i=0;i<MAXFILES;i++) {
-		init_fp(&(fsep->files[i]));
-        }
-	return (endpoint_t*) fsep;
-}
 
 // close a file descriptor
 static int close_fd(File *file) {
@@ -148,7 +110,7 @@ static int close_fd(File *file) {
 }
 
 
-void fsp_free(endpoint_t *ep) {
+static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
         int i;
         for(i=0;i<MAXFILES;i++) {
@@ -157,6 +119,58 @@ void fsp_free(endpoint_t *ep) {
 	free(cep->basepath);
 	free(cep->curpath);
         free(ep);
+}
+
+static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
+
+	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
+
+	// alloc and init a new endpoint struct
+	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
+	fsep->basepath = NULL;
+	fsep->curpath = NULL;
+        for(int i=0;i<MAXFILES;i++) {
+		init_fp(&(fsep->files[i]));
+        }
+
+	fsep->ptype = (struct provider_t *) &fs_provider;
+
+	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
+				path);
+
+	// malloc's a buffer and stores the canonical real path in it
+	fsep->basepath = realpath(dirpath, NULL);
+
+	free(dirpath);
+
+	if (fsep->basepath == NULL) {
+		// some problem with dirpath - maybe does not exist...
+		log_errno("Could not resolve path for assign");
+		fsp_free(fsep);
+		return NULL;
+	}
+
+	if (parentep != NULL) {
+		// if we have a parent, make sure we do not 
+		// escape the parent container, i.e. basepath
+		if (strstr(fsep->basepath, parentep->basepath) != fsep->basepath) {
+			// the parent base path is not at the start of the new base path
+			// so we throw an error
+			log_error("ASSIGN broke out of container (%s), was trying %s\n",
+				parentep->basepath, fsep->basepath);
+			fsp_free(fsep);
+				
+			return NULL;
+		}
+	}
+
+	// copy into current path
+	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
+	strcpy(fsep->curpath, fsep->basepath);
+
+	log_info("FS provider set to real path '%s'\n", fsep->basepath);
+
+	return (endpoint_t*) fsep;
 }
 
 
@@ -237,6 +251,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 		  return 0;
 		}
 		// TODO: open error (maybe depending on errno?)
+		close_fd(file);
 	}
 	return -1;
 }
@@ -264,6 +279,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		  return 0;
 		}
 		// TODO: open error (maybe depending on errno?)
+		close_fd(file);
 	}
 	return -1;
 }
@@ -418,27 +434,28 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	log_debug("Change dir to: %s\n", buf);
 
 	//  concat new path to current path
-	char *newpath = malloc(strlen(fsep->curpath) + strlen(buf) + 2);
-	strcpy(newpath, fsep->curpath);
-	strcat(newpath, "/");
-	strcat(newpath, buf);
+	char *newpath = malloc_path(fsep->curpath, buf);
 
 	// canonicalize it
 	char *newreal = realpath(newpath, NULL);
-
 	// free buffer so we don't forget it
 	free(newpath);
 
+	log_debug("Checking that new path '%s' is under base '%s'\n",
+		newreal, fsep->basepath);
+
 	// check if the new path is still under the base path
 	if (strstr(newreal, fsep->basepath) == newreal) {
-		// the needle base path is found at the start of the new real path
-		// -> ok
-		int rv = chdir(newreal);
-		if (rv < 0) {
-			log_errno("Error changing directory");
-			free(newreal);
-			return -22;
-		} 
+		// the needle base path is found at the start of the new real path -> ok
+	
+		// Don't need to chdir, as all paths are now absolute, based on curpath
+		//int rv = chdir(newreal);
+		//if (rv < 0) {
+		//	log_errno("Error changing directory");
+		//	free(newreal);
+		//	return -22;
+		//} 
+
 		free(fsep->curpath);
 		fsep->curpath = newreal;
 	} else {
@@ -454,25 +471,61 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 
 static int fs_mkdir(endpoint_t *ep, char *buf) {
 
-	int rv = mkdir(buf, 0557);
+	int er = -23;
 
-	if (rv < 0) {
-		log_errno("Error trying to make a directory");
-		return -22;
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	char *newpath = malloc_path(fsep->curpath, buf);
+
+	char *newreal = realpath(newpath, NULL);
+	free(newpath);
+
+	if (strstr(newreal, fsep->basepath) == newreal) {
+		// current path is still at the start of new path
+		// so it is not broken out of the container
+		
+		int rv = mkdir(newreal, 0557);
+
+		if (rv < 0) {
+			log_errno("Error trying to make a directory");
+			er = -22;
+		} else {
+			// ok
+			er = 0;
+		}
 	}
-	return 0;
+	free(newreal);
+	return er;
 }
 
 
 static int fs_rmdir(endpoint_t *ep, char *buf) {
 
-	int rv = rmdir(buf);
+	int er = -23;
 
-	if (rv < 0) {
-		log_errno("Error trying to remove a directory");
-		return -22;
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	char *newpath = malloc_path(fsep->curpath, buf);
+
+	char *newreal = realpath(newpath, NULL);
+	free(newpath);
+
+	if (strstr(newreal, fsep->basepath) == newreal) {
+		// current path is still at the start of new path
+		// so it is not broken out of the container
+		
+		int rv = rmdir(newreal);
+
+		if (rv < 0) {
+			log_errno("Error trying to remove a directory");
+			er = -22;
+		} else {
+			// ok
+			er = 0;
+		}
 	}
-	return 0;
+	free(newreal);
+	return er;
 }
 
 
@@ -526,7 +579,7 @@ provider_t fs_provider = {
 	readfile,
 	write_file,
 	fs_delete,
-	fs_rename,
+	NULL, //fs_rename,
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir
