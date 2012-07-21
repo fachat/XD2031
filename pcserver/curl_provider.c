@@ -272,10 +272,12 @@ printf("\n");
 	return inlen;
 }
 
+#if 0
 static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
 	return 0;
 }
+#endif
 
 static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	int running_handles = 0;
@@ -304,7 +306,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	CURLMsg *cmsg = NULL;
 	while ((cmsg = curl_multi_info_read(fp->multi, &msgs_in_queue)) != NULL) {
 #ifdef DEBUG_CURL	
-		printf("cmsg=%p, in queue=%d\n", cmsg, msgs_in_queue);
+		printf("cmsg=%p, in queue=%d\n", (void*)cmsg, msgs_in_queue);
 #endif	
 		// we only added one easy handle, so easy_handle is known
 		CURLMSG msg = cmsg->msg;
@@ -337,7 +339,7 @@ static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len
 		CURLMcode rv = CURLM_OK;
 		if (!fp->read_state) {		// set from previous pull_data
 			// try to pull in more, so we see if eof should be sent
-			CURLMcode rv = pull_data(cep, fp, &(fp->read_state));
+			rv = pull_data(cep, fp, &(fp->read_state));
 			if (rv != CURLM_OK) {
 				log_debug("reply_with_data sets EOF rv=%d, datalen=%d\n", rv, fp->bufdatalen);
 				*eof = 1;
@@ -354,8 +356,6 @@ static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len
 
 // read file data
 static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-
-	int rv = 0;
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = find_file(ep, tfd);

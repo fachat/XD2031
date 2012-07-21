@@ -37,6 +37,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
+#include <ctype.h>
 
 #include "wireformat.h"
 #include "fscmd.h"
@@ -49,6 +50,8 @@
 #undef DEBUG_WRITE
 
 #define	MAX_BUFFER_SIZE			64
+
+static void do_cmd(char *buf, int fs);
 
 //------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
@@ -108,11 +111,41 @@ void set_chan(int channo, endpoint_t *ep) {
 //------------------------------------------------------------------------------------
 //
 
+
 void cmd_init() {
 	provider_init();
 	chan_init();
 }
 
+/**
+ * take the command line, search for "-A<driv>=<name>" parameters and assign
+ * the value
+ */
+void cmd_assign_from_cmdline(int argc, char *argv[]) {
+
+	for (int i = 0; i < argc; i++) {
+
+		if ((strlen(argv[i]) >4) 
+			&& argv[i][0] == '-'
+			&& argv[i][1] == 'A') {
+
+			if (!isdigit(argv[i][2])) {
+				log_error("Could not identify %c as drive number!\n", argv[i][2]);
+				continue;
+			}
+
+			if (argv[i][3] != '=') {
+				log_error("Could not identify %s as ASSIGN parameter\n", argv[i]);
+				continue;
+			}
+	
+			int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			if (rv < 0) {
+				log_error("Could not assign, error number is %d\n", rv);
+			}
+		}
+	}
+}
 
 void cmd_loop(int readfd, int writefd) {
 
@@ -176,7 +209,7 @@ void cmd_loop(int readfd, int writefd) {
  * This function executes a packet from the device.
  * The return data is written into the file descriptor fd
  */
-void do_cmd(char *buf, int fd) {
+static void do_cmd(char *buf, int fd) {
 	int tfd, cmd;
 	unsigned int len;
 	char retbuf[200];

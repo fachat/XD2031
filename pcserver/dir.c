@@ -200,12 +200,19 @@ struct dirent* dir_next(DIR *dp, char *dirpattern) {
 /**
  * fill in the buffer with a directory entry
  */
-int dir_fill_entry(char *dest, struct dirent *de, int maxsize) {
+int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 	struct stat sbuf;
 	struct tm *tp;
 
+	char *realname = malloc_path(curpath, de->d_name);
+
         /* TODO: check return value */
-	stat(de->d_name, &sbuf);
+	int rv = stat(realname, &sbuf);
+	if (rv < 0) {
+		log_error("Failed stat'ing entry %s\n", de->d_name);
+		log_errno("Problem stat'ing dir entry");
+	}
+	free(realname);
 
         dest[FS_DIR_LEN] = sbuf.st_size & 255;
         dest[FS_DIR_LEN+1] = (sbuf.st_size >> 8) & 255;
@@ -236,9 +243,9 @@ int dir_fill_entry(char *dest, struct dirent *de, int maxsize) {
  * fill in the buffer with the final disk info entry
  */
 int dir_fill_disk(char *dest) {
-        dest[FS_DIR_LEN] = 0;
+        dest[FS_DIR_LEN] = 1;
         dest[FS_DIR_LEN+1] = 0;
-        dest[FS_DIR_LEN+2] = 1;
+        dest[FS_DIR_LEN+2] = 0;
         dest[FS_DIR_LEN+3] = 0;
         dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
         dest[FS_DIR_NAME] = 0;

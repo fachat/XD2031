@@ -61,10 +61,13 @@
 #include "privs.h"
 
 void usage(void) {
-	printf("Usage: fsmux [options] exported_directory hostname_to_export_to\n"
+	printf("Usage: fsmux [options] run_directory hostname_to_export_to\n"
 		" options=\n"
-		"   -ro		export read-only\n"
-		"   -ro		export read-only\n"
+		//"   -ro		export read-only \n"	// does not currently work
+		"   -A<drv>=<provider-string>\n"
+		"               assign a provider to a drive\n"
+		"               e.g. use '-A0=fs:.' to assign the current directory\n"
+		"               to drive 0. Dirs are relative to the run_directory param\n"
 	);
 	exit(1);
 }
@@ -90,6 +93,13 @@ int main(int argc, char *argv[]) {
 		  ro=1;
 		}
 		break;
+            case 'A':
+                // ignore that one, as it will be evaluated later by cmd_...
+                break;
+            default:
+                log_error("Unknown command line option %s\n", argv[i]);
+                usage();
+                break;
 	  }
 	  i++;
 	}
@@ -157,8 +167,10 @@ int main(int argc, char *argv[]) {
 	drop_privileges();
 
 	/* note that this may probably belong into the accept branch (e.g.
-	 * if we would clone() after accept */
+	 * if we would clone()/fork() after accept */
 	cmd_init();
+
+	cmd_assign_from_cmdline(argc, argv);
 
 	while(1) {
 	  client_addr_len = sizeof(client_addr);

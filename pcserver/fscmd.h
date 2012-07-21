@@ -37,9 +37,11 @@
 
 void cmd_init();
 
+void cmd_assign_from_cmdline(int argc, char *argv[]);
+
 void cmd_loop(int readfs, int writefd);
 
-void do_cmd(char *buf, int fs);
+//void do_cmd(char *buf, int fs);
 
 #endif
 

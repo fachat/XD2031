@@ -37,8 +37,6 @@
  */
 
 #include <stdio.h>
-
-#include "fscmd.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
@@ -47,21 +45,24 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "fscmd.h"
 #include "privs.h"
+#include "log.h"
 
 
 void usage(void) {
-	printf("Usage: fsser [options] exported_directory\n"
+	printf("Usage: fsser [options] run_directory\n"
 		" options=\n"
-		"   -ro		export read-only\n"
+                //"   -ro               export read-only \n"    // does not currently work
+                "   -A<drv>=<provider-string>\n"
+                "               assign a provider to a drive\n"
+                "               e.g. use '-A0=fs:.' to assign the current directory\n"
+                "               to drive 0. Dirs are relative to the run_directory param\n"
 		"   -d <device>	define serial device to use\n"
 	);
 	exit(1);
 }
 
-void error(char *msg) {
-	fprintf(stderr, msg);
-}
 
 /**
  * See http://en.wikibooks.org/wiki/Serial_Programming:Unix/termios
@@ -71,12 +72,12 @@ int config_ser(int fd) {
 	struct termios  config;
 
 	if(!isatty(fd)) { 
-		error("device is not a TTY!");
+		log_error("device is not a TTY!");
 		return -1;
 	 }
 
 	if(tcgetattr(fd, &config) < 0) { 
-		error("Could not get TTY attributes!");
+		log_error("Could not get TTY attributes!");
 		return -1;
 	}
 
@@ -122,14 +123,14 @@ int config_ser(int fd) {
         // constants)
 
         if(cfsetispeed(&config, B115200) < 0 || cfsetospeed(&config, B115200) < 0) {
-		error("Could not set required line speed!");
+		log_error("Could not set required line speed!");
 		return -1;
         }
 
         // Finally, apply the configuration
 
         if(tcsetattr(fd, TCSAFLUSH, &config) < 0) { 
-		error("Could not apply configuration!");
+		log_error("Could not apply configuration!");
 		return -1;
 	}
 
@@ -142,6 +143,7 @@ int main(int argc, char *argv[]) {
 	int i, ro=0;
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
+
 
 	i=1;
 	while(i<argc && argv[i][0]=='-') {
@@ -159,6 +161,13 @@ int main(int argc, char *argv[]) {
 		  device = argv[i];
 		}
  	     	break;
+	    case 'A':
+		// ignore that one, as it will be evaluated later by cmd_...
+		break;
+	    default:
+		log_error("Unknown command line option %s\n", argv[i]);
+		usage();
+		break;
 	  }
 	  i++;
 	}
@@ -195,6 +204,8 @@ int main(int argc, char *argv[]) {
 	drop_privileges();
 
 	cmd_init();
+
+	cmd_assign_from_cmdline(argc, argv);
 
 	cmd_loop(readfd, writefd);
 

@@ -31,7 +31,8 @@
 #include "provider.h"
 
 
-
+// TODO: this is ... awkward
+extern provider_t http_provider;
 extern provider_t ftp_provider;
 extern provider_t fs_provider;
 
@@ -155,19 +156,27 @@ void provider_init() {
 
         // manually handle the initial provider
         fs_provider.init();
-
 	provider_register(&fs_provider);
 
-        eptable[0].epno = 0;            // drive 0
-        eptable[0].ep = fs_provider.newep(NULL, ".");
+        ftp_provider.init();
+	provider_register(&ftp_provider);
+
+        http_provider.init();
+	provider_register(&http_provider);
+
+        //eptable[0].epno = 0;            // drive 0
+        //eptable[0].ep = fs_provider.newep(NULL, ".");
+
+	//eptable[1].epno = 9;		// drive 9
+	//eptable[1].ep = fs_provider.newep(NULL, "../tools");
 
         // test
-        eptable[4].epno = 6;            // drive 6
-        eptable[4].ep = fs_provider.newep(NULL, "..");
+        //eptable[4].epno = 6;            // drive 6
+        //eptable[4].ep = fs_provider.newep(NULL, "..");
 
         // test
-        eptable[6].epno = 7;            // drive 7
-        eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
+        //eptable[6].epno = 7;            // drive 7
+        //eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
 }
 
 endpoint_t *provider_lookup(int drive) {

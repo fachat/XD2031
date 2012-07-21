@@ -39,9 +39,12 @@
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+// to get a proper definition of realpath()
+#define	__USE_XOPEN_EXTENDED
+#include <stdlib.h>
 
 #include "dir.h"
 #include "fscmd.h"
@@ -285,7 +288,14 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 }
 
 // read directory
+//
+// Note: there is a race condition, as we do not save the current directory path
+// on directory open, so if it is changed "in the middle" of the operation,
+// we run into trouble here. Hope noone will do that...
+//
 static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
+
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	File *file = find_file(ep, tfd);
 
@@ -307,7 +317,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    rv = l;
 		    return rv;
 		  }
-		  int l = dir_fill_entry(retbuf, file->de, len);
+		  int l = dir_fill_entry(retbuf, fsep->curpath, file->de, len);
 		  rv = l;
 		  // prepare for next read (so we know if we're done)
 		  file->de = dir_next(file->dp, file->dirpattern);

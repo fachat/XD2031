@@ -33,7 +33,7 @@ clean:
 
 
 run:
-	MALLOC_CHECK_=1 ./fsser -d /dev/ttyUSB0 ../sample
+	MALLOC_CHECK_=1 ./fsser -d /dev/ttyUSB0 -A0=fs:../sample -A9=fs:../tools .
 
 debug:
 	echo "Start with: run -d /dev/ttyUSB0 ../sample"
