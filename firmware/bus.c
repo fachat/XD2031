@@ -193,16 +193,19 @@ static int16_t cmd_handler (bus_t *bus)
 
 	if (secaddr == 0x0f) {
       		/* Handle commands */
+		// zero termination
+		bus->command.command_buffer[bus->command.command_length++] = 0;
       		rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback);
     	} else {
       		/* Handle filenames */
 
+		// zero termination
+		bus->command.command_buffer[bus->command.command_length++] = 0;
 #ifdef DEBUG_SERIAL
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
-
       		rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback, secaddr == 1);
     	}
