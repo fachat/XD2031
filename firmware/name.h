@@ -39,6 +39,8 @@ typedef struct {
 	uint8_t	namelen;	// length of remaining file name
 } nameinfo_t;
 
+#define	NAMEINFO_UNUSED_DRIVE	0xff
+
 // shared global variable to be used in parse_filename, as long as it's threadsafe
 extern nameinfo_t nameinfo;
 

@@ -21,6 +21,7 @@
 ****************************************************************************/
 
 #include <stdio.h>
+#include <ctype.h>
 
 #include "provider.h"
 #include "debug.h"
@@ -77,6 +78,11 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 #ifdef DEBUG_PROVIDER
 	debug_printf("ASSIGN: drive %d to '%s'\n", drive, name);
 #endif
+
+	// check drive
+	if (drive < 0 || drive > 10) {
+		return -1;
+	}
 
 	// first find the colon
 	uint8_t p = 0;

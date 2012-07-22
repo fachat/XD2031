@@ -187,6 +187,8 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
   uint8_t *msg = err->error_buffer;
   uint8_t i = 0;
 
+  err->readp = 0;
+
 #if 0
   current_error = errornum;
   buffers[CONFIG_BUFFER_COUNT].data     = error_buffer;

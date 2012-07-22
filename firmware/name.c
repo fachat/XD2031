@@ -62,7 +62,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	uint8_t len = in->command_length;
 
 	// init output
-	result->drive = 0xff;
+	result->drive = NAMEINFO_UNUSED_DRIVE;
 	result->cmd = CMD_NONE;	// no command
 	result->type = 0;	// PRG
 	result->access = 'R';	// read
@@ -183,7 +183,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
 #if DEBUG_NAME
 	debug_printf("CMD=%s\n", result->cmd == CMD_NONE ? '-' : command_to_name(result->cmd));
-	debug_printf("DRIVE=%c\n", result->drive == 0xff ? '-' : result->drive + 0x30);
+	debug_printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' : result->drive + 0x30);
 	debug_puts("NAME="); debug_puts((char*)result->name); debug_putcrlf();
 	debug_puts("ACCESS="); debug_putc(result->access); debug_putcrlf();
 	debug_puts("TYPE="); debug_putc(result->type); debug_putcrlf();

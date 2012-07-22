@@ -152,17 +152,28 @@ int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg,
 		}
 
 		return file_submit_call(channel_no, type, errormsg, callback);
-	}
+	} else
 	if (nameinfo.cmd == CMD_ASSIGN) {
-	
+
+		if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+			// no drive
+			return -74;	// drive not ready
+		}
+
 		// the +1 on the name skips the endpoint number stored in position 0	
 		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
 		
 			return file_submit_call(channel_no, FS_ASSIGN, errormsg, callback);
 		} else {
-			// need to unlock the called by calling the callback function
+			// need to unlock the caller by calling the callback function
 			callback(0, NULL);
 		}
+		return 0;
+	} else
+	if (nameinfo.cmd == CMD_INITIALIZE) {
+		debug_puts("INITIALIZE");
+		// need to unlock the caller by calling the callback function
+		callback(0, NULL);
 		return 0;
 	}
 

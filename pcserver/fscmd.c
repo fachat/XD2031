@@ -220,19 +220,19 @@ static void do_cmd(char *buf, int fd) {
 
 	if (cmd == FS_TERM) {
 		if (len > 200) {
-			printf("TERM length exceeds 200! Is %d\n", len);
+			log_error("TERM length exceeds 200! Is %d\n", len);
 			len = 200;
 		}
 		memcpy(retbuf, buf+3, len-3);
 		retbuf[len-3] = 0;
-		printf("%s",retbuf);
+		printf(">>>: %s",retbuf);
 		return;
 	}
 
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		printf("cmd: %d bytes @%p: ",n, buf);
+		log_debug("cmd: %d bytes @%p: ",n, buf);
 		for(int i=0;i<n;i++) printf("%02x ",buf[i]); printf("\n");
 	}
 #endif

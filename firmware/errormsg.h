@@ -42,9 +42,10 @@
 
 typedef struct {
 	// callback that is called when the buffer is to be reset
-	void 		(*set_ok_message)();	// (struct errormsg_t *err);
+	//void 		(*set_ok_message)();	// (struct errormsg_t *err);
 	// error buffer
 	uint8_t 	error_buffer[CONFIG_ERROR_BUFFER_SIZE];
+	uint8_t		readp;	// read index in error_buffer
 } errormsg_t ;
 
 void set_error_ts(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector);

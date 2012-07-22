@@ -74,16 +74,10 @@
  *  Error and command channel handling
  */
 
-static void set_ieee_ok(void);
 
-static errormsg_t error = {
-	set_ieee_ok
-};
+static errormsg_t error;
 
-static void set_ieee_ok(void) {
-	set_error(&error, 0);
-};
-
+#if 0
 static void ieee_submit_status_refill(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum)) {
 
@@ -130,6 +124,29 @@ static endpoint_t ieee_status_endpoint = {
 	&ieee_status_provider,
 	NULL
 };
+
+//static channel_t* get_command_channel(bus_t *bus) {
+//
+//	channel_t *chan = channel_open(bus_adjust_secaddr(bus, 15),
+//			WTYPE_WRITEONLY, &ieee_command_provider, NULL);
+//
+//	return chan;
+//}
+
+static channel_t* get_status_channel(bus_t *bus) {
+
+	channel_t *chan = NULL;
+
+	uint8_t adjsa = bus_secaddr_adjust(bus, 15);
+
+	int er = channel_open(adjsa, WTYPE_READONLY, &ieee_status_endpoint, NULL);
+	if (er == 0) {
+		chan = channel_find(adjsa);
+	}
+
+	return chan;
+}
+#endif
 
 /********************************************************************************/
 
@@ -191,17 +208,17 @@ static int16_t cmd_handler (bus_t *bus)
 	bus_for_irq = bus;
 	bus_for_irq->cmd_done = 0;
 
+	// zero termination
+	bus->command.command_buffer[bus->command.command_length++] = 0;
+
 	if (secaddr == 0x0f) {
       		/* Handle commands */
 		// zero termination
-		bus->command.command_buffer[bus->command.command_length++] = 0;
       		rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback);
     	} else {
       		/* Handle filenames */
 
-		// zero termination
-		bus->command.command_buffer[bus->command.command_length++] = 0;
 #ifdef DEBUG_SERIAL
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
@@ -228,12 +245,13 @@ static int16_t cmd_handler (bus_t *bus)
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
 #endif
 		// result of the open
+		if (bus_for_irq->errnum == 1) {
+			set_error_ts(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0);
+		} else {
+                	set_error(&error, bus_for_irq->errnum);
+		}
+
         	if (bus_for_irq->errnum != 0) {
-			if (bus_for_irq->errnum == 1) {
-				set_error_ts(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0);
-			} else {
-        	        	set_error(&error, bus_for_irq->errnum);
-			}
         	        channel_close(bus_secaddr_adjust(bus, secaddr));
         	} else {
                 	// really only does something on read-only channels
@@ -258,7 +276,6 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 #ifdef DEBUG_SERIAL_DATA
     debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
-//delayus(45);
 
     if((bus->secondary & 0x0f) == 0x0f || (bus->secondary & 0xf0) == 0xf0) {
       if (bus->command.command_length < CONFIG_COMMAND_BUFFER_SIZE) {
@@ -284,19 +301,25 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	uint8_t secaddr = bus->secondary & 0x0f;
 	channel_t *channel = bus->channel;
 
-	if (channel == NULL) {
-		if (secaddr == 15) {
-      			channel_open(bus_secaddr_adjust(bus, secaddr), WTYPE_READONLY, &ieee_status_endpoint, NULL);
-			channel = channel_find(bus_secaddr_adjust(bus, secaddr));
-			bus->channel = channel;
-		}
-	}
+	if (secaddr == 15) {
 
-	if (channel == NULL) {
+		*data = error.error_buffer[error.readp];
+
+		if (!preload) {
+			// the real thing
+			error.readp++;
+			if (error.error_buffer[error.readp] == 0) {
+				// finished reading the error message
+				// set OK
+				set_error(&error, 0);
+			}
+		}
+	} else {
+	    if (channel == NULL) {
 		// if still NULL, error
 		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = 0x83;
-	} else {
+	    } else {
 #ifdef DEBUG_SERIAL
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
@@ -306,7 +329,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		*data = channel_current_byte(channel);
 		if (channel_current_is_eof(channel)) {
 #ifdef DEBUG_SERIAL
-			debug_printf("EOF!\n");
+			debug_puts("EOF!\n");
 #endif
 			st |= 0x40;
 		}
@@ -325,12 +348,13 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				}
 			}
 		}
+	    }
 	}
 	return st + (bus->device << 8);
 }
 
 /* These routines work for IEEE488 emulation on both C64 and PET.  */
-static int16_t bus_command(bus_t *bus)
+static int16_t bus_prepare(bus_t *bus)
 {
     uint8_t b;
     int8_t secaddr;
@@ -341,22 +365,19 @@ static int16_t bus_command(bus_t *bus)
          bus->device, bus->secondary);
 #endif
 
-    /* which device ? */
-    //p = &serialdevices[TrapDevice & 0x0f];
-    
     if ((bus->device & 0x0f) != bus->device_address) {
 	return 0x80;	// device not present
     }
 
     secaddr = bus->secondary & 0x0f;
 
-    switch (bus->secondary & 0xf0) {
-      case 0x60:
-          /* Open Channel */
-	  bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
-	  if (bus->channel == NULL) {
-		debug_printf("Did not find channel!\n");
-		st |= 0x40;	// TODO correct code?
+	  if (secaddr != 15) {
+          	/* Open Channel */
+	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
+		if (bus->channel == NULL) {
+			debug_puts("Did not find channel!\n");
+			st |= 0x40;	// TODO correct code?
+		}
 	  }
           if ((bus->device & 0xf0) == 0x40) {
 	      	// if we should TALK, prepare the first data byte
@@ -365,12 +386,15 @@ static int16_t bus_command(bus_t *bus)
 			//debug_printf("receive gets st=%04x\n", st);
 		} else {
 			// cause a FILE NOT FOUND
-			debug_printf("FILE NOT FOUND\n");
+			debug_puts("FILE NOT FOUND\n");
 			bus->device = 0;
 		}
           }
-          break;
-      case 0xE0:
+	return 0;
+}
+
+static void bus_close(bus_t *bus) {
+    	uint8_t secaddr = bus->secondary & 0x0f;
           /* Close File */
           if(secaddr == 15) {
 	    // is this correct or only a convenience?
@@ -379,18 +403,6 @@ static int16_t bus_command(bus_t *bus)
             /* Close a single buffer */
             channel_close(bus_secaddr_adjust(bus, secaddr));
           }
-          break;
-
-      case 0xF0:
-          /* Open File */
-	  st = cmd_handler(bus);
-          break;
-
-      default:
-          debug_printf("Unknown command %02X\n\n", bus->secondary & 0xff);
-	  break;
-    }
-    return (st);
 }
 
 int16_t bus_attention(bus_t *bus, uint8_t b) {
@@ -400,8 +412,12 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
     if (b == 0x3f
         && (((bus->secondary & 0xf0) == 0xf0)
             || ((bus->secondary & 0x0f) == 0x0f))) {
-	// then process the command
-        st = bus_command(bus);
+
+        if ((bus->device & 0x0f) == bus->device_address) {
+		// then process the command
+        	st = cmd_handler(bus);
+        }
+
     } else {
 
 	// not open, not command:
@@ -415,16 +431,29 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
               break;
 
           case 0x60:
+	      // secondary address (open DATA channel)
+  	      if ((bus->device & 0x0f) == bus->device_address) {
+
+              	bus->secondary = b;
+	      	// process a command if necessary
+              	bus_prepare(bus);
+	      }
+              break;
           case 0xe0:
-	      // secondary address (open DATA channel, or CLOSE)
-              bus->secondary = b;
-	      // process a command if necessary
-              st = bus_command(bus);
+	      // secondary address (CLOSE)
+  	      if ((bus->device & 0x0f) == bus->device_address) {
+              	bus->secondary = b;
+	      	// process a command if necessary
+              	//st = bus_command(bus);
+              	bus_close(bus);
+	      }
               break;
 
           case 0xf0:            /* Open File needs the filename first */
-              bus->secondary = b;
-	      // TODO: close previously opened file
+  	      if ((bus->device & 0x0f) == bus->device_address) {
+              	bus->secondary = b;
+	      	// TODO: close previously opened file
+	      }
               break;
 	  default:
 	      // falls through e.g. for unlisten/untalk
