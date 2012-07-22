@@ -69,11 +69,8 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void 
 
 
 #ifdef DEBUG_FILE
-	debug_putps("OPEN FILE: FOR CHAN:");
-	debug_puthex(channel_no);
-	debug_putps(" WITH NAME: ");
-	debug_puts((char*)&(command->command_buffer));
-	debug_putcrlf();
+	debug_printf("OPEN FILE: FOR CHAN: %d WITH NAME: %s\n",
+		channel_no, (char*)&(command->command_buffer));
 #endif
 
 	// note: in a preemtive env, the following would have to be protected
@@ -86,7 +83,7 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void 
 	if (nameinfo.cmd != CMD_NONE && nameinfo.cmd != CMD_DIR) {
 		// command name during open
 		// this is in fact ignored by CBM DOS as checked with VICE's true drive emulation
-		debug_puts("NO CORRECT CMD: "); debug_puts(command_to_name(nameinfo.cmd)); debug_putcrlf();
+		debug_printf("NO CORRECT CMD: %s\n", command_to_name(nameinfo.cmd));
 		nameinfo.cmd = 0;
 	}
 	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P') {

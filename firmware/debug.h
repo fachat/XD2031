@@ -33,13 +33,14 @@
 #if DEBUG 
 
 #include "term.h"
+#include "mem.h"
 
 static inline void debug_putc(char c) { term_putc(c); }
 static inline void debug_putcrlf() {  term_putcrlf(); term_flush(); }
-#define	debug_puts(s)	term_puts(s)
-#define	debug_putps(s)	term_puts(s)	/*uartPutString(PSTR(s))*/
+#define	debug_puts(s)	term_puts(IN_ROM_STR(s))
+//#define	debug_putps(s)	term_puts(PROGMEM s)	/*uartPutString(PSTR(s))*/
 
-#define	debug_printf	term_printf
+#define	debug_printf(format, ...)	term_printf(IN_ROM_STR(format), __VA_ARGS__)
 
 static char hexnibs[] = {'0','1','2','3','4','5','6','7',
                          '8','9','a','b','c','d','e','f' };

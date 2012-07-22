@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include <ctype.h>
-#include <avr/pgmspace.h>
+#include <mem.h>
 #include "errormsg.h"
 #include "channel.h"
 #include "version.h"		/* for LONGVERSION */
@@ -34,17 +34,17 @@
 #define	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
-const char PROGMEM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
+const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
 
 /// Long version string, used for message 9
-const char PROGMEM longverstr[] = LONGVERSION;
+const char IN_ROM longverstr[] = LONGVERSION;
 
 //static uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
 
 #define EC(x) x+0x80
 
 /// Abbreviations used in the main error strings
-static const uint8_t PROGMEM abbrevs[] = {
+static const uint8_t IN_ROM abbrevs[] = {
   EC(0), 'F','I','L','E',
   EC(1), 'R','E','A','D',
   EC(2), 'W','R','I','T','E',
@@ -62,7 +62,7 @@ static const uint8_t PROGMEM abbrevs[] = {
 };
 
 /// Error string table
-static const uint8_t PROGMEM messages[] = {
+static const uint8_t IN_ROM messages[] = {
   EC(00),
     ' ','O','K',
   EC(01),

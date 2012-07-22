@@ -80,7 +80,7 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 #endif
 
 	// check drive
-	if (drive < 0 || drive > 10) {
+	if (drive > 10) {
 		return -1;
 	}
 
@@ -102,7 +102,7 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 			return -1;
 		}
 		if (ep == &default_provider) {
-			debug_printf("Default is not registered, forwarding to server\n");
+			debug_puts("Default is not registered, forwarding to server\n");
 			return -1;
 		}
 		newprov = ep->provider;
@@ -182,7 +182,7 @@ endpoint_t* provider_lookup(uint8_t drive) {
 		}
 	}
 #ifdef DEBUG_PROVIDER
-	debug_printf("not found, returning default\n");
+	debug_puts("not found, returning default\n");
 #endif
 	return &default_provider;
 }

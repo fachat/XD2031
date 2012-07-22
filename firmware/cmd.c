@@ -105,9 +105,7 @@ const char *command_to_name(command_t cmd) {
 int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
 					void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
-	debug_putps("COMMAND: ");
-	debug_puts((char*)&(command->command_buffer));
-	debug_putcrlf();
+	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 
 	parse_filename(command, &nameinfo, 1);
 
