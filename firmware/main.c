@@ -37,7 +37,6 @@
 
 #include "config.h"
 #include "version.h"
-#include "timer.h"
 #include "main.h"
 #include "packet.h"
 #include "serial.h"
