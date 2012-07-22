@@ -30,7 +30,9 @@ void term_flush(void);
 void term_putc(char c);
 void term_putcrlf(void);
 void term_puts(const char *);
+void term_rom_puts(const char *);
 void term_printf(const char *, ...);
+void term_rom_printf(const char *, ...);
 
 
 #endif

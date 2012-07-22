@@ -48,6 +48,7 @@
 #include "file.h"
 #include "channel.h"
 #include "bus.h"
+#include "mem.h"
 
 #include "led.h"
 //#include "iec.h"
@@ -71,7 +72,7 @@ void ListVersion()
 
 	term_putcrlf();
 	
-	term_puts("### "HW_NAME"/"SW_NAME" v"VERSION" ###");
+	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION" ###"));
 	term_putcrlf();
 }
 

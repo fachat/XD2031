@@ -15,7 +15,7 @@ all: fstcp fsser
 #all: fsser
 
 fstcp: fstcp.c $(COMMONC) $(COMMONH)
-	# Note: $LIBS must be at the end for curl/libs to be found
+	# Note: LIBS must be at the end for curl/libs to be found
 	${CC} ${CFLAGS} fstcp.c $(COMMONC) -o fstcp ${LIBS}
 	# The following lines are only necessary if you want to listen on
 	# privileged ports (<1024)
@@ -23,7 +23,7 @@ fstcp: fstcp.c $(COMMONC) $(COMMONH)
 	#sudo chmod u+s $@
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
-	# Note: $LIBS must be at the end for curl/libs to be found
+	# Note: LIBS must be at the end for curl/libs to be found
 	${CC} ${CFLAGS} fsser.c $(COMMONC) -o fsser ${LIBS}
 	sudo chown root $@
 	sudo chmod u+s $@

@@ -32,6 +32,7 @@
 #include "term.h"
 #include "serial.h"
 #include "wireformat.h"
+#include "mem.h"
 
 #include "led.h"
 
@@ -86,6 +87,36 @@ void term_putcrlf() {
 	}
 }
 
+/**
+ * Note that this function expects its parameter in ROM
+ */
+void term_rom_puts(const char *rom_str) {
+
+
+	packet_wait_done(&termpack);
+
+	uint8_t len = rom_strlen(rom_str);
+
+	if ((nchars + len) >= TERM_BUFFER_LENGTH) {
+		if (endpoint == NULL) {
+			// no way we can print that now
+			return;
+		}
+		send();
+	}
+	packet_wait_done(&termpack);
+	if (len >= TERM_BUFFER_LENGTH) {
+		// cut
+		len = TERM_BUFFER_LENGTH;
+	}
+	rom_memcpy(buf+nchars, rom_str, len);
+
+	nchars += len;
+}
+
+/**
+ * Note that this function expects its parameter in ROM
+ */
 void term_puts(const char *str) {
 
 
@@ -113,10 +144,22 @@ void term_puts(const char *str) {
 void term_printf(const char *format, ...)
 {
     va_list args;
-    char    pbuf[TERM_BUFFER_LENGTH];
+    char pbuf[TERM_BUFFER_LENGTH];
 
     va_start( args, format );
     vsprintf(pbuf, format, args );
+
+    term_puts(pbuf);
+}
+
+void term_rom_printf(const char *rom_format, ...)
+{
+    va_list args;
+    char pbuf[TERM_BUFFER_LENGTH];
+
+    va_start( args, rom_format );
+    rom_vsprintf(pbuf, rom_format, args );
+
     term_puts(pbuf);
 }
 

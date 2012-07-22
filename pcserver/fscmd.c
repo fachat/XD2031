@@ -225,7 +225,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		memcpy(retbuf, buf+3, len-3);
 		retbuf[len-3] = 0;
-		printf(">>>: %s",retbuf);
+		log_term(retbuf);
 		return;
 	}
 

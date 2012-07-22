@@ -23,9 +23,48 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <strings.h>
 #include <stdarg.h>
+#include <ctype.h>
 
-void log_errno(const char *msg) {
+void log_term(const char *msg) {
+	
+	int newline = 0;
+
+	printf(">>>: ");
+	char c;
+	while ((c = *msg) != 0) {
+		if (newline) {
+			printf("\n>>>: ");
+		}
+		if (isprint(c)) {
+			putchar(c);
+			newline = 0;
+		} else
+		if (c == 10) {
+			newline = 1;
+		} else
+		if (c == 13) {
+			// silently ignore
+		} else {
+			printf("{%02x}", ((int)c) & 0xff);
+			newline = 0;
+		}
+		msg++;
+	}
+	printf("\n");
+}
+
+void log_errno(const char *msg, ...) {
+       va_list args;
+       va_start(args, msg);
+	char buffer[1024];
+
+	if (index(msg, '%') != NULL) {
+		// the msg contains parameter, so we need to fix it
+		vsprintf(buffer, msg, args);
+		msg = buffer;
+	}
         printf(">> %s: errno=%d: %s\n", msg, errno, strerror(errno));
 }
 
