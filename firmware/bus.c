@@ -241,6 +241,10 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 		*data = error.error_buffer[error.readp];
 
+		if (error.error_buffer[error.readp+1] == 0) {
+			// send EOF
+			st |= 0x40;
+		}
 		if (!preload) {
 			// the real thing
 			error.readp++;
@@ -253,6 +257,8 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	} else {
 	    if (channel == NULL) {
 		// if still NULL, error
+		debug_printf("Setting file not open on secaddr %d\n", bus->secondary);
+
 		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = 0x83;
 	    } else {
@@ -397,8 +403,8 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
         }
     }
 
-    if ((b == 0x3f) || (b == 0x5f)) {
-	// unlisten, untalk
+    if ((b == 0x3f) || (b == 0x5f) || ((b & 0xf0) == 0xe0)) {
+	// unlisten, untalk, close
         bus->device = 0;
         bus->secondary = 0;
     } else {
