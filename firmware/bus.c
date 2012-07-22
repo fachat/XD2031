@@ -181,6 +181,12 @@ static int16_t cmd_handler (bus_t *bus)
                 	set_error(&error, bus_for_irq->errnum);
 		}
 
+		// command may (or may not) open channel 15 for callback to the server
+		// so close it here, as this is done separately
+		if (secaddr == 15) {
+			channel_close(bus_secaddr_adjust(bus, 15));
+		}
+
         	if (bus_for_irq->errnum != 0) {
         	        channel_close(bus_secaddr_adjust(bus, secaddr));
         	} else {

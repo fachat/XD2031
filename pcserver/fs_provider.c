@@ -511,6 +511,11 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	log_debug("Checking that new path '%s' is under base '%s'\n",
 		newreal, fsep->basepath);
 
+	if (newreal == NULL) {
+		// target does not exist
+		return -23;
+	}
+
 	// check if the new path is still under the base path
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// the needle base path is found at the start of the new real path -> ok
@@ -545,13 +550,12 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	char *newreal = realpath(newpath, NULL);
-	free(newpath);
 
-	if (strstr(newreal, fsep->basepath) == newreal) {
-		// current path is still at the start of new path
-		// so it is not broken out of the container
-		
-		int rv = mkdir(newreal, 0557);
+	if (newreal != NULL) {
+		// file or directory exists
+		er = -63;
+	} else {
+		int rv = mkdir(newpath, 0557);
 
 		if (rv < 0) {
 			log_errno("Error trying to make a directory");
@@ -561,6 +565,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 			er = 0;
 		}
 	}
+	free(newpath);
 	free(newreal);
 	return er;
 }
@@ -577,6 +582,10 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 	char *newreal = realpath(newpath, NULL);
 	free(newpath);
 
+	if (newreal == NULL) {
+		// directory does not exist
+		er = -22;
+	} else
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// current path is still at the start of new path
 		// so it is not broken out of the container
