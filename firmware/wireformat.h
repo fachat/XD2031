@@ -28,6 +28,8 @@
 #ifndef WIREFORMAT_H
 #define WIREFORMAT_H
 
+#include "errors.h"		// pull in the error numbers
+
 /* data struct exchanged between client and server */
 #define FSP_CMD         0	/* command, see the FS_* defines below */
 #define FSP_LEN         1	/* total packet length, i.e. including CMD and LEN */

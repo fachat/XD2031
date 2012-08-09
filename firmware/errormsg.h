@@ -36,9 +36,8 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "errors.h"
 
-
-//typedef void errormsg_t;
 
 typedef struct {
 	// callback that is called when the buffer is to be reset
@@ -54,51 +53,5 @@ static inline void set_error(errormsg_t *error, uint8_t errornum) {
 	set_error_ts(error, errornum, 0, 0);
 }
 
-// Commodore DOS error codes
-#define ERROR_OK                  0
-#define ERROR_SCRATCHED           1
-#define ERROR_PARTITION_SELECTED  2
-#define ERROR_STATUS              3
-#define ERROR_LONGVERSION         9
-#define ERROR_READ_NOHEADER      20
-#define ERROR_READ_NOSYNC        21
-#define ERROR_READ_NODATA        22
-#define ERROR_READ_CHECKSUM      23
-#define ERROR_WRITE_VERIFY       25
-#define ERROR_WRITE_PROTECT      26
-#define ERROR_READ_HDRCHECKSUM   27
-#define ERROR_DISK_ID_MISMATCH   29
-#define ERROR_SYNTAX_UNKNOWN     30
-#define ERROR_SYNTAX_UNABLE      31
-#define ERROR_SYNTAX_TOOLONG     32
-#define ERROR_SYNTAX_JOKER       33
-#define ERROR_SYNTAX_NONAME      34
-#define ERROR_FILE_NOT_FOUND_39  39
-#define ERROR_RECORD_MISSING     50
-#define ERROR_RECORD_OVERFLOW    51
-#define ERROR_FILE_TOO_LARGE     52
-#define ERROR_WRITE_FILE_OPEN    60
-#define ERROR_FILE_NOT_OPEN      61
-#define ERROR_FILE_NOT_FOUND     62
-#define ERROR_FILE_EXISTS        63
-#define ERROR_FILE_TYPE_MISMATCH 64
-#define ERROR_NO_BLOCK           65
-#define ERROR_ILLEGAL_TS_COMMAND 66
-#define ERROR_ILLEGAL_TS_LINK    67
-#define ERROR_NO_CHANNEL         70
-#define ERROR_DIR_ERROR          71
-#define ERROR_DISK_FULL          72
-#define ERROR_DOSVERSION         73
-#define ERROR_DRIVE_NOT_READY    74
-#define ERROR_PARTITION_ILLEGAL  77
-#define ERROR_BUFFER_TOO_SMALL   78
-#define ERROR_IMAGE_INVALID      79
-#define ERROR_CLOCK_UNSTABLE     99
-
-/// Version number string, will be added to message 73
-//extern const char PROGMEM versionstr[];
-
-/// Long version string, used for message 9
-//extern const char PROGMEM longverstr[];
 
 #endif

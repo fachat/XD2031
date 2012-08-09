@@ -226,9 +226,10 @@ static void _file_open_callback(int8_t channelno, int8_t errnum) {
 				active[i].callback(ERROR_DRIVE_NOT_READY, NULL);
 			} else {
 				// we did receive the reply packet
-				// TODO: translate into errormsg code
 				// NOTE: rxdata[0] is actually rxdata[FSP_DATA], as first
 				// byte of reply packet is the error number
+				// Note that the reply packet already sends an official errors.h 
+				// error code, so no translation needed
 				active[i].callback(active[i].rxdata[0], active[i].rxdata);
 			}
 			active[i].channel_no = -1;

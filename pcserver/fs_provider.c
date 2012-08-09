@@ -49,6 +49,7 @@
 #include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
+#include "errors.h"
 
 #include "log.h"
 
@@ -176,6 +177,38 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	return (endpoint_t*) fsep;
 }
 
+// ----------------------------------------------------------------------------------
+// error translation
+
+static int errno_to_error(int err) {
+
+	switch(err) {
+	case EEXIST:
+		return ERROR_FILE_EXISTS;
+	case EACCES:
+		return ERROR_NO_PERMISSION;
+	case ENAMETOOLONG:
+		return ERROR_FILE_NAME_TOO_LONG;
+	case ENOENT:
+		return ERROR_FILE_NOT_FOUND;
+	case ENOSPC:
+		return ERROR_DISK_FULL;
+	case EROFS:
+		return ERROR_WRITE_PROTECT;
+	case ENOTDIR:	// mkdir, rmdir
+	case EISDIR:	// open, rename
+		return ERROR_FILE_TYPE_MISMATCH;
+	case ENOTEMPTY:
+		return ERROR_DIR_NOT_EMPTY;
+	case EMFILE:
+		return ERROR_NO_CHANNEL;
+	case EINVAL:
+		return ERROR_SYNTAX_INVAL;
+	default:
+		return ERROR_FAULT;
+	}
+}
+
 
 // ----------------------------------------------------------------------------------
 //
@@ -241,7 +274,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 		if(strchr(nm, '/')) {
 			// should give a security error
 			// TODO: replace with correct error number
-			return -1;
+			return ERROR_SYNTAX_DIR_SEPARATOR;
 		}
 
 		FILE *fp = open_first_match(fsep->curpath, nm, mode);
@@ -251,12 +284,12 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 		if(fp) {
 		  file->fp = fp;
 		  file->dp = NULL;
-		  return 0;
+		  return ERROR_OK;
 		}
 		// TODO: open error (maybe depending on errno?)
 		close_fd(file);
 	}
-	return -1;
+	return ERROR_FAULT;
 }
 
 // open a directory read
@@ -279,12 +312,15 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		  file->fp = NULL;
 		  file->dp = dp;
 		  file->is_first = 1;
-		  return 0;
+		  return ERROR_OK;
+		} else {
+		  log_errno("Error opening directory");
+		  int er = errno_to_error(errno);
+		  close_fd(file);
+		  return er;
 		}
-		// TODO: open error (maybe depending on errno?)
-		close_fd(file);
 	}
-	return -1;
+	return ERROR_FAULT;
 }
 
 // read directory
@@ -292,6 +328,8 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 // Note: there is a race condition, as we do not save the current directory path
 // on directory open, so if it is changed "in the middle" of the operation,
 // we run into trouble here. Hope noone will do that...
+//
+// returns the number of bytes read (>= 0), or a negative error number
 //
 static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
@@ -323,10 +361,13 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  file->de = dir_next(file->dp, file->dirpattern);
 		  return rv;
 	}
-	return -22;
+	return -ERROR_FAULT;
 }
 
 // read file data
+//
+// returns positive number of bytes read, or negative error number
+//
 static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	File *file = find_file(ep, tfd);
 
@@ -358,7 +399,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  }
 		return rv;
 	}
-	return -22;
+	return -ERROR_FAULT;
 }
 
 // write file data
@@ -373,14 +414,20 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		if(fp) {
 		  // TODO: evaluate return value
 		  int n = fwrite(buf, 1, len, fp);
+		  if (n < len) {
+			// short write indicates an error
+			log_debug("Short write on file!\n");
+			close_fds(ep, tfd);
+			return -ERROR_WRITE_ERROR;
+		  }
 		  if(is_eof) {
 		    log_debug("Write file received an EOF\n");
 		    close_fds(ep, tfd);
 		  }
-		  return 0;
+		  return ERROR_OK;
 		}
 	}
-	return -1;
+	return -ERROR_FAULT;
 }
 
 // ----------------------------------------------------------------------------------
@@ -394,14 +441,9 @@ static int _delete_callback(const int num_of_match, const char *name) {
 		// error handling
 		log_errno("While trying to unlink");
 
-		switch(errno) {
-		case EIO:
-			return -22;	// read error no data
-		default:
-			return -20;	// read error no header
-		}
+		return -errno_to_error(errno);
 	}
-	return 0;	
+	return ERROR_OK;	
 }
 
 static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
@@ -431,12 +473,12 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 
 	*outdeleted = matches;
 
-	return 1;	// FILES SCRATCHED message
+	return ERROR_SCRATCHED;	// FILES SCRATCHED message
 }	
 
 static int fs_rename(endpoint_t *ep, char *buf) {
 
-	int er = -23;
+	int er = ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -448,7 +490,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	if (buf[p] == 0) {
 		// not found
 		log_error("Did not find '=' in rename command %s\n", buf);
-		return -22;
+		return ERROR_SYNTAX_NONAME;
 	}
 
 	buf[p] = 0;
@@ -458,7 +500,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	if (index(to, '/') != NULL) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
-		return -22;
+		return ERROR_SYNTAX_DIR_SEPARATOR;
 	}
 
 	char *frompath = malloc_path(fsep->curpath, from);
@@ -470,7 +512,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 
 	if (toreal != NULL) {
 		// target already exists
-		er = -63;
+		er = ERROR_FILE_EXISTS;
 	} else {
 		// check both paths against container boundaries
 		if ((strstr(fromreal, fsep->basepath) == fromreal)
@@ -480,10 +522,10 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 			int rv = rename(fromreal, topath);
 
 			if (rv < 0) {
-				er = -22;
+				er = errno_to_error(errno);
 				log_errno("Error renaming a file\n");
 			} else {
-				er = 0;
+				er = ERROR_OK;
 			}
 		}
 	}
@@ -513,21 +555,12 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 
 	if (newreal == NULL) {
 		// target does not exist
-		return -23;
+		return ERROR_FILE_NOT_FOUND;
 	}
 
 	// check if the new path is still under the base path
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// the needle base path is found at the start of the new real path -> ok
-	
-		// Don't need to chdir, as all paths are now absolute, based on curpath
-		//int rv = chdir(newreal);
-		//if (rv < 0) {
-		//	log_errno("Error changing directory");
-		//	free(newreal);
-		//	return -22;
-		//} 
-
 		free(fsep->curpath);
 		fsep->curpath = newreal;
 	} else {
@@ -535,15 +568,14 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 		// -> security error
 		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
 		free(newreal);
-		return -22;
+		return ERROR_NO_PERMISSION;
 	}
-	return 0;
+	return ERROR_OK;
 }
-
 
 static int fs_mkdir(endpoint_t *ep, char *buf) {
 
-	int er = -23;
+	int er = ERROR_DIR_ERROR;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -553,16 +585,16 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	if (newreal != NULL) {
 		// file or directory exists
-		er = -63;
+		er = ERROR_FILE_EXISTS;
 	} else {
 		int rv = mkdir(newpath, 0557);
 
 		if (rv < 0) {
 			log_errno("Error trying to make a directory");
-			er = -22;
+			er = errno_to_error(errno);
 		} else {
 			// ok
-			er = 0;
+			er = ERROR_OK;
 		}
 	}
 	free(newpath);
@@ -573,7 +605,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 static int fs_rmdir(endpoint_t *ep, char *buf) {
 
-	int er = -23;
+	int er = ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -584,7 +616,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 	if (newreal == NULL) {
 		// directory does not exist
-		er = -22;
+		er = ERROR_FILE_NOT_FOUND;
 	} else
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// current path is still at the start of new path
@@ -593,11 +625,11 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 		int rv = rmdir(newreal);
 
 		if (rv < 0) {
+			er = errno_to_error(errno);
 			log_errno("Error trying to remove a directory");
-			er = -22;
 		} else {
 			// ok
-			er = 0;
+			er = ERROR_OK;
 		}
 	}
 	free(newreal);

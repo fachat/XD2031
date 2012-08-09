@@ -156,14 +156,15 @@ static int16_t cmd_handler (bus_t *bus)
       		rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
 									_cmd_callback, secaddr == 1);
     	}
+
       	if (rv < 0) {
 		// open ran into an error
 		// -- errormsg should be already set, so nothing left to do here
 		// TODO
 		debug_printf("Received direct error number on open: %d\n", rv);
-        	set_error(&error, 74);
+        	set_error(&error, ERROR_DRIVE_NOT_READY);
 		st = 2;
-      	}	else {
+      	} else {
 		// as this code is not (yet?) prepared for async operation, we 
 		// need to wait here until the response from the server comes
 		// Note: use bus_for_irq here, as it is volatile
@@ -195,7 +196,7 @@ static int16_t cmd_handler (bus_t *bus)
 		}
       	}
 
-    	bus->command.command_length = 0;
+    	bus_for_irq->command.command_length = 0;
 
     	return st;
 }
@@ -251,7 +252,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			if (error.error_buffer[error.readp] == 0) {
 				// finished reading the error message
 				// set OK
-				set_error(&error, 0);
+				set_error(&error, ERROR_OK);
 			}
 		}
 	} else {

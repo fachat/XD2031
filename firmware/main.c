@@ -49,26 +49,14 @@
 #include "bus.h"
 #include "mem.h"
 
+#include "timer.h"
 #include "led.h"
-//#include "iec.h"
-
-// STRUCTS
-
-// STATICS
-
-
-// GLOBALS
-
-// EXTERNALS
 
 
 //---------------------------
 // LIST XD-2031 VERSIONSTRING
 void ListVersion()
 {
-	term_putcrlf();
-	term_putc('.');
-
 	term_putcrlf();
 	
 	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION" ###"));
@@ -97,7 +85,7 @@ int main()
 	//
 	// first some basic hardware infrastructure
 	
-	//timer_init();			// Timer Interrupt initialisieren
+	timer_init();			// Timer Interrupt initialisieren
 	led_init();
 
 	provider_init();		// needs to be in the beginning, as other

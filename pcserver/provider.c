@@ -29,6 +29,7 @@
 
 #include "log.h"
 #include "provider.h"
+#include "errors.h"
 
 
 // TODO: this is ... awkward
@@ -143,9 +144,9 @@ int provider_assign(int drive, const char *name) {
 				break;
                 	}
         	}
-		return 0;
+		return ERROR_OK;
 	}
-	return -1;
+	return ERROR_FAULT;
 }
 
 void provider_init() {

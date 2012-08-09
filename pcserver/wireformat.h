@@ -8,10 +8,10 @@
     Multitasking Operating System for 6502 Computers
     Copyright (C) 1989-1997 Andre Fachat
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,10 +20,15 @@
 
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA  02110-1301, USA.
 
 ****************************************************************************/
 
+#ifndef WIREFORMAT_H
+#define WIREFORMAT_H
+
+#include "errors.h"		// pull in the error numbers
 
 /* data struct exchanged between client and server */
 #define FSP_CMD         0	/* command, see the FS_* defines below */
@@ -38,7 +43,7 @@
  * types, and are reused here for compatibility.
  * The zero and the negative numbers below are added as needed here.
  */
-#define   FS_SYNC        127    /* sync character, ignored until real buffer comes */
+#define	  FS_SYNC	 127	/* sync character, ignored until real buffer comes */
 
 #define	  FS_TERM	 0	/* print out */
 
@@ -88,4 +93,5 @@
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
 
+#endif
 

@@ -37,5 +37,5 @@ void log_debug(const char *msg, ...);
 
 void log_term(const char *msg);
 
-
+#define	log_rv(rv)	log_error("ERROR RETURN: %d\n", (rv))
 

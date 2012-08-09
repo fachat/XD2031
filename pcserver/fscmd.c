@@ -258,7 +258,7 @@ static void do_cmd(char *buf, int fd) {
 	retbuf[FSP_CMD] = FS_REPLY;
 	retbuf[FSP_LEN] = 4;
 	retbuf[FSP_FD] = tfd;
-	retbuf[FSP_DATA] = -22;
+	retbuf[FSP_DATA] = ERROR_FAULT;
 
 	int eof = 0;
 	int outdeleted = 0;
@@ -273,6 +273,8 @@ static void do_cmd(char *buf, int fd) {
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
+			} else {
+				log_rv(rv);
 			}
 		}
 		break;
@@ -286,6 +288,8 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+				} else {
+					log_rv(rv);
 				}
 			}
 		}
@@ -298,6 +302,8 @@ static void do_cmd(char *buf, int fd) {
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
+			} else {
+				log_rv(rv);
 			}
 		}
 		break;
@@ -309,6 +315,8 @@ static void do_cmd(char *buf, int fd) {
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
+			} else {
+				log_rv(rv);
 			}
 		}
 		break;
@@ -318,9 +326,12 @@ static void do_cmd(char *buf, int fd) {
 			eof = 0;	// default just in case
 			prov = (provider_t*) ep->ptype;
 			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
+			// TODO: handle error (rv<0)
+			if (rv < 0) {
+				log_rv(-rv);
+			}
 			retbuf[FSP_LEN] = FSP_DATA + rv;
 			if (eof) {
-				//printf("fscmd: setting EOF\n");
 				retbuf[FSP_CMD] = FS_EOF;
 			}
 		}
@@ -332,6 +343,9 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
+			if (rv != 0) {
+				log_rv(rv);
+			}
 			retbuf[FSP_DATA] = rv;
 		}
 		break;
@@ -341,7 +355,7 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			prov->close(ep, tfd);
 			free_chan(tfd);
-			retbuf[FSP_DATA] = 0;
+			retbuf[FSP_DATA] = ERROR_OK;
 		}
 		break;
 
@@ -352,9 +366,12 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
 				rv = prov->scratch(ep, buf+FSP_DATA+1, &outdeleted);
-				if (rv == 1) {
+				if (rv == ERROR_SCRATCHED) {
 					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
 					retbuf[FSP_LEN] = FSP_DATA + 2;
+				} else 
+				if (rv != 0) {
+					log_rv(rv);
 				}
 				retbuf[FSP_DATA] = rv;
 			}
@@ -366,6 +383,9 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
 				rv = prov->rename(ep, buf+FSP_DATA+1);
+				if (rv != 0) {
+					log_rv(rv);
+				}
 				retbuf[FSP_DATA] = rv;
 			}
 		}
@@ -376,6 +396,9 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
 				rv = prov->cd(ep, buf+FSP_DATA+1);
+				if (rv != 0) {
+					log_rv(rv);
+				}
 				retbuf[FSP_DATA] = rv;
 			}
 		}
@@ -386,6 +409,9 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
 				rv = prov->mkdir(ep, buf+FSP_DATA+1);
+				if (rv != 0) {
+					log_rv(rv);
+				}
 				retbuf[FSP_DATA] = rv;
 			}
 		}
@@ -396,6 +422,9 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
 				rv = prov->rmdir(ep, buf+FSP_DATA+1);
+				if (rv != 0) {
+					log_rv(rv);
+				}
 				retbuf[FSP_DATA] = rv;
 			}
 		}
@@ -412,6 +441,9 @@ static void do_cmd(char *buf, int fd) {
 		// If the provider name is a real name, the path is absolute.
 		//
 		rv = provider_assign(buf[FSP_DATA], buf+FSP_DATA+1);
+		if (rv != 0) {
+			log_rv(rv);
+		}
 		retbuf[FSP_DATA] = rv;
 		break;
 	}
@@ -427,7 +459,6 @@ static void do_cmd(char *buf, int fd) {
 	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", retbuf[i]);
 	printf("\n");
 #endif
-
 }
 
 

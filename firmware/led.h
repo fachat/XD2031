@@ -26,26 +26,32 @@
  * Takes the LED_PORT, LED_DDR and LED_BIT definitions from config.h
  */
 
-#include <avr/io.h>
+#ifndef LED_H
+#define	LED_H
 
-#include "config.h"
+typedef enum {
+	IDLE	= 0,
+	OFF	= 1,
+	ON	= 2,
+	ACTIVE	= 3,
+	ERROR	= 4
+} led_t;
 
-static inline void led_init() {
-	// set data direction
-	LED_DDR  |= _BV(LED_BIT);
-	// switch LED off
-	LED_PORT &= ~_BV(LED_BIT);
-}
+void led_set(led_t signal);
+
+void led_init();
 
 static inline void led_on() {
-	LED_PORT |= _BV(LED_BIT);
+	led_set(ON);
 }
 
 static inline void led_off() {
-	LED_PORT &= ~_BV(LED_BIT);
+	led_set(OFF);
 }
 
-static inline void led_toggle() {
-	LED_PORT ^= _BV(LED_BIT);
-}
+//static inline void led_toggle() {
+//	LED_PORT ^= _BV(LED_BIT);
+//}
+
+#endif
 

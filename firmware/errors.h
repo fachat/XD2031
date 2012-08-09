@@ -30,55 +30,41 @@
  * has both IEEE and IEC busses, as it only supports a single error 
  * state.
  */
-#ifndef ERRORMSG_H
-#define ERRORMSG_H
+#ifndef ERRORS_H
+#define ERRORS_H
 
-#include <stdint.h>
-
-#include "config.h"
-
-
-//typedef void errormsg_t;
-
-typedef struct {
-	// callback that is called when the buffer is to be reset
-	//void 		(*set_ok_message)();	// (struct errormsg_t *err);
-	// error buffer
-	uint8_t 	error_buffer[CONFIG_ERROR_BUFFER_SIZE];
-	uint8_t		readp;	// read index in error_buffer
-} errormsg_t ;
-
-void set_error_ts(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector);
-
-static inline void set_error(errormsg_t *error, uint8_t errornum) {
-	set_error_ts(error, errornum, 0, 0);
-}
 
 typedef enum {
 	ERROR_OK 			= 0,
 	ERROR_SCRATCHED			= 1,
-	ERROR_STATUS 			= 3,
-	ERROR_LONGVERSION		= 9,
 	// in CBM DOS error numbers 20-29 are translated from FDC errors (mostly unused here)
 //	ERROR_WRITE_VERIFY		= 25,
-//	ERROR_WRITE_PROTECT		= 26,
+	ERROR_WRITE_PROTECT		= 26,
+	ERROR_WRITE_ERROR		= 28,
 	// error numbers 30-34 are all just "SYNTAX ERROR" on the 1541
 	ERROR_SYNTAX_UNKNOWN		= 30,
 	ERROR_SYNTAX_NONAME		= 34,
+	ERROR_FILE_NAME_TOO_LONG	= 38,	// new for ENAMETOOLONG
 	ERROR_FILE_NOT_FOUND		= 39,
-	// relative file errors
+	// new problems
+	ERROR_SYNTAX_INVAL		= 40,	// EINVAL
+	ERROR_SYNTAX_DIR_SEPARATOR	= 41,	// name contains directory separator
+	// REL file errors
 //	ERROR_RECORD_NOT_PRESENT	= 50,
 //	ERROR_OVERFLOW_IN_RECORD	= 51,
 	// DOS file level problems
 //	ERROR_WRITE_FILE_OPEN		= 60,
 	ERROR_FILE_NOT_OPEN		= 61,	
-	ERROR_FILE_EXISTS		= 63,
+	ERROR_FILE_EXISTS		= 63,	// also used for EEXIST
 	ERROR_FILE_TYPE_MISMATCH	= 64,
 //	ERROR_NO_BLOCK			= 65,
+	ERROR_DIR_NOT_EMPTY		= 66,	// new for ENOTEMPTY
+	ERROR_NO_PERMISSION		= 67,	// new for EACCESS
+	ERROR_FAULT			= 68,	// new for EFAULT and others (fallback)
 	// DOS/disk problems and status
 	ERROR_NO_CHANNEL		= 70,
-//	ERROR_DIR_ERROR			= 71,
-//	ERROR_DISK_FULL			= 72,
+	ERROR_DIR_ERROR			= 71,
+	ERROR_DISK_FULL			= 72,
 	ERROR_DOSVERSION		= 73,
 	ERROR_DRIVE_NOT_READY		= 74
 } errno_t;

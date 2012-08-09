@@ -3,9 +3,9 @@
 # AVR ATMega Architecture
 #
 
-ARCHFILES=avr/uarthw.c
-ARCHDEPS=avr/compat.h avr/led.h avr/delayhw.h avr/uarthw.h avr/ints.o avr/mem.h
-ARCHASMOBJ=ints.o
+ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timer.c
+ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timer.h avr/timerint.o
+ARCHASMOBJ=uartints.o timerint.o
 
 ARCH=avr
 
@@ -37,7 +37,10 @@ archclean:
 	rm -f ints.o
 
 ## Assembler files
-avr/ints.o: avr/ints.S
+avr/uartints.o: avr/uartints.S
+	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
+
+avr/timerint.o: avr/timerint.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
 
 

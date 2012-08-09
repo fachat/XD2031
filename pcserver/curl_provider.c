@@ -398,7 +398,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	} else {
 		log_error("fp is NULL on read attempt\n");
 	}
-	return -22;
+	return -ERROR_FAULT;
 }
 
 
@@ -481,21 +481,24 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
 
 		printf("multi add returns %d\n", rv);
 
-		return 0;
+		return ERROR_OK;
 	}
-	return -22;
+	return ERROR_FAULT;
 }
 
 /**
  * converts the list of file names from an FTP NLST command
  * to a wireformat dir entry.
+ *
+ * Because of the FS_DIR_* macros used here, the wireformat.h include
+ * is required, which I would like to have avoided...
  */
 int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
 
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
 				len, FS_DIR_NAME+1);
-		return -22;
+		return -ERROR_FAULT;
 	}
 
 	// prepare dir entry
@@ -510,7 +513,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		if (len < FS_DIR_NAME + l + 1) {
 			log_error("read buffer too small for dir name (is %d, need at least %d)\n",
 				len, l+FS_DIR_NAME+1);
-			return -22;
+			return -ERROR_FILE_NAME_TOO_LONG;
 		}
 		strncpy(retbuf, fp->name_buffer, l+1);
 		l = l + FS_DIR_NAME + 1;
@@ -534,7 +537,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
-					return -22;
+					return -ERROR_DIR_ERROR;
 				}
 			}
 			// find length of name
@@ -561,7 +564,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 				if (len < FS_DIR_NAME + l + 1) {
 					log_error("read buffer too small for dir name (is %d, need at least %d)\n",
 						len, l+FS_DIR_NAME+1);
-					return -22;
+					return -ERROR_FILE_NAME_TOO_LONG;
 				}
 			}
 			if (*eof != 0) {
@@ -624,9 +627,9 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
 		printf("multi add returns %d\n", rv);
 
-		return 0;
+		return ERROR_OK;
 	}
-	return -22;
+	return ERROR_FAULT;
 }
 
 
@@ -701,7 +704,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 		}
 		if (plen + l + 1 > MAX_BUFFER_SIZE) {
 			log_error("new path for chdir too long: %d\n", plen+l+1);
-			return -1;
+			return ERROR_FILE_NAME_TOO_LONG;
 		}
 		strcat(cep->path_buffer, "/");
 		strncat(cep->path_buffer, p, plen);
@@ -714,7 +717,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 	log_debug("CHDIR: New path is '%s'\n", cep->path_buffer);
 
-	return 0;
+	return ERROR_OK;
 }
 
 
