@@ -39,11 +39,11 @@ void file_init(void);
 // use overlapping numbers, so they may be shifted or similar to avoid clashes)
 //
 // returns -1 on error, with an error message in cmd_t->error
-int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
+int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
 					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save);
 
 // submit a call to the provider
-uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
+uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg, rtconfig_t *rtconf,
  			               void (*callback)(int8_t errnum, uint8_t *rxdata)) ;
 
 #endif

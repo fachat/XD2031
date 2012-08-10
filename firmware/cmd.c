@@ -40,7 +40,8 @@ command_t command_find(uint8_t *input) {
 		return CMD_INITIALIZE;
 		break;
 	case 'R':
-		if (*(input+1) == 'M') {
+		if (*(input+1) == 'M' || *(input+1) == 'D') {
+			// RMDIR or RD
 			return CMD_RMDIR;
 		}
 		return CMD_RENAME;
@@ -50,16 +51,22 @@ command_t command_find(uint8_t *input) {
 		break;
 	case 'C':
 		if (*(input+1) == 'D' || *(input+1) == 'H') {
+			// CD or CHDIR
 			return CMD_CD;
 		}
 		// this would be the COPY command
 		return CMD_SYNTAX;
 		break;
 	case 'M':
+		// MKDIR or MD
 		return CMD_MKDIR;
 		break;
 	case 'A':
 		return CMD_ASSIGN;
+		break;
+	case 'X':
+		// extensions for XD2031
+		return CMD_EXT;
 		break;
 	}
         return CMD_SYNTAX;
@@ -97,12 +104,17 @@ const char *command_to_name(command_t cmd) {
         case CMD_ASSIGN:
                 return "ASSIGN";
                 break;
+	case CMD_EXT:
+		return "EXT";
+		break;
         }
         return "";
 }
 
-
-int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
+// note: this does not return an actual error code, 
+// but only <0 if an error occurred; in that case, the error
+// message must be set here.
+int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
 					void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
@@ -144,34 +156,42 @@ int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg,
 			type =FS_RMDIR;
 			break;
 		default:
+			// should not happen, all if() conditions are accounted for
         	        debug_puts("ILLEGAL COMMAND!");
         	        set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
-			return -1;
+			return ERROR_FAULT;
 		}
 
-		return file_submit_call(channel_no, type, errormsg, callback);
+		return file_submit_call(channel_no, type, errormsg, rtconf, callback);
 	} else
 	if (nameinfo.cmd == CMD_ASSIGN) {
 
 		if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
 			// no drive
-			return -74;	// drive not ready
+        	        set_error(errormsg, ERROR_DRIVE_NOT_READY);
+			return -1;
 		}
 
 		// the +1 on the name skips the endpoint number stored in position 0	
 		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
 		
-			return file_submit_call(channel_no, FS_ASSIGN, errormsg, callback);
+			return file_submit_call(channel_no, FS_ASSIGN, errormsg, rtconf, callback);
 		} else {
 			// need to unlock the caller by calling the callback function
-			callback(0, NULL);
+			callback(ERROR_OK, NULL);
 		}
 		return 0;
 	} else
 	if (nameinfo.cmd == CMD_INITIALIZE) {
 		debug_puts("INITIALIZE");
 		// need to unlock the caller by calling the callback function
-		callback(0, NULL);
+		callback(ERROR_OK, NULL);
+		return 0;
+	} else
+	if (nameinfo.cmd == CMD_EXT) {
+		debug_puts("CONFIGURATION EXTENSION");
+		int8_t rv = rtconfig_set(rtconf, (char*) command->command_buffer);
+		callback(rv, NULL);
 		return 0;
 	}
 

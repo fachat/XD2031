@@ -21,23 +21,25 @@
 
 ****************************************************************************/
 
-/*
- * timer handling
+/**
+ * This file implements the central communication channels between the
+ * IEEE layer and the provider layers
  */
-#include <avr/io.h>
 
-#include "config.h"
+#ifndef RTCONFIG_H
+#define RTCONFIG_H
 
-void timer_init(void) {
-	/* Count F_CPU/8 in timer 0 */
-	TCCR0B = _BV(CS01);
+#include "errors.h"
 
-	// 100 Hz timer using timer 1
-	OCR1A  = F_CPU / 64 / 100 - 1;
-	TCNT1  = 0;
-	TCCR1A = 0;
-	TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
-	TIMSK1 |= _BV(OCIE1A);
-}
+typedef struct {
+	uint8_t		device_address;		// current unit number
+	uint8_t		last_used_drive;	// init with 0
+} rtconfig_t;
 
+// initialize a runtime config block
+void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr);
 
+// set from an X command
+errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
+
+#endif

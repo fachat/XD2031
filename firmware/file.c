@@ -18,7 +18,7 @@
     MA  02110-1301, USA.
 */
 
-//    file.h: Definitions for the file handling
+//    file.c: file handling
 
 
 #include <inttypes.h>
@@ -65,7 +65,8 @@ void file_init(void) {
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
 //
-int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
+int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
+			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
 
 
 #ifdef DEBUG_FILE
@@ -113,26 +114,26 @@ int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, void 
 	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
 
 
-	return file_submit_call(channel_no, type, errormsg, callback);
+	return file_submit_call(channel_no, type, errormsg, rtconf, callback);
 
 }
 
-uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
+uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg, rtconfig_t *rtconf,
 		void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
 
 	// check for default drive (here is the place to set the last used one)
 	if (nameinfo.drive == 0xff) {
 		// there currently only is a single drive, 0
-		nameinfo.drive = 0;
+		nameinfo.drive = rtconf->last_used_drive;
 		// TODO: fix this hack!
-		nameinfo.name[0] = 0;
+		nameinfo.name[0] = rtconf->last_used_drive;
 	}
 
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
-	// the two bus systems. This could be done depending on the drive number
-	// and be managed with the ASSIGN call.
+	// the two bus systems. This is done depending on the drive number
+	// and managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
 	endpoint_t *endpoint = provider_lookup(nameinfo.drive);
 

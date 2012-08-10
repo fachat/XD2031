@@ -60,8 +60,10 @@ volatile uint8_t led_shift = 0;
 uint8_t led_code[] = {
 	// wink program - soft blink, needs 200 Hz timer irq
 	//1, 0, 1, 0x10, 2, 0x12, 2, 0x55, 2, 0x77, 2, 0xff, 2, 0x77, 2, 0x55, 2, 0x12, 2, 0x10, 0
-	// hard blink - as cbm floppy
-	5, 0, 5, 255, 0
+	// hard blink - as cbm floppy 200 Hz timer
+	//5, 0, 5, 255, 0
+	// hard blink - as cbm floppy 100 Hz timer
+	2, 0, 2, 255, 0
 };
 
 static void init_prg(uint8_t ptr) {

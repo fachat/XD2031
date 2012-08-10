@@ -45,6 +45,7 @@
 #include "errormsg.h"
 #include "cmd.h"
 #include "file.h"
+#include "rtconfig.h"
 #include "bus.h"
 
 #include "led.h"
@@ -96,10 +97,14 @@ void bus_init_bus(bus_t *bus) {
 
   	/* Read the hardware-set device address */
 	//  device_address = device_hw_address();
-  	bus->device_address = 8;
+  	uint8_t devaddr = 8;
 
   	/* Init vars and flags */
   	bus->command.command_length = 0;
+
+	// this is copied over after an UNTALK/UNLISTEN
+	bus->current_device_address = devaddr;
+	rtconfig_init(&(bus->rtconf), devaddr);
 
 	bus->channel = NULL;
 }
@@ -145,7 +150,10 @@ static int16_t cmd_handler (bus_t *bus)
       		/* Handle commands */
 		// zero termination
       		rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
-									_cmd_callback);
+								&(bus->rtconf),	_cmd_callback);
+
+		// change device address after command
+		bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
     	} else {
       		/* Handle filenames */
 
@@ -154,7 +162,7 @@ static int16_t cmd_handler (bus_t *bus)
          		secaddr, bus->command.command_buffer);
 #endif
       		rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
-									_cmd_callback, secaddr == 1);
+							&(bus->rtconf),	_cmd_callback, secaddr == 1);
     	}
 
       	if (rv < 0) {
@@ -308,7 +316,7 @@ static int16_t bus_prepare(bus_t *bus)
          bus->device, bus->secondary);
 #endif
 
-    if ((bus->device & 0x0f) != bus->device_address) {
+    if ((bus->device & 0x0f) != bus->current_device_address) {
 	return 0x80;	// device not present
     }
 
@@ -356,7 +364,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
         && (((bus->secondary & 0xf0) == 0xf0)
             || ((bus->secondary & 0x0f) == 0x0f))) {
 
-        if ((bus->device & 0x0f) == bus->device_address) {
+        if ((bus->device & 0x0f) == bus->current_device_address) {
 		// then process the command
         	st = cmd_handler(bus);
         }
@@ -368,14 +376,14 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
           case 0x20:
           case 0x40:
 	      // store device number plus LISTEN/TALK info
-	      if ((b & 0x0f) == bus->device_address) {
+	      if ((b & 0x0f) == bus->current_device_address) {
               	bus->device = b;
 	      }
               break;
 
           case 0x60:
 	      // secondary address (open DATA channel)
-  	      if ((bus->device & 0x0f) == bus->device_address) {
+  	      if ((bus->device & 0x0f) == bus->current_device_address) {
 
               	bus->secondary = b;
 	      	// process a command if necessary
@@ -384,7 +392,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
               break;
           case 0xe0:
 	      // secondary address (CLOSE)
-  	      if ((bus->device & 0x0f) == bus->device_address) {
+  	      if ((bus->device & 0x0f) == bus->current_device_address) {
               	bus->secondary = b;
 	      	// process a command if necessary
               	//st = bus_command(bus);
@@ -393,7 +401,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
               break;
 
           case 0xf0:            /* Open File needs the filename first */
-  	      if ((bus->device & 0x0f) == bus->device_address) {
+  	      if ((bus->device & 0x0f) == bus->current_device_address) {
               	bus->secondary = b;
 	      	// TODO: close previously opened file
 	      }
@@ -408,8 +416,9 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 	// unlisten, untalk, close
         bus->device = 0;
         bus->secondary = 0;
+
     } else {
-    	if (bus->device_address != (bus->device & 0x0f)) {
+    	if (bus->current_device_address != (bus->device & 0x0f)) {
 		// not this device
         	st |= 0x80;
     	}

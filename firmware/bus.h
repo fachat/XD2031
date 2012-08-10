@@ -23,6 +23,7 @@
 #ifndef BUS_H
 #define	BUS_H
 
+#include "rtconfig.h"
 
 /*
  * IEEE488 impedance layer
@@ -36,7 +37,7 @@
 // the IEEE488 or the serial IEC bus.
 typedef struct {
 	// configuration
-	uint8_t 	device_address;	// Current device address 
+	uint8_t		current_device_address;	// current device address (copied from rtconfig)
 	uint8_t		secaddr_offset;	// offset to use on secondary address to get channel no
 					// to avoid collisions with other busses
 	// runtime for the bus
@@ -53,6 +54,9 @@ typedef struct {
 	// command channel
 	cmd_t		command;	// command buffer
 	//errormsg_t	error;		// error message - is currently shared between busses
+	
+	// runtime config, like unit number, last used drive etc
+	rtconfig_t	rtconf;		
 } bus_t;
 
 // init

@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #include "errormsg.h"
+#include "rtconfig.h"
 #include "config.h"
 
 typedef enum {
@@ -65,7 +66,9 @@ typedef enum {
         CMD_CD,
         CMD_MKDIR,
         CMD_RMDIR,
-        CMD_ASSIGN
+        CMD_ASSIGN,
+	// configuration extension
+	CMD_EXT
 } command_t;
 
 typedef struct {
@@ -79,7 +82,7 @@ command_t command_find(uint8_t *buf);
 
 const char* command_to_name(command_t cmd);
 
-int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, 
+int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
 						void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
