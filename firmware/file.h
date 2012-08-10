@@ -29,6 +29,7 @@
 
 #include "cmd.h"
 #include "channel.h"
+#include "bus.h"
 
 // init file data structures
 void file_init(void);
@@ -39,7 +40,7 @@ void file_init(void);
 // use overlapping numbers, so they may be shifted or similar to avoid clashes)
 //
 // returns -1 on error, with an error message in cmd_t->error
-int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
+int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save);
 
 // submit a call to the provider

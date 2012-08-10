@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "cmd.h"
+#include "cmd2.h"
 #include "file.h"
 #include "name.h"
 #include "wireformat.h"
@@ -114,8 +115,11 @@ const char *command_to_name(command_t cmd) {
 // note: this does not return an actual error code, 
 // but only <0 if an error occurred; in that case, the error
 // message must be set here.
-int8_t command_execute(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
+int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 					void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+
+        cmd_t *command = &(bus->command);
+        rtconfig_t *rtconf = &(bus->rtconf);
 
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 

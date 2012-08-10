@@ -44,6 +44,7 @@
 #include "status.h"
 #include "errormsg.h"
 #include "cmd.h"
+#include "cmd2.h"
 #include "file.h"
 #include "rtconfig.h"
 #include "bus.h"
@@ -149,8 +150,7 @@ static int16_t cmd_handler (bus_t *bus)
 	if (secaddr == 0x0f) {
       		/* Handle commands */
 		// zero termination
-      		rv = command_execute(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
-								&(bus->rtconf),	_cmd_callback);
+      		rv = command_execute(bus_secaddr_adjust(bus, secaddr), bus, &error, _cmd_callback);
 
 		// change device address after command
 		bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
@@ -161,8 +161,8 @@ static int16_t cmd_handler (bus_t *bus)
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
-      		rv = file_open(bus_secaddr_adjust(bus, secaddr), &(bus->command), &error, 
-							&(bus->rtconf),	_cmd_callback, secaddr == 1);
+      		rv = file_open(bus_secaddr_adjust(bus, secaddr), bus, &error, 
+							_cmd_callback, secaddr == 1);
     	}
 
       	if (rv < 0) {

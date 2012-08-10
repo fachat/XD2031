@@ -20,39 +20,16 @@
 
 ****************************************************************************/
 
-/**
- * LED hardware layer
- *
- * Takes the LED_PORT, LED_DDR and LED_BIT definitions from config.h
- */
+#include <avr/interrupt.h>
 
-#ifndef LED_H
-#define	LED_H
+#include "led.h"
 
-typedef enum {
-	IDLE	= 0,
-	OFF	= 1,
-	ON	= 2,
-	ACTIVE	= 3,
-	ERROR	= 4,
-	PANIC	= 5
-} led_t;
+ISR(BADISR_vect)
+{
 
-void led_set(led_t signal);
+	// note that led_set enables interrupts, so...
+	led_set(PANIC);
 
-void led_init();
-
-static inline void led_on() {
-	led_set(ON);
+	while (1);
 }
-
-static inline void led_off() {
-	led_set(OFF);
-}
-
-//static inline void led_toggle() {
-//	LED_PORT ^= _BV(LED_BIT);
-//}
-
-#endif
 

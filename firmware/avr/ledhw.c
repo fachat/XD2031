@@ -56,6 +56,8 @@ volatile uint8_t led_pattern = 0;
 // bit shift register
 volatile uint8_t led_shift = 0;
 
+#define	PANIC_OFFSET 	5
+
 // led program code
 uint8_t led_code[] = {
 	// wink program - soft blink, needs 200 Hz timer irq
@@ -63,7 +65,9 @@ uint8_t led_code[] = {
 	// hard blink - as cbm floppy 200 Hz timer
 	//5, 0, 5, 255, 0
 	// hard blink - as cbm floppy 100 Hz timer
-	2, 0, 2, 255, 0
+	2, 0, 2, 255, 0,
+	// panic blink
+	1, 0x0f, 0
 };
 
 static void init_prg(uint8_t ptr) {
@@ -109,6 +113,9 @@ void led_set(led_t mode) {
 	case ACTIVE:
 	case ON:
 		_led_on();
+		break;
+	case PANIC:
+		init_prg(PANIC_OFFSET);
 		break;
 	case ERROR:
 	default:

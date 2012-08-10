@@ -3,7 +3,7 @@
 # AVR ATMega Architecture
 #
 
-ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timer.c
+ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timer.c avr/avr.c
 ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timer.h avr/timerint.o
 ARCHASMOBJ=uartints.o timerint.o
 

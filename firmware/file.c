@@ -65,9 +65,11 @@ void file_init(void) {
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
 //
-int8_t file_open(uint8_t channel_no, cmd_t *command, errormsg_t *errormsg, rtconfig_t *rtconf,
+int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, 
 			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
 
+	cmd_t *command = &(bus->command);
+	rtconfig_t *rtconf = &(bus->rtconf);
 
 #ifdef DEBUG_FILE
 	debug_printf("OPEN FILE: FOR CHAN: %d WITH NAME: %s\n",

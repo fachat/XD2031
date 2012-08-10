@@ -21,38 +21,18 @@
 ****************************************************************************/
 
 /**
- * LED hardware layer
- *
- * Takes the LED_PORT, LED_DDR and LED_BIT definitions from config.h
+ * This file implements the disk drive commands
  */
 
-#ifndef LED_H
-#define	LED_H
 
-typedef enum {
-	IDLE	= 0,
-	OFF	= 1,
-	ON	= 2,
-	ACTIVE	= 3,
-	ERROR	= 4,
-	PANIC	= 5
-} led_t;
+#ifndef CMD2_H
+#define CMD2_H
 
-void led_set(led_t signal);
+#include "channel.h"
+#include "bus.h"
 
-void led_init();
+int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
+						void (*callback)(int8_t errnum, uint8_t *rxdata));
 
-static inline void led_on() {
-	led_set(ON);
-}
-
-static inline void led_off() {
-	led_set(OFF);
-}
-
-//static inline void led_toggle() {
-//	LED_PORT ^= _BV(LED_BIT);
-//}
 
 #endif
-
