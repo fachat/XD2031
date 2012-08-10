@@ -417,11 +417,14 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
         bus->device = 0;
         bus->secondary = 0;
 
+	led_set(IDLE);
     } else {
     	if (bus->current_device_address != (bus->device & 0x0f)) {
 		// not this device
         	st |= 0x80;
-    	}
+    	} else {
+		led_set(ACTIVE);
+	}
     }
 
 #ifdef DEBUG_SERIAL

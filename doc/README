@@ -2,6 +2,180 @@
 XD-2031 firmware
 ================
 
+The XD-2031 firmware behaves as a disk drive to the Commodore computer. 
+As such it allows to load directories, as well as load and save files to it.
+
+Currently supported is the IEEE488 interface on the board.
+
+How to use
+----------
+
+Disconnect the device from the USB port. Connect the Commodore equipment that must be
+switched off! Then connect the device to the USB port of your PC, which switches
+the device on. Start the server component on the PC
+	
+	fscmd <options> <run-directory>
+
+with the appropriate options:
+
+	-d <device>	USB device name, e.g. "/dev/ttyUSB0"
+	-A<drv>=<provider-string>
+               		assign a provider to a drive
+               		e.g. use '-A0=fs:.' to assign the current directory
+               		to drive 0. Dirs are relative to the run_directory param
+
+The run-directory is the directory in which the server will change into first,
+all paths are relative to it. So for example if you use this command line in the
+distributions "firmware" directory:
+
+	./fsser -d /dev/ttyUSB0 -A0=fs:../sample -A1=fs:../tools
+
+you will get a drive 0 that points to the sample directory, and a drive 1 that points
+to the tools directory. Note that you can use drives 0 - 9, not just 0 or 1.
+
+Now you can switch on the Commodore equipment.
+
+On the Commodore BASIC 4 PET you can now for example use
+
+	DIRECTORY
+
+to display the contents of drive 0.  On drive 1 you can find the tools 
+described below.
+
+
+What does it not do
+-------------------
+
+- it currently does not handle read/write files (with optional seek)
+- it does not support the IEC bus.
+- it does support only a small subset of CBM DOS commands
+
+What is planned
+---------------
+
+- support for the IEC bus
+- support for an SD card on the 15-pin connector
+- support for device number switches on the 15-pin connector
+- support for Configuration PROM on the 15-pin connector, possibly with clock
+
+Command overview
+----------------
+
+The following DOS commands are implemented:
+
+	I(NITIALIZE)	- do nothing
+	R(ENAME)	- rename a file or directory
+	S(CRATCH)	- delete a file
+	CD / CH(DIR)	- change directory
+	M(D) / M(KDIR)	- make a new directory
+	RD / RM(DIR)	- remove an empty directory
+	A(SSIGN)	- assign drive numbers
+	X		- extension command
+
+In the following the drive is almost always optional,
+then the last used drive is taken.
+
+
+INITIALIZE
+
+This command does nothing but clear the error channel
+
+
+RENAME
+
+To rename a file or directory, send a command:
+	R<drive>:<new name>=<old name>
+for example
+	R0:newfile=oldfile
+where the drive is optional.
+
+
+SCRATCH
+
+To delete a file, send the command:
+	S<drive>:<pattern_to_remove1>[,<pattern_to_remove2>[,...]]
+for example
+	S:file1
+	S0:files*
+	S1:foo,ba?x
+The '?' replaces a single character (wildcard), the '*' ignores all
+further characters. The drive is optional again.
+
+
+CD / CHDIR
+
+You can change the directory in a drive by sending
+	C<drive>:<new_directory>
+for example
+	C0:subdir
+The drive is optional, but the directory is changed on the drive
+only.
+
+
+MD / MKDIR
+
+Create a new directory by sending
+	MD<drive>:<new_directory_name>
+for example
+	MD0:new_dir
+	MKDIR:new_dir
+
+
+RD / RMDIR
+
+Remove an empty directory by using
+	RD<drive>:<empty_directory_name>
+for example
+	RD0:empty_dir
+	RMDIR:empty_dir
+
+X
+
+This command allows to change runtime configuration.
+You can use it to change the device address and the drive number:
+	XU=<device_addr>
+changes the device address,
+	XD=<drive_number>
+changes the last used drive number, for example
+	XU=9
+	XD=1
+	
+ASSIGN
+------
+
+The assign command needs some more explaining. The PC server part contains so-called
+"provider". Each provider can handle different types of "servers". Currently these
+providers are available:
+
+	fs 	- provides access to the server file system
+	ftp	- provides read-only access to an FTP server
+	http	- provides read-only access to an HTTP server
+
+To use such a provider, a path needs to be configured as well as base address. For the
+ftp and http providers the path contains a server name as well.
+You can then assign a provider and path to a drive number, accessible from the 
+Commodore equipment with:
+
+	ASSIGN<drive>:<provider>:<path>
+
+for example: 
+
+	A2:ftp:ftp.zimmers.net/pub/cbm
+
+assigns FTP access to the server "ftp.zimmers.net" under the path "/pub/cbm" to
+drive 2. The following allows HTTP access to that server on drive 3
+
+	ASSIGN3:http:www.zimmers.net/anonftp/pub/cbm
+
+You can short-cut the provider definition by re-using the definition of an already
+configured drive:
+
+	A4:2:pet
+or
+	A4:0:subdir
+
+(Note: the short-cut does currently not work for ftp/http)
+
 
 Tools
 =====

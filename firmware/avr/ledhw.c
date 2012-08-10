@@ -83,6 +83,10 @@ static void init_prg(uint8_t ptr) {
 
 // -----------------------------------------------------------------------------
 
+static uint8_t has_error = 0;
+
+// -----------------------------------------------------------------------------
+
 void led_init() {
 	// set data direction
 	LED_DDR  |= _BV(LED_BIT);
@@ -92,6 +96,9 @@ void led_init() {
 	// switch off led interrupt program
 	led_program = 0;
 	led_current = 0;
+
+	// save error state over ACTIVE/IDLE calls
+	has_error = 0;
 }
 
 static inline void _led_on() {
@@ -107,7 +114,14 @@ static inline void _led_off() {
 void led_set(led_t mode) {
 	switch(mode) {
 	case IDLE:
+		if (has_error) {
+			init_prg(0);
+		} else {
+			_led_off();
+		}
+		break;
 	case OFF:
+		has_error = 0;
 		_led_off();
 		break;
 	case ACTIVE:
@@ -118,6 +132,7 @@ void led_set(led_t mode) {
 		init_prg(PANIC_OFFSET);
 		break;
 	case ERROR:
+		has_error = 1;
 	default:
 		init_prg(0);
 		break;

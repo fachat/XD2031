@@ -27,7 +27,7 @@
 
 #define SW_NAME			"XD2031"
 #define SW_NAME_LOWER		"xd2031"
-#define	VERSION			"0.1"
-#define	LONGVERSION		" BETA5"
+#define	VERSION			"0.9"
+#define	LONGVERSION		" RC1"
 
 #endif

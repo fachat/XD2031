@@ -34,7 +34,7 @@
 #define	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
-const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION;
+const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION LONGVERSION;
 
 #define	H(v)	((v)|0x80)
 
@@ -141,8 +141,8 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
 		}
 	} else {
     		msg = appendmsg(msg,messages,errornum);
-  		*msg++ = ',';
 	}
+  	*msg++ = ',';
 
   	msg = appendnumber(msg,track);
   	*msg++ = ',';
@@ -156,7 +156,8 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
 	if (errornum != ERROR_OK && errornum != ERROR_DOSVERSION && errornum != ERROR_SCRATCHED) {
 		led_set(ERROR);
 	} else {
-		led_set(IDLE);
+		// same as idle, but clears error
+		led_set(OFF);
 	}
 
 #ifdef DEBUG_ERROR
