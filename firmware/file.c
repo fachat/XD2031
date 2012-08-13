@@ -32,6 +32,7 @@
 
 #include "debug.h"
 #include "led.h"
+#include "assert.h"
 
 #define DEBUG_FILE
 
@@ -67,6 +68,8 @@ void file_init(void) {
 //
 int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, 
 			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
+
+	assert_not_null(bus, "file_open: bus is null");
 
 	cmd_t *command = &(bus->command);
 	rtconfig_t *rtconf = &(bus->rtconf);
@@ -123,6 +126,8 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg, rtconfig_t *rtconf,
 		void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
+	assert_not_null(errormsg, "file_submit_call: errormsg is null");
+	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
 	// check for default drive (here is the place to set the last used one)
 	if (nameinfo.drive == 0xff) {
