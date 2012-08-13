@@ -29,14 +29,18 @@
 #include "config.h"
 
 void timer_init(void) {
-	/* Count F_CPU/8 in timer 0 */
-	TCCR0B = _BV(CS01);
-
-	// 100 Hz timer using timer 1
+	// timer configuration derived from
+	// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=viewtopic&t=50106
+	
+	// 100 Hz timer 
 	OCR1A  = F_CPU / 64 / 100 - 1;
-	TCNT1  = 0;
+	// disable timer output on port
 	TCCR1A = 0;
-	TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+	// prescale by 64 (CS10/11/12), set up for CTC mode (WGM12)
+	TCCR1B = (TCCR1B | _BV(WGM12) | _BV(CS10) | _BV(CS11)) & (255 - _BV(CS12));
+	// initialize counter
+	TCNT1  = 0;
+	// enable overflow interrupt
 	TIMSK1 |= _BV(OCIE1A);
 }
 
