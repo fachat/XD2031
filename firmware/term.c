@@ -147,7 +147,8 @@ void term_printf(const char *format, ...)
     char pbuf[TERM_BUFFER_LENGTH];
 
     va_start( args, format );
-    vsprintf(pbuf, format, args );
+    vsnprintf(pbuf, TERM_BUFFER_LENGTH, format, args );
+    pbuf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
 
     term_puts(pbuf);
 }
@@ -158,7 +159,8 @@ void term_rom_printf(const char *rom_format, ...)
     char pbuf[TERM_BUFFER_LENGTH];
 
     va_start( args, rom_format );
-    rom_vsprintf(pbuf, rom_format, args );
+    rom_vsnprintf(pbuf, TERM_BUFFER_LENGTH, rom_format, args );
+    pbuf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
 
     term_puts(pbuf);
 }
