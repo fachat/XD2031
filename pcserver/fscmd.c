@@ -45,7 +45,8 @@
 #include "provider.h"
 #include "log.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
+#undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
 
@@ -219,6 +220,14 @@ static void do_cmd(char *buf, int fd) {
 	len = 255 & buf[FSP_LEN];	// 1
 
 	if (cmd == FS_TERM) {
+#ifdef DEBUG_CMD_TERM
+		{
+			int n = buf[FSP_LEN];
+			log_debug("term: %d bytes @%p: ",n, buf);
+			for(int i=0;i<n;i++) printf("%02x ",buf[i]); printf("\n");
+		}
+#endif
+
 		if (len > 200) {
 			log_error("TERM length exceeds 200! Is %d\n", len);
 			len = 200;

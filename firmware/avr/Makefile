@@ -16,7 +16,10 @@ ARCHINCLUDE=-I/opt/cross/avr/include -I$(ARCH)
 
 ASMFLAGS=
 
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
+# Note that due to me using the "%02x" printf conversion, actually the
+# full(!) printf version is required, including the floating point stuff, to be linked.
+# That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
 
 clean: archclean deviceclean
 

@@ -39,6 +39,7 @@
 #define	TERM_BUFFER_LENGTH	129
 
 static char buf[TERM_BUFFER_LENGTH];
+static char pbuf[TERM_BUFFER_LENGTH];
 static uint8_t nchars;
 
 static endpoint_t *endpoint;
@@ -96,6 +97,10 @@ void term_rom_puts(const char *rom_str) {
 	packet_wait_done(&termpack);
 
 	uint8_t len = rom_strlen(rom_str);
+	if (len >= TERM_BUFFER_LENGTH) {
+		// cut, can't send more bytes anyway
+		len = TERM_BUFFER_LENGTH;
+	}
 
 	if ((nchars + len) >= TERM_BUFFER_LENGTH) {
 		if (endpoint == NULL) {
@@ -105,17 +110,13 @@ void term_rom_puts(const char *rom_str) {
 		send();
 	}
 	packet_wait_done(&termpack);
-	if (len >= TERM_BUFFER_LENGTH) {
-		// cut
-		len = TERM_BUFFER_LENGTH;
-	}
 	rom_memcpy(buf+nchars, rom_str, len);
 
 	nchars += len;
 }
 
 /**
- * Note that this function expects its parameter in ROM
+ * Note that this function expects its parameter in RAM
  */
 void term_puts(const char *str) {
 
@@ -123,6 +124,10 @@ void term_puts(const char *str) {
 	packet_wait_done(&termpack);
 
 	uint8_t len = strlen(str);
+	if (len >= TERM_BUFFER_LENGTH) {
+		// cut, can't send more bytes anyway
+		len = TERM_BUFFER_LENGTH;
+	}
 
 	if ((nchars + len) >= TERM_BUFFER_LENGTH) {
 		if (endpoint == NULL) {
@@ -132,10 +137,6 @@ void term_puts(const char *str) {
 		send();
 	}
 	packet_wait_done(&termpack);
-	if (len >= TERM_BUFFER_LENGTH) {
-		// cut
-		len = TERM_BUFFER_LENGTH;
-	}
 	memcpy(buf+nchars, str, len);
 
 	nchars += len;
@@ -144,7 +145,6 @@ void term_puts(const char *str) {
 void term_printf(const char *format, ...)
 {
     va_list args;
-    char pbuf[TERM_BUFFER_LENGTH];
 
     va_start( args, format );
     vsnprintf(pbuf, TERM_BUFFER_LENGTH, format, args );
@@ -156,7 +156,6 @@ void term_printf(const char *format, ...)
 void term_rom_printf(const char *rom_format, ...)
 {
     va_list args;
-    char pbuf[TERM_BUFFER_LENGTH];
 
     va_start( args, rom_format );
     rom_vsnprintf(pbuf, TERM_BUFFER_LENGTH, rom_format, args );
