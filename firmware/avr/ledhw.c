@@ -111,6 +111,10 @@ static inline void _led_off() {
 	LED_PORT &= ~_BV(LED_BIT);
 }
 
+void led_toggle() {
+	LED_PORT ^= _BV(LED_BIT);
+}
+
 void led_set(led_t mode) {
 	switch(mode) {
 	case IDLE:

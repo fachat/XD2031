@@ -35,8 +35,8 @@
 
 #include "serial.h"
 
-//#include "led.h"
-//#include "debug.h"
+#include "led.h"
+#include "debug.h"
 
 #define	MAX_CHANNELS	8		// number of maximum open channels
 
@@ -111,6 +111,8 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 			channels[i].writetype = writetype;
 			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
+			channels[i].pull_state = PULL_OPEN;
+			channels[i].push_state = PUSH_OPEN;
 			// note: we should not channel_pull() here, as file open has not yet even been sent
 			// the pull is done in the open callback for a read-only channel
 			for (uint8_t j = 0; j < 2; j++) {
@@ -247,6 +249,8 @@ static void channel_close_int(channel_t *chan, uint8_t force) {
 
 void channel_close(int8_t channel_no) {
 	channel_t *chan = channel_find(channel_no);
+
+	//debug_printf("channel_close(%d), push_state=%d\n", channel_no, chan->push_state); debug_flush();
 
 	if (chan->push_state != PUSH_OPEN) {
 		// if it's not PUSH_FILLONE, then it is in the process

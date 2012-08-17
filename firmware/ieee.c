@@ -101,6 +101,9 @@ atn:
 }
 
 void listenloop() {
+#ifdef DEBUG_BUS
+	debug_putc('L');
+#endif
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
             par_status = bus_sendbyte(&bus, c, er & E_EOI);
@@ -120,6 +123,9 @@ void talkloop()
         int16_t er /*,sec*/;
         uint8_t c;
 
+#ifdef DEBUG_BUS
+	debug_putc('T'); debug_flush();
+#endif
         settx();            /* enables sending */
 
         er=0;
@@ -280,6 +286,9 @@ cmd:
         }
 
 	ieeehw_setup();
+#ifdef DEBUG_BUS
+	debug_putc('X'); debug_flush();
+#endif	
         return;
 }
 

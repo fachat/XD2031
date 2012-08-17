@@ -54,7 +54,7 @@
 
 #include "device.h"
 
-#define	DEBUG_SERIAL
+#undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
 /*
@@ -430,6 +430,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 #ifdef DEBUG_SERIAL
     debug_printf("ParallelAttention(%02x)->TrapDevice=%02x, st=%04x\n",
                b, bus->device, st | (bus->device << 8));
+    debug_flush();
 #endif
 
     st |= bus->device << 8;

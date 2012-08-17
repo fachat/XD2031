@@ -55,6 +55,13 @@ static void send() {
 }
 
 void term_flush() {
+	if (nchars > 0) {
+		// has not been sent with the last char
+		// flush
+		if (endpoint != NULL) {
+			send();
+		}
+	}
 	serial_flush();
 }
 

@@ -38,6 +38,7 @@
 static inline void debug_putc(char c) { term_putc(c); }
 static inline void debug_putcrlf() {  term_putcrlf(); term_flush(); }
 
+#define	debug_flush()	term_flush()
 #define	debug_puts(s)	term_rom_puts(IN_ROM_STR(s))
 //#define	debug_puts(s)	term_puts((s))
 

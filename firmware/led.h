@@ -50,9 +50,7 @@ static inline void led_off() {
 	led_set(OFF);
 }
 
-//static inline void led_toggle() {
-//	LED_PORT ^= _BV(LED_BIT);
-//}
+void led_toggle();
 
 #endif
 
