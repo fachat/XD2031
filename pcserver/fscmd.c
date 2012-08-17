@@ -45,7 +45,7 @@
 #include "provider.h"
 #include "log.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -160,7 +160,7 @@ void cmd_loop(int readfd, int writefd) {
         while((n=read(readfd, buf+wrp, 8192-wrp))!=0) {
 #ifdef DEBUG_READ
 	      printf("read %d bytes: ",n);
-	      for(int i=0;i<n;i++) printf("%02x ",buf[wrp+i]); printf("\n");
+	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
 #endif
 
               if(n<0) {
@@ -224,7 +224,7 @@ static void do_cmd(char *buf, int fd) {
 		{
 			int n = buf[FSP_LEN];
 			log_debug("term: %d bytes @%p: ",n, buf);
-			for(int i=0;i<n;i++) printf("%02x ",buf[i]); printf("\n");
+			for(int i=0;i<n;i++) printf("%02x ",255&buf[i]); printf("\n");
 		}
 #endif
 
@@ -242,7 +242,7 @@ static void do_cmd(char *buf, int fd) {
 	{
 		int n = buf[FSP_LEN];
 		log_debug("cmd: %d bytes @%p: ",n, buf);
-		for(int i=0;i<n;i++) printf("%02x ",buf[i]); printf("\n");
+		for(int i=0;i<n;i++) printf("%02x ",255&buf[i]); printf("\n");
 	}
 #endif
 
@@ -463,9 +463,9 @@ static void do_cmd(char *buf, int fd) {
 		printf("Error on write: %d\n", errno);
 	}
 #if defined DEBUG_WRITE || defined DEBUG_CMD
-	printf("write %02x %02x %02x:", retbuf[0], retbuf[1],
-			retbuf[2] );
-	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", retbuf[i]);
+	printf("write %02x %02x %02x:", 255&retbuf[0], 255&retbuf[1],
+			255&retbuf[2] );
+	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", 255&retbuf[i]);
 	printf("\n");
 #endif
 }
