@@ -5,7 +5,7 @@
 
 ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timer.c avr/avr.c
 ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timer.h avr/timerint.o
-ARCHASMOBJ=uartints.o timerint.o
+ARCHASMOBJ=avr/uartints.o avr/timerint.o
 
 ARCH=avr
 
@@ -37,13 +37,11 @@ load:
 	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(TARGET).hex:i
 
 archclean:
-	rm -f ints.o
+	rm -f $(ARCHASMOBJ)
 
 ## Assembler files
-avr/uartints.o: avr/uartints.S
-	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
+avr/%.o: avr/%.S
+	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -o $@ -c  $<
 
-avr/timerint.o: avr/timerint.S
-	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
 
 
