@@ -250,31 +250,33 @@ static void channel_close_int(channel_t *chan, uint8_t force) {
 void channel_close(int8_t channel_no) {
 	channel_t *chan = channel_find(channel_no);
 
-	//debug_printf("channel_close(%d), push_state=%d\n", channel_no, chan->push_state); debug_flush();
+	debug_printf("channel_close(%p -> %d), push_state=%d\n", chan, channel_no, chan->push_state); debug_flush();
 
-	if (chan->push_state != PUSH_OPEN) {
-		// if it's not PUSH_FILLONE, then it is in the process
-		// of being pushed
-		while (chan->push_state != PUSH_FILLONE) {
-			delayms(1);
+	if (chan != NULL) {
+		if (chan->push_state != PUSH_OPEN) {
+			// if it's not PUSH_FILLONE, then it is in the process
+			// of being pushed
+			while (chan->push_state != PUSH_FILLONE) {
+				delayms(1);
+			}
+
+			packet_t *curpack = &chan->buf[chan->current];
+			int l = packet_get_contentlen(curpack);
+
+			// even if l==0, send an EOF packet to close the file
+		        packet_set_filled(curpack, channel_no, FS_EOF, l);
+
+			endpoint_t *endpoint = chan->endpoint;
+        	        endpoint->provider->submit_call(endpoint->provdata, 
+				channel_no, curpack, curpack, _push_callback);
+
+               		// wait until the packet has been sent and been responded to
+      	 		while (chan->push_state == PUSH_FILLONE) {
+                	       	delayms(1);
+			}	
 		}
-
-		packet_t *curpack = &chan->buf[chan->current];
-		int l = packet_get_contentlen(curpack);
-
-		// even if l==0, send an EOF packet to close the file
-	        packet_set_filled(curpack, channel_no, FS_EOF, l);
-
-		endpoint_t *endpoint = chan->endpoint;
-                endpoint->provider->submit_call(endpoint->provdata, 
-			channel_no, curpack, curpack, _push_callback);
-
-               	// wait until the packet has been sent and been responded to
-      	 	while (chan->push_state == PUSH_FILLONE) {
-                       	delayms(1);
-		}	
+		channel_close_int(chan, 0);
 	}
-	channel_close_int(chan, 0);
 }
 
 /**
