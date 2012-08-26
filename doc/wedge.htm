@@ -2,8 +2,12 @@
 		"http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-  <title>CBM wedge</title>
-  <link rel="stylesheet" type="text/css" href="http://home.germany.net/nils.eilers/nils.css">
+  <title>CBM DOS Wedge</title>
+  <link rel="stylesheet" type="text/css" href="nils.css">
+  <meta name="viewport" content="width=600">
+  <style type="text/css">
+  #nobr { white-space:nowrap; }
+  </style>
   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
   <meta name="author" content="Nils Eilers">
   <meta name="description" content="The CBM wedge allows issuing Commodore
@@ -15,33 +19,73 @@
   <meta http-equiv="pragma" content="no-cache">
 </head>
 <body>
-<a name="top"></a>
-<h1>CBM wedge</h1>
-<p>Issuing arbitrary Commodore DOS commands to a connected disk drive
-directly from the BASIC command line</p>
-<hr>
-<a href="index.htm">Home</a> | 
-<a href="#down">Downloads</a> |
-<!--
-<a href="#links">Links</a> |
--->
-<a href="email.htm">Mail</a> 
-<!-- 
-| 
-<a href="en_chips.htm"><img border="0" alt="English version" width="16" height="10" src="flage.gif"></a> 
-<a href="en_chips.htm">English language</a>
--->
-<hr>
-<p>The wedge is compatible with Commdodore BASIC 4 only and consumes approx. 400
-bytes RAM.</p>
-<h4>Installation</h4>
-<p>Load the wedge like any other program, then run it, e.g.
-<code>LOAD"WEDGE",8</code> or <code>dL"wedge</code> followed by
-<code>RUN</code>. The wedge installs itselfs by moving the wedge code to
-the top of the memory. It lowers the internal MEMSIZE zero page pointer, 
-so it stays resident and available after NEW.</p>
+<div id="root">
 
-<h4>Command descriptions</h4>
+<div id="content">
+<h1>CBM DOS Wedge</h1>
+<h6>Issuing arbitrary Commodore DOS commands to a connected disk drive
+directly from the BASIC command line</h6>
+<hr style="margin-top: -1em;">
+<div id="toc">
+<h2 id="contents">Table of Contents</h2>
+<ul>
+<li><a href="#inst">Installation</a></li>
+<li><a href="#cmddescr">Command descriptions</a></li>
+<li><a href="#activation">Wedge activation signs</a></li>
+<li><a href="#defaultdev">Setting the default device</a></li>
+<li><a href="#dir">Displaying the directory</a></li>
+<li><a href="#chan">Reading the disk drive error channel</a></li>
+<li><a href="#load">Loading a program</a></li>
+<li><a href="#run">Loading and running a program</a></li>
+<li><a href="#sendcmd">Sending DOS commands</a></li>
+<li><a href="#down">Downloads</a></li>
+</ul>
+</div>
+
+<h2 id="inst">Installation</h2>
+<p>The wedge is compatible with Commodore BASIC&nbsp;2 and BASIC&nbsp;4 and 
+consumes only 389 bytes RAM.</p>
+<p>Load and start the wedge installer just like any other program:</p>
+<dl>
+<dt>BASIC 2:</dt>
+<dd><code class="cbm">LOAD"WEDGE",8</code></dd>
+<dd><code class="cbm">RUN</code></dd>
+<dt>BASIC 4:</dt>
+<dd><code class="cbm">dL"wedge</code></dd>
+<dd><code class="cbm">run</code></dd>
+</dl>
+<p>The <i>wedge installer</i> is a &quot;universal binary&quot; containing a
+couple of <i>resident wedge</i> versions.
+The wedge installer tries to auto-detect your BASIC version first and installs the 
+appropriate version of the resident wedge afterwards (if&nbsp;any).</p>
+<p>BASIC 2 and BASIC 4 are fully supported. The installer can detect BASIC 1 
+(PET&nbsp;2001), but this BASIC version is unsupported. 
+The CBM-II series aren't supported at all, but you
+can use Michael Pleban's <a class="ext" target="_blank" 
+href="http://sourceforge.net/projects/cbm2wedge/">CBM-II DOS Wedge</a> instead.</p>
+<!--
+<table align="center">
+<tr><th>BASIC version</th><th>Computer</th><th>Detectable</th><th>Supported</th></tr>
+<tr><td>1</td><td>PET 2001</td><td>yes</td><td>no</td></tr>
+<tr><td>2</td><td>CBM 3032</td><td>yes</td><td>yes</td></tr>
+<tr><td>4</td><td>CBM 4032, CBM 8032, CBM 8296</td><td>yes</td><td>yes</td></tr>
+<tr><td>128, v4.0</td><td>CBM 610, CBM 710</td><td>no</td><td>no</td></tr>
+<tr><td>256, v4.0</td><td>CBM 620, CBM 720</td><td>no</td><td>no</td></tr>
+</table>
+<p>The rest of this chapter is devoted to assembly programmers. If you aren't, you'd better like to skip it.
+</p>
+<p>The resident wedge uses position-independent code only that can be copied to any memory location
+and executed without modification. 
+The zero page pointer MEMSIZ indicates the last available byte of RAM plus one. 
+The memory area beyond MEMSIZ won't get deleted by NEW. What is more, it's in fact completely ignored by the
+BASIC interpreter making it a perfect place for any resident program.
+The installer makes room for the resident wedge by decrementing MEMSIZ by the wedge's size. After that it copies
+the appropriate wedge code to the upper end of the RAM ranging from new MEMSIZ to old MEMSIZ.
+Still reading?</p>
+<p>This procedure allows the usage of several resident programs at the same time.</p>
+-->
+
+<h2 id="cmddescr">Command descriptions</h2>
 <p><b>[ ]</b> Square brackets are used to enclose information which is optional to
 the command syntax. The brackets themselves are not part of the
 command.</p>
@@ -52,60 +96,77 @@ times. Usually this applies for filenames where the operation can applied
 to a single file or multiple files.</p>
 <p><i>Device</i> - usually a floppy disk drive connected to
 your PET using the IEEE bus. In this context, <i>device</i> means the
-unique <i>address address</i> that is used to communicate with the device. 
-If you load a program by <code>LOAD "PRG",8</code> your device has the address 8. 
-A <i>device</i> may contain a single <i>drive</i> like the 2031, or two <i>drives</i> 
-like the 8050.</p>
+unique <i>device&nbsp;address</i> that is used to communicate with the device. 
+If you load a program by <code class="cbm">LOAD"PRG",8</code> your device has the address 8. 
+A <i>device</i> may contain a single <i>drive</i> like the 2031, or two 
+<i>drives</i> like the 8050.</p>
 <p><i>Drive</i> - a dual floppy like the 8050 is a single
 <i>device</i> with two <i>drives</i>.</p>
 
-<h4>Wedge activation sign</h4>
+<h2 id="activation">Wedge activation signs</h2>
 <p>Wedge commands are only available in direct mode. You cannot use them in
-your programs. The wedge is a BASIC extension that is activated by a magic
-character at the beginning of the line when you enter a command in direct
-mode. The <i>greater than</i> <b>&gt;</b> has the same function
+your programs. The wedge is a BASIC extension that is activated by one of the
+magic characters #@&gt;/&uarr; at the beginning of the line when you enter a 
+command in direct mode. The <i>greater than</i> <b>&gt;</b> has the same function
 as the <i>at</i> @, so e.g. @$ and &gt;$ do the same. In the following text,
 only the @ is used to simplify things.</p>
-<p>Leading spaces are ommited.</p>
+<p>Leading spaces are omitted.</p>
+<p>Here's an overview of each wedge activation sign's purpose that will be 
+discussed later:</p>
+<dl>
+<dt>@ <span style="font-weight:normal;">and</span> &gt;</dt>
+<dd>Displaying the directory</dd>
+<dd>Reading the disk drive error channel</dd>
+<dd>Sending DOS commands</dd>
+<dt>#</dt><dd>setting the default device</dd>
+<dt>/</dt><dd>loading a program</dd>
+<dt>&uarr;</dt><dd>loading and running a program</dd>
+</dl>
 
-<h4>Setting the default device</h4>
-<p><b>@#</b><i>&lt;unit number&gt;</i> sets the default drive,<br>
-<b>@#</b> without unit number shows the current default drive.</p>
+<h2 id="defaultdev">Setting the default device</h2>
+<p><b>#</b><i>&lt;unit number&gt;</i> sets the default drive,<br>
+<b>#</b> without unit number shows the current default drive.</p>
 <p>The default device is initialized with 8.</p>
-<p><b>@#9</b> sets the default drive to 9.</p>
-<p><b>@#</b> will show you the default drive was really set to 9.</p>
-<p><b>@#8</b> sets the default drive back to 8.</p>
+<p><b>#9</b> sets the default drive to 9.</p>
+<p><b>#</b> will show you the default drive was really set to 9.</p>
+<p><b>#8</b> sets the default drive back to 8.</p>
 
-<h4>Displaying the directory</h4>
-<p><b>@$</b><i>[ [drive] :filename ]</i> displays the disk directory.</p>
-<p>Typing @$ with
-no filename displays the entire directory. @$ followed by a colon and a
+<h2 id="dir">Displaying the directory</h2>
+<p><b>@$</b><i>[ [drive] : filename ]</i> displays the disk's directory.</p>
+<p>Typing @$ without
+filename displays the entire directory. @$ followed by a colon and a
 filename will display the specified file in the directory listing (if it
 exists). A selective listing can be displayed by using pattern patching or
 wild cards as part of the filename.</p>
-<p>Press space bar to pause the listing and any other key to continue it.
-Pressing STOP aborts the listing.</p>
+<p>Press <span class="key">&nbsp;Space Bar&nbsp;</span> to pause the listing and 
+any other key to continue it.</p>
+<p>Abort the listing with the <span class="key">STOP</span>-key.</p>
 <p><b>@$</b> displays the entire directory.</p>
 <p><b>@$1:</b> displays the directory of default's device drive 1 only. 
 Do not confuse <i>drive</i> and <i>device</i>.</p>
 <p><b>@$:N*</b> displays all files having a "N" as the first letter in 
 their filename.</p>
 
-<h4>Reading the disk drive error channel</h4>
+<h2 id="chan">Reading the disk drive error channel</h2>
 <p><b>@</b> without any parameters reads and displays the disk drive error
 message channel. If everything is okay, you'll get your DOS version at
-startup and <code>00, OK, 00, 00</code> afterwards.</p>
+startup and <code class="cbm">00,&nbsp;OK,&nbsp;00,&nbsp;00</code> afterwards.</p>
 
-<h4>Loading a program</h4>
+<h2 id="load">Loading a program</h2>
 <p><b>/</b><i>filename</i> loads a program.</p>
 <p><b>/GARY</b> loads the program called GARY, but doesn't start it. So you
-can list end edit it afterwards.</p>
+can list and edit it afterwards.</p>
 
-<h4>Loading and running a program</h4>
+<h2 id="run">Loading and running a program</h2>
 <p><b>&uarr;GAME</b> loads and runs a game. Probably. But it wouldn't be
 very clever to save it on disk using this name.</p>
 
-<h4>Sending DOS commands</h4>
+<p>If you're using BASIC&nbsp;2 and try to load a non-existent file, these load 
+commands act just in the same way the normal BASIC-2-LOAD
+does: it hangs and tries to load forever. Use the 
+<span class="key">STOP</span>-key to get back to BASIC then.</p>
+
+<h2 id="sendcmd">Sending DOS commands</h2>
 <p><b>@</b><i>&lt;DOS command string&gt;</i> sends your command to the
 device's command channel. This text is not interpreted by the wedge, so the
 result depends on what your drive understands.</p>
@@ -128,13 +189,15 @@ delete all unclosed files from the directory.<br>
 <b>@D1=0</b> Duplicate an entire disk. Only available in dual drive units. 
 The target(!) drive number comes first, then the source drive number.<br>
 </p>
-<a name="down"></a>
-<h4>Downloads</h4>
-<p><a href="wedge.zip" type="application/zip">wedge.zip</a>, zipped source and binary.</p>
-<hr>
-<a href="index.htm">Home</a> | 
-<a href="email.htm">Mail</a> | 
-first edit 2011-07-05, last edit 2012-02-25
-<hr>
+
+<h2 id="down">Downloads</h2>
+<p><a href="wedge.zip" type="application/zip">
+<img src="../pic/5-25-floppy-56x56.jpg" width="56" height="56" style="border: none; text-align: left; width: 4em; 
+float: left; margin: 0 1em 1em 0;" alt=""><br>wedge.zip</a>, 
+zipped source and binary.</p>
+<hr style="clear:left;">
+</div>
+
+</div>
 </body>
 </html>
