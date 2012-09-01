@@ -379,6 +379,18 @@ static void push_data_to_packet(int8_t rxdata)
 	switch(rxstate) {
 	case RX_IDLE:
 		// no current packet
+		if (rxdata == FS_SYNC) {
+			// sync received
+			// mirror the sync back
+			// first flush all packets
+			while (slots_used > 0) {
+				send();
+			}
+			// can we send?
+			while (!uarthw_can_send());
+			// yes, send sync
+			uarthw_send(FS_SYNC);
+		} else
 		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF) {
 			// note EOI flag
 			current_is_eoi = rxdata;

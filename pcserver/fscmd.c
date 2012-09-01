@@ -148,13 +148,56 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 	}
 }
 
+static void cmd_sync(int readfd, int writefd) {
+	char syncbuf[1];
+
+	// first sync the device and the server.
+	// I.e. we send an FS_SYNC byte, and wait for the sync byte return,
+	// ignoreing all other bytes
+	//
+	// write the sync byte
+	syncbuf[0] = FS_SYNC;
+	int e = 0;
+	do {
+#if defined DEBUG_WRITE || defined DEBUG_CMD
+		printf("sync write %02x\n", syncbuf[0]);
+#endif
+		e = write(writefd, syncbuf, 1);
+	} while (e == 0 || (e < 0 &&  errno == EAGAIN));
+	if (e < 0) {
+		log_errno("Error on sync write", errno);
+	}
+	// wait for a sync byte
+	int n = 0;
+	do {
+		n = read(readfd, syncbuf, 1);
+#ifdef DEBUG_READ
+	        printf("sync read %d bytes: ",n);
+	        for(int i=0;i<n;i++) printf("%02x ",255&syncbuf[i]); printf("\n");
+#endif
+		if (n < 0) {
+			log_errno("Error on sync read", errno);
+		}
+	} while (n != 1 || (0xff & syncbuf[0]) != FS_SYNC);
+}
+
+/**
+ * this is the main loop of the program
+ *
+ * Here the data is read from the given readfd, put into a packet buffer,
+ * then given to do_cmd() for the actual execution, and the reply is 
+ * again packeted and written to the writefd
+ */
 void cmd_loop(int readfd, int writefd) {
 
         char buf[8192];
         int wrp,rdp,plen, cmd;
         int n;
 
-            /* write and read pointers in the input buffer "buf" */
+	// sync device and server
+	cmd_sync(readfd, writefd);
+
+        /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
 
         while((n=read(readfd, buf+wrp, 8192-wrp))!=0) {
@@ -185,8 +228,8 @@ void cmd_loop(int readfd, int writefd) {
                 cmd = 255 & buf[rdp+FSP_CMD];	//  AND with 255 to fix sign
 //printf("wrp-rdp=%d, plen=%d\n",wrp-rdp,plen);
                 // full packet received already?
-                if (cmd == FS_SYNC || plen < 3) {
-		  // a packet is at least 3 bytes
+                if (cmd == FS_SYNC || plen < FSP_DATA) {
+		  // a packet is at least 3 bytes (when with zero data length)
 		  // or the byte is the FS_SYNC command
 		  // so ignore byte and shift one in buffer position
 		  rdp++;
@@ -458,7 +501,7 @@ static void do_cmd(char *buf, int fd) {
 	}
 
 
-	int e = write(fd, retbuf, retbuf[FSP_LEN]);
+	int e = write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
 	if (e < 0) {
 		printf("Error on write: %d\n", errno);
 	}
