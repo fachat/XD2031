@@ -105,9 +105,9 @@ further characters. The drive is optional again.
 CD / CHDIR
 
 You can change the directory in a drive by sending
-	C<drive>:<new_directory>
+	CD<drive>:<new_directory>
 for example
-	C0:subdir
+	CD0:subdir
 The drive is optional, but the directory is changed on the drive
 only.
 
