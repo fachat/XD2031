@@ -10,7 +10,6 @@ Both communicate via a serial line.
 
 Currently this hardware is supported:
 	- XS-1541 	Communication via serial line over USB
-	- petSD   	Communication via serial line over USB
 
 For more information see the README files in the subdirectories
 
@@ -74,9 +73,6 @@ REFERENCES
 
 XS-1541: The hardware by T. Winkler is described here:
 	http://xs1541.t-winkler.net/
-
-petSD: The hardware by N. Eilers is described here:
-	http://home.germany.net/nils.eilers/petsd/
 
 sd2iec:	Some files in this firmware are derived from the sd2iec project by I. Korb
 	http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
