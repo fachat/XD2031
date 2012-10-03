@@ -43,7 +43,10 @@ uint8_t is_nrfdout = 0;
 static void ieee_interrupts_init(void)  {
   DDRD &= ~_BV(PD2);        // define ATN as input
   PORTD |= _BV(PD2);        // enable pull-up
-  EICRA |= _BV(ISC00);      // configure interrupt on falling edge of ATN
+
+  EIMSK &= (uint8_t) ~_BV(INT0);	// disable interrupt
+  EICRA &= (uint8_t) ~_BV(ISC00);	// configure interrupt on falling
+  EICRA |= _BV(ISC01);      		// edge of ATN
   EIMSK |= _BV(INT0);       // enable interrupt
   //debug_putps("Done init ieee ints"); debug_putcrlf();
 }
