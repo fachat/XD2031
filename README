@@ -73,16 +73,16 @@ REFERENCES
 ----------
 
 XS-1541: The hardware by T. Winkler is described here:
-	http://xs1541.t-winkler.net/
+	 http://xs1541.t-winkler.net/
 
-petSD: The hardware by N. Eilers is described here:
-	http://home.germany.net/nils.eilers/petsd/
+petSD:   The hardware by N. Eilers is described here:
+	 http://petsd.net
 
-sd2iec:	Some files in this firmware are derived from the sd2iec project by I. Korb
-	http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
+sd2iec:	 Some files in this firmware are derived from the sd2iec project by I. Korb
+	 http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
 
-cURL:	The cURL library is used to implement internet communication, esp.
-	the HTTP and FTP protocols. You can find it at
-	http://curl.haxx.se/
+cURL:	 The cURL library is used to implement internet communication, esp.
+	 the HTTP and FTP protocols. You can find it at
+	 http://curl.haxx.se/
 
 
