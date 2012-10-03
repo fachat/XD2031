@@ -215,6 +215,9 @@ static inline void settx (void) {
   tehi();                                           // Bus driver => TALK
   IEEE_DDR_DAV |= _BV(IEEE_PIN_DAV);                // DAV as output (high)
   IEEE_D_DDR = 0xff;                                // Data as output (high)
+  /* We're faster than the PET, so we have to wait for NDAC low first
+   * to avoid running in DEVICE NOT PRESENT error */
+  while(ndacishi() && atnishi());                   // Wait for NDAC low
 }
 
 // switch hardware from transmit to receive (after talk)
