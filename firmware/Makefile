@@ -24,3 +24,7 @@ include $(DEVICE)/Makefile
 
 doc:
 	doxygen Doxyfile
+
+rootclean:
+	rm -f $(TARGET) $(TARGET).hex
+
