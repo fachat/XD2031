@@ -1,9 +1,0 @@
-<map id="serial.h" name="serial.h">
-<area shape="rect" id="node3" href="$provider_8h.html" title="provider.h" alt="" coords="99,83,177,111"/>
-<area shape="rect" id="node7" href="$packet_8h.html" title="packet.h" alt="" coords="103,161,173,189"/>
-<area shape="rect" id="node22" href="$errormsg_8h.html" title="errormsg.h" alt="" coords="313,238,399,266"/>
-<area shape="rect" id="node10" href="$wireformat_8h.html" title="wireformat.h" alt="" coords="194,238,288,266"/>
-<area shape="rect" id="node14" href="$delay_8h.html" title="delay.h" alt="" coords="107,238,169,266"/>
-<area shape="rect" id="node12" href="$errors_8h.html" title="errors.h" alt="" coords="208,315,275,343"/>
-<area shape="rect" id="node16" href="$delayhw_8h.html" title="delayhw.h" alt="" coords="101,315,181,343"/>
-</map>

@@ -1,7 +1,0 @@
-<map id="provider.h" name="provider.h">
-<area shape="rect" id="node3" href="$curl__provider_8c.html" title="curl_provider.c" alt="" coords="5,83,112,111"/>
-<area shape="rect" id="node5" href="$curl__test_8c.html" title="curl_test.c" alt="" coords="136,83,217,111"/>
-<area shape="rect" id="node7" href="$fs__provider_8c.html" title="fs_provider.c" alt="" coords="242,83,339,111"/>
-<area shape="rect" id="node9" href="$fscmd_8c.html" title="fscmd.c" alt="" coords="364,83,431,111"/>
-<area shape="rect" id="node11" href="$provider_8c.html" title="provider.c" alt="" coords="455,83,533,111"/>
-</map>

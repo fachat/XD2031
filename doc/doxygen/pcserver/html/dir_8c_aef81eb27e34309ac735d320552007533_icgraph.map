@@ -1,6 +1,0 @@
-<map id="open_first_match" name="open_first_match">
-<area shape="rect" id="node3" href="$fs__provider_8c.html#a2b9a4a4d739b3230e451c61dad1cd7b7" title="open_file" alt="" coords="180,57,255,85"/>
-<area shape="rect" id="node5" href="$fs__provider_8c.html#acffd902f4e85b06b1563b973f8108138" title="open_file_rd" alt="" coords="306,5,401,33"/>
-<area shape="rect" id="node7" href="$fs__provider_8c.html#a9da86b704388c7eef6bc5877dce054c8" title="open_file_wr" alt="" coords="305,57,402,85"/>
-<area shape="rect" id="node9" href="$fs__provider_8c.html#ad2117b274dbc7b04a8e02bf451c29bc9" title="open_file_ap" alt="" coords="304,109,402,137"/>
-</map>

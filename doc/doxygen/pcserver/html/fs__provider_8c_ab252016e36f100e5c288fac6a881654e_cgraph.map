@@ -1,9 +1,0 @@
-<map id="open_dr" name="open_dr">
-<area shape="rect" id="node3" href="$fs__provider_8c.html#a3c8bb40501c57918cba3eef8aca4cb1b" title="close_fd" alt="" coords="283,38,354,66"/>
-<area shape="rect" id="node7" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="405,6,483,34"/>
-<area shape="rect" id="node9" href="$fs__provider_8c.html#a82b941cd0d0240a8cc3cc2f9ac166b96" title="errno_to_error" alt="" coords="125,75,232,103"/>
-<area shape="rect" id="node12" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="145,127,213,155"/>
-<area shape="rect" id="node14" href="$fs__provider_8c.html#a4df323ddb4f39f3fc96c96d7e618ad00" title="reserve_file" alt="" coords="134,179,224,207"/>
-<area shape="rect" id="node5" href="$fs__provider_8c.html#a0a39fc856ef71e3d8c7551c20b632272" title="init_fp" alt="" coords="416,70,472,98"/>
-<area shape="rect" id="node18" href="$log_8c.html#a157f7b0cfbdc0bcda5c1c0778cff4b71" title="log_warn" alt="" coords="281,179,356,207"/>
-</map>

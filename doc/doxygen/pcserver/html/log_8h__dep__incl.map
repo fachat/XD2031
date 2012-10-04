@@ -1,9 +1,0 @@
-<map id="log.h" name="log.h">
-<area shape="rect" id="node3" href="$curl__provider_8c.html" title="curl_provider.c" alt="" coords="5,83,112,111"/>
-<area shape="rect" id="node5" href="$dir_8c.html" title="dir.c" alt="" coords="137,83,183,111"/>
-<area shape="rect" id="node7" href="$fs__provider_8c.html" title="fs_provider.c" alt="" coords="208,83,304,111"/>
-<area shape="rect" id="node9" href="$fscmd_8c.html" title="fscmd.c" alt="" coords="329,83,396,111"/>
-<area shape="rect" id="node11" href="$fsser_8c.html" title="fsser.c" alt="" coords="421,83,480,111"/>
-<area shape="rect" id="node13" href="$fstcp_8c.html" title="fstcp.c" alt="" coords="505,83,564,111"/>
-<area shape="rect" id="node15" href="$provider_8c.html" title="provider.c" alt="" coords="588,83,667,111"/>
-</map>

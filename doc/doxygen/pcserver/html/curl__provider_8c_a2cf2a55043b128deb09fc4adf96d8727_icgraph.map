@@ -1,8 +1,0 @@
-<map id="close_fd" name="close_fd">
-<area shape="rect" id="node3" href="$curl__provider_8c.html#a3f721d6318d51a3c6579bf0cedf4db89" title="close_fds" alt="" coords="132,5,209,33"/>
-<area shape="rect" id="node5" href="$curl__provider_8c.html#a371038f10f9b4d15a4ae448c830ec6e3" title="prov_free" alt="" coords="132,57,209,85"/>
-<area shape="rect" id="node7" href="$curl__provider_8c.html#a4df323ddb4f39f3fc96c96d7e618ad00" title="reserve_file" alt="" coords="126,109,216,137"/>
-<area shape="rect" id="node9" href="$curl__provider_8c.html#acbaeed54c34afef056df227e4b2ed0c7" title="open_file" alt="" coords="265,109,340,137"/>
-<area shape="rect" id="node11" href="$curl__provider_8c.html#a22d16e372721a3166d5208590a2e57ae" title="open_rd" alt="" coords="390,82,460,110"/>
-<area shape="rect" id="node13" href="$curl__provider_8c.html#ab252016e36f100e5c288fac6a881654e" title="open_dr" alt="" coords="390,134,460,162"/>
-</map>

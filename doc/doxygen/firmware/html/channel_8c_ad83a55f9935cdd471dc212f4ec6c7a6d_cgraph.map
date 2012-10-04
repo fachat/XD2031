@@ -1,6 +1,0 @@
-<map id="channel_pull" name="channel_pull">
-<area shape="rect" id="node3" href="$channel_8c.html#a26b97d3a3a80ba21ae3d74944fc3477e" title="_pull_callback" alt="" coords="157,5,262,33"/>
-<area shape="rect" id="node7" href="$packet_8h.html#a437f19cbea67d2fcceab3daca7999b53" title="packet_set_filled" alt="" coords="149,57,270,85"/>
-<area shape="rect" id="node5" href="$channel_8c.html#a4f422b28ba066eb1f918ffe5b31955df" title="channel_find" alt="" coords="329,5,426,33"/>
-<area shape="rect" id="node9" href="$packet_8h.html#ac734d1711836633dfd94a48850b3a7a8" title="packet_set_read" alt="" coords="317,57,437,85"/>
-</map>

@@ -1,9 +1,0 @@
-<map id="fs_delete" name="fs_delete">
-<area shape="rect" id="node3" href="$fs__provider_8c.html#a39c2fe1544b7fcb6607029575c46d5e6" title="_delete_callback" alt="" coords="132,57,252,85"/>
-<area shape="rect" id="node9" href="$dir_8c.html#a8badd483a529f1e964bf1b112f4f2c7d" title="dir_call_matches" alt="" coords="131,109,253,137"/>
-<area shape="rect" id="node5" href="$fs__provider_8c.html#a82b941cd0d0240a8cc3cc2f9ac166b96" title="errno_to_error" alt="" coords="309,5,416,33"/>
-<area shape="rect" id="node7" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="324,57,402,85"/>
-<area shape="rect" id="node11" href="$name_8c.html#a95fe960512bf2097c7c7980dbffddb95" title="compare_pattern" alt="" coords="302,109,424,137"/>
-<area shape="rect" id="node13" href="$dir_8c.html#a125151e3969662e6984e7c1202d6657d" title="malloc_path" alt="" coords="316,161,409,189"/>
-<area shape="rect" id="node15" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="473,161,541,189"/>
-</map>

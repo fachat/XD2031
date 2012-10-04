@@ -1,7 +1,0 @@
-<map id="provider_assign" name="provider_assign">
-<area shape="rect" id="node3" href="$cmd2_8h.html#abaf24aaeaa145dec95026ae71251be71" title="command_execute" alt="" coords="170,5,304,33"/>
-<area shape="rect" id="node5" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="352,5,451,33"/>
-<area shape="rect" id="node7" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="499,5,600,33"/>
-<area shape="rect" id="node9" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="648,5,811,33"/>
-<area shape="rect" id="node11" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="859,5,909,33"/>
-</map>

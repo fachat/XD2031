@@ -1,7 +1,0 @@
-<map id="fs_rename" name="fs_rename">
-<area shape="rect" id="node3" href="$fs__provider_8c.html#a82b941cd0d0240a8cc3cc2f9ac166b96" title="errno_to_error" alt="" coords="139,5,245,33"/>
-<area shape="rect" id="node5" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="153,57,231,85"/>
-<area shape="rect" id="node7" href="$log_8c.html#a2a4f55619b06be2dc2f756d17ffbebb8" title="log_error" alt="" coords="155,109,229,137"/>
-<area shape="rect" id="node9" href="$dir_8c.html#a125151e3969662e6984e7c1202d6657d" title="malloc_path" alt="" coords="145,161,239,189"/>
-<area shape="rect" id="node11" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="294,161,362,189"/>
-</map>

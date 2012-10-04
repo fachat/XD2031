@@ -1,9 +1,0 @@
-<map id="packet_peek_data" name="packet_peek_data">
-<area shape="rect" id="node3" href="$channel_8h.html#ab251327a6bfb5495a6f0c4e86b2b4a6d" title="channel_current_byte" alt="" coords="184,31,333,59"/>
-<area shape="rect" id="node5" href="$bus_8h.html#aaf55247b4144eabb80a9f8a9908742cc" title="bus_receivebyte" alt="" coords="382,31,501,59"/>
-<area shape="rect" id="node7" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="549,5,645,33"/>
-<area shape="rect" id="node15" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="710,57,778,85"/>
-<area shape="rect" id="node9" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="693,5,795,33"/>
-<area shape="rect" id="node11" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="843,31,1005,59"/>
-<area shape="rect" id="node13" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="1054,31,1104,59"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="close_fds" name="close_fds">
-<area shape="rect" id="node3" href="$curl__provider_8c.html#a2cf2a55043b128deb09fc4adf96d8727" title="close_fd" alt="" coords="131,5,202,33"/>
-<area shape="rect" id="node7" href="$curl__provider_8c.html#a8cf5652c677f33cbe6206af837b23e77" title="find_file" alt="" coords="133,57,200,85"/>
-<area shape="rect" id="node9" href="$log_8c.html#a157f7b0cfbdc0bcda5c1c0778cff4b71" title="log_warn" alt="" coords="252,82,327,110"/>
-<area shape="rect" id="node5" href="$curl__provider_8c.html#a0a39fc856ef71e3d8c7551c20b632272" title="init_fp" alt="" coords="261,5,318,33"/>
-</map>

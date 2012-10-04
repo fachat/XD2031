@@ -1,6 +1,0 @@
-<map id="ISR" name="ISR">
-<area shape="rect" id="node3" href="$ledhw_8c.html#a85fc34f47b1f802300ac61f441ca4ec8" title="led_set" alt="" coords="99,57,163,85"/>
-<area shape="rect" id="node5" href="$ledhw_8c.html#a38dc2f2205582632c983a345458f3bf2" title="init_prg" alt="" coords="213,5,278,33"/>
-<area shape="rect" id="node7" href="$ledhw_8c.html#a07349daa417c8b171f2342486b71a3c6" title="_led_off" alt="" coords="211,57,280,85"/>
-<area shape="rect" id="node9" href="$ledhw_8c.html#a07f0d32d7cef684f1c3a1a17dede9eca" title="_led_on" alt="" coords="211,109,280,137"/>
-</map>

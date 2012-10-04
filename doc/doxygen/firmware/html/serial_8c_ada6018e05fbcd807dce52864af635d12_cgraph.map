@@ -1,7 +1,0 @@
-<map id="read_char_from_packet" name="read_char_from_packet">
-<area shape="rect" id="node3" href="$packet_8h.html#a34b76089cf01a140b9d44bb17337ba5d" title="packet_get_chan" alt="" coords="233,5,356,33"/>
-<area shape="rect" id="node5" href="$packet_8h.html#a89d861cedccb4c116bca4686f5300b03" title="packet_get_contentlen" alt="" coords="217,57,372,85"/>
-<area shape="rect" id="node7" href="$packet_8h.html#abd38157c9a5066d33eb199105dc57c0f" title="packet_get_type" alt="" coords="235,109,354,137"/>
-<area shape="rect" id="node9" href="$packet_8h.html#addb176aaaeddd33017a9c51693dc4510" title="packet_has_data" alt="" coords="233,161,356,189"/>
-<area shape="rect" id="node11" href="$packet_8h.html#a82b582cda143f4b419e8ab621a1d7142" title="packet_read_char" alt="" coords="231,213,359,241"/>
-</map>

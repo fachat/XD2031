@@ -1,9 +1,0 @@
-<map id="uarthw_can_send" name="uarthw_can_send">
-<area shape="rect" id="node3" href="$serial_8c.html#ab3258ff091e5e10fc76b30cd24e55596" title="push_data_to_packet" alt="" coords="318,5,466,33"/>
-<area shape="rect" id="node7" href="$serial_8c.html#a6aaf52ad0a4ad585de528c2f40af36e3" title="send" alt="" coords="200,57,250,85"/>
-<area shape="rect" id="node15" href="$serial_8h.html#ab9ddf2fb0d23eab0aa1ccefa91149255" title="serial_sync" alt="" coords="181,134,269,162"/>
-<area shape="rect" id="node5" href="$serial_8h.html#a2a467023822de9459179b4c9a13da0d1" title="serial_delay" alt="" coords="532,31,625,59"/>
-<area shape="rect" id="node11" href="$serial_8c.html#ac3bb6e8286980b507589e1a799e752f9" title="serial_submit" alt="" coords="342,109,442,137"/>
-<area shape="rect" id="node13" href="$serial_8c.html#a3386cdb2f4c51be5b17839689bb0040b" title="serial_submit_call" alt="" coords="515,109,642,137"/>
-<area shape="rect" id="node17" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="367,161,417,189"/>
-</map>
