@@ -42,3 +42,5 @@ debug:
 curltest: curl_test.c curl_provider.c log.c
 	${CC} ${CFLAGS} -o curltest curl_provider.c curl_test.c log.c ${LIBS}
 
+doc:
+	doxygen Doxyfile

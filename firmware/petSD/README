@@ -1,10 +1,3 @@
-*****   U N D E R   C O N S T R U C T I O N   *****
-
-The petSD hardware support has only ALHPHA status at the moment :/
-While commands like LOAD and SAVE seem to work flawlessly, the wedge
-doesn't work at all. So there's still some work to do...
-
-
 *****   B A D   F U S E S   S E T T I N G S   *****
 
 petSDs shipped until July 2012 had AVR fuse settings that may cause
@@ -20,3 +13,5 @@ avrdude -p m1284p -v -y -U lfuse:w:0xf7:m -U hfuse:w:0xd2:m -U efuse:w:0xff:m
 
 WARNING:   IF YOU DON'T KNOW WHAT YOU'RE DOING, YOU MAY BRICK YOUR DEVICE!
 ========   Please feel free to email nils.eilers@gmx.de for further advice.
+
+
