@@ -76,6 +76,14 @@ uint16_t BytesFree()
 
 static endpoint_t term_endpoint;
 
+// -------------------------
+// delay loop, to keep all maintenance running while
+// waiting for a response from the server
+
+void main_delay() {
+	serial_delay();
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // Main-Funktion
 /////////////////////////////////////////////////////////////////////////////
@@ -139,7 +147,7 @@ int main()
 	while (1)  			// Mainloop-Begin
 	{
 		// keep data flowing on the serial line
-		serial_delay();
+		main_delay();
 
 		// handle IEEE488 bus
 		ieee_mainloop_iteration();

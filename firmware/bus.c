@@ -178,7 +178,7 @@ static int16_t cmd_handler (bus_t *bus)
 		// Note: use bus_for_irq here, as it is volatile
 		while (bus_for_irq->cmd_done == 0) {
 			// TODO this should be reworked more backend (serial) independent
-			serial_delay();
+			main_delay();
 		}
 #ifdef DEBUG_SERIAL
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);

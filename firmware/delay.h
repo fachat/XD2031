@@ -30,12 +30,13 @@
 
 #include "delayhw.h"
 
-void serial_delay();
+// this is in main.c, but as it is used for delays, it is defined here
+void main_delay();
 
 static inline void delayms(uint8_t t) {
 	uint8_t ms = t;	
 	do {
-		serial_delay();
+		main_delay();
 		delayhw_ms(1);
 		ms--;	
 	}
