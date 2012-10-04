@@ -331,6 +331,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_DR:
+		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
 		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;

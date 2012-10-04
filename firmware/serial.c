@@ -74,7 +74,7 @@ void serial_submit(void *epdata, packet_t *buf);
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 void (*callback)(int8_t channelno, int8_t errnum));
 
-static int8_t directory_converter(packet_t *p);
+static int8_t directory_converter(packet_t *p, uint8_t drive);
 static int8_t to_provider(packet_t *p);
 
 // dummy
@@ -163,7 +163,7 @@ static uint8_t *append(uint8_t *outp, const char *to_append) {
  */
 static uint8_t out[64];
 
-static int8_t directory_converter(packet_t *p) {
+static int8_t directory_converter(packet_t *p, uint8_t drive) {
 	uint8_t *inp = NULL;
 	uint8_t *outp = &(out[0]);
 
@@ -186,16 +186,20 @@ static int8_t directory_converter(packet_t *p) {
 	*outp = 1; outp++;		// link address high
 
 	uint16_t lineno = 0;
-	// line number, derived from file length
-	if (inp[FS_DIR_LEN+3] != 0 
-		|| inp[FS_DIR_LEN+2] > 0xf9
-		|| (inp[FS_DIR_LEN+2] == 0xf9 && inp[FS_DIR_LEN+1] == 0xff && inp[FS_DIR_LEN] != 0)) {
-		// more than limit of 63999 blocks
-		lineno = 63999;
+	if (type == FS_DIR_MOD_NAM) {
+		lineno = drive;
 	} else {
-		lineno = inp[FS_DIR_LEN+1] | (inp[FS_DIR_LEN+2] << 8);
-		if (inp[FS_DIR_LEN] != 0) {
-			lineno++;
+		// line number, derived from file length
+		if (inp[FS_DIR_LEN+3] != 0 
+			|| inp[FS_DIR_LEN+2] > 0xf9
+			|| (inp[FS_DIR_LEN+2] == 0xf9 && inp[FS_DIR_LEN+1] == 0xff && inp[FS_DIR_LEN] != 0)) {
+			// more than limit of 63999 blocks
+			lineno = 63999;
+		} else {
+			lineno = inp[FS_DIR_LEN+1] | (inp[FS_DIR_LEN+2] << 8);
+			if (inp[FS_DIR_LEN] != 0) {
+				lineno++;
+			}
 		}
 	}
 	*outp = lineno & 255; outp++;

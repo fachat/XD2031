@@ -1,2 +1,4 @@
 *.o
 .svn
+fw
+fw.hex

@@ -100,7 +100,8 @@ static void channel_pull(channel_t *c, uint8_t slot) {
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(packet_t *)) {
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(packet_t *, uint8_t drive), 
+	uint8_t drive) {
 
 //debug_printf("channel_open: chan=%d\n", chan);
 
@@ -111,6 +112,7 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 			channels[i].writetype = writetype;
 			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
+			channels[i].drive = drive;
 			channels[i].pull_state = PULL_OPEN;
 			channels[i].push_state = PUSH_OPEN;
 			// note: we should not channel_pull() here, as file open has not yet even been sent
@@ -157,7 +159,7 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
 				//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
-				chan->directory_converter(&chan->buf[chan->current]);
+				chan->directory_converter(&chan->buf[chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_ONEREAD;
 		}
@@ -171,7 +173,7 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
 				//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
-				chan->directory_converter(&chan->buf[1-chan->current]);
+				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}
@@ -303,7 +305,7 @@ channel_t* channel_refill(channel_t *chan) {
 			if (chan->directory_converter != NULL) {
 //debug_printf(">>3: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
 //debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
-				chan->directory_converter(&chan->buf[1-chan->current]);
+				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}

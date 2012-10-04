@@ -136,6 +136,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		// TODO: fix this hack!
 		nameinfo.name[0] = rtconf->last_used_drive;
 	}
+	rtconf->last_used_drive = nameinfo.drive;
 
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
@@ -185,7 +186,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 
 	// open channel
 	uint8_t writetype = (type == FS_OPEN_WR || type == FS_OPEN_AP) ? 1 : 0;
-	int8_t (*converter)(packet_t*) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
+	int8_t (*converter)(packet_t*, uint8_t) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
 	channel_t *channel = channel_find(channel_no);
 	if (channel != NULL) {
@@ -197,7 +198,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		return -1;
 	}
 
-	int8_t e = channel_open(channel_no, writetype, endpoint, converter);
+	int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
 	if (e < 0) {
 		debug_puts("E="); debug_puthex(e); debug_putcrlf();
 		set_error(errormsg, ERROR_NO_CHANNEL);

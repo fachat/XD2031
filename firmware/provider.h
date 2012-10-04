@@ -46,7 +46,7 @@ typedef struct {
                 void (*callback)(int8_t channelno, int8_t errnum));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(packet_t *p);
+	int8_t (*directory_converter)(packet_t *p, uint8_t);
 	// convert a packet from CBM codepage to provider
 	// used only for open and commands!
 	// return -1 if packet is too small to hold converted value
