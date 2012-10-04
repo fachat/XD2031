@@ -28,7 +28,6 @@
 #include <ctype.h>
 
 #include "ieeehw.h"
-#include "errormsg.h"
 #include "cmd.h"
 #include "channel.h"
 #include "bus.h"
