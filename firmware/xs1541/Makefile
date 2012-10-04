@@ -1,6 +1,7 @@
 
 # directory name used in includes
-DEVICE=xs1541
+# This is already set in top level Makefile
+#DEVICE=xs1541
 
 DEVICEFILES=xs1541/ieeehw.c
 DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h
@@ -16,4 +17,6 @@ xs1541/%.o: xs1541/%.S
 deviceclean:
 	rm -f $(DEVICEASMOBJ)
 
+# include platform specific Makefile
+include avr/Makefile
 

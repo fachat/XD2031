@@ -1,6 +1,7 @@
 
 # directory name used in includes
-DEVICE=petSD
+# this is already set in toplevel Makefile
+#DEVICE=petSD
 
 DEVICEFILES=petSD/ieeehw.c
 DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h
@@ -16,4 +17,8 @@ petSD/atn.o: petSD/atn.S
 
 deviceclean:
 	rm -f atn.o
+
+# include platform specific Makefile
+include avr/Makefile
+
 
