@@ -15,3 +15,5 @@ include xs1541/Makefile
 
 include avr/Makefile
 
+doc:
+	doxygen Doxyfile

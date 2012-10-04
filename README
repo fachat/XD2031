@@ -10,6 +10,7 @@ Both communicate via a serial line.
 
 Currently this hardware is supported:
 	- XS-1541 	Communication via serial line over USB
+	- petSD   	Communication via serial line over USB
 
 For more information see the README files in the subdirectories
 
@@ -72,13 +73,16 @@ REFERENCES
 ----------
 
 XS-1541: The hardware by T. Winkler is described here:
-	http://xs1541.t-winkler.net/
+	 http://xs1541.t-winkler.net/
 
-sd2iec:	Some files in this firmware are derived from the sd2iec project by I. Korb
-	http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
+petSD:   The hardware by N. Eilers is described here:
+	 http://petsd.net
 
-cURL:	The cURL library is used to implement internet communication, esp.
-	the HTTP and FTP protocols. You can find it at
-	http://curl.haxx.se/
+sd2iec:	 Some files in this firmware are derived from the sd2iec project by I. Korb
+	 http://www.c64-wiki.com/index.php/sd2iec_%28firmware%29
+
+cURL:	 The cURL library is used to implement internet communication, esp.
+	 the HTTP and FTP protocols. You can find it at
+	 http://curl.haxx.se/
 
 

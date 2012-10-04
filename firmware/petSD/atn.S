@@ -44,7 +44,7 @@ INT0_vect:
 
         ; ATN acknowledge
         lds     r16, PORTC            ; PC6: NDAC, PC7: NRFD            2
-        andi    r16, 255 - _BV(PC6) | _BV(PC7);                         1
+        andi    r16, 255 - _BV(PC6) - _BV(PC7);                         1
         sts     PORTC, r16            ; NDAC low, NRFD low              2
         
         lds     r16, DDRC             ; NDAC + NRFD as outputs          2
