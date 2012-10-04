@@ -1,0 +1,10 @@
+<map id="bus_init" name="bus_init">
+<area shape="rect" id="node3" href="$errormsg_8h.html#aaa86d4da98675a27e26141f19fadc907" title="set_error" alt="" coords="120,57,195,85"/>
+<area shape="rect" id="node5" href="$errormsg_8c.html#adaf0ba8d19c41eda11dbdeade76a43a6" title="set_error_ts" alt="" coords="243,57,336,85"/>
+<area shape="rect" id="node7" href="$errormsg_8c.html#a6ebcffc1657e5c42336a72e11530b521" title="appendnumber" alt="" coords="384,5,496,33"/>
+<area shape="rect" id="node9" href="$errormsg_8c.html#ae1d0465c57eaf7cdf2fb6491882a2e03" title="appendmsg" alt="" coords="394,57,486,85"/>
+<area shape="rect" id="node11" href="$ledhw_8c.html#a85fc34f47b1f802300ac61f441ca4ec8" title="led_set" alt="" coords="408,109,472,137"/>
+<area shape="rect" id="node13" href="$ledhw_8c.html#a07349daa417c8b171f2342486b71a3c6" title="_led_off" alt="" coords="544,57,613,85"/>
+<area shape="rect" id="node15" href="$ledhw_8c.html#a07f0d32d7cef684f1c3a1a17dede9eca" title="_led_on" alt="" coords="544,109,613,137"/>
+<area shape="rect" id="node17" href="$ledhw_8c.html#a38dc2f2205582632c983a345458f3bf2" title="init_prg" alt="" coords="546,161,611,189"/>
+</map>

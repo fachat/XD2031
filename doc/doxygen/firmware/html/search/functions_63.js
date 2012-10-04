@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['channel_5fclose',['channel_close',['../channel_8c.html#a27276c04c9964ae01dc04f436f57115b',1,'channel_close(int8_t channel_no):&#160;channel.c'],['../channel_8h.html#a2f03f94142b87d3c287c17d558ca81bb',1,'channel_close(int8_t secondary_address):&#160;channel.c']]],
+  ['channel_5fclose_5fint',['channel_close_int',['../channel_8c.html#a7e98d9edd07cfa978bedfa82abf9953e',1,'channel.c']]],
+  ['channel_5fclose_5frange',['channel_close_range',['../channel_8c.html#a95267ccd8b077002647dcf947cccbb4d',1,'channel_close_range(uint8_t fromincl, uint8_t toincl):&#160;channel.c'],['../channel_8h.html#a95267ccd8b077002647dcf947cccbb4d',1,'channel_close_range(uint8_t fromincl, uint8_t toincl):&#160;channel.c']]],
+  ['channel_5fcurrent_5fbyte',['channel_current_byte',['../channel_8c.html#ab251327a6bfb5495a6f0c4e86b2b4a6d',1,'channel_current_byte(channel_t *chan):&#160;channel.c'],['../channel_8h.html#ab251327a6bfb5495a6f0c4e86b2b4a6d',1,'channel_current_byte(channel_t *chan):&#160;channel.c']]],
+  ['channel_5fcurrent_5fis_5feof',['channel_current_is_eof',['../channel_8h.html#a67933e90bf107059d7c8b99b303414e6',1,'channel.h']]],
+  ['channel_5ffind',['channel_find',['../channel_8c.html#a4f422b28ba066eb1f918ffe5b31955df',1,'channel_find(int8_t chan):&#160;channel.c'],['../channel_8h.html#a4f422b28ba066eb1f918ffe5b31955df',1,'channel_find(int8_t chan):&#160;channel.c']]],
+  ['channel_5fhas_5fmore',['channel_has_more',['../channel_8c.html#a36f99405322341c5ec6190ad7df984e8',1,'channel_has_more(channel_t *chan):&#160;channel.c'],['../channel_8h.html#a36f99405322341c5ec6190ad7df984e8',1,'channel_has_more(channel_t *chan):&#160;channel.c']]],
+  ['channel_5finit',['channel_init',['../channel_8c.html#a1f2167cb6569f2dcfb040c75bdf90fc2',1,'channel_init(void):&#160;channel.c'],['../channel_8h.html#a1f2167cb6569f2dcfb040c75bdf90fc2',1,'channel_init(void):&#160;channel.c']]],
+  ['channel_5fis_5feof',['channel_is_eof',['../channel_8h.html#aaa765329128c5d6a3d83cc031d186dc3',1,'channel.h']]],
+  ['channel_5fis_5frel',['channel_is_rel',['../channel_8h.html#ad4899bc564bd71a4cf01b2b6523bdd46',1,'channel.h']]],
+  ['channel_5fis_5fwritable',['channel_is_writable',['../channel_8h.html#a71c4951acfd6005fc77ee9eaa8d112e6',1,'channel.h']]],
+  ['channel_5fnext',['channel_next',['../channel_8c.html#ab788bfc67eced677c3e8f3b5f4c25d9c',1,'channel_next(channel_t *chan):&#160;channel.c'],['../channel_8h.html#ab788bfc67eced677c3e8f3b5f4c25d9c',1,'channel_next(channel_t *chan):&#160;channel.c']]],
+  ['channel_5fopen',['channel_open',['../channel_8c.html#a9e50fcfde4df544d0129c1b56a7a6359',1,'channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t(*dirconv)(packet_t *)):&#160;channel.c'],['../channel_8h.html#ab810f981278991ac5b12dddff1fb41e2',1,'channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t(*dirconverter)(packet_t *)):&#160;channel.c']]],
+  ['channel_5fpreload',['channel_preload',['../channel_8c.html#a0e2a982477e7730e6d25854edd31a259',1,'channel_preload(int8_t chan):&#160;channel.c'],['../channel_8h.html#ac164e244d86c59f184bed5e7380885b9',1,'channel_preload(int8_t channelno):&#160;channel.c']]],
+  ['channel_5fpreload_5fint',['channel_preload_int',['../channel_8c.html#ae7784dd177e78324ea066e9a2e475737',1,'channel.c']]],
+  ['channel_5fpreloadp',['channel_preloadp',['../channel_8c.html#ac42b73ef4fb417f5eae59ce4bcc34da1',1,'channel_preloadp(channel_t *chan):&#160;channel.c'],['../channel_8h.html#ac42b73ef4fb417f5eae59ce4bcc34da1',1,'channel_preloadp(channel_t *chan):&#160;channel.c']]],
+  ['channel_5fpull',['channel_pull',['../channel_8c.html#ad83a55f9935cdd471dc212f4ec6c7a6d',1,'channel.c']]],
+  ['channel_5fput',['channel_put',['../channel_8c.html#a5bfb7b380fbcb047cb5b839823ed019d',1,'channel_put(channel_t *chan, char c, int forceflush):&#160;channel.c'],['../channel_8h.html#a5bfb7b380fbcb047cb5b839823ed019d',1,'channel_put(channel_t *chan, char c, int forceflush):&#160;channel.c']]],
+  ['channel_5frefill',['channel_refill',['../channel_8c.html#a5eb3ce54c85a9984a99446a4bd7cc180',1,'channel_refill(channel_t *chan):&#160;channel.c'],['../channel_8h.html#a5eb3ce54c85a9984a99446a4bd7cc180',1,'channel_refill(channel_t *chan):&#160;channel.c']]],
+  ['clrd',['clrd',['../pet_s_d_2ieeehw_8h.html#a25d9b7d01fd7a14be5e4552cc116d842',1,'clrd(void):&#160;ieeehw.h'],['../xs1541_2ieeehw_8h.html#a25d9b7d01fd7a14be5e4552cc116d842',1,'clrd(void):&#160;ieeehw.h']]],
+  ['cmd_5fhandler',['cmd_handler',['../bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b',1,'bus.c']]],
+  ['command_5fexecute',['command_execute',['../cmd_8c.html#abaf24aaeaa145dec95026ae71251be71',1,'command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, void(*callback)(int8_t errnum, uint8_t *rxdata)):&#160;cmd.c'],['../cmd2_8h.html#abaf24aaeaa145dec95026ae71251be71',1,'command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, void(*callback)(int8_t errnum, uint8_t *rxdata)):&#160;cmd.c']]],
+  ['command_5ffind',['command_find',['../cmd_8c.html#ab9643f90107f881d6ccbdcc75f2af424',1,'command_find(uint8_t *input):&#160;cmd.c'],['../cmd_8h.html#a9a4ee65559f136d7bf14d6b37408b019',1,'command_find(uint8_t *buf):&#160;cmd.c']]],
+  ['command_5fto_5fname',['command_to_name',['../cmd_8c.html#a638fac6ce8a134b11f8b5f8858af1e0a',1,'command_to_name(command_t cmd):&#160;cmd.c'],['../cmd_8h.html#a638fac6ce8a134b11f8b5f8858af1e0a',1,'command_to_name(command_t cmd):&#160;cmd.c']]]
+];

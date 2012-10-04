@@ -1,0 +1,6 @@
+<map id="reserve_file" name="reserve_file">
+<area shape="rect" id="node3" href="$fs__provider_8c.html#a3c8bb40501c57918cba3eef8aca4cb1b" title="close_fd" alt="" coords="147,57,218,85"/>
+<area shape="rect" id="node5" href="$fs__provider_8c.html#a0a39fc856ef71e3d8c7551c20b632272" title="init_fp" alt="" coords="280,5,336,33"/>
+<area shape="rect" id="node10" href="$log_8c.html#a157f7b0cfbdc0bcda5c1c0778cff4b71" title="log_warn" alt="" coords="145,109,220,137"/>
+<area shape="rect" id="node7" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="269,57,347,85"/>
+</map>

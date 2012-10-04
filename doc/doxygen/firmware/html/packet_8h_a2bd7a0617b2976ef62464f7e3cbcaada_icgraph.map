@@ -1,0 +1,19 @@
+<map id="packet_init" name="packet_init">
+<area shape="rect" id="node3" href="$channel_8c.html#a7e98d9edd07cfa978bedfa82abf9953e" title="channel_close_int" alt="" coords="139,158,267,186"/>
+<area shape="rect" id="node26" href="$file_8h.html#a8336bd2f1ed40fc3520412402061d43b" title="file_submit_call" alt="" coords="516,262,628,290"/>
+<area shape="rect" id="node44" href="$term_8h.html#ac743d5797dd0f5f8634b72786c6bbfe0" title="term_init" alt="" coords="1022,282,1095,310"/>
+<area shape="rect" id="node5" href="$channel_8h.html#a2f03f94142b87d3c287c17d558ca81bb" title="channel_close" alt="" coords="336,210,443,238"/>
+<area shape="rect" id="node34" href="$channel_8h.html#a95267ccd8b077002647dcf947cccbb4d" title="channel_close_range" alt="" coords="315,158,463,186"/>
+<area shape="rect" id="node37" href="$channel_8h.html#a1f2167cb6569f2dcfb040c75bdf90fc2" title="channel_init" alt="" coords="864,5,957,33"/>
+<area shape="rect" id="node40" href="$channel_8h.html#a5eb3ce54c85a9984a99446a4bd7cc180" title="channel_refill" alt="" coords="339,106,439,134"/>
+<area shape="rect" id="node7" href="$bus_8c.html#aa005573fc6338f79631c8fa5547b7cf5" title="bus_close" alt="" coords="531,158,613,186"/>
+<area shape="rect" id="node15" href="$bus_8h.html#aaf55247b4144eabb80a9f8a9908742cc" title="bus_receivebyte" alt="" coords="513,106,631,134"/>
+<area shape="rect" id="node23" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="861,237,960,265"/>
+<area shape="rect" id="node9" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="1008,153,1109,181"/>
+<area shape="rect" id="node11" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="1157,114,1320,142"/>
+<area shape="rect" id="node13" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="1368,114,1418,142"/>
+<area shape="rect" id="node17" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="699,107,795,135"/>
+<area shape="rect" id="node20" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="877,57,944,85"/>
+<area shape="rect" id="node28" href="$cmd2_8h.html#abaf24aaeaa145dec95026ae71251be71" title="command_execute" alt="" coords="680,262,814,290"/>
+<area shape="rect" id="node31" href="$file_8h.html#a2dac9b9090b14532b84f96929c3cb2cc" title="file_open" alt="" coords="709,314,784,342"/>
+</map>

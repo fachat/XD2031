@@ -1,0 +1,9 @@
+<map id="term_putc" name="term_putc">
+<area shape="rect" id="node3" href="$packet_8h.html#a2cade8ffc72b19e08f8fbff1ce795417" title="packet_wait_done" alt="" coords="134,57,263,85"/>
+<area shape="rect" id="node11" href="$term_8c.html#ad6b6b9297aa30da49f6dc3422bf708a4" title="send" alt="" coords="174,109,224,137"/>
+<area shape="rect" id="node5" href="$delay_8h.html#a304927311300df9e48c410ac5732d173" title="delayms" alt="" coords="337,5,407,33"/>
+<area shape="rect" id="node9" href="$packet_8h.html#ae18177b6d0283a274422f843fb924d81" title="packet_is_done" alt="" coords="315,57,429,85"/>
+<area shape="rect" id="node7" href="$delay_8h.html#a2a467023822de9459179b4c9a13da0d1" title="serial_delay" alt="" coords="494,5,586,33"/>
+<area shape="rect" id="node13" href="$packet_8h.html#a437f19cbea67d2fcceab3daca7999b53" title="packet_set_filled" alt="" coords="312,109,432,137"/>
+<area shape="rect" id="node15" href="$packet_8h.html#ac734d1711836633dfd94a48850b3a7a8" title="packet_set_read" alt="" coords="480,109,600,137"/>
+</map>

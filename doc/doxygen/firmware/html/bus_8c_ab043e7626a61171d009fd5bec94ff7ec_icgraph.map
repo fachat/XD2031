@@ -1,0 +1,7 @@
+<map id="bus_receivebyte" name="bus_receivebyte">
+<area shape="rect" id="node3" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="173,5,269,33"/>
+<area shape="rect" id="node11" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="334,57,402,85"/>
+<area shape="rect" id="node5" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="317,5,419,33"/>
+<area shape="rect" id="node7" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="467,31,629,59"/>
+<area shape="rect" id="node9" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="678,31,728,59"/>
+</map>

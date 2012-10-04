@@ -1,0 +1,14 @@
+<map id="serial_submit" name="serial_submit">
+<area shape="rect" id="node3" href="$serial_8c.html#a6aaf52ad0a4ad585de528c2f40af36e3" title="send" alt="" coords="176,149,226,177"/>
+<area shape="rect" id="node25" href="$delay_8h.html#a2a467023822de9459179b4c9a13da0d1" title="serial_delay" alt="" coords="155,201,248,229"/>
+<area shape="rect" id="node5" href="$serial_8c.html#ab9126462beb6d6cfba1d6b5941557207" title="advance_slots" alt="" coords="324,70,431,98"/>
+<area shape="rect" id="node7" href="$serial_8c.html#ada6018e05fbcd807dce52864af635d12" title="read_char_from_packet" alt="" coords="296,122,458,150"/>
+<area shape="rect" id="node19" href="$uarthw_8c.html#a9a446e9813b93bc7782622d598df287d" title="uarthw_can_send" alt="" coords="314,174,441,202"/>
+<area shape="rect" id="node21" href="$uarthw_8c.html#acb0e0d143a12e48dbb13b23ac1c8515c" title="uarthw_send" alt="" coords="328,239,426,267"/>
+<area shape="rect" id="node9" href="$packet_8h.html#a34b76089cf01a140b9d44bb17337ba5d" title="packet_get_chan" alt="" coords="524,5,647,33"/>
+<area shape="rect" id="node11" href="$packet_8h.html#a89d861cedccb4c116bca4686f5300b03" title="packet_get_contentlen" alt="" coords="508,57,663,85"/>
+<area shape="rect" id="node13" href="$packet_8h.html#abd38157c9a5066d33eb199105dc57c0f" title="packet_get_type" alt="" coords="526,109,645,137"/>
+<area shape="rect" id="node15" href="$packet_8h.html#addb176aaaeddd33017a9c51693dc4510" title="packet_has_data" alt="" coords="524,161,647,189"/>
+<area shape="rect" id="node17" href="$packet_8h.html#a82b582cda143f4b419e8ab621a1d7142" title="packet_read_char" alt="" coords="521,213,649,241"/>
+<area shape="rect" id="node23" href="$uarthw_8c.html#a16407b10e85b038a6ea51bfb8c31ad56" title="_uart_enable_sendisr" alt="" coords="511,265,660,293"/>
+</map>

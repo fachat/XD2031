@@ -1,0 +1,5 @@
+<map id="led_set" name="led_set">
+<area shape="rect" id="node3" href="$ledhw_8c.html#a07349daa417c8b171f2342486b71a3c6" title="_led_off" alt="" coords="118,5,186,33"/>
+<area shape="rect" id="node5" href="$ledhw_8c.html#a07f0d32d7cef684f1c3a1a17dede9eca" title="_led_on" alt="" coords="118,57,186,85"/>
+<area shape="rect" id="node7" href="$ledhw_8c.html#a38dc2f2205582632c983a345458f3bf2" title="init_prg" alt="" coords="119,109,185,137"/>
+</map>

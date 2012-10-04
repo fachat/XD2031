@@ -1,0 +1,14 @@
+<map id="cmd_loop" name="cmd_loop">
+<area shape="rect" id="node3" href="$fscmd_8c.html#a439ae5539b93e14dd0f6ae8d752c74d3" title="cmd_sync" alt="" coords="134,83,215,111"/>
+<area shape="rect" id="node7" href="$fscmd_8c.html#acadd9e503504342f43686c95c6ea9f44" title="do_cmd" alt="" coords="140,213,209,241"/>
+<area shape="rect" id="node5" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="289,5,367,33"/>
+<area shape="rect" id="node9" href="$fscmd_8c.html#ac1bdc89cd482dffb2699bf75b00ec8d4" title="chan_to_endpoint" alt="" coords="264,213,392,241"/>
+<area shape="rect" id="node13" href="$fscmd_8c.html#a4bf74fcccb28f36e76be0205105ac046" title="free_chan" alt="" coords="288,419,368,447"/>
+<area shape="rect" id="node15" href="$log_8c.html#ab78e2de4bd6fc03706a48c3d01a285d7" title="log_debug" alt="" coords="457,297,540,325"/>
+<area shape="rect" id="node17" href="$log_8c.html#a2a4f55619b06be2dc2f756d17ffbebb8" title="log_error" alt="" coords="461,83,536,111"/>
+<area shape="rect" id="node19" href="$log_8c.html#a47a02a13f399183905b4a4512774f0be" title="log_term" alt="" coords="291,161,365,189"/>
+<area shape="rect" id="node21" href="$provider_8c.html#ac09b19b96a84715ca81a06f743e3570d" title="provider_assign" alt="" coords="270,265,386,293"/>
+<area shape="rect" id="node24" href="$provider_8c.html#a928f4f1facce651a1e3a060e88e09a63" title="provider_lookup" alt="" coords="441,361,557,389"/>
+<area shape="rect" id="node28" href="$fscmd_8c.html#a7b21bf4d0a558a8ff9c39e2d7666d834" title="set_chan" alt="" coords="290,109,366,137"/>
+<area shape="rect" id="node11" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="465,219,533,247"/>
+</map>

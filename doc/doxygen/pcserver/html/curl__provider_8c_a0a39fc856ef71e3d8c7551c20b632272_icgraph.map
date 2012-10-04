@@ -1,0 +1,13 @@
+<map id="init_fp" name="init_fp">
+<area shape="rect" id="node3" href="$curl__provider_8c.html#a2cf2a55043b128deb09fc4adf96d8727" title="close_fd" alt="" coords="129,57,199,85"/>
+<area shape="rect" id="node9" href="$curl__provider_8c.html#a4df323ddb4f39f3fc96c96d7e618ad00" title="reserve_file" alt="" coords="264,109,354,137"/>
+<area shape="rect" id="node17" href="$curl__provider_8c.html#ac57d0b6a21fd5d68f7dcea96a358ea07" title="new_endpoint" alt="" coords="112,161,216,189"/>
+<area shape="rect" id="node5" href="$curl__provider_8c.html#a3f721d6318d51a3c6579bf0cedf4db89" title="close_fds" alt="" coords="271,5,348,33"/>
+<area shape="rect" id="node7" href="$curl__provider_8c.html#a371038f10f9b4d15a4ae448c830ec6e3" title="prov_free" alt="" coords="271,57,348,85"/>
+<area shape="rect" id="node11" href="$curl__provider_8c.html#acbaeed54c34afef056df227e4b2ed0c7" title="open_file" alt="" coords="404,109,479,137"/>
+<area shape="rect" id="node13" href="$curl__provider_8c.html#a22d16e372721a3166d5208590a2e57ae" title="open_rd" alt="" coords="529,82,599,110"/>
+<area shape="rect" id="node15" href="$curl__provider_8c.html#ab252016e36f100e5c288fac6a881654e" title="open_dr" alt="" coords="529,134,599,162"/>
+<area shape="rect" id="node19" href="$curl__provider_8c.html#a2b78b04a406a467ca8fee1380fe67f8b" title="_new" alt="" coords="283,161,336,189"/>
+<area shape="rect" id="node21" href="$curl__provider_8c.html#acd513f373f231b1cc581ee0f9c41c299" title="ftp_new" alt="" coords="407,161,475,189"/>
+<area shape="rect" id="node23" href="$curl__provider_8c.html#a63378f50c7208fdbb05bc7a337801f9f" title="http_new" alt="" coords="404,213,479,241"/>
+</map>

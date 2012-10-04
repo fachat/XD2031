@@ -1,0 +1,12 @@
+<map id="open_file_wr" name="open_file_wr">
+<area shape="rect" id="node3" href="$fs__provider_8c.html#a2b9a4a4d739b3230e451c61dad1cd7b7" title="open_file" alt="" coords="153,169,228,197"/>
+<area shape="rect" id="node5" href="$fs__provider_8c.html#a3c8bb40501c57918cba3eef8aca4cb1b" title="close_fd" alt="" coords="477,233,547,261"/>
+<area shape="rect" id="node11" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="626,25,694,53"/>
+<area shape="rect" id="node13" href="$dir_8c.html#aef81eb27e34309ac735d320552007533" title="open_first_match" alt="" coords="278,129,402,157"/>
+<area shape="rect" id="node22" href="$fs__provider_8c.html#a4df323ddb4f39f3fc96c96d7e618ad00" title="reserve_file" alt="" coords="295,260,385,288"/>
+<area shape="rect" id="node7" href="$fs__provider_8c.html#a0a39fc856ef71e3d8c7551c20b632272" title="init_fp" alt="" coords="632,272,688,300"/>
+<area shape="rect" id="node9" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="621,195,699,223"/>
+<area shape="rect" id="node15" href="$name_8c.html#a95fe960512bf2097c7c7980dbffddb95" title="compare_pattern" alt="" coords="451,129,573,157"/>
+<area shape="rect" id="node19" href="$dir_8c.html#a125151e3969662e6984e7c1202d6657d" title="malloc_path" alt="" coords="465,25,559,53"/>
+<area shape="rect" id="node26" href="$log_8c.html#a157f7b0cfbdc0bcda5c1c0778cff4b71" title="log_warn" alt="" coords="474,337,550,365"/>
+</map>

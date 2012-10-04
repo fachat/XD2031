@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['callback',['callback',['../structopen__t.html#a713995e0ea4d6edab33bc6172e41a98d',1,'open_t::callback()'],['../serial_8c.html#ac7063263faf9c3950f983dea0effb3bf',1,'callback():&#160;serial.c']]],
+  ['chan',['chan',['../structpacket__t.html#a9dbe5b5796c2ae507fad013f8fd7777d',1,'packet_t']]],
+  ['channel',['channel',['../structbus__t.html#a660bf66adad2484288e40d15cec8c09a',1,'bus_t']]],
+  ['channel_5fno',['channel_no',['../structchannel__t.html#ad5e3813af7610093f319c97eeb342464',1,'channel_t::channel_no()'],['../structopen__t.html#ad5e3813af7610093f319c97eeb342464',1,'open_t::channel_no()']]],
+  ['channelno',['channelno',['../serial_8c.html#aa44526c5384fd0ebbae40062387b2683',1,'serial.c']]],
+  ['channels',['channels',['../channel_8c.html#abe3072592fe03008aef976c1be5e8d50',1,'channel.c']]],
+  ['cmd',['cmd',['../structnameinfo__t.html#a1aa03361e7476a96a22ac4dd7201ad68',1,'nameinfo_t']]],
+  ['cmd_5fdone',['cmd_done',['../structbus__t.html#a6c90e63602903c46ce77f9a51c387135',1,'bus_t']]],
+  ['command',['command',['../structbus__t.html#aa536b8970e01099010c0bbe033f95c07',1,'bus_t']]],
+  ['command_5fbuffer',['command_buffer',['../structcmd__t.html#a34c46fd8deb58b66521af86b4d3d4fd9',1,'cmd_t']]],
+  ['command_5flength',['command_length',['../structcmd__t.html#a5ce40446fcd0f4c16af5ea0f16ff7adb',1,'cmd_t']]],
+  ['current',['current',['../structchannel__t.html#a50f63c1ee4d6aebea66e795845c5aba5',1,'channel_t']]],
+  ['current_5fchannelno',['current_channelno',['../serial_8c.html#a4a73c94ff2e1a886f0139d4a1a487150',1,'serial.c']]],
+  ['current_5fchannelpos',['current_channelpos',['../serial_8c.html#a4badad1d3d72e7a8c6104d604725906e',1,'serial.c']]],
+  ['current_5fdata_5fleft',['current_data_left',['../serial_8c.html#a814f24a889da2738662302f05cef093c',1,'serial.c']]],
+  ['current_5fdevice_5faddress',['current_device_address',['../structbus__t.html#ab5db802f5a6a738b104e6166a471d600',1,'bus_t']]],
+  ['current_5fis_5feoi',['current_is_eoi',['../serial_8c.html#ab8f6b6d398bc21dfe9dc608da0ee0995',1,'serial.c']]],
+  ['current_5frxpacket',['current_rxpacket',['../serial_8c.html#a3a682bd146c8dfd08d349238cb44a0a4',1,'serial.c']]]
+];

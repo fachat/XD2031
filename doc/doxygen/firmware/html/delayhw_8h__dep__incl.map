@@ -1,0 +1,24 @@
+<map id="avr/delayhw.h" name="avr/delayhw.h">
+<area shape="rect" id="node3" href="$delay_8h.html" title="delay.h" alt="" coords="1076,83,1139,111"/>
+<area shape="rect" id="node5" href="$packet_8h.html" title="packet.h" alt="" coords="825,161,896,189"/>
+<area shape="rect" id="node19" href="$channel_8c.html" title="channel.c" alt="" coords="1233,470,1311,498"/>
+<area shape="rect" id="node7" href="$provider_8h.html" title="provider.h" alt="" coords="771,238,849,266"/>
+<area shape="rect" id="node15" href="$file_8c.html" title="file.c" alt="" coords="508,547,556,575"/>
+<area shape="rect" id="node34" href="$serial_8c.html" title="serial.c" alt="" coords="1012,470,1075,498"/>
+<area shape="rect" id="node36" href="$main_8c.html" title="main.c" alt="" coords="302,470,361,498"/>
+<area shape="rect" id="node38" href="$term_8c.html" title="term.c" alt="" coords="1151,470,1208,498"/>
+<area shape="rect" id="node40" href="$channel_8h.html" title="channel.h" alt="" coords="279,315,357,343"/>
+<area shape="rect" id="node9" href="$term_8h.html" title="term.h" alt="" coords="712,315,771,343"/>
+<area shape="rect" id="node30" href="$provider_8c.html" title="provider.c" alt="" coords="576,470,655,498"/>
+<area shape="rect" id="node59" href="$serial_8h.html" title="serial.h" alt="" coords="949,393,1013,421"/>
+<area shape="rect" id="node11" href="$debug_8h.html" title="debug.h" alt="" coords="704,393,773,421"/>
+<area shape="rect" id="node13" href="$assert_8h.html" title="assert.h" alt="" coords="919,470,987,498"/>
+<area shape="rect" id="node17" href="$bus_8c.html" title="bus.c" alt="" coords="93,470,145,498"/>
+<area shape="rect" id="node21" href="$cmd_8c.html" title="cmd.c" alt="" coords="221,470,277,498"/>
+<area shape="rect" id="node23" href="$errormsg_8c.html" title="errormsg.c" alt="" coords="387,470,471,498"/>
+<area shape="rect" id="node26" href="$ieee_8c.html" title="ieee.c" alt="" coords="496,470,552,498"/>
+<area shape="rect" id="node28" href="$name_8c.html" title="name.c" alt="" coords="679,470,744,498"/>
+<area shape="rect" id="node32" href="$rtconfig_8c.html" title="rtconfig.c" alt="" coords="769,470,844,498"/>
+<area shape="rect" id="node43" href="$cmd2_8h.html" title="cmd2.h" alt="" coords="155,393,220,421"/>
+<area shape="rect" id="node47" href="$file_8h.html" title="file.h" alt="" coords="245,393,293,421"/>
+</map>

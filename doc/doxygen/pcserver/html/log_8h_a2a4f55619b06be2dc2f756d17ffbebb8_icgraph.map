@@ -1,0 +1,26 @@
+<map id="log_error" name="log_error">
+<area shape="rect" id="node3" href="$fscmd_8h.html#a05c10a83750f826bd67a461d2ea0e2ec" title="cmd_assign_from_cmdline" alt="" coords="129,49,309,77"/>
+<area shape="rect" id="node5" href="$fsser_8c.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="414,49,464,77"/>
+<area shape="rect" id="node7" href="$fsser_8c.html#ac5ec92f8c6d0cd5e7366dc02f60ac615" title="config_ser" alt="" coords="177,101,260,129"/>
+<area shape="rect" id="node10" href="$dir_8h.html#a3b46e0fa997e8a6cec9a10594a5e6e0c" title="dir_fill_entry" alt="" coords="172,153,265,181"/>
+<area shape="rect" id="node16" href="$curl__provider_8c.html#aaea2b7e3b5c317b82cd244472bf7ac76" title="dir_nlst_read_converter" alt="" coords="358,257,519,285"/>
+<area shape="rect" id="node20" href="$curl__provider_8c.html#a3ac688150bdcdb56d532dab21fbef4f9" title="do_chdir" alt="" coords="182,413,255,441"/>
+<area shape="rect" id="node22" href="$fscmd_8c.html#acadd9e503504342f43686c95c6ea9f44" title="do_cmd" alt="" coords="404,517,473,545"/>
+<area shape="rect" id="node28" href="$fs__provider_8c.html#a4cd03a4037dec872b22cd74b09963f90" title="fs_cd" alt="" coords="192,621,245,649"/>
+<area shape="rect" id="node30" href="$fs__provider_8c.html#a834a91f4d8d7230fd7a34c5c09e274d7" title="fs_rename" alt="" coords="177,673,261,701"/>
+<area shape="rect" id="node32" href="$fs__provider_8c.html#a51aa84fef84236572ee71e569883876d" title="fsp_new" alt="" coords="183,725,254,753"/>
+<area shape="rect" id="node35" href="$curl__provider_8c.html#acbaeed54c34afef056df227e4b2ed0c7" title="open_file" alt="" coords="181,205,256,233"/>
+<area shape="rect" id="node40" href="$provider_8h.html#ad9a7ae74bd508938f66505cd74bc1cca" title="provider_register" alt="" coords="158,569,279,597"/>
+<area shape="rect" id="node47" href="$curl__provider_8c.html#aa8b6603bc58ebca606ad8ee5cf2eccdb" title="pull_data" alt="" coords="181,309,256,337"/>
+<area shape="rect" id="node50" href="$curl__provider_8c.html#a3c76deaf818e476e541fbe083cebde07" title="read_file" alt="" coords="572,361,644,389"/>
+<area shape="rect" id="node56" href="$fscmd_8c.html#a7b21bf4d0a558a8ff9c39e2d7666d834" title="set_chan" alt="" coords="181,465,256,493"/>
+<area shape="rect" id="node12" href="$fs__provider_8c.html#a0122ebf41799d0be0c82dba39a294293" title="read_dir" alt="" coords="404,101,474,129"/>
+<area shape="rect" id="node14" href="$fs__provider_8c.html#a17cc6c2c5a602a894044e1252373b0a0" title="readfile" alt="" coords="575,101,641,129"/>
+<area shape="rect" id="node18" href="$curl__provider_8c.html#ab252016e36f100e5c288fac6a881654e" title="open_dr" alt="" coords="573,232,643,260"/>
+<area shape="rect" id="node24" href="$fscmd_8h.html#aa3ba3f5aaa12874ea6c8399fb98223c9" title="cmd_loop" alt="" coords="568,517,648,545"/>
+<area shape="rect" id="node26" href="$fsio_8c.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="696,544,746,572"/>
+<area shape="rect" id="node38" href="$curl__provider_8c.html#a22d16e372721a3166d5208590a2e57ae" title="open_rd" alt="" coords="404,153,474,181"/>
+<area shape="rect" id="node42" href="$provider_8h.html#ab28e292d9ece77f1b5cd150bdff218e0" title="provider_init" alt="" coords="392,569,486,597"/>
+<area shape="rect" id="node44" href="$fscmd_8h.html#ab39e508f0407f0116610fe76bad3b699" title="cmd_init" alt="" coords="573,569,643,597"/>
+<area shape="rect" id="node52" href="$curl__provider_8c.html#ae5a236759bf38100c5802d27962ec5db" title="reply_with_data" alt="" coords="381,309,496,337"/>
+</map>

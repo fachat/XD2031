@@ -1,0 +1,10 @@
+<map id="bus_secaddr_adjust" name="bus_secaddr_adjust">
+<area shape="rect" id="node3" href="$bus_8c.html#aa005573fc6338f79631c8fa5547b7cf5" title="bus_close" alt="" coords="370,57,451,85"/>
+<area shape="rect" id="node11" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="363,109,459,137"/>
+<area shape="rect" id="node14" href="$bus_8h.html#aaf55247b4144eabb80a9f8a9908742cc" title="bus_receivebyte" alt="" coords="195,159,314,187"/>
+<area shape="rect" id="node20" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="205,5,304,33"/>
+<area shape="rect" id="node5" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="507,70,608,98"/>
+<area shape="rect" id="node7" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="656,109,819,137"/>
+<area shape="rect" id="node9" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="867,109,917,137"/>
+<area shape="rect" id="node17" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="524,147,591,175"/>
+</map>

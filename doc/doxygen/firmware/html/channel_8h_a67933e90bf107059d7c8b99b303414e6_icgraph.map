@@ -1,0 +1,8 @@
+<map id="channel_current_is_eof" name="channel_current_is_eof">
+<area shape="rect" id="node3" href="$bus_8h.html#aaf55247b4144eabb80a9f8a9908742cc" title="bus_receivebyte" alt="" coords="214,31,333,59"/>
+<area shape="rect" id="node5" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="381,5,477,33"/>
+<area shape="rect" id="node13" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="542,57,610,85"/>
+<area shape="rect" id="node7" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="525,5,627,33"/>
+<area shape="rect" id="node9" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="675,31,837,59"/>
+<area shape="rect" id="node11" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="886,31,936,59"/>
+</map>

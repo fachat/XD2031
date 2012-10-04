@@ -1,0 +1,12 @@
+<map id="compare_pattern" name="compare_pattern">
+<area shape="rect" id="node3" href="$dir_8h.html#a8badd483a529f1e964bf1b112f4f2c7d" title="dir_call_matches" alt="" coords="178,5,299,33"/>
+<area shape="rect" id="node7" href="$dir_8h.html#a0949f89097f70de1469ba35e6b38ff53" title="dir_next" alt="" coords="204,57,273,85"/>
+<area shape="rect" id="node13" href="$dir_8h.html#aef81eb27e34309ac735d320552007533" title="open_first_match" alt="" coords="177,134,300,162"/>
+<area shape="rect" id="node5" href="$fs__provider_8c.html#a3efaddda31e5d537a7f19117af7eecb0" title="fs_delete" alt="" coords="350,5,426,33"/>
+<area shape="rect" id="node9" href="$fs__provider_8c.html#a0122ebf41799d0be0c82dba39a294293" title="read_dir" alt="" coords="353,57,423,85"/>
+<area shape="rect" id="node11" href="$fs__provider_8c.html#a17cc6c2c5a602a894044e1252373b0a0" title="readfile" alt="" coords="491,50,557,78"/>
+<area shape="rect" id="node15" href="$fs__provider_8c.html#a2b9a4a4d739b3230e451c61dad1cd7b7" title="open_file" alt="" coords="350,147,426,175"/>
+<area shape="rect" id="node17" href="$fs__provider_8c.html#ad2117b274dbc7b04a8e02bf451c29bc9" title="open_file_ap" alt="" coords="475,102,573,130"/>
+<area shape="rect" id="node19" href="$fs__provider_8c.html#acffd902f4e85b06b1563b973f8108138" title="open_file_rd" alt="" coords="477,154,571,182"/>
+<area shape="rect" id="node21" href="$fs__provider_8c.html#a9da86b704388c7eef6bc5877dce054c8" title="open_file_wr" alt="" coords="476,206,572,234"/>
+</map>

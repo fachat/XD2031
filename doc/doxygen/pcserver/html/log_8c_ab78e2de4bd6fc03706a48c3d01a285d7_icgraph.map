@@ -1,0 +1,17 @@
+<map id="log_debug" name="log_debug">
+<area shape="rect" id="node3" href="$curl__provider_8c.html#aaea2b7e3b5c317b82cd244472bf7ac76" title="dir_nlst_read_converter" alt="" coords="314,5,475,33"/>
+<area shape="rect" id="node7" href="$curl__provider_8c.html#a3ac688150bdcdb56d532dab21fbef4f9" title="do_chdir" alt="" coords="161,161,234,189"/>
+<area shape="rect" id="node9" href="$fscmd_8c.html#acadd9e503504342f43686c95c6ea9f44" title="do_cmd" alt="" coords="360,213,429,241"/>
+<area shape="rect" id="node15" href="$fs__provider_8c.html#a4cd03a4037dec872b22cd74b09963f90" title="fs_cd" alt="" coords="171,317,224,345"/>
+<area shape="rect" id="node17" href="$provider_8h.html#ac09b19b96a84715ca81a06f743e3570d" title="provider_assign" alt="" coords="140,265,255,293"/>
+<area shape="rect" id="node24" href="$curl__provider_8c.html#aa8b6603bc58ebca606ad8ee5cf2eccdb" title="pull_data" alt="" coords="160,57,235,85"/>
+<area shape="rect" id="node29" href="$curl__provider_8c.html#ae5a236759bf38100c5802d27962ec5db" title="reply_with_data" alt="" coords="337,109,452,137"/>
+<area shape="rect" id="node32" href="$fs__provider_8c.html#a17cc6c2c5a602a894044e1252373b0a0" title="readfile" alt="" coords="165,369,230,397"/>
+<area shape="rect" id="node35" href="$fs__provider_8c.html#ae73481209870e3c35a2a002de1dc3b9a" title="write_file" alt="" coords="160,421,234,449"/>
+<area shape="rect" id="node5" href="$curl__provider_8c.html#ab252016e36f100e5c288fac6a881654e" title="open_dr" alt="" coords="538,5,608,33"/>
+<area shape="rect" id="node11" href="$fscmd_8h.html#aa3ba3f5aaa12874ea6c8399fb98223c9" title="cmd_loop" alt="" coords="534,213,613,241"/>
+<area shape="rect" id="node13" href="$fsio_8c.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="662,213,712,241"/>
+<area shape="rect" id="node19" href="$fscmd_8h.html#a05c10a83750f826bd67a461d2ea0e2ec" title="cmd_assign_from_cmdline" alt="" coords="305,265,485,293"/>
+<area shape="rect" id="node21" href="$fsser_8c.html#a0ddf1224851353fc92bfbff6f499fa97" title="main" alt="" coords="548,265,598,293"/>
+<area shape="rect" id="node27" href="$curl__provider_8c.html#a3c76deaf818e476e541fbe083cebde07" title="read_file" alt="" coords="537,82,610,110"/>
+</map>

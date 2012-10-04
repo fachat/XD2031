@@ -1,0 +1,24 @@
+<map id="main" name="main">
+<area shape="rect" id="node3" href="$fscmd_8c.html#a05c10a83750f826bd67a461d2ea0e2ec" title="cmd_assign_from_cmdline" alt="" coords="265,267,445,295"/>
+<area shape="rect" id="node5" href="$log_8c.html#a2a4f55619b06be2dc2f756d17ffbebb8" title="log_error" alt="" coords="691,151,765,179"/>
+<area shape="rect" id="node15" href="$fscmd_8c.html#ab39e508f0407f0116610fe76bad3b699" title="cmd_init" alt="" coords="125,209,195,237"/>
+<area shape="rect" id="node24" href="$fscmd_8c.html#aa25b6cff487bba61e8cb39a9e17e859e" title="cmd_loop" alt="" coords="120,319,200,347"/>
+<area shape="rect" id="node46" href="$fsser_8c.html#ac5ec92f8c6d0cd5e7366dc02f60ac615" title="config_ser" alt="" coords="119,99,201,127"/>
+<area shape="rect" id="node49" href="$privs_8c.html#a23c026cc361d78c1314971dd6be2b0ad" title="drop_privileges" alt="" coords="104,371,216,399"/>
+<area shape="rect" id="node54" href="$fsio_8c.html#ae8605e2b78cd4a81b6c6b5c30cb7366a" title="usage" alt="" coords="131,423,189,451"/>
+<area shape="rect" id="node7" href="$provider_8c.html#ac09b19b96a84715ca81a06f743e3570d" title="provider_assign" alt="" coords="500,385,615,413"/>
+<area shape="rect" id="node9" href="$log_8c.html#a71ea2d6ec56d5620e986340d060702cd" title="log_info" alt="" coords="694,359,762,387"/>
+<area shape="rect" id="node11" href="$provider_8c.html#a928f4f1facce651a1e3a060e88e09a63" title="provider_lookup" alt="" coords="670,450,786,478"/>
+<area shape="rect" id="node13" href="$log_8c.html#ab78e2de4bd6fc03706a48c3d01a285d7" title="log_debug" alt="" coords="686,527,770,555"/>
+<area shape="rect" id="node17" href="$fscmd_8c.html#ae21e9ca6714643d0c4f35cb0cc9fe792" title="chan_init" alt="" coords="317,209,392,237"/>
+<area shape="rect" id="node19" href="$provider_8c.html#ace7b8936edf7a06cda75602ded054086" title="provider_init" alt="" coords="308,131,402,159"/>
+<area shape="rect" id="node21" href="$provider_8c.html#ad9a7ae74bd508938f66505cd74bc1cca" title="provider_register" alt="" coords="497,125,618,153"/>
+<area shape="rect" id="node26" href="$fscmd_8c.html#a439ae5539b93e14dd0f6ae8d752c74d3" title="cmd_sync" alt="" coords="314,423,395,451"/>
+<area shape="rect" id="node30" href="$fscmd_8c.html#acadd9e503504342f43686c95c6ea9f44" title="do_cmd" alt="" coords="320,371,389,399"/>
+<area shape="rect" id="node28" href="$log_8c.html#a4500b79e646dcead32849b2fdae4ffd1" title="log_errno" alt="" coords="518,645,596,673"/>
+<area shape="rect" id="node32" href="$fscmd_8c.html#ac1bdc89cd482dffb2699bf75b00ec8d4" title="chan_to_endpoint" alt="" coords="494,333,621,361"/>
+<area shape="rect" id="node35" href="$fscmd_8c.html#a4bf74fcccb28f36e76be0205105ac046" title="free_chan" alt="" coords="517,541,598,569"/>
+<area shape="rect" id="node39" href="$log_8c.html#a47a02a13f399183905b4a4512774f0be" title="log_term" alt="" coords="521,437,594,465"/>
+<area shape="rect" id="node43" href="$fscmd_8c.html#a7b21bf4d0a558a8ff9c39e2d7666d834" title="set_chan" alt="" coords="520,229,595,257"/>
+<area shape="rect" id="node51" href="$privs_8c.html#a97720a15a8b6d596b91f2546f3c3cfe0" title="drop_to_uid" alt="" coords="309,475,401,503"/>
+</map>

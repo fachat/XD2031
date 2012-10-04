@@ -1,0 +1,6 @@
+<map id="pull_data" name="pull_data">
+<area shape="rect" id="node3" href="$curl__provider_8c.html#aaea2b7e3b5c317b82cd244472bf7ac76" title="dir_nlst_read_converter" alt="" coords="131,5,293,33"/>
+<area shape="rect" id="node7" href="$curl__provider_8c.html#a3c76deaf818e476e541fbe083cebde07" title="read_file" alt="" coords="341,82,414,110"/>
+<area shape="rect" id="node9" href="$curl__provider_8c.html#ae5a236759bf38100c5802d27962ec5db" title="reply_with_data" alt="" coords="155,109,269,137"/>
+<area shape="rect" id="node5" href="$curl__provider_8c.html#ab252016e36f100e5c288fac6a881654e" title="open_dr" alt="" coords="342,5,412,33"/>
+</map>

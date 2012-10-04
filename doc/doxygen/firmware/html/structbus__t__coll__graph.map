@@ -1,0 +1,8 @@
+<map id="bus_t" name="bus_t">
+<area shape="rect" id="node2" href="$structrtconfig__t.html" title="rtconfig_t" alt="" coords="5,193,80,221"/>
+<area shape="rect" id="node4" href="$structcmd__t.html" title="cmd_t" alt="" coords="105,193,161,221"/>
+<area shape="rect" id="node6" href="$structchannel__t.html" title="channel_t" alt="" coords="187,193,265,221"/>
+<area shape="rect" id="node8" href="$structpacket__t.html" title="packet_t" alt="" coords="152,99,223,127"/>
+<area shape="rect" id="node10" href="$structendpoint__t.html" title="endpoint_t" alt="" coords="248,99,331,127"/>
+<area shape="rect" id="node12" href="$structprovider__t.html" title="provider_t" alt="" coords="249,6,329,34"/>
+</map>

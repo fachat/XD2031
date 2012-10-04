@@ -1,0 +1,13 @@
+<map id="channel_current_byte" name="channel_current_byte">
+<area shape="rect" id="node3" href="$channel_8c.html#ae7784dd177e78324ea066e9a2e475737" title="channel_preload_int" alt="" coords="203,135,344,163"/>
+<area shape="rect" id="node23" href="$packet_8h.html#a3a738b87a4697d5c841bbac110b4fc75" title="packet_peek_data" alt="" coords="208,187,338,215"/>
+<area shape="rect" id="node5" href="$channel_8c.html#ad83a55f9935cdd471dc212f4ec6c7a6d" title="channel_pull" alt="" coords="405,57,501,85"/>
+<area shape="rect" id="node15" href="$delay_8h.html#a304927311300df9e48c410ac5732d173" title="delayms" alt="" coords="418,109,489,137"/>
+<area shape="rect" id="node19" href="$packet_8h.html#addb176aaaeddd33017a9c51693dc4510" title="packet_has_data" alt="" coords="392,161,515,189"/>
+<area shape="rect" id="node21" href="$packet_8h.html#a23092de9747c65e9bbbe4516a23056a0" title="packet_is_last" alt="" coords="400,213,506,241"/>
+<area shape="rect" id="node7" href="$packet_8h.html#a437f19cbea67d2fcceab3daca7999b53" title="packet_set_filled" alt="" coords="562,5,683,33"/>
+<area shape="rect" id="node11" href="$channel_8c.html#a26b97d3a3a80ba21ae3d74944fc3477e" title="_pull_callback" alt="" coords="570,57,675,85"/>
+<area shape="rect" id="node9" href="$packet_8h.html#ac734d1711836633dfd94a48850b3a7a8" title="packet_set_read" alt="" coords="731,5,851,33"/>
+<area shape="rect" id="node13" href="$channel_8c.html#a4f422b28ba066eb1f918ffe5b31955df" title="channel_find" alt="" coords="742,57,839,85"/>
+<area shape="rect" id="node17" href="$delay_8h.html#a2a467023822de9459179b4c9a13da0d1" title="serial_delay" alt="" coords="576,109,669,137"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="term.c" name="term.c">
+<area shape="rect" id="node11" href="$packet_8h.html" title="packet.h" alt="" coords="213,238,284,266"/>
+<area shape="rect" id="node14" href="$wireformat_8h.html" title="wireformat.h" alt="" coords="305,315,399,343"/>
+<area shape="rect" id="node26" href="$term_8h.html" title="term.h" alt="" coords="101,83,160,111"/>
+<area shape="rect" id="node38" href="$serial_8h.html" title="serial.h" alt="" coords="184,83,248,111"/>
+<area shape="rect" id="node42" href="$mem_8h.html" title="mem.h" alt="" coords="640,83,701,111"/>
+<area shape="rect" id="node46" href="$led_8h.html" title="led.h" alt="" coords="726,83,775,111"/>
+<area shape="rect" id="node18" href="$delay_8h.html" title="delay.h" alt="" coords="218,315,280,343"/>
+<area shape="rect" id="node16" href="$errors_8h.html" title="errors.h" alt="" coords="118,393,185,421"/>
+<area shape="rect" id="node20" href="$delayhw_8h.html" title="delayhw.h" alt="" coords="209,393,289,421"/>
+<area shape="rect" id="node28" href="$provider_8h.html" title="provider.h" alt="" coords="125,161,204,189"/>
+<area shape="rect" id="node32" href="$errormsg_8h.html" title="errormsg.h" alt="" coords="5,315,91,343"/>
+</map>

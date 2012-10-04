@@ -1,0 +1,15 @@
+<map id="serial_flush" name="serial_flush">
+<area shape="rect" id="node3" href="$term_8h.html#af0742bbf17e400753f1d6551580934ef" title="term_flush" alt="" coords="145,138,228,166"/>
+<area shape="rect" id="node5" href="$debug_8h.html#af964f239c289f93b082b6bb75f884fa2" title="debug_putcrlf" alt="" coords="278,138,380,166"/>
+<area shape="rect" id="node7" href="$cmd2_8h.html#abaf24aaeaa145dec95026ae71251be71" title="command_execute" alt="" coords="613,86,747,114"/>
+<area shape="rect" id="node13" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="1091,189,1253,217"/>
+<area shape="rect" id="node17" href="$serial_8c.html#a723b54d8d0110a7475aee8bc4f99771f" title="directory_converter" alt="" coords="430,292,565,320"/>
+<area shape="rect" id="node19" href="$file_8h.html#a2dac9b9090b14532b84f96929c3cb2cc" title="file_open" alt="" coords="642,34,718,62"/>
+<area shape="rect" id="node22" href="$file_8h.html#a8336bd2f1ed40fc3520412402061d43b" title="file_submit_call" alt="" coords="441,86,554,114"/>
+<area shape="rect" id="node27" href="$name_8h.html#a0e25b9dc05d9d0c2b58510892dacd5eb" title="parse_filename" alt="" coords="441,34,554,62"/>
+<area shape="rect" id="node31" href="$pet_s_d_2ieeehw_8c.html#a96773c4d0d22be83b1b84de6cb6ff52d" title="set_atn_irq" alt="" coords="636,241,724,269"/>
+<area shape="rect" id="node9" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="795,86,893,114"/>
+<area shape="rect" id="node11" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="941,112,1043,140"/>
+<area shape="rect" id="node15" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="1302,216,1352,244"/>
+<area shape="rect" id="node33" href="$xs1541_2ieeehw_8h.html#a2a60f36b918244a1755bf23d56fee284" title="ieeehw_init" alt="" coords="800,241,888,269"/>
+</map>

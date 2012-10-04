@@ -1,0 +1,14 @@
+<map id="channel_preload_int" name="channel_preload_int">
+<area shape="rect" id="node3" href="$channel_8h.html#ab251327a6bfb5495a6f0c4e86b2b4a6d" title="channel_current_byte" alt="" coords="195,5,344,33"/>
+<area shape="rect" id="node18" href="$channel_8h.html#a36f99405322341c5ec6190ad7df984e8" title="channel_has_more" alt="" coords="202,57,337,85"/>
+<area shape="rect" id="node21" href="$channel_8h.html#ab788bfc67eced677c3e8f3b5f4c25d9c" title="channel_next" alt="" coords="219,109,320,137"/>
+<area shape="rect" id="node24" href="$channel_8h.html#ac164e244d86c59f184bed5e7380885b9" title="channel_preload" alt="" coords="392,213,512,241"/>
+<area shape="rect" id="node29" href="$channel_8h.html#ac42b73ef4fb417f5eae59ce4bcc34da1" title="channel_preloadp" alt="" coords="206,161,333,189"/>
+<area shape="rect" id="node5" href="$bus_8h.html#aaf55247b4144eabb80a9f8a9908742cc" title="bus_receivebyte" alt="" coords="393,109,511,137"/>
+<area shape="rect" id="node7" href="$bus_8c.html#a2c2d584fe64320bc811ffeb1d546b3f2" title="bus_prepare" alt="" coords="561,161,657,189"/>
+<area shape="rect" id="node15" href="$ieee_8c.html#aab59fb97f896fd24eb381d95aef1f098" title="talkloop" alt="" coords="724,109,791,137"/>
+<area shape="rect" id="node9" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="707,161,808,189"/>
+<area shape="rect" id="node11" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="856,135,1019,163"/>
+<area shape="rect" id="node13" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="1067,135,1117,163"/>
+<area shape="rect" id="node26" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="560,213,659,241"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="channel.h" name="channel.h">
+<area shape="rect" id="node3" href="$bus_8c.html" title="bus.c" alt="" coords="4,161,56,189"/>
+<area shape="rect" id="node5" href="$cmd2_8h.html" title="cmd2.h" alt="" coords="38,83,103,111"/>
+<area shape="rect" id="node10" href="$file_8h.html" title="file.h" alt="" coords="127,83,176,111"/>
+<area shape="rect" id="node14" href="$file_8c.html" title="file.c" alt="" coords="162,161,211,189"/>
+<area shape="rect" id="node16" href="$main_8c.html" title="main.c" alt="" coords="235,161,295,189"/>
+<area shape="rect" id="node18" href="$channel_8c.html" title="channel.c" alt="" coords="302,83,380,111"/>
+<area shape="rect" id="node20" href="$errormsg_8c.html" title="errormsg.c" alt="" coords="404,83,488,111"/>
+<area shape="rect" id="node23" href="$ieee_8c.html" title="ieee.c" alt="" coords="513,83,569,111"/>
+<area shape="rect" id="node8" href="$cmd_8c.html" title="cmd.c" alt="" coords="81,161,137,189"/>
+</map>

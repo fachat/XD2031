@@ -1,0 +1,15 @@
+<map id="errormsg.c" name="errormsg.c">
+<area shape="rect" id="node7" href="$mem_8h.html" title="mem.h" alt="" coords="148,161,209,189"/>
+<area shape="rect" id="node11" href="$errormsg_8h.html" title="errormsg.h" alt="" coords="204,315,289,343"/>
+<area shape="rect" id="node19" href="$channel_8h.html" title="channel.h" alt="" coords="376,161,455,189"/>
+<area shape="rect" id="node42" href="$version_8h.html" title="version.h" alt="" coords="428,83,503,111"/>
+<area shape="rect" id="node46" href="$debug_8h.html" title="debug.h" alt="" coords="284,83,353,111"/>
+<area shape="rect" id="node52" href="$led_8h.html" title="led.h" alt="" coords="622,83,671,111"/>
+<area shape="rect" id="node17" href="$errors_8h.html" title="errors.h" alt="" coords="354,470,421,498"/>
+<area shape="rect" id="node23" href="$packet_8h.html" title="packet.h" alt="" coords="436,315,507,343"/>
+<area shape="rect" id="node37" href="$provider_8h.html" title="provider.h" alt="" coords="284,238,363,266"/>
+<area shape="rect" id="node27" href="$wireformat_8h.html" title="wireformat.h" alt="" coords="425,393,519,421"/>
+<area shape="rect" id="node30" href="$delay_8h.html" title="delay.h" alt="" coords="543,393,605,421"/>
+<area shape="rect" id="node32" href="$delayhw_8h.html" title="delayhw.h" alt="" coords="489,470,569,498"/>
+<area shape="rect" id="node48" href="$term_8h.html" title="term.h" alt="" coords="290,161,349,189"/>
+</map>

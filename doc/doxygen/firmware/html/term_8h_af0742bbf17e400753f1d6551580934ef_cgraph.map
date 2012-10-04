@@ -1,0 +1,7 @@
+<map id="term_flush" name="term_flush">
+<area shape="rect" id="node3" href="$term_8c.html#ad6b6b9297aa30da49f6dc3422bf708a4" title="send" alt="" coords="159,5,209,33"/>
+<area shape="rect" id="node9" href="$serial_8c.html#a94547a891c369354cec16547930de449" title="serial_flush" alt="" coords="140,57,228,85"/>
+<area shape="rect" id="node5" href="$packet_8h.html#a437f19cbea67d2fcceab3daca7999b53" title="packet_set_filled" alt="" coords="277,5,398,33"/>
+<area shape="rect" id="node7" href="$packet_8h.html#ac734d1711836633dfd94a48850b3a7a8" title="packet_set_read" alt="" coords="445,5,565,33"/>
+<area shape="rect" id="node11" href="$delay_8h.html#a2a467023822de9459179b4c9a13da0d1" title="serial_delay" alt="" coords="291,57,384,85"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="serial_sync" name="serial_sync">
+<area shape="rect" id="node3" href="$uarthw_8c.html#a9a446e9813b93bc7782622d598df287d" title="uarthw_can_send" alt="" coords="142,5,269,33"/>
+<area shape="rect" id="node5" href="$uarthw_8c.html#acb0e0d143a12e48dbb13b23ac1c8515c" title="uarthw_send" alt="" coords="156,57,254,85"/>
+<area shape="rect" id="node7" href="$uarthw_8c.html#a16407b10e85b038a6ea51bfb8c31ad56" title="_uart_enable_sendisr" alt="" coords="317,57,467,85"/>
+</map>

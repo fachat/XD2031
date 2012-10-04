@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['path_5fbuffer',['path_buffer',['../structcurl__endpoint__t.html#a24eb2dde30be6d54e6095f76b401c002',1,'curl_endpoint_t']]],
+  ['port',['PORT',['../fstcp_8c.html#a614217d263be1fb1a5f76e2ff7be19a2',1,'fstcp.c']]],
+  ['privs_2ec',['privs.c',['../privs_8c.html',1,'']]],
+  ['privs_2eh',['privs.h',['../privs_8h.html',1,'']]],
+  ['proto_5fftp',['PROTO_FTP',['../curl__provider_8c.html#a366728e00d588373adbfc2d6cf895fb3accc46838d2346c2c0c55602f2effe1dd',1,'curl_provider.c']]],
+  ['proto_5fftps',['PROTO_FTPS',['../curl__provider_8c.html#a366728e00d588373adbfc2d6cf895fb3a0f21e416a5a4ffe936ac4e319edb1dcf',1,'curl_provider.c']]],
+  ['proto_5fhttp',['PROTO_HTTP',['../curl__provider_8c.html#a366728e00d588373adbfc2d6cf895fb3a6d5ad1c7c1c8ff1a19a79368acd7ec77',1,'curl_provider.c']]],
+  ['proto_5fhttps',['PROTO_HTTPS',['../curl__provider_8c.html#a366728e00d588373adbfc2d6cf895fb3a80da59f3b1a212934aaaf954a70ff4c6',1,'curl_provider.c']]],
+  ['proto_5ft',['proto_t',['../curl__provider_8c.html#a366728e00d588373adbfc2d6cf895fb3',1,'curl_provider.c']]],
+  ['protocol',['protocol',['../structcurl__endpoint__t.html#abf75f283ab0657253cb036d927f7aefd',1,'curl_endpoint_t']]],
+  ['prov_5ffree',['prov_free',['../curl__provider_8c.html#a371038f10f9b4d15a4ae448c830ec6e3',1,'curl_provider.c']]],
+  ['provider',['provider',['../provider_8c.html#a9cfb091f3898a26be41690ceec533d6d',1,'provider.c']]],
+  ['provider_2ec',['provider.c',['../provider_8c.html',1,'']]],
+  ['provider_2eh',['provider.h',['../provider_8h.html',1,'']]],
+  ['provider_5fassign',['provider_assign',['../provider_8c.html#ac09b19b96a84715ca81a06f743e3570d',1,'provider_assign(int drive, const char *name):&#160;provider.c'],['../provider_8h.html#ac09b19b96a84715ca81a06f743e3570d',1,'provider_assign(int drive, const char *name):&#160;provider.c']]],
+  ['provider_5finit',['provider_init',['../provider_8c.html#ace7b8936edf7a06cda75602ded054086',1,'provider_init():&#160;provider.c'],['../provider_8h.html#ab28e292d9ece77f1b5cd150bdff218e0',1,'provider_init(void):&#160;provider.c']]],
+  ['provider_5flookup',['provider_lookup',['../provider_8c.html#a928f4f1facce651a1e3a060e88e09a63',1,'provider_lookup(int drive):&#160;provider.c'],['../provider_8h.html#a928f4f1facce651a1e3a060e88e09a63',1,'provider_lookup(int drive):&#160;provider.c']]],
+  ['provider_5fregister',['provider_register',['../provider_8c.html#ad9a7ae74bd508938f66505cd74bc1cca',1,'provider_register(provider_t *provider):&#160;provider.c'],['../provider_8h.html#ad9a7ae74bd508938f66505cd74bc1cca',1,'provider_register(provider_t *provider):&#160;provider.c']]],
+  ['provider_5ft',['provider_t',['../structprovider__t.html',1,'']]],
+  ['providers',['providers',['../provider_8c.html#a73b98a0ed26d1b14726455a21a63cd9a',1,'provider.c']]],
+  ['ptype',['ptype',['../structcurl__endpoint__t.html#a2b7c52a663a59bbdb7399fbf87004e96',1,'curl_endpoint_t::ptype()'],['../structfs__endpoint__t.html#a2b7c52a663a59bbdb7399fbf87004e96',1,'fs_endpoint_t::ptype()'],['../struct__endpoint.html#aa4eef8b47f1b3861963a7162185024bc',1,'_endpoint::ptype()']]],
+  ['pull_5fdata',['pull_data',['../curl__provider_8c.html#aa8b6603bc58ebca606ad8ee5cf2eccdb',1,'curl_provider.c']]]
+];

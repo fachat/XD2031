@@ -1,0 +1,13 @@
+<map id="packet_reset" name="packet_reset">
+<area shape="rect" id="node3" href="$channel_8h.html#ab810f981278991ac5b12dddff1fb41e2" title="channel_open" alt="" coords="153,57,258,85"/>
+<area shape="rect" id="node20" href="$channel_8h.html#a5bfb7b380fbcb047cb5b839823ed019d" title="channel_put" alt="" coords="158,109,252,137"/>
+<area shape="rect" id="node5" href="$file_8h.html#a8336bd2f1ed40fc3520412402061d43b" title="file_submit_call" alt="" coords="306,57,419,85"/>
+<area shape="rect" id="node7" href="$cmd2_8h.html#abaf24aaeaa145dec95026ae71251be71" title="command_execute" alt="" coords="466,5,600,33"/>
+<area shape="rect" id="node17" href="$file_8h.html#a2dac9b9090b14532b84f96929c3cb2cc" title="file_open" alt="" coords="496,57,571,85"/>
+<area shape="rect" id="node9" href="$bus_8c.html#a68ec77741c71e9f01f346016e85f3e7b" title="cmd_handler" alt="" coords="648,57,747,85"/>
+<area shape="rect" id="node11" href="$bus_8h.html#ac5b8727fd6b9e6bdaf98977f90832dcc" title="bus_attention" alt="" coords="795,57,896,85"/>
+<area shape="rect" id="node13" href="$ieee_8h.html#a47341f8a6f71378581fb6a67ece35ed2" title="ieee_mainloop_iteration" alt="" coords="944,83,1107,111"/>
+<area shape="rect" id="node15" href="$main_8c.html#ae66f6b31b5ad750f1fe042a706a4e3d4" title="main" alt="" coords="1155,83,1205,111"/>
+<area shape="rect" id="node22" href="$bus_8h.html#a501ceedc969857e0fff25531a3877bed" title="bus_sendbyte" alt="" coords="310,109,415,137"/>
+<area shape="rect" id="node24" href="$ieee_8c.html#a4701558a7300ca20b3519287feb05bc1" title="listenloop" alt="" coords="658,109,736,137"/>
+</map>
