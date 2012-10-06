@@ -22,13 +22,15 @@
 ****************************************************************************/
 
 /**
- * Hardware-independent IEEE layer 
+ * Hardware-independent IEC layer 
  */
 
 #include <ctype.h>
+#include <delay.h>
 
-#include "ieeehw.h"
+#include "iechw.h"
 #include "bus.h"
+#include "timer.h"
 
 #include "debug.h"
 #include "led.h"
@@ -40,76 +42,113 @@
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((par_status&0xf000)==0x2000)
-#define isTalking()     ((par_status&0xf000)==0x4000)
+#define isListening()   ((ser_status&0xf000)==0x2000)
+#define isTalking()     ((ser_status&0xf000)==0x4000)
 
 // bus state
 static bus_t bus;
 
 // TODO: make that ... different...
-static int16_t par_status = 0;
+static int16_t ser_status = 0;
 
 
 /***************************************************************************
  * Listen handling
  */
 
-// read a byte from IEEE
-static int16_t liecin(int *c)
+// check whether we got an ATN; this depends on whether we are 
+// under ATN (when receiving commands) or not under ATN (when receiving data)
+// returns !=0 when ATN has changed
+static uint8_t checkatn(uint8_t underatn) 
 {
-        int er = 0;
+	if (underatn) {
+		return satnishi();
+	} else {
+		return satnislo();
+	}
+}
 
-        nrfdhi();
+// read a byte from IEEE - E9C9 in VC1541
+static int16_t iecin(uint8_t underatn)
+{
+	uint8_t eoi = 0;
+	uint8_t port;
+	uint8_t cnt = 8;
+	uint8_t data = 0;
 
-	// do...while to make sure to at least test ATN once
-        do {
-            if(atnislo()) {
-		// ATN got low, exit
-                goto atn;
-            }
-        } while( davishi() );
+	do {
+		if (checkatn(underatn)) 
+			return -1;
 
-        nrfdlo();
+	} while (is_port_clklo(read_debounced()));
 
-        if(!eoiishi())
-                er|=E_EOI;
-        *c=rdd();
+	datahi();
 
-        ndachi();
+	// set timer with 256 us
+	timer_set(256);
 
-        do {
-            if(atnislo()) {
-		// ATN got low, exit
-                //break;
-                goto atn;
-            }
-        } while( davislo() );
+	do {
+		if (checkatn(underatn))
+			return -1;
 
-        ndaclo();
+		if (timer_underflow()) { 
+			// handle EOI condition
+			datalo();
+			delayus(50);
+			datahi();
 
-        return(er);
+			do {
+				if (checkatn(underatn))
+					return -1;
 
-atn:
-	// we do not need to do anything,
-	// as we already are in listen mode, and the
-	// ACK hardware or software has just pulled 
-	// NRFD and NDAC
-        return E_ATN;
+			} while (is_port_clkhi(read_debounced()));
+			
+			eoi = 1;
+
+			break;
+		}
+
+	} while (is_port_clkhi(read_debounced()));
+
+	// shift in all bits
+	do {
+		do {
+			port = read_debounced();
+		} while (is_port_clklo(port));
+
+		data <<= 1;
+		if (is_port_datahi(port)) {
+			data |= 1;
+		}
+
+		do {
+			if (checkatn(underatn)) 
+				return -1;
+		} while (is_port_clkhi(read_debounced()));
+
+		cnt--;
+	} while (cnt > 0);
+
+	datalo();
+
+	return 0xff & data;
 }
 
 static void listenloop() {
 #ifdef DEBUG_BUS
 	debug_putc('L');
 #endif
+/*
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            par_status = bus_sendbyte(&bus, c, er & E_EOI);
+            ser_status = bus_sendbyte(&bus, c, er & E_EOI);
         }
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
 	if (er != E_ATN) {
 	    setidle();
 	}
+*/
         return;
 }
 
@@ -119,27 +158,27 @@ static void talkloop()
 {
         int16_t er /*,sec*/;
         uint8_t c;
-
+/*
 #ifdef DEBUG_BUS
 	debug_putc('T'); debug_flush();
 #endif
-        settx();            /* enables sending */
+        settx();            // enables sending 
 
         er=0;
-        /*sec=secadr&0x0f;*/
+        //sec=secadr&0x0f;
 
         while (!er) {
 
-            /* wait nrfd hi */
+            // wait nrfd hi 
             do {
                 if( atnislo() ) {
 		    goto atn;
 		}
             } while( nrfdislo() );
 
-            /* write data & eoi */
-            par_status = bus_receivebyte(&bus, &c, 1);
-            if(par_status & 0x40)
+            // write data & eoi 
+            ser_status = bus_receivebyte(&bus, &c, 1);
+            if(ser_status & 0x40)
             {
                 eoilo();
                 er|=E_EOI;
@@ -147,7 +186,7 @@ static void talkloop()
             wrd(c);
             davlo();
 
-            /* wait nrfd lo */
+            // wait nrfd lo 
             do {
                 if( atnislo() ) {
 		    goto atn;
@@ -161,7 +200,7 @@ static void talkloop()
                 }
             } while( nrfdishi() );
 
-            /* wait ndac hi */
+            // wait ndac hi 
             do {
                 if ( atnislo() ) {
 		    // ATN got low
@@ -171,10 +210,10 @@ static void talkloop()
 
             davhi();
             eoihi();
-            par_status = bus_receivebyte(&bus, &c, 0);
+            ser_status = bus_receivebyte(&bus, &c, 0);
 
-            /* wait ndac lo */
-            if( par_status & 0xff ) {
+            // wait ndac lo 
+            if( ser_status & 0xff ) {
                 break;
             } else {
                 do {
@@ -196,6 +235,7 @@ atn:
 idle:
 	// after EOF we set bus to idle
 	setidle();
+*/
         return; //(er&(E_EOI));
 }
 
@@ -205,84 +245,61 @@ idle:
  * the IEEE stuff. The outside loop calls this one on each iteration.
  */
 
-void ieee_mainloop_iteration(void)
+void iec_mainloop_iteration(void)
 {
-        int cmd = 0;
+        int16_t cmd = 0;
+
+        ser_status=0;
 
 	// only do something on ATN low
-	if (atnishi()) {
+	if (satnishi()) {
 		return;
 	}
 
-	// set receive mode
-	setrx();
+	clkhi();
 
-        par_status=0;
+	datalo();
 
-        /* Loop to get commands during ATN lo ----------------------------*/
+	// acknowledge ATN
+	satnalo();
 
-        while(1)
-        {
-            ndaclo();
-	    // acknowledge ATN
-            atnalo();
-            nrfdhi();
+        // Loop to get commands during ATN lo ----------------------------
 
-            /* wait for DAV lo */
-            do {
-                if(atnishi()) {
-		    // ATN hi, end loop
-                    goto cmd;
-                }
-            } while(davishi());
+	do {
+		if (satnishi()) {
+			goto cmd;
+		}
+	} while (clkislo());
+
+	do {
+		// get byte (under ATN) - call to E9C9
+		cmd = iecin(1);
+		if (cmd < 0) {
+			break;
+		}
+		ser_status = bus_attention(&bus, 0xff & cmd);
+
+	} while (satnislo());
 	
-            nrfdlo();
-
-	    // read data
-            cmd=rdd();
-	    // ack with ndac hi
-            ndachi();
-
-            par_status = bus_attention(&bus, cmd);
-
-	    // wait until DAV goes up
-//	    do {
-//		if (atnishi()) {
-//		    // ATN hi, end loop
-//		    goto cmd;
-//		}
-//	    }
-            while(davislo());
-        }
-
-        /* ---------------------------------------------------------------*/
+        // ---------------------------------------------------------------
 	// ATN is high now
 	// parallelattention has set status what to do
 	// now transfer the data
 cmd:
 #ifdef DEBUG_BUS
-	debug_printf("stat=%04x", par_status); debug_putcrlf();
+	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif
+	
+	// E8D7
+	satnahi();
 
 	if(isListening())
         {
-		// make sure nrfd stays lo...
-		nrfdlo();
-		// ... when we un-acknowlege the ATN
-		// (which is already hi anyway)
-                atnahi();
-                listenloop();
         } else
         {
-                atnahi();
-                nrfdhi();
-
-                if(isTalking()) {
-                    talkloop();
-                }
         }
 
-	ieeehw_setup();
+	iechw_setup();
 #ifdef DEBUG_BUS
 	debug_putc('X'); debug_flush();
 #endif	
@@ -292,11 +309,13 @@ cmd:
 /***************************************************************************
  * Init code
  */
-void ieee_init(uint8_t deviceno) {
+void iec_init(uint8_t deviceno) {
+/*
         ieeehw_setup();
 
 	// register bus instance
 	bus_init_bus(&bus);
+*/
 }
 
 

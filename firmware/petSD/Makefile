@@ -3,6 +3,9 @@
 # this is already set in toplevel Makefile
 #DEVICE=petSD
 
+# specific switches for this device
+DEVICEOPTS=-DHAS_IEEE
+
 # Microcontroller name for AVRDUDE
 TARGET_MCU = m1284p
 
@@ -11,8 +14,8 @@ LFUSE = f7
 HFUSE = d2
 EFUSE = ff
 
-DEVICEFILES=petSD/ieeehw.c
-DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h
+DEVICEFILES=petSD/ieeehw.c petSD/device.c
+DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h petSD/device.h
 
 DEVICEASMOBJ=atn.o
 

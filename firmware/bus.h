@@ -23,6 +23,8 @@
 #ifndef BUS_H
 #define	BUS_H
 
+#include "cmd.h"
+#include "channel.h"
 #include "rtconfig.h"
 
 /*

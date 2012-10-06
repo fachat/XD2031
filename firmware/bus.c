@@ -54,7 +54,7 @@
 
 #include "device.h"
 
-#undef	DEBUG_SERIAL
+#define	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
 /*

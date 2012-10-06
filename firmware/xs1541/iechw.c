@@ -20,23 +20,23 @@
 
 ****************************************************************************/
 
-#include "ieeehw.h"
+#include "iechw.h"
 
 /* ------------------------------------------------------------------------- 
  * local variables
  */
 
 // when set, disable ATN acknowledgement
-uint8_t is_atna = 0;
-uint8_t is_ndacout = 0;
-uint8_t is_nrfdout = 0;
+uint8_t is_satna = 0;
+uint8_t is_dataout = 0;
+uint8_t is_clkout = 0;
 
 /* ------------------------------------------------------------------------- */
 /*  Interrupt handling                                                       */
 /* ------------------------------------------------------------------------- */
 
 #if 0
-static void ieee_interrupts_init(void)  {
+static void iec_interrupts_init(void)  {
   /* clear interrupt flag */
   PCIFR |= _BV(PCIF3);
 
@@ -45,26 +45,25 @@ static void ieee_interrupts_init(void)  {
   *   PCMSK3 |= _BV(PCINT27)
   * which is ok for PD3
   */
-  IEEE_PCMSK |= _BV(IEEE_PCINT);
+  IEC_PCMSK |= _BV(IEC_PCINT);
 
   /* Enable pin change interrupt 3 (PCINT31..24) */
   PCICR |= _BV(PCIE3);
 
   //debug_putps("Done init ieee ints"); debug_putcrlf();
 }
-#endif
 
-/* IEEE-488 ATN interrupt using PCINT 
+/* IEC-488 ATN interrupt using PCINT */
 static void set_atn_irq(uint8_t x) {
 #if DEBUG
   debug_putps("ATN_IRQ:"); debug_puthex(x); debug_putcrlf();
 #endif
   if (x)
-    IEEE_PCMSK |= _BV(IEEE_PCINT);
+    IEC_PCMSK |= _BV(IEC_PCINT);
   else
-    IEEE_PCMSK &= (uint8_t) ~_BV(IEEE_PCINT);
+    IEC_PCMSK &= (uint8_t) ~_BV(IEC_PCINT);
 }
-*/
+#endif 
 
 /* Interrupt routine that simulates the hardware-auto-acknowledge of ATN
    at falling edge of ATN. If pin change interrupts are used, we have to
@@ -88,26 +87,23 @@ IEEE_ATN_HANDLER {
  *  General functions
  */
 
-void ieeehw_setup() {
+void iechw_setup() {
 	// clear IEEE lines
-	atnahi();
-	clrd();
-	davhi();
-	nrfdhi();
-	ndachi();
-	eoihi();
+	satnahi();
+	datahi();
+	clkhi();
 }
 
-void ieeehw_init() {
+void iechw_init() {
 
 	// disable ATN interrupt
 	//set_atn_irq(0);
 
 	// clear IEEE lines
-	ieeehw_setup();
+	iechw_setup();
 
 	// start ATN interrupt handling
-	//ieee_interrupts_init();
+	//iec_interrupts_init();
 }
 
 

@@ -3,6 +3,10 @@
 # This is already set in top level Makefile
 #DEVICE=xs1541
 
+# specific switches for this device
+DEVICEOPTS=-DHAS_IEC -DHAS_IEEE
+#DEVICEOPTS=-DHAS_IEEE
+
 # Microcontroller name for AVRDUDE
 TARGET_MCU = m644p
 
@@ -11,8 +15,8 @@ LFUSE = ff
 HFUSE = d4
 EFUSE = fc
 
-DEVICEFILES=xs1541/ieeehw.c
-DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h
+DEVICEFILES=xs1541/ieeehw.c xs1541/iechw.c xs1541/device.c
+DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h xs1541/iechw.h xs1541/device.h
 
 DEVICEASMOBJ=xs1541/atn.o
 

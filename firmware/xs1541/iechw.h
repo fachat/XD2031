@@ -1,0 +1,178 @@
+
+/****************************************************************************
+
+    XD-2031 - Serial line filesystem server for CBMs
+    Copyright (C) 2012 Andre Fachat
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA  02110-1301, USA.
+
+****************************************************************************/
+
+
+#ifndef IECHW_H
+#define IECHW_H
+
+#include <stdint.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+#include "device.h"
+
+// IEEE hw code error codes
+
+#define         E_OK            0
+#define         E_ATN           1
+#define         E_EOI           2
+#define         E_TIME          4
+#define         E_BRK           5
+#define         E_NODEV         6
+
+// Prototypes
+
+// output of ATNA
+extern uint8_t is_satna;
+// last output of DATA before ATNA handling
+extern uint8_t is_dataout;
+// last output of CLK before ATNA handling
+extern uint8_t is_clkout;
+
+// ATN handling
+// (input only)
+
+static inline uint8_t satnislo() {
+	return !(IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
+}
+
+static inline uint8_t satnishi() {
+	return (IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
+}
+
+// NDAC & NRFD handling
+// Note the order of method definition in this file depends on dependencies
+
+static inline void datalo() {
+      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_DATA);    	// DATA low
+      	IEC_DDR |= _BV(IEC_PIN_DATA);              	// DATA as output
+	is_dataout = 0;
+}
+
+static inline void clklo() {
+      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_CLK);   		// CLK low
+      	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    		// CLK as output
+	is_clkout = 0;
+}
+
+static inline void datahi() {
+	// disable interrupt to avoid race condition
+	// of ATN irq between the satnishi() check and
+	// setting DATA lo
+	cli();	
+	if (satnishi() || is_satna) {
+	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_DATA);    // DATA as input
+      		IEC_PORT |= _BV(IEC_PIN_DATA);             // Enable pull-up
+	}
+	// allow interrupt again
+	sei();
+	is_dataout = 1;
+}
+
+static inline void clkhi() {
+	// disable interrupt to avoid race condition
+	// of ATN irq between the satnishi() check and
+	// setting NDAC lo
+	//cli();	
+	//if (satnishi() || is_satna) {
+	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_CLK);    // CLK as input
+	      	IEC_PORT |= _BV(IEC_PIN_CLK);             // Enable pull-up
+	//}
+	// allow interrupt again
+	//sei();
+	is_clkout = 1;
+}
+
+static inline uint8_t dataislo() {
+	return !(IEC_INPUT & _BV(IEC_PIN_DATA));
+}
+
+static inline uint8_t dataishi() {
+	return (IEC_INPUT & _BV(IEC_PIN_DATA));
+}
+
+
+static inline uint8_t clkislo() {
+	return !(IEC_INPUT & _BV(IEC_PIN_CLK));
+}
+
+static inline uint8_t clkishi() {
+	return (IEC_INPUT & _BV(IEC_PIN_CLK));
+}
+
+// returns a debounced port byte, to be checked with 
+// the methods is_port_*(port_byte)
+static inline uint8_t read_debounced() {
+	uint8_t port;
+
+	do {
+		port = IEC_INPUT;
+	} while (port != IEC_INPUT);
+	
+	return port;
+}
+
+static inline uint8_t is_port_clklo(uint8_t port) {
+	return !(port & IEC_PIN_CLK);
+}
+
+static inline uint8_t is_port_clkhi(uint8_t port) {
+	return port & IEC_PIN_CLK;
+}
+
+static inline uint8_t is_port_datahi(uint8_t port) {
+	return port & IEC_PIN_DATA;
+}
+
+
+
+// ATNA handling
+// (ATN acknowledge logic)
+
+// acknowledge ATN
+static inline void satnahi() {
+	is_satna = 0;
+}
+
+// disarm ATN acknowledge handling
+static inline void satnalo() {
+	if (!is_clkout) {
+		clklo();
+	}
+	if (!is_dataout) {
+		datalo();
+	}
+	is_satna = 1;
+}
+
+
+// general functions
+
+void iechw_init();
+
+// resets the IEEE hardware after a transfer
+void iechw_setup();
+
+
+#endif
+

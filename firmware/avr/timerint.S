@@ -35,7 +35,7 @@
 
 
 ;---------------------------------------------------------------------------
-; UART receive interrupt
+; TIMER underflow interrupt (timer 1)
 .global TIMER1_COMPA_vect							; cycles in IRQ:
 TIMER1_COMPA_vect:
 	push 	r2		; 	make place for status register		; 2

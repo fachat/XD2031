@@ -36,6 +36,23 @@ PCINT3_vect:
 	in	r2, _SFR_IO_ADDR(SREG)	; 	save status register		; 1
 	push	r16		;	save working register			; 2
 
+	; first check if we're being called for a serial IEC ATN
+	lds 	r16, PIND	;	load ATN in port			; 1
+	andi	r16, _BV(PD2)	; 	mask out IEC ATN bit
+	brne	checkieee	;	not low, so end
+	
+	; SATN acknowledge
+	lds 	r16, PORTD
+	andi 	r16, 255 - _BV(PD4)	; PD4 is DATA
+	sts 	PORTD, r16
+
+	lds 	r16, DDRD
+	ori	r16, _BV(PD4)
+	sts 	DDRD, r16
+
+	; done with IEC, check IEEE via fall through
+
+checkieee:
 	lds	r16, PIND	; 	load ATN in port			; 1
 	andi	r16, _BV(PD3)	; 	mask out ATN bit			; 1
 	
@@ -50,7 +67,7 @@ PCINT3_vect:
 	ori	r16, _BV(PC4) | _BV(PC5)					; 1
 	sts	DDRC, r16							; 2
 										;===
-										;19 
+										;
 noatn:	
 	; end of interrupt routine
 

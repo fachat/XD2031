@@ -41,8 +41,16 @@
 #include "packet.h"
 #include "serial.h"
 #include "uarthw.h"
-#include "ieeehw.h"
+#include "device.h"
+
+// those are currently still needed for *_mainloop_iteration
+#ifdef HAS_IEC
+#include "iec.h"
+#endif
+#ifdef HAS_IEEE
 #include "ieee.h"
+#endif
+
 #include "term.h"
 #include "file.h"
 #include "channel.h"
@@ -126,9 +134,11 @@ int main()
 
 	// bus init	
 	bus_init();			// first the general bus (with bus counter)
-	// IEEE488 bus
-	ieeehw_init();			// hardware
-	ieeehwi_init(8);		// hardware-independent part; registers as bus
+
+	// this call initializes the device-specific hardware
+	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
+	// it also handles the interrupt initialization if necessary
+	device_init();
 
 	// enable interrupts
 	sei();
@@ -148,9 +158,14 @@ int main()
 	{
 		// keep data flowing on the serial line
 		main_delay();
-
+#ifdef HAS_IEEE
 		// handle IEEE488 bus
 		ieee_mainloop_iteration();
+#endif
+#if 0 //def HAS_IEC
+		// handle IEEE488 bus
+		iec_mainloop_iteration();
+#endif
 	}
 }
 //---------------------------------------------------------------------------

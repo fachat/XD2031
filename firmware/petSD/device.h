@@ -28,8 +28,8 @@
 #ifndef PETSD_H
 #define PETSD_H
 
-// we have the 75160/75161 pairs
-#define HAVE_7516X
+// we have the 75160/75161 pairs - unused
+//#define HAVE_7516X
 
 // bus definitions
 #  define IEEE_PORT_TE          PORTB   /* TE */
@@ -71,5 +71,7 @@
 
 #define	IEEE_SECADDR_OFFSET	0
 #define	IEC_SECADDR_OFFSET	16
+
+void device_init(void);
 
 #endif

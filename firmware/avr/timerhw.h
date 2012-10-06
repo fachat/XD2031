@@ -21,17 +21,28 @@
 
 ****************************************************************************/
 
+/*
+ * timer handling
+ */
 
-#ifndef IEEE_H
-#define IEEE_H
+#ifndef TIMERHW_H
+#define TIMERHW_H
+
+#include <avr/io.h>
 
 
+void timerhw_init(void);
 
-// general functions
+static inline void timerhw_set(uint16_t us) {
+	// we run at 1.75MHz, so approx. 2MHz, thus divide us by 2 to get counter value
+	OCR0A = 0xff & (us >> 1);
+	TCNT0 = 0;
+	// clear the overflow bit, so we can check for overflow
+	TIFR0 |= _BV(OCF0A);
+}
 
-void ieee_init(uint8_t deviceno);
-
-void ieee_mainloop_iteration(void);
+static inline uint8_t timerhw_has_timed_out() {
+	return TIFR0 & _BV(OCF0A);
+}
 
 #endif
-

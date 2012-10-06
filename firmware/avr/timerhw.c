@@ -21,17 +21,36 @@
 
 ****************************************************************************/
 
+/*
+ * timer handling
+ */
+#include <avr/io.h>
 
-#ifndef IEEE_H
-#define IEEE_H
+#include "config.h"
 
+void timerhw_init(void) {
+	// timer configuration derived from
+	// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=viewtopic&t=50106
 
+	// ---------------------------------------------------------	
+	// Timer 1: 100 Hz timer 
+	OCR1A  = F_CPU / 64 / 100 - 1;
+	// disable timer output on port
+	TCCR1A = 0;
+	// prescale by 64 (CS10/11/12), set up for CTC mode (WGM12)
+	TCCR1B = (TCCR1B | _BV(WGM12) | _BV(CS10) | _BV(CS11)) & (255 - _BV(CS12));
+	// initialize counter
+	TCNT1  = 0;
+	// enable overflow interrupt
+	TIMSK1 |= _BV(OCIE1A);
 
-// general functions
+/*
+	// ---------------------------------------------------------	
+	// timer 0: IEC underflow timer, 8 bit
+	TCCR0A = 0;
+	// prescale by 8, so running with approx 1.75MHz; CTC mode
+	TCCR0B = (TCCR0B | _BV(WGM02) | _BV(CS01)) & (255 - _BV(CS02) - _BV(CS00));
+*/
+}
 
-void ieee_init(uint8_t deviceno);
-
-void ieee_mainloop_iteration(void);
-
-#endif
 

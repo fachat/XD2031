@@ -1,4 +1,3 @@
-
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
@@ -21,27 +20,34 @@
 
 ****************************************************************************/
 
-/*
- * timer handling
+/**
+ * timer definitions
+ *
  */
-#include <avr/io.h>
 
-#include "config.h"
+#ifndef TIMER_H
+#define	TIMER_H
 
-void timer_init(void) {
-	// timer configuration derived from
-	// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=viewtopic&t=50106
-	
-	// 100 Hz timer 
-	OCR1A  = F_CPU / 64 / 100 - 1;
-	// disable timer output on port
-	TCCR1A = 0;
-	// prescale by 64 (CS10/11/12), set up for CTC mode (WGM12)
-	TCCR1B = (TCCR1B | _BV(WGM12) | _BV(CS10) | _BV(CS11)) & (255 - _BV(CS12));
-	// initialize counter
-	TCNT1  = 0;
-	// enable overflow interrupt
-	TIMSK1 |= _BV(OCIE1A);
+
+#include "timerhw.h"
+
+
+static inline void timer_init(void) {
+	timerhw_init();
 }
 
+
+// set the timer to underflow after the given number of us
+static inline void timer_set(uint16_t us) {
+	timerhw_set(us);
+}
+
+// returns !=0 when the timer has underflown
+static inline uint8_t timer_underflow() {
+	return timerhw_has_timed_out();
+}
+
+
+
+#endif
 

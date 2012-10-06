@@ -3,8 +3,8 @@
 # AVR ATMega Architecture
 #
 
-ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timer.c avr/avr.c
-ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timer.h avr/timerint.o
+ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timerhw.c avr/avr.c
+ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timerhw.h avr/timerint.o
 ARCHASMOBJ=avr/uartints.o avr/timerint.o
 
 ARCH=avr
@@ -23,7 +23,7 @@ ASMFLAGS=
 # Note that due to me using the "%02x" printf conversion, actually the
 # full(!) printf version is required, including the floating point stuff, to be linked.
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) -I$(DEVICE) -I.
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I.
 
 clean: archclean deviceclean rootclean
 

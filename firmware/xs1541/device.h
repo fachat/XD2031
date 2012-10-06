@@ -25,10 +25,10 @@
 #ifndef XS1541_H
 #define XS1541_H
 
-// we don't have the 75160/75161 pairs
-#undef HAVE_7516X
+// we don't have the 75160/75161 pairs - unused
+//#undef HAVE_7516X
 
-// bus definitions
+// IEEE bus definitions
 #define IEEE_DDR_NDAC		DDRC
 #define	IEEE_PORT_NDAC		PORTC
 #define	IEEE_INPUT_NDAC		PINC
@@ -65,16 +65,37 @@
 /* interrupt init from sd2iec */
 
 #  define IEEE_ATN_INT          PCINT3
-#  define IEEE_PCMSK            PCMSK3
 #  define IEEE_PCINT            PCINT27
-#  define IEEE_ATN_INT_VECT     PCINT3_vect
 
 //#define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
-#define IEEE_ATN_HANDLER  ISR(IEEE_ATN_INT_VECT)
 
 #define HW_NAME			"XS-1541"
 
-#define	IEEE_SECADDR_OFFSET	0
-#define	IEC_SECADDR_OFFSET	16
+// DATA and CLK use the same port
+#define IEC_DDR			DDRD
+#define	IEC_PORT		PORTD
+#define	IEC_INPUT		PIND
+
+// IEC bus definitions
+#define	IEC_PIN_DATA		PD4
+#define	IEC_PIN_CLK		PD7
+
+// ATN actually uses the very same port, but this is more portable
+#define	IEC_DDR_ATN		DDRD
+#define	IEC_PORT_ATN		PORTD
+#define	IEC_INPUT_ATN		PIND
+#define	IEC_PIN_ATN		PD2
+
+/* interrupt init */
+#define IEC_SATN_INT         	PCINT3
+#define IEC_PCINT            	PCINT26
+
+/* general pin change interrupt for serial ATN as well as parallel ATN */
+#define XS1541_PCMSK         	PCMSK3
+#define XS1541_ATN_INT_VECT  	PCINT3_vect
+#define XS1541_ATN_HANDLER  	ISR(XS1541_ATN_INT_VECT)
+
+void device_init(void);
+
 
 #endif
