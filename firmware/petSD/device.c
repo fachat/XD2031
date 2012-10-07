@@ -23,6 +23,8 @@
 */
 
 #include "device.h"
+#include "ieeehw.h"
+#include "ieee.h"
 
 void device_init(void) {
 
