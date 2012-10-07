@@ -44,13 +44,14 @@ void timerhw_init(void) {
 	// enable overflow interrupt
 	TIMSK1 |= _BV(OCIE1A);
 
-/*
+
 	// ---------------------------------------------------------	
 	// timer 0: IEC underflow timer, 8 bit
 	TCCR0A = 0;
-	// prescale by 8, so running with approx 1.75MHz; CTC mode
-	TCCR0B = (TCCR0B | _BV(WGM02) | _BV(CS01)) & (255 - _BV(CS02) - _BV(CS00));
-*/
+	// prescale by 8, so running with approx 2MHz; CTC mode
+	TCCR0B = _BV(CS00) | _BV(CS01) | _BV(WGM01);
+	// disable interrupt
+	TIMSK0 = 0;
 }
 
 

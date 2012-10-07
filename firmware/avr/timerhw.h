@@ -30,19 +30,21 @@
 
 #include <avr/io.h>
 
+#include "debug.h"
 
 void timerhw_init(void);
 
-static inline void timerhw_set(uint16_t us) {
+static inline void timerhw_set_us(uint16_t us) {
 	// we run at 1.75MHz, so approx. 2MHz, thus divide us by 2 to get counter value
-	OCR0A = 0xff & (us >> 1);
+	OCR0A = 0xff & (us >> 2);
 	TCNT0 = 0;
 	// clear the overflow bit, so we can check for overflow
-	TIFR0 |= _BV(OCF0A);
+	TIFR0 |= _BV(TOV0) | _BV(OCF0A);
 }
 
 static inline uint8_t timerhw_has_timed_out() {
 	return TIFR0 & _BV(OCF0A);
+	//return TIFR0 & _BV(TOV0);
 }
 
 #endif

@@ -38,12 +38,12 @@ static inline void timer_init(void) {
 
 
 // set the timer to underflow after the given number of us
-static inline void timer_set(uint16_t us) {
-	timerhw_set(us);
+static inline void timer_set_us(uint16_t us) {
+	timerhw_set_us(us);
 }
 
 // returns !=0 when the timer has underflown
-static inline uint8_t timer_underflow() {
+static inline uint8_t timer_is_timed_out() {
 	return timerhw_has_timed_out();
 }
 
