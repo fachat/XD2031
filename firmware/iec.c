@@ -111,8 +111,6 @@ static int16_t iecin(uint8_t underatn)
 
 	} while (is_port_clkhi(read_debounced()));
 
-led_on();
-
 	// shift in all bits
 	do {
 		do {
@@ -125,8 +123,9 @@ led_on();
 		}
 
 		do {
-			if (checkatn(underatn)) 
+			if (checkatn(underatn)) {
 				return -1;
+			}
 		} while (is_port_clkhi(read_debounced()));
 
 		cnt--;
@@ -134,112 +133,132 @@ led_on();
 
 	datalo();
 
-	return 0xff & data;
+	return (0xff & data) | (eoi ? 0x4000 : 0);
 }
 
 static void listenloop() {
 #ifdef DEBUG_BUS
 	debug_putc('L');
 #endif
-/*
-        int er, c;
-        while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            ser_status = bus_sendbyte(&bus, c, er & E_EOI);
-        }
-	// if did not stop due to ATN, set to idle,
-	// otherwise stay in rx mode
-	if (er != E_ATN) {
-	    setidle();
-	}
-*/
-        return;
+
+	int16_t c;
+
+	do {
+		c = iecin(0);
+		if (c < 0) {
+			break;
+		}
+            	ser_status = bus_sendbyte(&bus, c, (c & 0x4000) ? 1 : 0);
+        } while (1);
+
+	return;
 }
 
 /***************************************************************************/
+
+static int16_t iecout(uint8_t data, uint8_t witheoi) {
+	
+	uint8_t port;
+	uint8_t cnt = 8;
+
+	if (checkatn(0)) {
+		return -1;
+	}
+		
+	port = read_debounced();
+
+	// e91f
+	clkhi();
+
+	// TODO: sort that crappy flow out
+
+	if (is_port_datalo(port)) {
+		// e925			
+		do {
+			if (checkatn(0)) {
+				return -1;
+			}
+		} while (is_port_datalo(read_debounced()));
+
+		if (!witheoi) {
+			goto noeoi;
+		}
+	}
+
+	// either data was already low, or EOI is to be sent
+	// send EOI - e937
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datalo(read_debounced()));
+	// e941
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datahi(read_debounced()));
+noeoi:
+	// e94b
+	clklo();
+
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datalo(read_debounced()));
+
+	// e958
+	do {
+		// e95c
+		if (is_port_datalo(read_debounced())) {
+			return -1;
+		}
+
+		if (data & 1) {
+			datahi();
+		} else {
+			datalo();
+		}
+		data >>= 1;
+
+		clkhi();
+
+		// fef3
+		delayus(45);
+
+		// fefb
+		clklo();
+		datahi();
+
+		cnt--;
+	} while (cnt > 0);
+
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datahi(read_debounced()));	
+
+	return 0;
+}
 
 static void talkloop()
 {
         int16_t er /*,sec*/;
         uint8_t c;
-/*
-#ifdef DEBUG_BUS
-	debug_putc('T'); debug_flush();
-#endif
-        settx();            // enables sending 
 
-        er=0;
-        //sec=secadr&0x0f;
+	do {
+            	ser_status = bus_receivebyte(&bus, &c, 1);
+debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
 
-        while (!er) {
+		er = iecout(c, ser_status & 0x40);
 
-            // wait nrfd hi 
-            do {
-                if( atnislo() ) {
-		    goto atn;
-		}
-            } while( nrfdislo() );
-
-            // write data & eoi 
-            ser_status = bus_receivebyte(&bus, &c, 1);
-            if(ser_status & 0x40)
-            {
-                eoilo();
-                er|=E_EOI;
-            }
-            wrd(c);
-            davlo();
-
-            // wait nrfd lo 
-            do {
-                if( atnislo() ) {
-		    goto atn;
+		if (er >= 0) {
+            		ser_status = bus_receivebyte(&bus, &c, 0);
 		}
 
-                if( ndacishi() && nrfdishi() ) {
-                    eoihi();
-                    davhi();
-		    er |= E_NODEV;
-		    goto idle;
-                }
-            } while( nrfdishi() );
-
-            // wait ndac hi 
-            do {
-                if ( atnislo() ) {
-		    // ATN got low
-                    goto atn;
-                }
-            } while( ndacislo() );
-
-            davhi();
-            eoihi();
-            ser_status = bus_receivebyte(&bus, &c, 0);
-
-            // wait ndac lo 
-            if( ser_status & 0xff ) {
-                break;
-            } else {
-                do {
-                    if ( atnislo() ) {
-                        goto atn;
-                    }
-                } while( ndacishi() );
-            }
-        }
-	// no ATN, so set bus to idle
-	setidle();
-        return; //(er&(E_EOI));
-
-atn:
-	// sets IEEE488 back to receive mode
-        setrx();
-        return; //(er&(E_EOI));
-
-idle:
-	// after EOF we set bus to idle
-	setidle();
-*/
-        return; //(er&(E_EOI));
+	} while (er >= 0);
 }
 
 /***************************************************************************
@@ -314,8 +333,14 @@ cmd:
 
 	if(isListening())
         {
+		listenloop();
         } else
         {
+		if (isTalking()) {
+			datahi();
+			clklo();
+			talkloop();
+		}
         }
 
 	iechw_setup();
