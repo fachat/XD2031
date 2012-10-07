@@ -5,7 +5,6 @@
 
 # specific switches for this device
 DEVICEOPTS=-DHAS_IEC -DHAS_IEEE
-#DEVICEOPTS=-DHAS_IEEE
 
 # Microcontroller name for AVRDUDE
 TARGET_MCU = m644p

@@ -70,15 +70,19 @@ static inline void datalo() {
 }
 
 static inline void clklo() {
-      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_CLK);   		// CLK low
-      	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    		// CLK as output
-	is_clkout = 0;
+      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_CLK);   	// CLK low
+      	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    	// CLK as output
+}
+
+static inline void atn_init() {
+      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
+	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
 }
 
 static inline void datahi() {
 	// disable interrupt to avoid race condition
 	// of ATN irq between the satnishi() check and
-	// setting DATA lo
+	// setting DATA hi
 	cli();	
 	if (satnishi() || is_satna) {
 	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_DATA);    // DATA as input
@@ -90,17 +94,8 @@ static inline void datahi() {
 }
 
 static inline void clkhi() {
-	// disable interrupt to avoid race condition
-	// of ATN irq between the satnishi() check and
-	// setting NDAC lo
-	//cli();	
-	//if (satnishi() || is_satna) {
-	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_CLK);    // CLK as input
-	      	IEC_PORT |= _BV(IEC_PIN_CLK);             // Enable pull-up
-	//}
-	// allow interrupt again
-	//sei();
-	is_clkout = 1;
+      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_CLK);    // CLK as input
+      	IEC_PORT |= _BV(IEC_PIN_CLK);             // Enable pull-up
 }
 
 static inline uint8_t dataislo() {
@@ -133,15 +128,19 @@ static inline uint8_t read_debounced() {
 }
 
 static inline uint8_t is_port_clklo(uint8_t port) {
-	return !(port & IEC_PIN_CLK);
+	return !(port & _BV(IEC_PIN_CLK));
 }
 
 static inline uint8_t is_port_clkhi(uint8_t port) {
-	return port & IEC_PIN_CLK;
+	return port & _BV(IEC_PIN_CLK);
 }
 
 static inline uint8_t is_port_datahi(uint8_t port) {
-	return port & IEC_PIN_DATA;
+	return port & _BV(IEC_PIN_DATA);
+}
+
+static inline uint8_t is_port_datalo(uint8_t port) {
+	return !(port & _BV(IEC_PIN_DATA));
 }
 
 
@@ -156,9 +155,6 @@ static inline void satnahi() {
 
 // disarm ATN acknowledge handling
 static inline void satnalo() {
-	if (!is_clkout) {
-		clklo();
-	}
 	if (!is_dataout) {
 		datalo();
 	}

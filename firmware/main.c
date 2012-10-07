@@ -162,7 +162,7 @@ int main()
 		// handle IEEE488 bus
 		ieee_mainloop_iteration();
 #endif
-#if 0 //def HAS_IEC
+#ifdef HAS_IEC
 		// handle IEEE488 bus
 		iec_mainloop_iteration();
 #endif

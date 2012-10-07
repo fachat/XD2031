@@ -89,6 +89,7 @@ IEEE_ATN_HANDLER {
 
 void iechw_setup() {
 	// clear IEEE lines
+	atn_init();
 	satnahi();
 	datahi();
 	clkhi();

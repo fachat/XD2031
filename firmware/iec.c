@@ -35,7 +35,7 @@
 #include "debug.h"
 #include "led.h"
 
-#undef DEBUG_BUS
+#define DEBUG_BUS
 
 // Prototypes
 
@@ -85,22 +85,23 @@ static int16_t iecin(uint8_t underatn)
 	datahi();
 
 	// set timer with 256 us
-	timer_set(256);
+	timer_set_us(256);
 
 	do {
-		if (checkatn(underatn))
+		if (checkatn(underatn)) {
 			return -1;
+		}
 
-		if (timer_underflow()) { 
+		if (timer_is_timed_out()) { 
 			// handle EOI condition
 			datalo();
 			delayus(50);
 			datahi();
 
 			do {
-				if (checkatn(underatn))
+				if (checkatn(underatn)) {
 					return -1;
-
+				}
 			} while (is_port_clkhi(read_debounced()));
 			
 			eoi = 1;
@@ -110,15 +111,17 @@ static int16_t iecin(uint8_t underatn)
 
 	} while (is_port_clkhi(read_debounced()));
 
+led_on();
+
 	// shift in all bits
 	do {
 		do {
 			port = read_debounced();
 		} while (is_port_clklo(port));
 
-		data <<= 1;
+		data >>= 1;
 		if (is_port_datahi(port)) {
-			data |= 1;
+			data |= 128;
 		}
 
 		do {
@@ -249,6 +252,15 @@ void iec_mainloop_iteration(void)
 {
         int16_t cmd = 0;
 
+#if 0
+	// debug
+	timer_set_us(256);
+	led_toggle();
+	while(!timer_is_timed_out());
+	led_toggle();
+	// end debug
+#endif
+
         ser_status=0;
 
 	// only do something on ATN low
@@ -263,18 +275,25 @@ void iec_mainloop_iteration(void)
 	// acknowledge ATN
 	satnalo();
 
-        // Loop to get commands during ATN lo ----------------------------
+	// on the C64, CLK is set high directly after setting ATN
+	// but here we are possibly faster than that, so do a delay
+	delayus(20);
 
+        // Loop to get commands during ATN lo ----------------------------
+#if 0 
+	// this is also on top of liecin()
 	do {
 		if (satnishi()) {
 			goto cmd;
 		}
 	} while (clkislo());
+#endif
 
 	do {
 		// get byte (under ATN) - call to E9C9
 		cmd = iecin(1);
 		if (cmd < 0) {
+debug_printf("cmd=%d", cmd);
 			break;
 		}
 		ser_status = bus_attention(&bus, 0xff & cmd);
@@ -310,12 +329,11 @@ cmd:
  * Init code
  */
 void iec_init(uint8_t deviceno) {
-/*
-        ieeehw_setup();
+
+        iechw_setup();
 
 	// register bus instance
 	bus_init_bus(&bus);
-*/
 }
 
 
