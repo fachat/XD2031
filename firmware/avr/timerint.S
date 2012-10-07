@@ -21,6 +21,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "config.h"		// LED definitions
 
 /**
  * LED interrupt handler
@@ -102,14 +103,14 @@ ledbit:
 	sts	led_shift, r16
 	brcc 	ledoff
 ledon:	
-	lds 	r16, PORTC
-	ori	r16, _BV(PC0)
-	sts	PORTC, r16
+	lds 	r16, LED_PORT
+	ori	r16, _BV(LED_BIT)
+	sts	LED_PORT, r16
 	jmp	ledend
 ledoff:
-	lds 	r16, PORTC
-	andi	r16, 255-_BV(PC0)
-	sts	PORTC, r16
+	lds 	r16, LED_PORT
+	andi	r16, 255-_BV(LED_BIT)
+	sts	LED_PORT, r16
 ledend:
 	;---------------------------------------------------------
 

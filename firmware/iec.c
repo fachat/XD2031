@@ -21,6 +21,8 @@
 
 ****************************************************************************/
 
+#ifdef HAS_IEC
+
 /**
  * Hardware-independent IEC layer 
  */
@@ -336,4 +338,4 @@ void iec_init(uint8_t deviceno) {
 	bus_init_bus(&bus);
 }
 
-
+#endif // HAS_IEC
