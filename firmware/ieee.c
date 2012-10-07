@@ -21,6 +21,8 @@
 
 ****************************************************************************/
 
+#ifdef HAS_IEEE
+
 /**
  * Hardware-independent IEEE layer 
  */
@@ -299,4 +301,4 @@ void ieee_init(uint8_t deviceno) {
 	bus_init_bus(&bus);
 }
 
-
+#endif // HAS_IEEE
