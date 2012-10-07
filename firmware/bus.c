@@ -312,7 +312,7 @@ static int16_t bus_prepare(bus_t *bus)
     int st = 0;
 
 #ifdef DEBUG_SERIAL
-    debug_printf("***ParallelCommand %02x %02x\n",
+    debug_printf("***BusCommand %02x %02x\n",
          bus->device, bus->secondary);
 #endif
 
@@ -428,7 +428,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
     }
 
 #ifdef DEBUG_SERIAL
-    debug_printf("ParallelAttention(%02x)->TrapDevice=%02x, st=%04x\n",
+    debug_printf("BusAttention(%02x)->TrapDevice=%02x, st=%04x\n",
                b, bus->device, st | (bus->device << 8));
     debug_flush();
 #endif
