@@ -86,6 +86,9 @@ static int16_t iecin(uint8_t underatn)
 
 	datahi();
 
+	// TODO: wait for data being really hi, as other listeners
+	// may delay the transition, and we misunderstand this for an EOI
+
 	// set timer with 256 us
 	timer_set_us(256);
 
@@ -174,14 +177,22 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	if (checkatn(0)) {
 		return -1;
 	}
-		
-	port = read_debounced();
 
+	// make sure data is actually lo
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datahi(read_debounced()));
+
+	
+	// are we really that fast?
+	delayus(70);
+	
 	// e91f
 	clkhi();
 
 	// wait for the listener to release data, signalling ready for data
-	// e937
 	do {
 		if (checkatn(0)) {
 			return -1;
@@ -207,16 +218,21 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		// done signalling EOI
 	}
 
-
 	// e94b
 	clklo();
 
-	delayus(40);
+	delayus(70);
 
+	// make sure data is still hi
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datalo(read_debounced()));
+
+	
 	// e958
 	do {
-		delayus(70);
-
 		// e95c
 		if (is_port_datalo(read_debounced())) {
 			return -1;
@@ -229,15 +245,18 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		}
 		data >>= 1;
 
+		delayus(70);
+
 		clkhi();
 
 		// fef3
-		delayus(70);
+		delayus(80);
 
 		// fefb
 		clklo();
 		datahi();
 
+		delayus(5);	// settle time (sd2iec)
 		cnt--;
 	} while (cnt > 0);
 
@@ -268,12 +287,16 @@ debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);deb
 		er = iecout(c, ser_status & 0x40);
 		// enable ints
 		sei();
+debug_printf("next, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
 
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, 0);
 		}
+debug_printf("commited, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
 
 	} while (er >= 0);
+
+debug_printf("bailing out with er=%d\n", er);
 }
 
 /***************************************************************************
