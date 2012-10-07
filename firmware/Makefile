@@ -1,8 +1,8 @@
 
 
 # Uncomment one of the following lines to select your device:
-DEVICE=xs1541
-#DEVICE=petSD
+#DEVICE=xs1541
+DEVICE=petSD
 
 # This defines the serial-over-USB port to use when loading the
 # firmware into the device with "make load"
@@ -32,6 +32,11 @@ all:$(TARGET).hex
 
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
+
+# Include optional modules?
+ifeq ($(strip $(USE_FAT)),y)
+	include fatfs/Makefile
+endif
 
 doc:
 	doxygen Doxyfile
