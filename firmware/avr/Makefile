@@ -58,7 +58,7 @@ archclean:
 
 ## Assembler files
 avr/%.o: avr/%.S
-	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -o $@ -c  $<
+	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -I$(DEVICE) -o $@ -c  $<
 
 
 
