@@ -146,7 +146,13 @@ static void listenloop() {
 	int16_t c;
 
 	do {
+		// disable interrupts
+		cli();
+		// read byte from IEC
 		c = iecin(0);
+		// enable ints
+		sei();
+
 		if (c < 0) {
 			break;
 		}
@@ -157,6 +163,8 @@ static void listenloop() {
 }
 
 /***************************************************************************/
+
+// more info see here: https://groups.google.com/forum/?hl=de&fromgroups=#!msg/comp.sys.cbm/e4qxrtt5RP0/0q1EVUkV8moJ
 
 static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	
@@ -172,46 +180,43 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// e91f
 	clkhi();
 
-	// TODO: sort that crappy flow out
+	// wait for the listener to release data, signalling ready for data
+	// e937
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datalo(read_debounced()));
 
-	if (is_port_datalo(port)) {
-		// e925			
+	if (witheoi) {
+		// signal the EOI
+		// wait for data low as acknowledge from the listener
+		do {
+			if (checkatn(0)) {
+				return -1;
+			}
+		} while (is_port_datahi(read_debounced()));
+
+		// and wait for DATA to go back up
 		do {
 			if (checkatn(0)) {
 				return -1;
 			}
 		} while (is_port_datalo(read_debounced()));
 
-		if (!witheoi) {
-			goto noeoi;
-		}
+		// done signalling EOI
 	}
 
-	// either data was already low, or EOI is to be sent
-	// send EOI - e937
-	do {
-		if (checkatn(0)) {
-			return -1;
-		}
-	} while (is_port_datalo(read_debounced()));
-	// e941
-	do {
-		if (checkatn(0)) {
-			return -1;
-		}
-	} while (is_port_datahi(read_debounced()));
-noeoi:
+
 	// e94b
 	clklo();
 
-	do {
-		if (checkatn(0)) {
-			return -1;
-		}
-	} while (is_port_datalo(read_debounced()));
+	delayus(40);
 
 	// e958
 	do {
+		delayus(70);
+
 		// e95c
 		if (is_port_datalo(read_debounced())) {
 			return -1;
@@ -227,7 +232,7 @@ noeoi:
 		clkhi();
 
 		// fef3
-		delayus(45);
+		delayus(70);
 
 		// fefb
 		clklo();
@@ -236,11 +241,14 @@ noeoi:
 		cnt--;
 	} while (cnt > 0);
 
+
 	do {
 		if (checkatn(0)) {
 			return -1;
 		}
 	} while (is_port_datahi(read_debounced()));	
+
+led_on();
 
 	return 0;
 }
@@ -254,7 +262,12 @@ static void talkloop()
             	ser_status = bus_receivebyte(&bus, &c, 1);
 debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
 
+		// disable ints
+		cli();
+		// send byte to IEC
 		er = iecout(c, ser_status & 0x40);
+		// enable ints
+		sei();
 
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, 0);
@@ -311,8 +324,13 @@ void iec_mainloop_iteration(void)
 #endif
 
 	do {
+		// disable ints
+		cli();
 		// get byte (under ATN) - call to E9C9
 		cmd = iecin(1);
+		// enable ints again
+		sei();
+
 		if (cmd < 0) {
 debug_printf("cmd=%d", cmd);
 			break;
