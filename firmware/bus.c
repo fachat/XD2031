@@ -57,21 +57,6 @@
 #define	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
-/*
-  Debug output:
-
-  AXX   : ATN 0xXX
-  c     : listen_handler cancelled
-  C     : CLOSE
-  l     : UNLISTEN
-  L     : LISTEN
-  D     : DATA 0x60
-  O     : OPEN 0xfX
-  ?XX   : unknown cmd 0xXX
-  .     : timeout after ATN
-
-*/
-
 /* -------------------------------------------------------------------------
  *  Error and command channel handling
  */

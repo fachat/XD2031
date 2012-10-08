@@ -30,16 +30,17 @@ ASMFLAGS=
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I.
 
-clean: archclean deviceclean rootclean
+clean: archclean deviceclean
 
 distclean: clean
-	rm $(TARGET) $(TARGET).hex
+	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 	
-fw: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
+$(BINDIR)/$(TARGET).elf: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
+	mkdir -p $(BINDIR)
+	$(CC) $(CFLAGS) -o $(BINDIR)/$(TARGET).elf $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
-$(TARGET).hex : $(TARGET)
+$(BINDIR)/$(TARGET).hex : $(BINDIR)/$(TARGET).elf
 	 avr-objcopy -j .data -j .text -O ihex $< $@
 
 # Bootloader AVR programming with AVRPROG compatible bootloader from
@@ -47,16 +48,20 @@ $(TARGET).hex : $(TARGET)
 # Do NOT use $(TARGET_MCU) here. The bootloader expects m644 only
 # but flashes m644p as well.
 load:
-	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(TARGET).hex:i
+	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # ISP programming 
 flash:
-	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(TARGET).hex:i
+	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # Fuse programming
 fuses:
 	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 # 
+
+# Info about memory usage
+size:
+	avr-size -C $(BINDIR)/$(TARGET).elf --mcu=$(SIZE_MCU)
 
 archclean:
 	rm -f $(ARCHASMOBJ)
