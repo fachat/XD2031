@@ -2,8 +2,8 @@
 # Usage: make -f Makefile-FATdemo             
 # Uncomment one of the following lines to select your device:
 
-#DEVICE=xs1541
-DEVICE=petSD
+DEVICE=xs1541
+#DEVICE=petSD
 
 
 ####################################################################
@@ -18,6 +18,9 @@ all:$(TARGET).hex
 
 USE_FAT=y                       # Enable optional FAT module?
 
+ifeq ($(DEVICE),xs1541)
+	ARCHDEVICE= -mmcu=atmega644p
+endif
 ifeq ($(DEVICE),petSD)
 	ARCHDEVICE= -mmcu=atmega1284p
 endif
@@ -27,14 +30,14 @@ endif
 
 #DEVICEASMOBJ=atn.o
 
-DEVICEFILES+=../petSD/fatfshw.c	    # HW specific code for FatFs
-DEVICEFILES+=sdcard.c         # SD card low level routines
-DEVICEFILES+=rtc-ds1307.c     # DS1307 Real time clock routines
-DEVICEFILES+=i2c.c            # I2C high level routines
-DEVICEFILES+=i2c-bb.c         # I2C bit banging routines
-DEVICEDEPS+=../petSD/fatfshw.h	    # HW specific defs / protos for FatFs
-DEVICEDEPS+=rtc.h             # Real time clock defs  and prototypes
-DEVICEDEPS+=i2c.h             # I2C high level routines
+DEVICEFILES+=../petSD/fatfshw.c	# HW specific code for FatFs
+DEVICEFILES+=sdcard.c         	# SD card low level routines
+DEVICEFILES+=rtc-ds1307.c	# DS1307 Real time clock routines
+DEVICEFILES+=i2c.c		# I2C high level routines
+DEVICEFILES+=i2c-bb.c		# I2C bit banging routines
+DEVICEDEPS+=../petSD/fatfshw.h	# HW specific defs / protos for FatFs
+DEVICEDEPS+=rtc.h		# Real time clock defs  and prototypes
+DEVICEDEPS+=i2c.h		# I2C high level routines
 
 
 ## Assembler files

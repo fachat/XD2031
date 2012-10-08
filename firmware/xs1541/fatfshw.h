@@ -35,15 +35,6 @@
 #define SPI_PIN_MISO            PB6
 #define SPI_PIN_MOSI            PB5
 
-/* ---- Ethernet ---------------------------------------------------------- */
-#define PORT_ETH_CS             PORTC           /* Ethernet chip select */
-#define DDR_ETH_CS              DDRC
-#define PIN_ETH_CS              PC4
-
-#define PORT_ETH_INT            PORTD           /* Ethernet interrupt */
-#define DDR_ETH_INT             DDRD
-#define PIN_ETH_INT             PD3
-
 /* ---- SD card ----------------------------------------------------------- */
 #define PORT_SD_CS              PORTB           /* SD card select */
 #define DDR_SD_CS               DDRB
@@ -62,16 +53,6 @@
 #define PIN_SD_CD               PD4
 #define SOCKINS                 (!(INPUT_SD_CD & _BV(PIN_SD_CD)))       
 /* Card detected?   yes:true, no:false, default:true */
-
-/* ---- I2C bus ----------------------------------------------------------- */
-#define IIC_INIT()      // DDRE &= 0xF3; PORTE &= 0xF3  /* Set SCL/SDA as hi-z */
-#define SCL_LOW()       // DDRE |=      0x04                    /* SCL = LOW */
-#define SCL_HIGH()      // DDRE &=      0xFB                    /* SCL = High-Z */
-#define SCL_VAL         0 // ((PINE & 0x04) ? 1 : 0)    /* SCL input level */
-#define SDA_LOW()       // DDRE |=      0x08                    /* SDA = LOW */
-#define SDA_HIGH()      // DDRE &=      0xF7                    /* SDA = High-Z */
-#define SDA_VAL         0 // ((PINE & 0x08) ? 1 : 0)    /* SDA input level */
-#define I2C_BB_DELAY_US		6
 
 /* ---- Prototypes -------------------------------------------------------- */
 #define power_status(x) 1
