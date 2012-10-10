@@ -54,23 +54,8 @@
 
 #include "device.h"
 
-#define	DEBUG_SERIAL
+#undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
-
-/*
-  Debug output:
-
-  AXX   : ATN 0xXX
-  c     : listen_handler cancelled
-  C     : CLOSE
-  l     : UNLISTEN
-  L     : LISTEN
-  D     : DATA 0x60
-  O     : OPEN 0xfX
-  ?XX   : unknown cmd 0xXX
-  .     : timeout after ATN
-
-*/
 
 /* -------------------------------------------------------------------------
  *  Error and command channel handling
@@ -93,14 +78,18 @@ void bus_init() {
 /* Init IEEE bus */
 void bus_init_bus(bus_t *bus) {
 
+  	uint8_t devaddr = 8;
+#	ifdef DEV_ADDR
+		devaddr = DEV_ADDR;
+#	endif
+
 	bus->secaddr_offset = secaddr_offset_counter;
 	secaddr_offset_counter += 16;
 
   	/* Read the hardware-set device address */
 	//  device_address = device_hw_address();
-  	uint8_t devaddr = 8;
 
-  	/* Init vars and flags */
+	/* Init vars and flags */
   	bus->command.command_length = 0;
 
 	// this is copied over after an UNTALK/UNLISTEN

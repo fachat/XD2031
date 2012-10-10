@@ -1,7 +1,8 @@
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2012 Andre Fachat <afachat@gmx.de>
+    Copyright (C) 2012 Nils Eilers <nils.eilers@gmx.de>
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -33,7 +34,6 @@
 #include "config.h"
 #include "mem.h"
 #include "led.h"
-
 
 // -----------------------------------------------------------------------------
 // communication with timer interrupt routine for led interrupt program
@@ -92,6 +92,10 @@ void led_init() {
 	LED_DDR  |= _BV(LED_BIT);
 	// switch LED off
 	LED_PORT &= ~_BV(LED_BIT);
+#	ifdef ACTIVE_LED_DDR
+		ACTIVE_LED_DDR |= _BV(ACTIVE_LED_BIT);
+	  	ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
+#	endif
 
 	// switch off led interrupt program
 	led_program = 0;
@@ -106,9 +110,20 @@ static inline void _led_on() {
 	LED_PORT |= _BV(LED_BIT);
 }
 
-static inline void _led_off() {
+static inline void _active_led_on() {
+#	ifdef ACTIVE_LED_DDR
+		ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+#	else
+		_led_on();
+#	endif
+}
+
+static inline void _leds_off() {
 	led_program = 0;
 	LED_PORT &= ~_BV(LED_BIT);
+#	ifdef ACTIVE_LED_DDR
+	  ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
+#	endif
 }
 
 void led_toggle() {
@@ -121,14 +136,16 @@ void led_set(led_t mode) {
 		if (has_error) {
 			init_prg(0);
 		} else {
-			_led_off();
+			_leds_off();
 		}
 		break;
 	case OFF:
 		has_error = 0;
-		_led_off();
+		_leds_off();
 		break;
 	case ACTIVE:
+		if(!has_error) _active_led_on();
+		break;
 	case ON:
 		_led_on();
 		break;
@@ -137,6 +154,7 @@ void led_set(led_t mode) {
 		break;
 	case ERROR:
 		has_error = 1;
+		_leds_off();
 	default:
 		init_prg(0);
 		break;

@@ -1,13 +1,17 @@
 
-all: pcserver/fsser firmware/fw.hex
+all:	pcserver/fsser firmware doc
 
 pcserver/fsser:
 	make -C pcserver
 
-firmware/fw.hex:
-	make -C firmware
+firmware:
+	make -C firmware zoo
 
+doc:
+	make -C pcserver doc
+	make -C firmware doc
 clean:
 	make -C pcserver clean
-	make -C firmware clean
+	make -C firmware clean zooclean
 
+.PHONY:	pcserver/fsser firmware doc
