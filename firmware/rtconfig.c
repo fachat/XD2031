@@ -70,10 +70,13 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			ptr++;
 			uint8_t devaddr = (*ptr);
 			if (isdigit(*ptr)) devaddr = atoi(ptr);
-			if (devaddr >= 4 && devaddr <= 15) {
+			if (devaddr >= 4 && devaddr <= 31) {
 				rtc->device_address = devaddr;
 				er = ERROR_OK;
 				debug_printf("SETTING UNIT# TO %d\n", devaddr);
+			} else {
+				er = ERROR_SYNTAX_INVAL;
+				debug_printf("ERROR SETTING UNIT# TO %d\n", devaddr);
 			}
 		}
 		break;

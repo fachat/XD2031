@@ -57,6 +57,25 @@
 #undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
+#define	DEVICE_MASK	0x1f
+#define	SECADDR_MASK	0x0f
+
+#define	BUSCMD_MASK	0xe0	// ~DEVICE_MASK
+#define	BUSSEC_MASK	0xf0	// ~SECADDR_MASK
+
+#define	BUSCMD_TALK	0x40
+#define	BUSCMD_UNTALK	0x5f
+#define	BUSCMD_LISTEN	0x20
+#define	BUSCMD_UNLISTEN	0x3f
+#define	BUSCMD_DATA	0x60
+
+#define	CMD_SECADDR	15	// command channel
+#define	LOAD_SECADDR	0	// load channel
+
+#define	BUSSEC_OPEN	0xf0	// secaddr for open
+#define	BUSSEC_CLOSE	0xe0	// secaddr for close
+
+
 /* -------------------------------------------------------------------------
  *  Error and command channel handling
  */
@@ -92,8 +111,6 @@ void bus_init_bus(bus_t *bus) {
 	/* Init vars and flags */
   	bus->command.command_length = 0;
 
-	// this is copied over after an UNTALK/UNLISTEN
-	bus->current_device_address = devaddr;
 	rtconfig_init(&(bus->rtconf), devaddr);
 
 	bus->channel = NULL;
@@ -125,7 +142,7 @@ static int16_t cmd_handler (bus_t *bus)
 
 	bus->cmd_done = 0;
    
-	uint8_t secaddr = bus->secondary & 0x0f;
+	uint8_t secaddr = bus->secondary & SECADDR_MASK;
 
 	int8_t rv = 0;
 
@@ -136,13 +153,13 @@ static int16_t cmd_handler (bus_t *bus)
 	// zero termination
 	bus->command.command_buffer[bus->command.command_length++] = 0;
 
-	if (secaddr == 0x0f) {
+	if (secaddr == CMD_SECADDR) {
       		/* Handle commands */
 		// zero termination
       		rv = command_execute(bus_secaddr_adjust(bus, secaddr), bus, &error, _cmd_callback);
 
 		// change device address after command
-		bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
+		//bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
     	} else {
       		/* Handle filenames */
 
@@ -181,8 +198,8 @@ static int16_t cmd_handler (bus_t *bus)
 
 		// command may (or may not) open channel 15 for callback to the server
 		// so close it here, as this is done separately
-		if (secaddr == 15) {
-			channel_close(bus_secaddr_adjust(bus, 15));
+		if (secaddr == CMD_SECADDR) {
+			channel_close(bus_secaddr_adjust(bus, CMD_SECADDR));
 		}
 
         	if (bus_for_irq->errnum != 0) {
@@ -211,7 +228,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
 
-    if((bus->secondary & 0x0f) == 0x0f || (bus->secondary & 0xf0) == 0xf0) {
+    if(((bus->secondary & SECADDR_MASK) == CMD_SECADDR) || ((bus->secondary & BUSSEC_MASK) == BUSSEC_OPEN)) {
       if (bus->command.command_length < CONFIG_COMMAND_BUFFER_SIZE) {
         bus->command.command_buffer[bus->command.command_length++] = data;
       }
@@ -232,10 +249,10 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 	int16_t st = 0;
 
-	uint8_t secaddr = bus->secondary & 0x0f;
+	uint8_t secaddr = bus->secondary & SECADDR_MASK;
 	channel_t *channel = bus->channel;
 
-	if (secaddr == 15) {
+	if (secaddr == CMD_SECADDR) {
 
 		*data = error.error_buffer[error.readp];
 
@@ -280,7 +297,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				if (channel_has_more(channel)) {
 					channel_refill(channel);
 				} else {
-      					if (secaddr == 15 || secaddr == 0) {
+      					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
         					// autoclose when load is done, or after reading status channel
 						channel_close(bus_secaddr_adjust(bus, secaddr));
 						bus->channel = NULL;
@@ -300,18 +317,20 @@ static int16_t bus_prepare(bus_t *bus)
     int8_t secaddr;
     int st = 0;
 
+    uint8_t device = bus->device & DEVICE_MASK;
+
 #ifdef DEBUG_SERIAL
     debug_printf("***BusCommand %02x %02x\n",
          bus->device, bus->secondary);
 #endif
 
-    if ((bus->device & 0x0f) != bus->current_device_address) {
+    if (device != bus->rtconf.device_address) {
 	return 0x80;	// device not present
     }
 
-    secaddr = bus->secondary & 0x0f;
+    secaddr = bus->secondary & SECADDR_MASK;
 
-	  if (secaddr != 15) {
+	  if (secaddr != CMD_SECADDR) {
           	/* Open Channel */
 	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 		if (bus->channel == NULL) {
@@ -319,7 +338,7 @@ static int16_t bus_prepare(bus_t *bus)
 			st |= 0x40;	// TODO correct code?
 		}
 	  }
-          if ((bus->device & 0xf0) == 0x40) {
+          if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
 	      	// if we should TALK, prepare the first data byte
 	      	if (!st) {
               		st = bus_receivebyte(bus, &b, 1) & 0xbf;   /* any error, except eof */
@@ -334,11 +353,11 @@ static int16_t bus_prepare(bus_t *bus)
 }
 
 static void bus_close(bus_t *bus) {
-    	uint8_t secaddr = bus->secondary & 0x0f;
+    	uint8_t secaddr = bus->secondary & SECADDR_MASK;
           /* Close File */
-          if(secaddr == 15) {
+          if(secaddr == CMD_SECADDR) {
 	    // is this correct or only a convenience?
-            channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, 15));
+            channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
           } else {
             /* Close a single buffer */
             channel_close(bus_secaddr_adjust(bus, secaddr));
@@ -348,67 +367,79 @@ static void bus_close(bus_t *bus) {
 int16_t bus_attention(bus_t *bus, uint8_t b) {
     int16_t st = 0;
 
-    // UNLISTEN and it is either open or the command channel
-    if (b == 0x3f
-        && (((bus->secondary & 0xf0) == 0xf0)
-            || ((bus->secondary & 0x0f) == 0x0f))) {
+    uint8_t is_config_device = ( (bus->device & DEVICE_MASK) == bus->rtconf.device_address );
 
-        if ((bus->device & 0x0f) == bus->current_device_address) {
+    // UNLISTEN and it is either open or the command channel
+    if (b == BUSCMD_UNLISTEN
+        && (((bus->secondary & BUSSEC_MASK) == BUSSEC_OPEN)
+            || ((bus->secondary & SECADDR_MASK) == CMD_SECADDR))) {
+
+        if (is_config_device) {
 		// then process the command
+		// note: may change bus->rtconf.device_address!
         	st = cmd_handler(bus);
         }
 
     } else {
 
-	// not open, not command:
-        switch (b & 0xf0) {
-          case 0x20:
-          case 0x40:
+	// not unlisten, or not open, not command:
+	// first handle the "outer" commands that use 3 command bits (mask is 0xe0)
+        switch (b & BUSCMD_MASK) {
+          case BUSCMD_LISTEN:		// 0x20
+          case BUSCMD_TALK:		// 0x40
 	      // store device number plus LISTEN/TALK info
-	      if ((b & 0x0f) == bus->current_device_address) {
+	      // untalk / unlisten fall through here (there b & DEVICEMASK would be 0x1f)
+	      if ((b & DEVICE_MASK) == bus->rtconf.device_address) {
               	bus->device = b;
+		is_config_device = 1;	// true
 	      }
               break;
 
-          case 0x60:
+          case BUSCMD_DATA:		// 0x60
 	      // secondary address (open DATA channel)
-  	      if ((bus->device & 0x0f) == bus->current_device_address) {
+  	      if (is_config_device) {
 
               	bus->secondary = b;
 	      	// process a command if necessary
               	bus_prepare(bus);
 	      }
               break;
-          case 0xe0:
-	      // secondary address (CLOSE)
-  	      if ((bus->device & 0x0f) == bus->current_device_address) {
-              	bus->secondary = b;
-	      	// process a command if necessary
-              	//st = bus_command(bus);
-              	bus_close(bus);
-	      }
-              break;
-
-          case 0xf0:            /* Open File needs the filename first */
-  	      if ((bus->device & 0x0f) == bus->current_device_address) {
-              	bus->secondary = b;
-	      	// TODO: close previously opened file
-	      }
-              break;
 	  default:
-	      // falls through e.g. for unlisten/untalk
-	      break;
+		// in the default case handle all the
+		// others that use 4 command bits (mask is 0xf0)
+		switch(b & BUSSEC_MASK) {
+          	  case BUSSEC_CLOSE:
+	      		// secondary address (CLOSE)
+  	      		if (is_config_device) {
+              			bus->secondary = b;
+              			bus_close(bus);
+	      		}
+              		break;
+          	  case BUSSEC_OPEN:            
+	      		// for open, which needs the filename first before it can
+	      		// actually do something (done in unlisten handling at top of
+			// function)
+  	      		if (is_config_device) {
+              			bus->secondary = b;
+	      			// TODO: close previously opened file
+	      		}
+              		break;
+		  default:
+			// others are ignored
+			break;
+		}
+	      	break;
         }
     }
 
-    if ((b == 0x3f) || (b == 0x5f) || ((b & 0xf0) == 0xe0)) {
+    if ((b == BUSCMD_UNLISTEN) || (b == BUSCMD_UNTALK) || ((b & BUSSEC_MASK) == BUSSEC_CLOSE)) {
 	// unlisten, untalk, close
         bus->device = 0;
         bus->secondary = 0;
 
 	led_set(IDLE);
     } else {
-    	if (bus->current_device_address != (bus->device & 0x0f)) {
+    	if (!is_config_device) {
 		// not this device
         	st |= 0x80;
     	} else {

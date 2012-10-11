@@ -42,8 +42,8 @@
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((par_status&0xf000)==0x2000)
-#define isTalking()     ((par_status&0xf000)==0x4000)
+#define isListening()   ((par_status&0xe000)==0x2000)
+#define isTalking()     ((par_status&0xe000)==0x4000)
 
 // bus state
 static bus_t bus;

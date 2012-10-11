@@ -39,7 +39,7 @@
 // the IEEE488 or the serial IEC bus.
 typedef struct {
 	// configuration
-	uint8_t		current_device_address;	// current device address (copied from rtconfig)
+
 	uint8_t		secaddr_offset;	// offset to use on secondary address to get channel no
 					// to avoid collisions with other busses
 	// runtime for the bus
