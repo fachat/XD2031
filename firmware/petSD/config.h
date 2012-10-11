@@ -28,13 +28,20 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define F_CPU       18432000UL
+//#define DEV_ADDR	9	// default device address
 
-// LED configuration
-#define LED_DDR     DDRD
-#define LED_PORT    PORTD
-#define LED_BIT     PD5       // green LED (may be part of bi-color LED)
-// not used         PD6       // red LED   (may be part of bi-color LED)
+#define F_CPU		18432000UL
+
+// LED configuration for single LED HW / error LED
+#define LED_DDR		DDRD
+#define LED_PORT	PORTD
+#define LED_BIT		PD6	// red LED (may be part of bi-color LED)
+
+// LED configuration for separate activity LED
+// Leave ACTIVE_LED_DDR undefined for HW without activity LED
+#define ACTIVE_LED_DDR	DDRD
+#define ACTIVE_LED_PORT	PORTD
+#define ACTIVE_LED_BIT	PD5	// green LED (may be part of bi-color LED)
 
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120

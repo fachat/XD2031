@@ -28,6 +28,7 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "rtconfig.h"
 #include "errors.h"
@@ -63,32 +64,30 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 	// c now contains the actual command
 	switch(c) {
 	case 'U':
-		// look for "U=<unit number in ascii>"
+		// look for "U=<unit number in ascii || binary>"
 		ptr++;
 		if (*ptr == '=') {
 			ptr++;
-			if (isdigit(*ptr)) {
-				uint8_t devaddr = (*ptr) & 0x0f;
-				if (devaddr >= 4 && devaddr < 15) {
-					rtc->device_address = devaddr;
-					er = ERROR_OK;
-					debug_printf("SETTING UNIT# TO %d\n", devaddr);
-				}
+			uint8_t devaddr = (*ptr);
+			if (isdigit(*ptr)) devaddr = atoi(ptr);
+			if (devaddr >= 4 && devaddr <= 15) {
+				rtc->device_address = devaddr;
+				er = ERROR_OK;
+				debug_printf("SETTING UNIT# TO %d\n", devaddr);
 			}
 		}
 		break;
 	case 'D':
 		// set default drive number
-		// look for "D=<drive number in ascii>"
+		// look for "D=<drive number in ascii || binary>"
 		ptr++;
 		if (*ptr == '=') {
 			ptr++;
-			if (isdigit(*ptr)) {
-				uint8_t drv = (*ptr) & 0x0f;
-				rtc->last_used_drive = drv;
-				er = ERROR_OK;
-				debug_printf("SETTING DRIVE# TO %d\n", drv);
-			}
+			uint8_t drv = (*ptr);
+			if (isdigit(*ptr)) drv=atoi(ptr);
+			rtc->last_used_drive = drv;
+			er = ERROR_OK;
+			debug_printf("SETTING DRIVE# TO %d\n", drv);
 		}
 		break;
 	default:
