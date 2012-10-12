@@ -59,9 +59,6 @@ inline __attribute__((always_inline)) void power_on() {
 
     PORT_SD_CS |= _BV(PIN_SD_CS);               // SD chip select = high
     DDR_SD_CS |= _BV(PIN_SD_CS);                // SD_CS as output
-
-    PORT_ETH_CS |= _BV(PIN_ETH_CS);         // Ethernet chip select = high
-    DDR_ETH_CS |= _BV(PIN_ETH_CS);          // ETH_CS as output
                                       
     SPCR = 0x52;            /* Enable SPI function in mode 0 */ 
     SPSR = 0x01;            /* SPI 2x mode */           

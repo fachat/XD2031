@@ -13,9 +13,29 @@ typedef struct {
     BYTE    sec;    /* 0..59 */
 } RTC;
 
-int rtc_init (void);            /* Initialize RTC */
-uint8_t RTC_OK;                 /* Nonzero if RTC available and valid */
-int rtc_gettime (RTC*);         /* Get time */
-int rtc_settime (const RTC*);   /* Set time */
+#ifdef HAS_RTC
+int rtc_init (void);			/* Initialize RTC */
+uint8_t RTC_OK;				/* Nonzero if RTC available and valid */
+int rtc_gettime (RTC*);			/* Get time */
+int rtc_settime (const RTC*);		/* Set time */
+#endif
+
+/* -------------------------------------------------------------------------- */
+
+#ifndef HAS_RTC
+  static uint8_t RTC_OK=0;			/* RTC not available */
+
+  static int rtc_init (void) {			/* Initialize RTC */
+    return 0;
+  }
+
+  static int rtc_gettime (RTC* x) {		/* Get time */	
+    return 0;
+  }					
+
+  static int rtc_settime (const RTC* x) {	/* Set time */
+    return 0;
+  }					
+#endif
 
 #endif

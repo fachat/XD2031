@@ -1,5 +1,5 @@
 # This Makefile builds ChaN's FatFs monitor / demo 
-# Usage: make -f Makefile-FATdemo             
+# Usage: make -f Makefile-fatfs-testdemo             
 # Uncomment one of the following lines to select your device:
 
 DEVICE=xs1541
@@ -9,37 +9,32 @@ DEVICE=xs1541
 ####################################################################
 # Should not be modified
 
-TARGET=FatFs-test-demo
+TARGET=fatfs-testdemo
 
 FILES=testdemo.c
 DEPS=
 
-all:$(TARGET).hex
 
-USE_FAT=y                       # Enable optional FAT module?
-
-ifeq ($(DEVICE),xs1541)
+ifeq ($(strip $(DEVICE)),xs1541)
 	ARCHDEVICE= -mmcu=atmega644p
 endif
+
 ifeq ($(DEVICE),petSD)
+	DEVICEOPTS=-DHAS_RTC
 	ARCHDEVICE= -mmcu=atmega1284p
+	DEVICEFILES+=rtc-ds1307.c	# DS1307 Real time clock routines
+	DEVICEFILES+=i2c.c		# I2C high level routines
+	DEVICEFILES+=i2c-bb.c		# I2C bit banging routines
+	DEVICEDEPS+=rtc.h		# Real time clock defs  and prototypes
+	DEVICEDEPS+=i2c.h		# I2C high level routines
 endif
 
-#DEVICEFILES=petSD/ieeehw.c petSD/device.c
-#DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h petSD/device.h
-
-#DEVICEASMOBJ=atn.o
-
-DEVICEFILES+=../petSD/fatfshw.c	# HW specific code for FatFs
-DEVICEFILES+=sdcard.c         	# SD card low level routines
-DEVICEFILES+=rtc-ds1307.c	# DS1307 Real time clock routines
-DEVICEFILES+=i2c.c		# I2C high level routines
-DEVICEFILES+=i2c-bb.c		# I2C bit banging routines
-DEVICEDEPS+=../petSD/fatfshw.h	# HW specific defs / protos for FatFs
-DEVICEDEPS+=rtc.h		# Real time clock defs  and prototypes
-DEVICEDEPS+=i2c.h		# I2C high level routines
+DEVICEFILES+=sdcard.c         		# SD card low level routines
+DEVICEFILES+=../$(DEVICE)/fatfshw.c	# HW specific code for FatFs
+DEVICEDEPS+=../$(DEVICE)/fatfshw.h	# HW specific defs / protos for FatFs
 
 
+all:	$(TARGET).hex
 ## Assembler files
 xitoa.o: xitoa.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
@@ -67,7 +62,8 @@ ASMFLAGS=
 # Note that due to me using the "%02x" printf conversion, actually the
 # full(!) printf version is required, including the floating point stuff, to be linked.
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I../$(DEVICE) -I../
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I../$(DEVICE) -I../ -DXITOA
+
 
 clean: archclean deviceclean rootclean
 
@@ -78,7 +74,7 @@ $(TARGET): $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES
 	$(CC) $(CFLAGS) -o $(TARGET) $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
-$(TARGET).hex : $(TARGET)
+$(TARGET).hex:	$(TARGET)
 	 avr-objcopy -j .data -j .text -O ihex $< $@
 
 archclean:
@@ -102,3 +98,4 @@ DEPS+=integer.h   	# Integer type definitions for FatFs
 rootclean:
 	rm -f $(TARGET) $(TARGET).hex
 
+.PHONY: $(TARGET)

@@ -40,18 +40,20 @@
 #define DDR_SD_CS               DDRB
 #define PIN_SD_CS               PB4
 
-#define INPUT_SD_WP             PINC            /* SD card write protect */
-#define PORT_SD_WP              PORTC
-#define DDR_SD_WP               DDRC
-#define PIN_SD_WP               PC3
-#define SOCKWP                  (INPUT_SD_WP & _BV(PIN_SD_WP))  
+// #define INPUT_SD_WP          PINC            /* SD card write protect */
+// #define PORT_SD_WP           PORTC
+// #define DDR_SD_WP            DDRC
+// #define PIN_SD_WP            PC3
+// #define SOCKWP               (INPUT_SD_WP & _BV(PIN_SD_WP))  
+#define SOCKWP                  0               /* always writable */
 /* Write protected. yes:true, no:false, default:false */
 
-#define INPUT_SD_CD             PIND            /* SD card detect */
-#define PORT_SD_CD              PORTD
-#define DDR_SD_CD               DDRD
-#define PIN_SD_CD               PD4
-#define SOCKINS                 (!(INPUT_SD_CD & _BV(PIN_SD_CD)))       
+// #define INPUT_SD_CD             PIND            /* SD card detect */
+// #define PORT_SD_CD              PORTD
+// #define DDR_SD_CD               DDRD
+// #define PIN_SD_CD               PD4
+// #define SOCKINS                 (!(INPUT_SD_CD & _BV(PIN_SD_CD)))       
+#define SOCKINS                    1 /* assume card is always available */
 /* Card detected?   yes:true, no:false, default:true */
 
 /* ---- Prototypes -------------------------------------------------------- */

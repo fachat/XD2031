@@ -3,8 +3,11 @@
 
 -----------------------------------------------------------------------------*/
 
-#ifndef XITOA
-#define XITOA
+#ifndef XITOA_H
+#define XITOA_H
+
+#define	debug_printf(format, ...) xprintf(PSTR(format), __VA_ARGS__)
+#define debug_puts(s) xputs(s)
 
 #include <inttypes.h>
 #include <avr/pgmspace.h>

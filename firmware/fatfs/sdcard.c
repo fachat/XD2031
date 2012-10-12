@@ -3,9 +3,16 @@
 /*-----------------------------------------------------------------------*/
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include "fatfshw.h"     /* Device dependent I/O definitions */
 #include "diskio.h"
+#include "sdcard.h"
 
+#ifdef XITOA
+#  include "xitoa.h"
+#else
+#  include "debug.h"
+#endif
 
 /*--------------------------------------------------------------------------
 
@@ -164,7 +171,7 @@ BYTE send_cmd (     /* Returns R1 resp (bit7==1:Send failed) */
 {
     BYTE n, res;
 
-
+    debug_printf("cmd %02X ", cmd);
     if (cmd & 0x80) {   /* ACMD<n> is the command sequense of CMD55-CMD<n> */
         cmd &= 0x7F;
         res = send_cmd(CMD55, 0);
@@ -192,7 +199,8 @@ BYTE send_cmd (     /* Returns R1 resp (bit7==1:Send failed) */
     do
         res = xchg_spi(0xFF);
     while ((res & 0x80) && --n);
-
+    
+    debug_printf("=%02X",res);
     return res;         /* Return with the response value */
 }
 
@@ -218,7 +226,10 @@ DSTATUS SD_disk_initialize (
 
     if (drv) return STA_NOINIT;         /* Supports only single drive */
     power_off();                        /* Turn off the socket power to reset the card */
-    if (Stat & STA_NODISK) return Stat; /* No card in the socket */
+    if (Stat & STA_NODISK) {
+      debug_puts("No card!\n");
+      return Stat; /* No card in the socket */
+    }
     power_on();                         /* Turn on the socket power */
     slow_spi_clk();
     for (n = 10; n; n--) xchg_spi(0xFF);    /* 80 dummy clocks */
