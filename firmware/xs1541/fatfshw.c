@@ -57,6 +57,9 @@ inline __attribute__((always_inline)) void power_on() {
     SPI_PORT |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);   // SCK/MOSI as output
     SPI_DDR |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);
 
+    SPI_DDR &= ~_BV(SPI_PIN_MISO);		// MISO as input 
+    SPI_PORT |= _BV(SPI_PIN_MISO);		// pull-up enabled
+
     PORT_SD_CS |= _BV(PIN_SD_CS);               // SD chip select = high
     DDR_SD_CS |= _BV(PIN_SD_CS);                // SD_CS as output
                                       

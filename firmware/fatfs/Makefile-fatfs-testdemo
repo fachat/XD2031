@@ -5,23 +5,42 @@
 DEVICE=xs1541
 #DEVICE=petSD
 
+# This defines the serial-over-USB port to use when loading the
+# firmware into the device with "make load"
+# For AVR (AtMega) needs avrdude - see avr/Makefile for details
+SERIAL=/dev/ttyUSB0
 
+# If you do ISP programming with "make flash", select your programmer/port:
+DUDE_PROGRAMMER = avrispmkii
+# DUDE_PROGRAMMER = stk200
+
+DUDE_PORT = usb
+# DUDE_PORT = /dev/parport0
+# DUDE_PORT = lpt1
+
+# If you didn't find your programmer, have a took at the list given from:
+# avrdude -c ?
+#
 ####################################################################
 # Should not be modified
 
-TARGET=fatfs-testdemo
+TARGET=fatfs-testdemo-$(DEVICE)
+BINDIR=../bin
 
 FILES=testdemo.c
 DEPS=
 
-
 ifeq ($(strip $(DEVICE)),xs1541)
 	ARCHDEVICE= -mmcu=atmega644p
+	TARGET_MCU=m644p
+	SIZE_MCU=atmega644p
 endif
 
 ifeq ($(DEVICE),petSD)
 	DEVICEOPTS=-DHAS_RTC
 	ARCHDEVICE= -mmcu=atmega1284p
+	TARGET_MCU=m1284p
+	SIZE_MCU=atmega1284p
 	DEVICEFILES+=rtc-ds1307.c	# DS1307 Real time clock routines
 	DEVICEFILES+=i2c.c		# I2C high level routines
 	DEVICEFILES+=i2c-bb.c		# I2C bit banging routines
@@ -32,9 +51,10 @@ endif
 DEVICEFILES+=sdcard.c         		# SD card low level routines
 DEVICEFILES+=../$(DEVICE)/fatfshw.c	# HW specific code for FatFs
 DEVICEDEPS+=../$(DEVICE)/fatfshw.h	# HW specific defs / protos for FatFs
+DEVICEDEPS+=../$(DEVICE)/ffconf.h	# HW specific FatFs configuration
 
 
-all:	$(TARGET).hex
+all:	../bin/$(TARGET).hex size
 ## Assembler files
 xitoa.o: xitoa.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
@@ -54,6 +74,12 @@ ARCHASMOBJ=../avr/uartints.o ../avr/timerint.o xitoa.o
 
 ARCH=avr
 
+# If avrdude isn't at given location, search it in the $PATH
+DUDE=/opt/cross/bin/avrdude
+ifeq ($(wildcard $(DUDE)),)
+        DUDE = avrdude
+endif
+
 CC=avr-gcc
 ARCHINCLUDE=-I/opt/cross/avr/include -I../$(ARCH) 
 
@@ -68,17 +94,37 @@ CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpac
 clean: archclean deviceclean rootclean
 
 distclean: clean
-	rm $(TARGET) $(TARGET).hex
+	rm $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 	
-$(TARGET): $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
+$(BINDIR)/$(TARGET).elf: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
+	$(CC) $(CFLAGS) -o $(BINDIR)/$(TARGET).elf $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
-$(TARGET).hex:	$(TARGET)
+$(BINDIR)/$(TARGET).hex:	$(BINDIR)/$(TARGET).elf
 	 avr-objcopy -j .data -j .text -O ihex $< $@
+
+# Info about memory usage
+size:
+	@FORMAT=berkeley ;\
+	if avr-size --help | grep -e "--format=" | grep -q avr ; then\
+	  FORMAT=avr ;\
+	fi ;\
+	avr-size --format $$FORMAT $(BINDIR)/$(TARGET).elf --mcu=$(SIZE_MCU)
 
 archclean:
 	rm -f $(ARCHASMOBJ)
+
+# Bootloader AVR programming with AVRPROG compatible bootloader from
+# http://www.siwawi.arubi.uni-kl.de/avr_projects/#avrprog_boot
+# Do NOT use $(TARGET_MCU) here. The bootloader expects m644 only
+# but flashes m644p as well.
+load:
+	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(BINDIR)/$(TARGET).hex:i
+
+# ISP programming
+flash:
+	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
+
 
 ## Assembler files
 ../avr/%.o: ../avr/%.S
@@ -96,6 +142,6 @@ DEPS+=diskio.h    	# Defs and protos for disk I/O modules
 DEPS+=integer.h   	# Integer type definitions for FatFs
 
 rootclean:
-	rm -f $(TARGET) $(TARGET).hex
+	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 
 .PHONY: $(TARGET)

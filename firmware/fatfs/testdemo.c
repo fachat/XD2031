@@ -2,7 +2,6 @@
 /* FAT file system sample project for FatFs            (C)ChaN, 2010    */
 /*----------------------------------------------------------------------*/
 
-
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
@@ -12,7 +11,7 @@
 #include "ff.h"
 #include "diskio.h"
 #include "rtc.h"
-
+#include "fatfshw.h"
 
 DWORD AccSize;              /* Work register for fs command */
 WORD AccFiles, AccDirs;
