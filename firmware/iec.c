@@ -178,16 +178,17 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		return -1;
 	}
 
+	// just in case, release the data line
+	datahi();
+
 	// make sure data is actually lo
 	do {
 		if (checkatn(0)) {
 			return -1;
 		}
+//led_toggle();
 	} while (is_port_datahi(read_debounced()));
 
-	
-	// are we really that fast?
-	delayus(70);
 	
 	// e91f
 	clkhi();
@@ -220,16 +221,6 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 
 	// e94b
 	clklo();
-
-	delayus(70);
-
-	// make sure data is still hi
-	do {
-		if (checkatn(0)) {
-			return -1;
-		}
-	} while (is_port_datalo(read_debounced()));
-
 	
 	// e958
 	do {
@@ -245,29 +236,28 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		}
 		data >>= 1;
 
-		delayus(70);
+		delayus(80);
 
 		clkhi();
 
+		// C64: min about 15 cycles to detect it, plus 43+ bad line cycles
 		// fef3
-		delayus(80);
+		delayus(70);
 
 		// fefb
 		clklo();
 		datahi();
 
-		delayus(5);	// settle time (sd2iec)
 		cnt--;
 	} while (cnt > 0);
 
 
+	// wait for the host to set data lo
 	do {
 		if (checkatn(0)) {
 			return -1;
 		}
 	} while (is_port_datahi(read_debounced()));	
-
-led_on();
 
 	return 0;
 }
@@ -279,7 +269,7 @@ static void talkloop()
 
 	do {
             	ser_status = bus_receivebyte(&bus, &c, 1);
-debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
+//debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
 
 		// disable ints
 		cli();
@@ -287,12 +277,15 @@ debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);deb
 		er = iecout(c, ser_status & 0x40);
 		// enable ints
 		sei();
-debug_printf("next, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
+
+//		delayus(4000);
+
+//debug_printf("next, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
 
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, 0);
 		}
-debug_printf("commited, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
+//debug_printf("commited, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
 
 	} while (er >= 0);
 
