@@ -54,7 +54,7 @@
 
 #include "device.h"
 
-#define	DEBUG_SERIAL
+#undef	DEBUG_SERIAL
 #undef	DEBUG_SERIAL_DATA
 
 #define	DEVICE_MASK	0x1f

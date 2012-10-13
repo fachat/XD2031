@@ -37,8 +37,7 @@
 #include "debug.h"
 #include "led.h"
 
-#define DEBUG_BUS
-#define DEBUG_BUS_DATA
+#undef DEBUG_BUS
 
 // Prototypes
 
@@ -357,6 +356,7 @@ void iec_mainloop_iteration(void)
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif
+		delayms(10);
 	
 	// E8D7
 	satnahi();
