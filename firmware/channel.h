@@ -128,7 +128,10 @@ channel_t* channel_refill(channel_t *chan);
 void channel_preload(int8_t channelno);
 void channel_preloadp(channel_t *chan);
 
-channel_t* channel_put(channel_t *chan, char c, int forceflush);
+#define	PUT_FLUSH	0x01
+#define	PUT_SYNC	0x02
+
+channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush);
 
 void channel_close(int8_t secondary_address);
 

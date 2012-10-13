@@ -105,7 +105,7 @@ static void listenloop() {
 #endif
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            par_status = bus_sendbyte(&bus, c, er & E_EOI);
+            par_status = bus_sendbyte(&bus, c, (er & E_EOI) ? BUS_FLUSH : 0);
         }
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode

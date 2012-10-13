@@ -117,12 +117,13 @@ static inline uint8_t clkishi() {
 
 // returns a debounced port byte, to be checked with 
 // the methods is_port_*(port_byte)
+// only check for changes in the actual IEC bus lines
 static inline uint8_t read_debounced() {
 	uint8_t port;
 
 	do {
 		port = IEC_INPUT;
-	} while (port != IEC_INPUT);
+	} while ( (port ^ IEC_INPUT) & (_BV(IEC_PIN_CLK) | _BV(IEC_PIN_DATA)) );
 	
 	return port;
 }
@@ -155,10 +156,10 @@ static inline void satnahi() {
 
 // disarm ATN acknowledge handling
 static inline void satnalo() {
-	if (!is_dataout) {
-		datalo();
-	}
 	is_satna = 1;
+	if (is_dataout) {
+		datahi();
+	}
 }
 
 

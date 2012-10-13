@@ -333,6 +333,7 @@ static void _push_callback(int8_t channelno, int8_t errnum) {
         if (p != NULL) {
                 p->last_push_errorno = errnum;
 
+led_on();
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
                 if (p->push_state == PUSH_FILLTWO) {
@@ -347,7 +348,7 @@ static void _push_callback(int8_t channelno, int8_t errnum) {
 }
 	
 
-channel_t* channel_put(channel_t *chan, char c, int forceflush) {
+channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;
@@ -358,18 +359,20 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 
 	packet_write_char(curpack, (uint8_t) c);
 
-	if (packet_is_full(curpack) || forceflush) {
+	if (packet_is_full(curpack) || (forceflush & PUT_FLUSH)) {
 		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
 
+led_off();
 		// wait until the other packet has been replied to,
 		// i.e. it has been sent, the buffer is free again 
 		// which we need for the next channel_put
 		while (chan->push_state == PUSH_FILLTWO) {
 			delayms(1);
-			//serial_delay();
+			main_delay();
 		}
 
-		// note that we pushed one and are now filling the second
+		// note that we are pushing one and are now filling the second
+		// change that before pushing, as callback might already be done during push
 		chan->push_state = PUSH_FILLTWO;
 
 		// use same packet as rx/tx buffer
@@ -377,9 +380,25 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 		endpoint->provider->submit_call(endpoint->provdata, 
 			channo, curpack, curpack, _push_callback);
 
-		// switch
-		chan->current = 1-chan->current;
-		packet_reset(&chan->buf[chan->current], channo);
+		if (forceflush & PUT_SYNC) {
+			// we are forced to wait for the reply, e.g. from the IEC code
+			// as the interrupt block prevents us from really receiving all
+			// replies - so we have to make sure we really got it
+
+			// wait until the other packet has been replied to,
+			// i.e. it has been sent, the buffer is free again 
+			// which we need for the next channel_put
+			while (chan->push_state == PUSH_FILLTWO) {
+				delayms(1);
+				main_delay();
+			}
+
+		} else {
+			// switch
+			chan->current = 1-chan->current;
+			packet_reset(&chan->buf[chan->current], channo);
+		}
+led_on();
 	}
 	return chan;
 }

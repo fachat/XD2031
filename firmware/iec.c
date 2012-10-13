@@ -81,13 +81,15 @@ static int16_t iecin(uint8_t underatn)
 	do {
 		if (checkatn(underatn)) 
 			return -1;
-
 	} while (is_port_clklo(read_debounced()));
 
 	datahi();
 
-	// TODO: wait for data being really hi, as other listeners
-	// may delay the transition, and we misunderstand this for an EOI
+	// wait until data is really hi (other devices may delay this)
+	do {
+		if (checkatn(underatn))
+			return -1;
+	} while (is_port_datalo(read_debounced()));
 
 	// set timer with 256 us
 	timer_set_us(256);
@@ -100,7 +102,9 @@ static int16_t iecin(uint8_t underatn)
 		if (timer_is_timed_out()) { 
 			// handle EOI condition
 			datalo();
-			delayus(50);
+			// at least 23 cycles + 43+ for bad lines
+			delayus(80);
+
 			datahi();
 
 			do {
@@ -134,9 +138,14 @@ static int16_t iecin(uint8_t underatn)
 		} while (is_port_clkhi(read_debounced()));
 
 		cnt--;
+
 	} while (cnt > 0);
 
+	// this can cause device not present on save
+	//delayus(5);
+
 	datalo();
+	delayus(256);
 
 	return (0xff & data) | (eoi ? 0x4000 : 0);
 }
@@ -155,11 +164,12 @@ static void listenloop() {
 		c = iecin(0);
 		// enable ints
 		sei();
-
 		if (c < 0) {
+//debug_printf("c<0: %d\n", c);
 			break;
 		}
-            	ser_status = bus_sendbyte(&bus, c, (c & 0x4000) ? 1 : 0);
+//debug_printf("sending byte: %02x\n", c&0xff);
+            	ser_status = bus_sendbyte(&bus, c, BUS_SYNC | ((c & 0x4000) ? BUS_FLUSH : 0));
         } while (1);
 
 	return;
@@ -302,15 +312,6 @@ void iec_mainloop_iteration(void)
 {
         int16_t cmd = 0;
 
-#if 0
-	// debug
-	timer_set_us(256);
-	led_toggle();
-	while(!timer_is_timed_out());
-	led_toggle();
-	// end debug
-#endif
-
         ser_status=0;
 
 	// only do something on ATN low
@@ -330,14 +331,6 @@ void iec_mainloop_iteration(void)
 	delayus(20);
 
         // Loop to get commands during ATN lo ----------------------------
-#if 0 
-	// this is also on top of liecin()
-	do {
-		if (satnishi()) {
-			goto cmd;
-		}
-	} while (clkislo());
-#endif
 
 	do {
 		// disable ints
@@ -348,7 +341,6 @@ void iec_mainloop_iteration(void)
 		sei();
 
 		if (cmd < 0) {
-debug_printf("cmd=%d", cmd);
 			break;
 		}
 		ser_status = bus_attention(&bus, 0xff & cmd);
@@ -360,6 +352,7 @@ debug_printf("cmd=%d", cmd);
 	// parallelattention has set status what to do
 	// now transfer the data
 cmd:
+
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif

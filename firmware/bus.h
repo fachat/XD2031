@@ -61,6 +61,10 @@ typedef struct {
 	rtconfig_t	rtconf;		
 } bus_t;
 
+// definitions for bus_sendbyte
+#define	BUS_SYNC	PUT_SYNC		// from channel.h
+#define	BUS_FLUSH	PUT_FLUSH		// from channel.h
+
 // init
 // needs to be called before any concrete bus instance init
 void bus_init();
@@ -70,7 +74,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *c, uint8_t newbyte);
 
 int16_t bus_attention(bus_t *bus, uint8_t cmd);
 
-int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t with_eoi);
+int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t options);
 
 // init the bus_t structure
 void bus_init_bus(bus_t *bus);
