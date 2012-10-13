@@ -37,21 +37,25 @@
 #include "debug.h"
 #include "led.h"
 
-#define DEBUG_BUS
+#undef DEBUG_BUS
 
 // Prototypes
 
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((ser_status&0xe000)==0x2000)
-#define isTalking()     ((ser_status&0xe000)==0x4000)
-
 // bus state
 static bus_t bus;
 
-// TODO: make that ... different...
+// This status value has in its lower byte the status similar as it
+// is used in the Commodore line of computers, mostly used for 0x40 as EOF.
+// In the upper byte it contains the current "first" command byte, i.e.
+// whether we are talking or listening. This is returned from the bus layer
+// so we can react on it.
 static int16_t ser_status = 0;
+
+#define isListening()   ((ser_status&0xe000)==0x2000)
+#define isTalking()     ((ser_status&0xe000)==0x4000)
 
 
 /***************************************************************************
@@ -145,6 +149,8 @@ static int16_t iecin(uint8_t underatn)
 	//delayus(5);
 
 	datalo();
+
+	// TODO: optimize
 	delayus(256);
 
 	return (0xff & data) | (eoi ? 0x4000 : 0);
@@ -165,10 +171,8 @@ static void listenloop() {
 		// enable ints
 		sei();
 		if (c < 0) {
-//debug_printf("c<0: %d\n", c);
 			break;
 		}
-//debug_printf("sending byte: %02x\n", c&0xff);
             	ser_status = bus_sendbyte(&bus, c, BUS_SYNC | ((c & 0x4000) ? BUS_FLUSH : 0));
         } while (1);
 
@@ -181,7 +185,6 @@ static void listenloop() {
 
 static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	
-	uint8_t port;
 	uint8_t cnt = 8;
 
 	if (checkatn(0)) {
@@ -196,7 +199,6 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		if (checkatn(0)) {
 			return -1;
 		}
-//led_toggle();
 	} while (is_port_datahi(read_debounced()));
 
 	
@@ -246,6 +248,8 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		}
 		data >>= 1;
 
+		// here and in the next delay, maybe build a switch to 
+		// support faster speeds for VIC-20
 		delayus(80);
 
 		clkhi();
@@ -274,12 +278,11 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 
 static void talkloop()
 {
-        int16_t er /*,sec*/;
+        int16_t er;
         uint8_t c;
 
 	do {
             	ser_status = bus_receivebyte(&bus, &c, 1);
-//debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
 
 		// disable ints
 		cli();
@@ -288,18 +291,11 @@ static void talkloop()
 		// enable ints
 		sei();
 
-//		delayus(4000);
-
-//debug_printf("next, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
-
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, 0);
 		}
-//debug_printf("commited, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
 
-	} while (er >= 0);
-
-debug_printf("bailing out with er=%d\n", er);
+	} while (er >= 0 && ((ser_status & 0xff) == 0));
 }
 
 /***************************************************************************
@@ -344,6 +340,14 @@ void iec_mainloop_iteration(void)
 			break;
 		}
 		ser_status = bus_attention(&bus, 0xff & cmd);
+
+		// when I removed all the debug output, I had
+		// to insert this delay to keep it from hanging
+		// when loading a directory.
+		// (which may be a sign that
+		// the ATN high detection in iecin isn't working as 
+		// well - if we have to rely on satnislo() here)
+		delayms(3);
 
 	} while (satnislo());
 	

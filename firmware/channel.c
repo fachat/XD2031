@@ -333,7 +333,6 @@ static void _push_callback(int8_t channelno, int8_t errnum) {
         if (p != NULL) {
                 p->last_push_errorno = errnum;
 
-led_on();
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
                 if (p->push_state == PUSH_FILLTWO) {
@@ -362,7 +361,6 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 	if (packet_is_full(curpack) || (forceflush & PUT_FLUSH)) {
 		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
 
-led_off();
 		// wait until the other packet has been replied to,
 		// i.e. it has been sent, the buffer is free again 
 		// which we need for the next channel_put
@@ -398,7 +396,6 @@ led_off();
 			chan->current = 1-chan->current;
 			packet_reset(&chan->buf[chan->current], channo);
 		}
-led_on();
 	}
 	return chan;
 }

@@ -42,14 +42,18 @@
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((par_status&0xe000)==0x2000)
-#define isTalking()     ((par_status&0xe000)==0x4000)
-
 // bus state
 static bus_t bus;
 
-// TODO: make that ... different...
+// This status value has in its lower byte the status similar as it
+// is used in the Commodore line of computers, mostly used for 0x40 as EOF.
+// In the upper byte it contains the current "first" command byte, i.e.
+// whether we are talking or listening. This is returned from the bus layer
+// so we can react on it.
 static int16_t par_status = 0;
+
+#define isListening()   ((par_status&0xe000)==0x2000)
+#define isTalking()     ((par_status&0xe000)==0x4000)
 
 
 /***************************************************************************
