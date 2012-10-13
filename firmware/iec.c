@@ -151,7 +151,7 @@ static int16_t iecin(uint8_t underatn)
 	datalo();
 
 	// TODO: optimize
-	delayus(256);
+	//delayus(256);
 
 	return (0xff & data) | (eoi ? 0x4000 : 0);
 }
@@ -282,7 +282,7 @@ static void talkloop()
         uint8_t c;
 
 	do {
-            	ser_status = bus_receivebyte(&bus, &c, 1);
+            	ser_status = bus_receivebyte(&bus, &c, BUS_PRELOAD | BUS_SYNC);
 
 		// disable ints
 		cli();
@@ -292,7 +292,7 @@ static void talkloop()
 		sei();
 
 		if (er >= 0) {
-            		ser_status = bus_receivebyte(&bus, &c, 0);
+            		ser_status = bus_receivebyte(&bus, &c, BUS_SYNC);
 		}
 
 	} while (er >= 0 && ((ser_status & 0xff) == 0));
@@ -341,21 +341,12 @@ void iec_mainloop_iteration(void)
 		}
 		ser_status = bus_attention(&bus, 0xff & cmd);
 
-		// when I removed all the debug output, I had
-		// to insert this delay to keep it from hanging
-		// when loading a directory.
-		// (which may be a sign that
-		// the ATN high detection in iecin isn't working as 
-		// well - if we have to rely on satnislo() here)
-		delayms(3);
-
 	} while (satnislo());
 	
         // ---------------------------------------------------------------
 	// ATN is high now
 	// parallelattention has set status what to do
 	// now transfer the data
-cmd:
 
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
@@ -369,7 +360,13 @@ cmd:
 		listenloop();
         } else
         {
+		// when I removed all the debug output, I had
+		// to insert this delay to keep it from hanging
+		// when loading.
+		delayms(10);
+
 		if (isTalking()) {
+
 			datahi();
 			clklo();
 			talkloop();

@@ -80,16 +80,14 @@ static inline void atn_init() {
 }
 
 static inline void datahi() {
-	// disable interrupt to avoid race condition
-	// of ATN irq between the satnishi() check and
+	// note: do not fiddle with ints, as iecout and iecin
+	// alread run interrupt-protected
+
 	// setting DATA hi
-	cli();	
 	if (satnishi() || is_satna) {
 	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_DATA);    // DATA as input
       		IEC_PORT |= _BV(IEC_PIN_DATA);             // Enable pull-up
 	}
-	// allow interrupt again
-	sei();
 	is_dataout = 1;
 }
 

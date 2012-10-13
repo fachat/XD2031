@@ -64,6 +64,7 @@ typedef struct {
 // definitions for bus_sendbyte
 #define	BUS_SYNC	PUT_SYNC		// from channel.h
 #define	BUS_FLUSH	PUT_FLUSH		// from channel.h
+#define	BUS_PRELOAD	0x80		
 
 // init
 // needs to be called before any concrete bus instance init

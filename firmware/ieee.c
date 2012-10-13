@@ -144,7 +144,7 @@ static void talkloop()
             } while( nrfdislo() );
 
             /* write data & eoi */
-            par_status = bus_receivebyte(&bus, &c, 1);
+            par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
             if(par_status & 0x40)
             {
                 eoilo();

@@ -70,7 +70,7 @@ static void _pull_callback(int8_t channel_no, int8_t errorno) {
 /**
  * pull in a buffer from the server
  */
-static void channel_pull(channel_t *c, uint8_t slot) {
+static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	packet_t *p = &c->buf[slot];
 
 	//debug_printf("pull: chan=%p, channo=%d\n", c, c->channel_no);
@@ -84,14 +84,23 @@ static void channel_pull(channel_t *c, uint8_t slot) {
 	if (c->pull_state == PULL_OPEN) {
 		c->pull_state = PULL_PRELOAD;
 		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
+
+		if (options & GET_SYNC) {
+			while (c->pull_state == PULL_PRELOAD) {
+				delayms(1);
+			}
+		}
 	} else
 	if (c->pull_state == PULL_ONEREAD && c->writetype == WTYPE_READONLY) {
 		c->pull_state = PULL_PULL2ND;
 		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
-	}
 
-//led_on();
-//debug_puts("pull_state is "); debug_puthex(c->pull_state); debug_putcrlf();
+		if (options & GET_SYNC) {
+			while (c->pull_state == PULL_PULL2ND) {
+				delayms(1);
+			}
+		}
+	}
 }
 
 /*
@@ -143,7 +152,7 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 	do {
 	    if (chan->pull_state == PULL_OPEN) {
 		chan->current = 0;
-		channel_pull(chan, 0);
+		channel_pull(chan, 0, GET_SYNC);
 	    }
 	    if (wait) {
 		while (chan->pull_state == PULL_PRELOAD) {
@@ -206,7 +215,7 @@ char channel_current_byte(channel_t *chan) {
 /**
  * return true (non-zero) when there is still a byte available in the buffer
  */
-uint8_t channel_next(channel_t *chan) {
+uint8_t channel_next(channel_t *chan, uint8_t options) {
 
 	// make sure we do have something at least
 	channel_preload_int(chan, 1);
@@ -220,7 +229,7 @@ uint8_t channel_next(channel_t *chan) {
 	if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_last(&chan->buf[chan->current]))) {
 		// if the other packet is free ("done"), and the current packet is not the last one ("eoi")
 		// We should only do this on "standard" files though, not relative or others
-		channel_pull(chan, other);
+		channel_pull(chan, other, options);
 	}
 
 	// return the actual value requested
@@ -286,7 +295,7 @@ void channel_close(int8_t channel_no) {
  * the current buffer is empty, but channel_has_more() true has indicated
  * that the current buffer is not the last one
  */
-channel_t* channel_refill(channel_t *chan) {
+channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	// buf->refill();
 	// buf = find_buffer(...)
 	//
@@ -303,8 +312,6 @@ channel_t* channel_refill(channel_t *chan) {
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
-//debug_printf(">>3: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-//debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
@@ -317,7 +324,7 @@ channel_t* channel_refill(channel_t *chan) {
 			chan->pull_state = PULL_ONEREAD;
 
 			if (!packet_is_last(&chan->buf[chan->current])) {
-				channel_pull(chan, 1-other);
+				channel_pull(chan, 1-other, options);
 			}
 			return chan;
 		}
@@ -366,7 +373,6 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 		// which we need for the next channel_put
 		while (chan->push_state == PUSH_FILLTWO) {
 			delayms(1);
-			main_delay();
 		}
 
 		// note that we are pushing one and are now filling the second
@@ -377,6 +383,10 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 		endpoint_t *endpoint = chan->endpoint;
 		endpoint->provider->submit_call(endpoint->provdata, 
 			channo, curpack, curpack, _push_callback);
+
+		// switch
+		chan->current = 1-chan->current;
+		packet_reset(&chan->buf[chan->current], channo);
 
 		if (forceflush & PUT_SYNC) {
 			// we are forced to wait for the reply, e.g. from the IEC code
@@ -391,10 +401,6 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 				main_delay();
 			}
 
-		} else {
-			// switch
-			chan->current = 1-chan->current;
-			packet_reset(&chan->buf[chan->current], channo);
 		}
 	}
 	return chan;

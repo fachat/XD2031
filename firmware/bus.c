@@ -260,7 +260,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			// send EOF
 			st |= 0x40;
 		}
-		if (!preload) {
+		if (!(preload & BUS_PRELOAD)) {
 			// the real thing
 			error.readp++;
 			if (error.error_buffer[error.readp] == 0) {
@@ -291,11 +291,11 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			st |= 0x40;
 		}
 
-		if (!preload) {
+		if (!(preload & BUS_PRELOAD)) {
 			// make sure the next call does have a data byte
-			if (!channel_next(channel)) {
+			if (!channel_next(channel, preload & BUS_SYNC)) {
 				if (channel_has_more(channel)) {
-					channel_refill(channel);
+					channel_refill(channel, preload & BUS_SYNC);
 				} else {
       					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
         					// autoclose when load is done, or after reading status channel
@@ -341,7 +341,7 @@ static int16_t bus_prepare(bus_t *bus)
           if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
 	      	// if we should TALK, prepare the first data byte
 	      	if (!st) {
-              		st = bus_receivebyte(bus, &b, 1) & 0xbf;   /* any error, except eof */
+              		st = bus_receivebyte(bus, &b, BUS_PRELOAD | BUS_SYNC) & 0xbf;   /* any error, except eof */
 			//debug_printf("receive gets st=%04x\n", st);
 		} else {
 			// cause a FILE NOT FOUND

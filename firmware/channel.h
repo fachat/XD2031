@@ -119,17 +119,20 @@ static inline uint8_t channel_current_is_eof(channel_t *chan) {
         return packet_current_is_eof(&chan->buf[chan->current]);
 }       
 
-uint8_t channel_next(channel_t *chan);
+uint8_t channel_next(channel_t *chan, uint8_t options);
 
 uint8_t channel_has_more(channel_t *chan);
 
-channel_t* channel_refill(channel_t *chan);
+channel_t* channel_refill(channel_t *chan, uint8_t options);
 
 void channel_preload(int8_t channelno);
 void channel_preloadp(channel_t *chan);
 
 #define	PUT_FLUSH	0x01
 #define	PUT_SYNC	0x02
+
+#define	GET_WAIT	0x01
+#define	GET_SYNC	0x02
 
 channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush);
 
