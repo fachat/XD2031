@@ -34,6 +34,7 @@
  *   options:
  * 	-ro	export read-only
  * 	-d <device>  determine device (if none, use stdin/stdout)
+ *	-d auto      try to auto-detect device	
  */
 
 #include <stdio.h>
@@ -44,6 +45,9 @@
 #include <termios.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/dir.h>
+#include <fnmatch.h>
+#include <string.h>
 
 #include "fscmd.h"
 #include "privs.h"
@@ -59,6 +63,7 @@ void usage(void) {
                 "               e.g. use '-A0=fs:.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
 		"   -d <device>	define serial device to use\n"
+		"   -d auto     auto-detect serial device\n"
 	);
 	exit(1);
 }
@@ -137,6 +142,45 @@ int config_ser(int fd) {
 	return 0;
 }
 
+void guess_device(char** device) {
+/* search /dev for a virtual serial port 
+   Change "device" to it, if exactly one found
+   If none found or more than one, exit(1) with error msg */
+
+  DIR *dirptr;
+  struct direct *entry;
+  static char devicename[80] = "/dev/";
+  int candidates = 0;
+
+  dirptr = opendir(devicename);
+  while((entry=readdir(dirptr))!=NULL) {
+    if ((!fnmatch("cu.usbserial-*",entry->d_name,FNM_NOESCAPE)) ||
+        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE))) 
+    {
+      strncpy(devicename + 5, entry->d_name, 80-5); 
+      devicename[80] = 0; // paranoid... wish I had strncpy_s...
+      candidates++;
+    }
+  }
+  if(candidates == 1) *device = devicename;
+
+  // return(candidates); someday the error handling could be outside this fn
+
+  switch(candidates) {
+    case 0:
+      fprintf(stderr, "Could not auto-detect device: none found\n");
+      exit(1);
+    case 1:
+      log_info("Serial device %s auto-detected\n", *device);
+      break;
+    default:
+      fprintf(stderr, "Unable to decide which serial device it is. "
+                      "Please pick one.\n");
+      exit(1);
+      break;
+  }
+}
+
 int main(int argc, char *argv[]) {
 	int writefd, readfd;
 	int fdesc;
@@ -159,6 +203,11 @@ int main(int argc, char *argv[]) {
 		if (i < argc-2) {
 		  i++;
 		  device = argv[i];
+		  if(!strcmp(device,"auto")) {
+		    guess_device(&device);
+		    /* exits on more or less than a single possibility */
+		  }
+		  printf("main: device = %s\n", device);
 		}
  	     	break;
 	    case 'A':

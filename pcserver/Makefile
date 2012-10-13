@@ -33,10 +33,10 @@ clean:
 
 
 run:
-	MALLOC_CHECK_=1 ./fsser -d /dev/ttyUSB0 -A0=fs:../sample -A1=fs:../tools .
+	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools .
 
 debug:
-	echo "Start with: run -d /dev/ttyUSB0 ../sample"
+	echo "Start with: run -d auto ../sample"
 	sudo gdb ./fsser 
 
 curltest: curl_test.c curl_provider.c log.c
