@@ -37,7 +37,8 @@
 #include "debug.h"
 #include "led.h"
 
-#undef DEBUG_BUS
+#define DEBUG_BUS
+#define DEBUG_BUS_DATA
 
 // Prototypes
 
@@ -145,13 +146,7 @@ static int16_t iecin(uint8_t underatn)
 
 	} while (cnt > 0);
 
-	// this can cause device not present on save
-	//delayus(5);
-
 	datalo();
-
-	// TODO: optimize
-	//delayus(256);
 
 	return (0xff & data) | (eoi ? 0x4000 : 0);
 }
@@ -184,7 +179,8 @@ static void listenloop() {
 // more info see here: https://groups.google.com/forum/?hl=de&fromgroups=#!msg/comp.sys.cbm/e4qxrtt5RP0/0q1EVUkV8moJ
 
 static int16_t iecout(uint8_t data, uint8_t witheoi) {
-	
+
+	uint8_t port;	
 	uint8_t cnt = 8;
 
 	if (checkatn(0)) {
@@ -194,13 +190,19 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// just in case, release the data line
 	datahi();
 
-	// make sure data is actually lo
-	do {
-		if (checkatn(0)) {
-			return -1;
-		}
-	} while (is_port_datahi(read_debounced()));
+	// make sure data is actually lo (done by controller)
+//	do {
+//		if (checkatn(0)) {
+//			return -1;
+//		}
+//	} while (is_port_datahi(read_debounced()));
 
+	// e916 ff
+	port = read_debounced();
+	
+led_off();
+
+	delayus(60);	// sd2iec
 	
 	// e91f
 	clkhi();
@@ -210,9 +212,11 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		if (checkatn(0)) {
 			return -1;
 		}
+sei();cli();
+led_toggle();
 	} while (is_port_datalo(read_debounced()));
-
-	if (witheoi) {
+led_on();
+	if (witheoi || is_port_datahi(port)) {
 		// signal the EOI
 		// wait for data low as acknowledge from the listener
 		do {
@@ -234,6 +238,7 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// e94b
 	clklo();
 	
+//led_on();
 	// e958
 	do {
 		// e95c
@@ -272,7 +277,7 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 			return -1;
 		}
 	} while (is_port_datahi(read_debounced()));	
-
+//led_on();
 	return 0;
 }
 
@@ -283,6 +288,9 @@ static void talkloop()
 
 	do {
             	ser_status = bus_receivebyte(&bus, &c, BUS_PRELOAD | BUS_SYNC);
+#ifdef BUS_DEBUG_DATA
+		debug_printf("rx->iecout: %02\n", c); debug_flush();
+#endif
 
 		// disable ints
 		cli();
@@ -294,7 +302,6 @@ static void talkloop()
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, BUS_SYNC);
 		}
-
 	} while (er >= 0 && ((ser_status & 0xff) == 0));
 }
 
@@ -336,10 +343,9 @@ void iec_mainloop_iteration(void)
 		// enable ints again
 		sei();
 
-		if (cmd < 0) {
-			break;
+		if (cmd >= 0) {
+			ser_status = bus_attention(&bus, 0xff & cmd);
 		}
-		ser_status = bus_attention(&bus, 0xff & cmd);
 
 	} while (satnislo());
 	
