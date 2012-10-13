@@ -199,7 +199,7 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// e916 ff
 	port = read_debounced();
 	
-led_off();
+//led_off();
 
 	delayus(60);	// sd2iec
 	
@@ -211,10 +211,10 @@ led_off();
 		if (checkatn(0)) {
 			return -1;
 		}
-sei();cli();
-led_toggle();
+//sei();cli();
+//led_toggle();
 	} while (is_port_datalo(read_debounced()));
-led_on();
+//led_on();
 	if (witheoi || is_port_datahi(port)) {
 		// signal the EOI
 		// wait for data low as acknowledge from the listener
