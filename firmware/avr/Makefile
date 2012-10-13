@@ -54,13 +54,17 @@ fuses:
 	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 # 
 
-# Info about memory usage
+# Info about memory usage, give only supported options
 size:
 	@FORMAT=berkeley ;\
 	if avr-size --help | grep -e "--format=" | grep -q avr ; then\
 	  FORMAT=avr ;\
 	fi ;\
-	avr-size --format $$FORMAT $(BINDIR)/$(TARGET).elf 
+	MCU= ;\
+	if avr-size --help | grep -q -e "--mcu=" ; then\
+	  MCU=--mcu=$(SIZE_MCU) ;\
+	fi ;\
+	avr-size --format $$FORMAT $$MCU $(BINDIR)/$(TARGET).elf 
 
 archclean:
 	rm -f $(ARCHASMOBJ)
