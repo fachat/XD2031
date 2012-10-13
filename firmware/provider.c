@@ -30,8 +30,6 @@
 
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
-// all 10 drives can be used
-#define	MAX_DRIVES	10
 
 static endpoint_t 	default_provider;
 

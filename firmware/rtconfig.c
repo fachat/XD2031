@@ -32,6 +32,7 @@
 
 #include "rtconfig.h"
 #include "errors.h"
+#include "provider.h"	// MAX_DRIVES
 
 #include "debug.h"
 
@@ -70,7 +71,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			ptr++;
 			uint8_t devaddr = (*ptr);
 			if (isdigit(*ptr)) devaddr = atoi(ptr);
-			if (devaddr >= 4 && devaddr <= 31) {
+			if (devaddr >= 4 && devaddr <= 30) {
 				rtc->device_address = devaddr;
 				er = ERROR_OK;
 				debug_printf("SETTING UNIT# TO %d\n", devaddr);
@@ -88,9 +89,11 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			ptr++;
 			uint8_t drv = (*ptr);
 			if (isdigit(*ptr)) drv=atoi(ptr);
-			rtc->last_used_drive = drv;
-			er = ERROR_OK;
-			debug_printf("SETTING DRIVE# TO %d\n", drv);
+			if (drv < MAX_DRIVES) {
+				rtc->last_used_drive = drv;
+				er = ERROR_OK;
+				debug_printf("SETTING DRIVE# TO %d\n", drv);
+			}
 		}
 		break;
 	default:

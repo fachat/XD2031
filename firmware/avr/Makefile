@@ -56,7 +56,11 @@ fuses:
 
 # Info about memory usage
 size:
-	avr-size -C $(BINDIR)/$(TARGET).elf --mcu=$(SIZE_MCU)
+	@FORMAT=berkeley ;\
+	if avr-size --help | grep -e "--format=" | grep -q avr ; then\
+	  FORMAT=avr ;\
+	fi ;\
+	avr-size --format $$FORMAT $(BINDIR)/$(TARGET).elf --mcu=$(SIZE_MCU)
 
 archclean:
 	rm -f $(ARCHASMOBJ)

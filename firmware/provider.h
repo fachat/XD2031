@@ -34,6 +34,9 @@
 #include "packet.h"
 #include "errormsg.h"
 
+// all 10 drives can be used
+#define	MAX_DRIVES	10
+
 typedef struct {
 	// get a new void data pointer to be given to submit() for each ASSIGN
 	void *(*prov_assign)(const char *name);
