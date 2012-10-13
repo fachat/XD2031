@@ -356,7 +356,7 @@ void iec_mainloop_iteration(void)
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif
-		delayms(10);
+	delayms(10);
 	
 	// E8D7
 	satnahi();
@@ -369,7 +369,7 @@ void iec_mainloop_iteration(void)
 		// when I removed all the debug output, I had
 		// to insert this delay to keep it from hanging
 		// when loading.
-		delayms(10);
+		delayms(5);
 
 		if (isTalking()) {
 
