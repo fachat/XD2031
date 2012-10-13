@@ -34,6 +34,11 @@ all:	$(BINDIR)/$(TARGET).hex size
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
 
+# Include optional modules?
+ifeq ($(strip $(USE_FAT)),y)
+	include fatfs/Makefile
+endif
+
 doc:
 	mkdir -p ../doc/doxygen/firmware
 	doxygen Doxyfile

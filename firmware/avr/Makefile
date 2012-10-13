@@ -6,6 +6,11 @@
 ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timerhw.c avr/avr.c
 ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timerhw.h avr/timerint.o
 ARCHASMOBJ=avr/uartints.o avr/timerint.o
+# FatFs monitor (=test+demo) uses it's own kind of printf:
+ifeq ($(strip $(FAT_TESTDEMO)),y)
+        ARCHDEPS+=avr/xitoa.o
+        ARCHASMOBJ+=avr/xitoa.o
+endif
 
 ARCH=avr
 
