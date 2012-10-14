@@ -369,7 +369,7 @@ void iec_mainloop_iteration(void)
 		// when I removed all the debug output, I had
 		// to insert this delay to keep it from hanging
 		// when loading.
-		delayms(5);
+		delayms(2);
 
 		if (isTalking()) {
 
