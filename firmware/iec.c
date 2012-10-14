@@ -190,11 +190,11 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	datahi();
 
 	// make sure data is actually lo (done by controller)
-//	do {
-//		if (checkatn(0)) {
-//			return -1;
-//		}
-//	} while (is_port_datahi(read_debounced()));
+	do {
+		if (checkatn(0)) {
+			return -1;
+		}
+	} while (is_port_datahi(read_debounced()));
 
 	// e916 ff
 	port = read_debounced();
