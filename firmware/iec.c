@@ -199,8 +199,6 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// e916 ff
 	port = read_debounced();
 	
-//led_off();
-
 	delayus(60);	// sd2iec
 	
 	// e91f
@@ -211,10 +209,8 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		if (checkatn(0)) {
 			return -1;
 		}
-//sei();cli();
-//led_toggle();
 	} while (is_port_datalo(read_debounced()));
-//led_on();
+
 	if (witheoi || is_port_datahi(port)) {
 		// signal the EOI
 		// wait for data low as acknowledge from the listener
@@ -356,6 +352,10 @@ void iec_mainloop_iteration(void)
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif
+
+	// when I removed all the debug output, I had
+	// to insert this delay to keep it from hanging
+	// when loading.
 	delayms(10);
 	
 	// E8D7
@@ -369,7 +369,7 @@ void iec_mainloop_iteration(void)
 		// when I removed all the debug output, I had
 		// to insert this delay to keep it from hanging
 		// when loading.
-		delayms(2);
+		delayms(1);
 
 		if (isTalking()) {
 
