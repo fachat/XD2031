@@ -50,6 +50,8 @@ zoo:			   # Compile everything
 	  make DEVICE=$$d ;\
 	  make DEVICE=$$d clean; \
 	done
+	# Copy firmware updater script
+	cp xs1541/xs1541up.sh $(BINDIR)
 
 zip:	zoo
 	@echo "\n$(BAR)   Zip\n$(BAR)"
