@@ -1,3 +1,9 @@
+PREFIX=/usr/local
+BINDIR=bin
+DOCDIR=xd2031/doc
+SAMPLEDIR=xd2031/sample
+# The space separeted list of directories in DROPDIR will be removed at uninstall too
+DROPDIR=xd2031
 
 CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
@@ -43,5 +49,27 @@ curltest: curl_test.c curl_provider.c log.c
 	${CC} ${CFLAGS} -o curltest curl_provider.c curl_test.c log.c ${LIBS}
 
 doc:
-	mkdir -p ../doc/doxygen
+	mkdir -p ../docsrc/doxygen
 	doxygen Doxyfile
+
+install:
+	test -d $(PREFIX) || mkdir -p $(PREFIX)
+	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
+	install -m 0755 fsser $(PREFIX)/$(BINDIR)
+	chmod u+s $(PREFIX)/$(BINDIR)/fsser
+	install -m 0755 fstcp $(PREFIX)/$(BINDIR)
+	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
+	cp ../doc/* $(PREFIX)/$(DOCDIR)
+	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
+	cp ../sample/* $(PREFIX)/$(SAMPLEDIR)
+
+uninstall:
+	rm -f $(PREFIX)/$(BINDIR)/fsser
+	rm -f $(PREFIX)/$(BINDIR)/fstcp
+	rm -f $(PREFIX)/$(DOCDIR)/*
+	rmdir $(PREFIX)/$(DOCDIR) 2>/dev/null | exit 0
+	rm -f $(PREFIX)/$(SAMPLEDIR)/*
+	rmdir $(PREFIX)/$(SAMPLEDIR) 2>/dev/null | exit 0
+	for i in $(DROPDIR) ; do \
+	  rmdir $(PREFIX)/$$i 2>/dev/null | exit 0; \
+	done;
