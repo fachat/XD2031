@@ -55,6 +55,8 @@
 #include "log.h"
 #include "provider.h"
 
+#define FALSE 0
+#define TRUE 1
 
 void usage(void) {
 	printf("Usage: fsser [options] run_directory\n"
@@ -202,6 +204,7 @@ int main(int argc, char *argv[]) {
 	int i, ro=0;
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
+	char parameter_d_given = FALSE;
 
 
 	i=1;
@@ -215,6 +218,7 @@ int main(int argc, char *argv[]) {
 		  ro=1;
 		}
 	    case 'd':
+	    	parameter_d_given = TRUE;
 		if (i < argc-2) {
 		  i++;
 		  device = argv[i];
@@ -222,6 +226,7 @@ int main(int argc, char *argv[]) {
 		    guess_device(&device);
 		    /* exits on more or less than a single possibility */
 		  }
+		  if(!strcmp(device,"-")) device = NULL; 	// use stdin/out
 		  printf("main: device = %s\n", device);
 		}
  	     	break;
@@ -235,11 +240,11 @@ int main(int argc, char *argv[]) {
 	  }
 	  i++;
 	}
+	if(!parameter_d_given) guess_device(&device);
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
 		// Default assigns are made later
-		guess_device(&device);
 		dir = ".";
 	} else
 	{
