@@ -64,7 +64,7 @@ install:
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
 	cp ../sample/* $(PREFIX)/$(SAMPLEDIR)
 	test -d $(PREFIX)/$(TOOLSDIR) || mkdir -p $(PREFIX)/$(TOOLSDIR)
-	cp ../sample/* $(PREFIX)/$(TOOLSDIR)
+	cp ../tools/* $(PREFIX)/$(TOOLSDIR)
 
 uninstall:
 	rm -f $(PREFIX)/$(BINDIR)/fsser
