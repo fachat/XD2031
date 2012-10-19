@@ -151,6 +151,7 @@ int main()
 	// ... and some system info
 	term_printf((" %u Bytes free"), BytesFree());
 	term_printf((", %d kHz"), (int32_t)(F_CPU/1000));
+	fuse_info();
 	term_putcrlf();
 	term_putcrlf();
 
