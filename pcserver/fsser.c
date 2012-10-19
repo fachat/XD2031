@@ -48,10 +48,12 @@
 #include <sys/dir.h>
 #include <fnmatch.h>
 #include <string.h>
+#include <pwd.h>
 
 #include "fscmd.h"
 #include "privs.h"
 #include "log.h"
+#include "provider.h"
 
 
 void usage(void) {
@@ -181,6 +183,19 @@ void guess_device(char** device) {
   }
 }
 
+char* get_home_dir (void) {
+	char* dir = getenv("HOME");
+	if(!dir) {
+		struct passwd* pwd = getpwuid(getuid());
+		if(pwd) dir = pwd->pw_dir;
+		else { 
+			fprintf(stderr, "Unable to determine home directory.\n");
+			exit(1);
+		}
+	}
+	return dir;
+}
+
 int main(int argc, char *argv[]) {
 	int writefd, readfd;
 	int fdesc;
@@ -221,11 +236,19 @@ int main(int argc, char *argv[]) {
 	  i++;
 	}
 
-	if(i!=argc-1) {
-	  usage();
-	}
+	if(argc == 1) {
+		// Use default configuration if no parameters were given
+		// Default assigns are made later
+		guess_device(&device);
+		dir = ".";
+	} else
+	{
+		if(i!=argc-1) {
+		  usage();
+		}
 
-	dir = argv[i++];
+		dir = argv[i++];
+	}
 	printf("dir=%s\n",dir);
 
 	if(chdir(dir)<0) { 
@@ -254,14 +277,24 @@ int main(int argc, char *argv[]) {
 
 	cmd_init();
 
-	cmd_assign_from_cmdline(argc, argv);
+	if(argc == 1) {
+		// Default assigns
+		char *fs_home;
+		fs_home = (char*) malloc(strlen(get_home_dir()) + 4);
+		strcpy(fs_home, "fs:");
+		strcat(fs_home, get_home_dir());
+		provider_assign(0, fs_home);
+		provider_assign(1, "fs:/usr/local/xd2031/sample");
+		provider_assign(2, "fs:/usr/local/xd2031/tools");
+		provider_assign(3, "ftp:ftp.zimmers.net/pub/cbm");
+		provider_assign(7, "http:www.zimmers.net/anonftp/pub/cbm/");
+	} else cmd_assign_from_cmdline(argc, argv);
 
 	cmd_loop(readfd, writefd);
 
 	if (device != NULL) {
 		close(fdesc);
 	}
-
 	return 0;	
 }
 
