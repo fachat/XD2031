@@ -67,7 +67,7 @@ void ListVersion()
 {
 	term_putcrlf();
 	
-	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION" ###"));
+	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION LONGVERSION" ###"));
 	term_putcrlf();
 }
 
