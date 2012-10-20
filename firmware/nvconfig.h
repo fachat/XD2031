@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include "rtconfig.h"
 
+#ifdef HAS_EEPROM
+
 void	nv_data_dump(void);
 int8_t	nv_valid_crc (void);		// returns nonzero if crc is valid
 void	nv_save_config (rtconfig_t *rtc);
@@ -44,4 +46,13 @@ struct nv_struct {
 
 void debug_nvconfig(void); 
 
-#endif
+
+#else
+
+static inline void nv_data_dump(void) {}
+static int8_t nv_valid_crc(void) { return 0; }
+static void nv_save_config (rtconfig_t *rtc) {}
+static int8_t nvrestore_config(rtconfig_t *rtc) { return 1; }
+
+#endif // HAS_EEPROM
+#endif // NVCONFIG_H
