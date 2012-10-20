@@ -34,6 +34,7 @@
 #include "errors.h"
 #include "provider.h"	// MAX_DRIVES
 #include "nvconfig.h"
+#include "bus.h"	// get_default_device_address()
 
 #include "debug.h"
 
@@ -100,11 +101,15 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			}
 		}
 		break;
+	case 'I':
+		// INIT: restore default values
+		rtconfig_init(rtc, get_default_device_address());
+		er = ERROR_OK;
+		debug_puts("RUNTIME CONFIG INITIALIZED\n");
 	case 'W':
 		// write runtime config to EEPROM
 		nv_save_config(rtc);
 		er = ERROR_OK;
-		debug_puts("CONFIG WRITTEN TO EEPROM\n");
 	default:
 		break;
 	}

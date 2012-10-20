@@ -94,24 +94,28 @@ void bus_init() {
 	set_error(&error, ERROR_DOSVERSION);
 }
 
-/* Init IEEE bus */
-void bus_init_bus(bus_t *bus) {
-
+uint8_t get_default_device_address(void) {
   	uint8_t devaddr = 8;
 #	ifdef DEV_ADDR
 		devaddr = DEV_ADDR;
 #	endif
 
-	bus->secaddr_offset = secaddr_offset_counter;
-	secaddr_offset_counter += 16;
-
   	/* Read the hardware-set device address */
 	//  device_address = device_hw_address();
+
+	return devaddr;
+}
+
+/* Init IEEE bus */
+void bus_init_bus(bus_t *bus) {
+
+	bus->secaddr_offset = secaddr_offset_counter;
+	secaddr_offset_counter += 16;
 
 	/* Init vars and flags */
   	bus->command.command_length = 0;
 
-	rtconfig_init(&(bus->rtconf), devaddr);
+	rtconfig_init(&(bus->rtconf), get_default_device_address());
 
 	bus->channel = NULL;
 }
