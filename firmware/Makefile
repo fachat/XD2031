@@ -35,7 +35,8 @@ all:	$(BINDIR)/$(TARGET).hex size
 include $(DEVICE)/Makefile
 
 doc:
-	mkdir -p ../doc/doxygen/firmware
+	mkdir -p ../docsrc/doxygen
+	mkdir -p ../docsrc/doxygen/firmware
 	doxygen Doxyfile
 
 rootclean:
