@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include "rtconfig.h"
 
+void	nv_data_dump(void);
 int8_t	nv_valid_crc (void);		// returns nonzero if crc is valid
 void	nv_save_config (rtconfig_t *rtc);
 int8_t	nv_restore_config (rtconfig_t *rtc);	

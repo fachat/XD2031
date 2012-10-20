@@ -43,8 +43,7 @@ void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr) {
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
 
-	// Read rtc from eeprom. Update nv config if outdated.
-	if(nv_restore_config(rtc) < 0) nv_save_config(rtc);
+	if(nv_restore_config(rtc)) nv_save_config(rtc);
 }
 
 // set from an X command
