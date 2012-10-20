@@ -29,12 +29,14 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "rtconfig.h"
 #include "errors.h"
 #include "provider.h"	// MAX_DRIVES
 #include "nvconfig.h"
 #include "bus.h"	// get_default_device_address()
+#include "system.h"	// reset_mcu()
 
 #include "debug.h"
 
@@ -110,6 +112,12 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		// write runtime config to EEPROM
 		nv_save_config(rtc);
 		er = ERROR_OK;
+		break;
+	case 'R':
+		if(!strcmp(ptr, "RESET")) {
+			// reset everything
+			reset_mcu();
+		}
 	default:
 		break;
 	}
