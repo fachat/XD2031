@@ -39,8 +39,12 @@
 
 // initialize a runtime config block
 void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr) {
+	// Default values
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
+
+	// Read rtc from eeprom. Update nv config if outdated.
+	if(nv_restore_config(rtc) < 0) nv_save_config(rtc);
 }
 
 // set from an X command
@@ -98,8 +102,8 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		}
 		break;
 	case 'W':
-		// write current config to EEPROM
-		nv_save_config();
+		// write runtime config to EEPROM
+		nv_save_config(rtc);
 		er = ERROR_OK;
 		debug_puts("CONFIG WRITTEN TO EEPROM\n");
 	default:

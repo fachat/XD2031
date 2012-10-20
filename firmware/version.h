@@ -30,8 +30,7 @@
 #define	VERSION			"0.9"
 #define	LONGVERSION		".1"
 
-#define VERSION_MAJOR		0	// for nv config
-#define VERSION_MINOR		9
-#define VERSION_PATCHLEVEL	1
+#define VER32(major,minor,patch) (major*65536 + minor*256 + patch)
+#define VERSION_U32 VER32(0,9,1)
 
 #endif

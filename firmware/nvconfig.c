@@ -5,6 +5,7 @@
 
 #include "nvconfig.h"
 #include "version.h"
+#include "rtconfig.h"
 #include "debug.h"
 
 struct EEMEM nv_struct nv;
@@ -17,23 +18,34 @@ int8_t nv_valid_crc(void) {
   return (eeprom_read_word(&nv.crc) == nv_calc_crc() );
 }
 
-void nv_save_config(void) {
-  eeprom_update_byte(&nv.config.version_major, VERSION_MAJOR);
-  eeprom_update_byte(&nv.config.version_minor, VERSION_MINOR);
-  eeprom_update_byte(&nv.config.version_patchlevel, VERSION_PATCHLEVEL);
-  eeprom_update_byte(&nv.config.device_address, 8);	// FIXME
+void nv_save_config(rtconfig_t *rtc) {
+  eeprom_update_word(&nv.size, sizeof(nv.config));
+
+  eeprom_update_dword(&nv.config.version, VERSION_U32);
+  eeprom_update_byte(&nv.config.device_address, rtc->device_address);
+  eeprom_update_byte(&nv.config.last_used_drive, rtc->last_used_drive);
 
   eeprom_update_word(&nv.crc, nv_calc_crc());
 }
 
-uint8_t nv_restore_config(void) {
-  // Restore saved config
-  // returns 0 on success
+int8_t nv_restore_config(rtconfig_t *rtc) {
+  /* Restore saved config. Return
+  	-1 if a valid old configuration with less data was restored
+	 0 on success
+	 1 if crc check of saved config failed
+  */
+	
   if(!nv_valid_crc()) return 1;
-  /* FIXME: should compare stored/current version numbers */
 
-  // eeprom_read_byte(&nv.config.device_address)
+  rtc->device_address =  eeprom_read_byte(&nv.config.device_address);
+  rtc->last_used_drive = eeprom_read_byte(&nv.config.last_used_drive);
 
+  if(eeprom_read_dword(&nv.config.version) >= VER32(2,6,11))
+  {
+    // read value introduced with version 2.6.1
+  }
+
+  if(eeprom_read_word(&nv.size) != sizeof(nv.config)) return -1;
   return 0;
 }
 
@@ -41,7 +53,9 @@ uint8_t nv_restore_config(void) {
 static uint16_t nv_calc_crc(void) {
   uint16_t i, crc = 0xffff;
 
-  for (i=0; i < sizeof(nv.bytes); i++) crc = _crc16_update(crc, eeprom_read_byte(&nv.bytes[i]));
+  for (i=0; i < eeprom_read_word(&nv.size); i++) {
+    crc = _crc16_update(crc, eeprom_read_byte(&nv.bytes[i]));
+  }
   return crc;
 }
 
