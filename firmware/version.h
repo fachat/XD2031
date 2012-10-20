@@ -30,4 +30,8 @@
 #define	VERSION			"0.9"
 #define	LONGVERSION		".1"
 
+#define VERSION_MAJOR		0	// for nv config
+#define VERSION_MINOR		9
+#define VERSION_PATCHLEVEL	1
+
 #endif

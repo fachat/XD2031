@@ -3,6 +3,10 @@
 
 #include <inttypes.h>
 
+int8_t	nv_valid_crc (void);		// returns nonzero if crc is valid
+void	nv_save_config (void);
+uint8_t	nv_restore_config (void);	// returns 0 on success
+
 struct nv_config_data 
 {
   /*********************************************************************
@@ -20,5 +24,7 @@ struct nv_struct {
     uint8_t bytes [ sizeof(struct nv_config_data) ];
   };
 } __attribute__((packed)) ;
+
+void debug_nvconfig(void); 
 
 #endif
