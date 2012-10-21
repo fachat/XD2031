@@ -1,6 +1,6 @@
 
 # specific switches for this device
-DEVICEOPTS=-DHAS_IEEE
+DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM
 
 # MCU name madness
 ARCHDEVICE = -mmcu=atmega1284p	# for compiling

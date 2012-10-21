@@ -14,4 +14,10 @@ clean:
 	make -C pcserver clean
 	make -C firmware clean zooclean
 
-.PHONY:	pcserver/fsser firmware doc
+install:
+	make -C pcserver install
+
+uninstall:
+	make -C pcserver uninstall
+
+.PHONY:	pcserver/fsser install uninstall firmware doc

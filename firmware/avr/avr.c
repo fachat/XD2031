@@ -21,8 +21,10 @@
 ****************************************************************************/
 
 #include <avr/interrupt.h>
+#include <avr/boot.h>
 
 #include "led.h"
+#include "term.h"
 
 ISR(BADISR_vect)
 {
@@ -33,3 +35,14 @@ ISR(BADISR_vect)
 	while (1);
 }
 
+void fuse_info(void) {
+	uint8_t lowfuse, hifuse, extfuse, lockfuse;
+
+	cli();
+	lowfuse = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS);
+	hifuse = boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS);
+	extfuse = boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS);
+	lockfuse = boot_lock_fuse_bits_get(GET_LOCK_BITS);
+	sei();
+	term_printf("\r\nFuses: l=%02X h=%02X e=%02X l=%02X\r\n", lowfuse, hifuse, extfuse, lockfuse);
+}

@@ -80,6 +80,8 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t options);
 // init the bus_t structure
 void bus_init_bus(bus_t *bus);
 
+uint8_t get_default_device_address(void);
+
 // helper method
 
 static inline uint8_t bus_secaddr_adjust(bus_t *bus, uint8_t secaddr) {

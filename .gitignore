@@ -1,4 +1,4 @@
 .svn
-doc/doxygen/*
+docsrc/doxygen/*
 *.DS_Store
 *.dSYM/

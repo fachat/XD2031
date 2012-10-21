@@ -29,17 +29,24 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "rtconfig.h"
 #include "errors.h"
 #include "provider.h"	// MAX_DRIVES
+#include "nvconfig.h"
+#include "bus.h"	// get_default_device_address()
+#include "system.h"	// reset_mcu()
 
 #include "debug.h"
 
 // initialize a runtime config block
 void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr) {
+	// Default values
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
+
+	if(nv_restore_config(rtc)) nv_save_config(rtc);
 }
 
 // set from an X command
@@ -96,6 +103,21 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			}
 		}
 		break;
+	case 'I':
+		// INIT: restore default values
+		rtconfig_init(rtc, get_default_device_address());
+		er = ERROR_OK;
+		debug_puts("RUNTIME CONFIG INITIALIZED\n");
+	case 'W':
+		// write runtime config to EEPROM
+		nv_save_config(rtc);
+		er = ERROR_OK;
+		break;
+	case 'R':
+		if(!strcmp(ptr, "RESET")) {
+			// reset everything
+			reset_mcu();
+		}
 	default:
 		break;
 	}
