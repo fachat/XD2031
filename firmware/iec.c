@@ -377,7 +377,10 @@ void iec_mainloop_iteration(void)
         {
 
 		if (isTalking()) {
-			delayms(1);
+			// does not work without delay (why?)
+			// but this is fast enough so I won't complain
+			// Duration is a wild guess though, which seems to work
+			delayus(60);
 
 			datahi();
 			clklo();
