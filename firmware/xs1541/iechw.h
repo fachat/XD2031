@@ -52,6 +52,11 @@ extern uint8_t is_clkout;
 // ATN handling
 // (input only)
 
+static inline void atn_init() {
+      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
+	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
+}
+
 static inline uint8_t satnislo() {
 	return !(IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
 }
@@ -60,8 +65,7 @@ static inline uint8_t satnishi() {
 	return (IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
 }
 
-// NDAC & NRFD handling
-// Note the order of method definition in this file depends on dependencies
+// DATA & CLK handling
 
 static inline void datalo() {
       	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_DATA);    	// DATA low
@@ -72,11 +76,6 @@ static inline void datalo() {
 static inline void clklo() {
       	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_CLK);   	// CLK low
       	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    	// CLK as output
-}
-
-static inline void atn_init() {
-      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
-	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
 }
 
 static inline void datahi() {

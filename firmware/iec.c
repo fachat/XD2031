@@ -82,6 +82,8 @@ static int16_t iecin(uint8_t underatn)
 	uint8_t cnt = 8;
 	uint8_t data = 0;
 
+	clkhi();
+
 	do {
 		if (checkatn(underatn)) 
 			return -1;
@@ -90,7 +92,7 @@ static int16_t iecin(uint8_t underatn)
 	// (not so?) unlikely race condition:
 	// between the checkatn() and the is_port_clklo() the 
 	// sectalk ends the previous atn sequence with a 
-	// atn lo and clk hi - so we might fall through here;
+	// atn hi and clk hi - so we might fall through here;
 	// thus check ATN here again to be sure
 	if (checkatn(underatn)) {
 		return -1;
@@ -242,7 +244,6 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// e94b
 	clklo();
 	
-//led_on();
 	// e958
 	do {
 		// e95c
@@ -281,7 +282,7 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 			return -1;
 		}
 	} while (is_port_datahi(read_debounced()));	
-//led_on();
+
 	return 0;
 }
 
@@ -297,7 +298,7 @@ static void talkloop()
 #endif
 
 		// disable ints
-		cli();
+		cli(); // TODO: arch-dependent
 		// send byte to IEC
 		er = iecout(c, ser_status & 0x40);
 		// enable ints
@@ -340,7 +341,7 @@ void iec_mainloop_iteration(void)
         // Loop to get commands during ATN lo ----------------------------
 
 	do {
-		// disable ints
+		// disable ints - TODO: arch-specific
 		cli();
 		// get byte (under ATN) - call to E9C9
 		cmd = iecin(1);
@@ -366,32 +367,23 @@ void iec_mainloop_iteration(void)
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
 #endif
 
-	// when I removed all the debug output, I had
-	// to insert this delay to keep it from hanging
-	// when loading.
-	//delayms(10);
-	
 	// E8D7
 	satnahi();
 
 	if(isListening())
         {
-		//delayms(10);
 		listenloop();
         } else
         {
-		// when I removed all the debug output, I had
-		// to insert this delay to keep it from hanging
-		// when loading.
 
-		delayms(10);
 		if (isTalking()) {
+			delayms(1);
 
 			datahi();
 			clklo();
 			talkloop();
 		} else {
-		delayms(1);
+			delayms(11);
 		}
         }
 
