@@ -117,7 +117,7 @@ static int16_t iecin(uint8_t underatn)
 		if (timer_is_timed_out()) { 
 			// handle EOI condition
 			datalo();
-			// at least 23 cycles + 43+ for bad lines
+			// at least 23 cycles + 43+ for C64 bad video lines
 			delayus(80);
 
 			datahi();
@@ -390,13 +390,24 @@ void iec_mainloop_iteration(void)
 
 			datahi();
 		} else {
+			uint8_t port = 0;
+
 			datahi();
-			//clkhi();
+
+		        // wait for the host to set data and clk hi
+			// well, we could, but it doesn't make a difference
+//        		do {
+//                		if (checkatn(0)) {
+//                        		break;
+//                		}
+//				port = read_debounced();
+//        		} while (is_port_datalo(port) || is_port_clklo(port));
+
+			// anything below 11ms hangs :-(
 			delayms(11);
 		}
         }
 
-	//iechw_setup();
 #ifdef DEBUG_BUS
 	debug_putc('X'); debug_flush();
 #endif	

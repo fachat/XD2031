@@ -46,8 +46,6 @@
 extern uint8_t is_satna;
 // last output of DATA before ATNA handling
 extern uint8_t is_dataout;
-// last output of CLK before ATNA handling
-extern uint8_t is_clkout;
 
 // ATN handling
 // (input only)

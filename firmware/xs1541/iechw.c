@@ -29,7 +29,6 @@
 // when set, disable ATN acknowledgement
 uint8_t is_satna = 0;
 uint8_t is_dataout = 0;
-uint8_t is_clkout = 0;
 
 /* ------------------------------------------------------------------------- 
  *  General functions
