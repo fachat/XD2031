@@ -41,6 +41,9 @@ Fix bugs:
 	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
 	  and most commands (CHDIR works)
 
+	- C128 can not start with it, as XD2031 gets confused by the C128's 
+	  boot commands
+
 	- ...
 
 
