@@ -356,7 +356,7 @@ void iec_mainloop_iteration(void)
 		// If ATN should have been re-asserted here, do we really
 		// have a problem just staying in the loop?
 		// TODO: check if cmd<0 condition is needed
-	} while ((cmd >= 0) && satnislo());
+	} while (satnislo());
 	
         // ---------------------------------------------------------------
 	// ATN is high now
@@ -373,6 +373,8 @@ void iec_mainloop_iteration(void)
 	if(isListening())
         {
 		listenloop();
+
+		clkhi();
         } else
         {
 
@@ -385,12 +387,16 @@ void iec_mainloop_iteration(void)
 			datahi();
 			clklo();
 			talkloop();
+
+			datahi();
 		} else {
+			datahi();
+			//clkhi();
 			delayms(11);
 		}
         }
 
-	iechw_setup();
+	//iechw_setup();
 #ifdef DEBUG_BUS
 	debug_putc('X'); debug_flush();
 #endif	
