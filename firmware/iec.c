@@ -86,7 +86,16 @@ static int16_t iecin(uint8_t underatn)
 		if (checkatn(underatn)) 
 			return -1;
 	} while (is_port_clklo(read_debounced()));
-
+	
+	// (not so?) unlikely race condition:
+	// between the checkatn() and the is_port_clklo() the 
+	// sectalk ends the previous atn sequence with a 
+	// atn lo and clk hi - so we might fall through here;
+	// thus check ATN here again to be sure
+	if (checkatn(underatn)) {
+		return -1;
+	}
+	
 	datahi();
 
 	// wait until data is really hi (other devices may delay this)
@@ -342,7 +351,11 @@ void iec_mainloop_iteration(void)
 			ser_status = bus_attention(&bus, 0xff & cmd);
 		}
 
-	} while (satnislo());
+		// cmd might be <0 if iecin ran into an ATN hi condition
+		// If ATN should have been re-asserted here, do we really
+		// have a problem just staying in the loop?
+		// TODO: check if cmd<0 condition is needed
+	} while ((cmd >= 0) && satnislo());
 	
         // ---------------------------------------------------------------
 	// ATN is high now
@@ -356,13 +369,14 @@ void iec_mainloop_iteration(void)
 	// when I removed all the debug output, I had
 	// to insert this delay to keep it from hanging
 	// when loading.
-	delayms(10);
+	//delayms(10);
 	
 	// E8D7
 	satnahi();
 
 	if(isListening())
         {
+		//delayms(10);
 		listenloop();
         } else
         {
@@ -370,6 +384,7 @@ void iec_mainloop_iteration(void)
 		// to insert this delay to keep it from hanging
 		// when loading.
 
+		delayms(10);
 		if (isTalking()) {
 
 			datahi();
