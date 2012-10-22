@@ -1,0 +1,970 @@
+\documentclass[10pt,a4paper]{scrartcl}		% Ersatz für Klasse "article" 
+\parskip 12pt
+\parindent 0pt
+\usepackage{makeidx}					% Stichwortverzeichnis
+\makeindex
+\makeglossary
+\usepackage[ngerman]{babel}				% Umlaute "a "s etc.
+\usepackage[utf8]{inputenc}				% Umlaute in Quelldatei UTF8-kodiert
+\usepackage[T1]{fontenc}
+\usepackage{footnpag}					% Nummerierung auf jeder Seite neu beginnen
+\usepackage[hyphens]{url}
+\usepackage{listings}
+\lstloadlanguages{[Visual]Basic}
+\lstset{language=C, basicstyle=\ttfamily\small, commentstyle=\itshape }
+\usepackage{numprint}
+\usepackage{booktabs}
+\usepackage{amssymb}					% $\checkmark$
+\usepackage[colorlinks,
+pdfpagelabels,
+pdfstartview = FitH,
+bookmarksopen = true,
+bookmarksnumbered = true,
+linkcolor = black,
+plainpages = false,
+hypertexnames = false,
+citecolor = black] {hyperref}
+\usepackage{eurosym}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+
+% **************   SERIF   **************
+%\usepackage{mathptmx} % Times Roman
+%usepackage{fouriernc} % New Century Schoolbook
+\usepackage{tgschola} % TEX Gyre Schola (based on New Century Schoolbook)
+%\usepackage[scaled]{DejaVuSerif}
+
+% **************   SANS SERIF   **************
+%\usepackage[scaled=.90] {helvet}
+\usepackage{tgadventor} % TEX Gyre Adventor (based on URW Gothic, an Avantgarde clone)
+%\usepackage{tgheros} % TEX Gyre Heros (based on URW Nimbus Sans)
+%\usepackage{arev} % Arev is a version of Bitstream Vera Sans, disigned for slide presentations
+
+% **************   MONO   **************
+%\usepackage{luximono}
+\usepackage{beramono}
+
+\newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
+\newcommand{\sfend}[1]{\end{addmargin}}
+
+% -------------------------------------------------------------------------
+% Variablen
+%
+\newcommand{\fwbinaries}{http://FIXME-fwbinaries.de}
+\newcommand{\osxbinaries}{http://FIXME-osxbinaries.de}
+% -------------------------------------------------------------------------
+
+\begin{document}
+
+\tableofcontents
+\clearpage
+
+\section{Allgemeines}
+
+\subsection{Verwendungszweck dieser Software}
+\index{Verwendungszweck}
+XD-2031 ist Software, die einen modernem Mikrocontroller für einen
+historischen Commodore-Computer wie ein Diskettenlaufwerk erscheinen läßt.
+
+Sie dient dem Datenaustausch zwischen alten und modernen Computern, der
+ohne weiteres nicht mehr möglich ist. 
+Moderne Computer können die Datenträger der alten nicht mehr lesen,
+die alten aber auch nicht die der neuen und sie haben auch keine gemeinsame 
+Schnittstelle, über die sie Daten untereinander austauschen könnten.
+
+XD-2031 schließt diese Lücke mithilfe eines Adapters zwischen den
+damals verwendeten Bus-Systemen und dem aktuellen USB-Bus.
+
+Damit kann man beispielsweise...
+\begin{itemize}
+\item alte Daten und Programme auf einem neuen PC sichern
+\item aus dem Internet geladene Programme auf dem Commodore ausprobieren
+\item mit modernen Werkzeugen Software für alte Rechner entwickeln
+\end{itemize}
+
+Dabei sind hier ausschließlich die 8-Bit Commodore-Computer gemeint, die über
+einen IEEE-488-Bus \index{IEEE-488-Bus} oder seriellen
+	\index{CBM-Bus} CBM-Bus\footnote
+	{Diese proprietäre serielle Variante des IEEE-488-Busses wird
+	oft auch als IEC-Bus \index{IEC-Bus|see{CBM-Bus}} bezeichnet.
+	Da er allerdings \textit{nicht} durch die
+	\textit{International Electrotechnical Commission} standardisiert
+	wurde, verwendet diese Anleitung den Begriff CBM-Bus}
+verfügen, wie etwa:
+\begin{itemize}
+\item C64, C128, VC20, +4
+\item PET 2001\footnote{
+	Nur mit BASIC 2, erkennbar an der Einschaltmeldung 
+	\texttt{\#\#\# COMMODORE BASIC \#\#\#}}
+, CBM 8032, CBM 610/710
+\end{itemize}
+Commodore Amiga und PC gehören nicht dazu, für sie existieren andere Lösungen.
+
+\subsection{Über den Namen \glqq XD-2031\grqq}
+Der Name steht in der Tradition der Namensgebung einer ganzen Familie
+von Adapterkabeln, genannt die X-Kabel. Diese konnten zum 
+Datenaustausch zwischen dem Diskettenlaufwerk \mbox{VC 1541} 
+und PC verwendet werden, als diese noch über eine
+Druckerschnittstelle nach Centronics-Standard verfügten.
+
+Das X symbolisiert den Datenaustausch, D steht für \glqq drive\grqq\ 
+und 2031 erinnert an das Diskettenlaufwerk CBM 2031.
+
+\subsection{Unterstützte Adapter}
+\index{Adapter}
+\index{Geraet@Ger""at}
+Derzeit läuft die Firmware auf folgenden Geräten:
+
+\begin{tabular}[c]{l l}
+\toprule 
+Hardware & Homepage \\
+\midrule
+XS-1541	& \url{http://xs1541.t-winkler.net} \\
+petSD	& \url{http://petsd.net} \\
+\bottomrule
+\end{tabular}
+
+Für nähere Beschreibungen dieser Geräte sei auf deren Internetseiten
+verwiesen.
+
+\subsection*{Leistungsmerkmale nach Adapter}
+\index{Leistungsmerkmale}
+\index{Features}
+
+\begin{tabular}[c]{l l l}
+\toprule
+			& XS-1541	& petSD			\\
+\midrule
+CBM-Bus			& $\checkmark$	& -- 			\\
+IEEE-488-Bus		& $\checkmark$	& $\checkmark$		\\
+Zugriff auf das Dateisystem
+des Hosts		& $\checkmark$	& $\checkmark$		\\
+ftp:// über Host	& $\checkmark$	& $\checkmark$		\\
+http:// über Host	& $\checkmark$	& $\checkmark$		\\
+\bottomrule
+\end{tabular}
+
+\subsection{Unterstützte Betriebssysteme}
+\index{Betriebssysteme}
+\begin{tabular}[c]{c c c}
+\toprule
+Linux & OS X & Windows \\
+$\checkmark$ & $\checkmark$ & -- \\
+\bottomrule
+\end{tabular}
+
+\section{Installation}
+\subsection{USB-Treiber}
+Unter Linux ist der Treiber schon seit einiger Zeit direkt im Kernel
+enthalten, so dass keine separate Installation erfolgen muss.
+
+Für OS X und Windows laden Sie sich bitte den Treiber von der
+Herstellerseite \url{http://www.ftdichip.com/Drivers/VCP.htm} 
+herunter und installieren ihn wie auf Ihrem System üblich.
+
+\subsection{Aktualisierung der Firmware}
+\index{Firmware}
+Die XD-2031-Software, die auf einem Mikrocontroller-basiertem Adapter
+läuft, wird auch als \textit{Firmware} bezeichnet.
+Wenn Sie einen vorprogrammierten Adapter erhalten haben,
+dürfen Sie direkt weiter bei \glqq\ref{serverinst} 
+\nameref{serverinst}\grqq\ auf Seite \pageref{serverinst}  weiterlesen.
+
+Wenn Sie ein petSD besitzen, lesen Sie bitte jetzt bei
+\glqq\ref{petsdfwinst} \nameref{petsdfwinst}\grqq\ auf Seite
+\pageref{petsdfwinst} weiter.
+
+\subsubsection{Aktualisierung der Firmware für XS-1541}
+Laden Sie zunächst von \url{\fwbinaries} die Firmware für das XS-1541
+herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
+Halten Sie die entpackten Dateien in Ihrem Heimatverzeichnis bereit.
+\subsubsection*{Linux}
+\begin{enumerate}
+\item Für die weiteren Arbeitsschritte werden Sie das Programm
+\glqq AVRDUDE\grqq\ benötigen.  
+Das Paket \glqq avrdude\grqq\ sollte in allen gängigen Distributionen
+enthalten sein. Wie Sie dieses Paket installieren, hängt von Ihrer
+verwendeten Distribution ab. Für Debian, Ubuntu und deren Verwandte:
+
+\texttt{sudo apt-get install avrdude}
+
+\item Schließen Sie das XS-1541 mittels USB-Kabel an Ihren Computer an.
+\item Öffnen Sie ein Terminal, Sie sollten nun in Ihrem Heimatverzeichnis
+sein, wo Ihre zuvor herunter geladenen Dateien liegen sollten.
+\item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
+
+\texttt{chmod +x xs1541up.sh}
+\item Wenn Sie die aktuellste Firmware verwenden wollen, tippen Sie
+	folgenden Befehl ein, aber noch \textit{nicht} die 
+	Eingabetaste:
+
+	\texttt{./xs1541up.sh}
+
+	\textbf{--- oder ---}
+
+	Wenn Sie eine bestimmte Firmware-Version aufspielen möchten, geben
+	Sie den Dateinamen an, drücken aber noch \textit{nicht}
+	die Eingabetaste:
+
+	\texttt{./xs1541up.sh XD2031-xs1541-bestimmte-Version.hex}
+\item Drücken Sie am XS-1541 die Reset-Taste und lassen Sie sie wieder los.
+\item Drücken Sie am PC binnen drei Sekunden die Eingabetaste um
+	avrdude nun zu starten.
+\end{enumerate}
+\subsubsection*{OS X}
+
+\begin{enumerate}
+\item Installieren Sie das \textit{CrossPack for 
+AVR\textsuperscript{\textregistered} Development} von 
+\\\url{http://www.obdev.at/products/crosspack}
+\item Schließen Sie das XS-1541 mittels USB-Kabel an Ihren Computer an.
+\item Klicken Sie auf \glqq Programme\grqq\ $\to$ \glqq Dienstprogramme\grqq
+$\to$ \glqq Terminal\grqq\ um ein Terminal zu öffnen.
+\item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
+
+\texttt{chmod +x xs1541up.sh}
+\item Tippen Sie den folgenden Befehl ein, aber noch \textit{nicht} die
+Eingabetaste:
+
+\texttt{sudo mv /dev/cu.usbserial}
+
+\item Tippen Sie jetzt die Tab-Taste auf Ihrer Tastatur. Das Wort
+\glqq usbserial\grqq\ sollte jetzt mit der Seriennummer Ihres Adapters
+vervollständigt werden, wie z.B. usbserial-A10044Co.
+
+Drücken Sie noch immer \textit{nicht} die Eingabetaste, sondern fügen
+Sie die folgende Zeile an den Behl an:
+
+\textit{<Leertaste>} \texttt{/dev/ttyUSB0}
+
+Wenn der Befehl jetzt wie folgt aussieht (ausschließlich anderer
+Seriennummer), drücken Sie jetzt die Eingabetaste:
+
+\texttt{sudo mv /dev/cu.usbserial-A10044Co /dev/ttyUSB0}
+
+Geben Sie dann Ihr Administrator-Passwort ein, um diesen Vorgang
+zu ermöglichen.
+\item Wenn Sie die aktuellste Firmware verwenden wollen, tippen Sie
+	folgenden Befehl ein, aber noch \textit{nicht} die 
+	Eingabetaste:
+
+	\texttt{./xs1541up.sh}
+
+	\textbf{--- oder ---}
+
+	Wenn Sie eine bestimmte Firmware-Version aufspielen möchten, geben
+	Sie den Dateinamen an, drücken aber noch \textit{nicht}
+	die Eingabetaste:
+
+	\texttt{./xs1541up.sh XD2031-xs1541-bestimmte-Version.hex}
+
+\item Drücken Sie am XS-1541 die Reset-Taste und lassen Sie sie wieder los.
+\item Drücken Sie am PC binnen drei Sekunden die Eingabetaste um
+	avrdude nun zu starten.
+\end{enumerate}
+
+\subsubsection*{Wenn das Aktualisieren scheitert...}
+Wenn es nicht geklappt hat, weil drei Sekunden doch recht kurz sind,
+müssen Sie nicht alles noch einmal eintippen. Drücken Sie einfach
+die $\uparrow$-Taste und der letzte Befehl sollte
+wieder erscheinen. Drücken Sie dann Reset und jetzt schnell die Eingabetaste!
+
+Sollte trotz allem die Fehlermeldung \glqq programmer is not responding\grqq\ 
+erscheinen, wurde Ihr XS-1541 vermutlich \textit{nicht} mit einem Bootloader
+versehen. In diesem Fall kann die Firmware nur unter Verwendung eines
+AVR-ISP-Programmiergerätes aufgespielt werden.
+
+\subsubsection{Aktualisierung der Firmware für petSD}
+\label{petsdfwinst}
+Haben Sie Ihr petSD nach Juli 2012 erworben, können Sie die Firmware
+sehr einfach aktualisieren:
+\begin{enumerate}
+\item Laden Sie von \url{\fwbinaries} die Firmware für das \mbox{petSD}
+herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
+\item Kopieren Sie die auf \glqq .bin\grqq\ endende Firmware-Datei
+in das Hauptverzeichnis der am petSD verwendeten SD-Karte
+\item Legen Sie die SD-Karte in das ausgeschaltete petSD ein
+\item Schalten Sie das petSD ein
+\end{enumerate}
+Der Bootloader wird dann die neue Firmware finden und den Mikrocontroller
+neu programmieren. Die Datei darf auch nach dem Programmiervorgang im 
+Hauptverzeichnis liegen bleiben, da der Bootloader gleiche Firmwares
+nur einmal programmiert.
+
+Haben Sie dagegen Ihr petSD vor Juli 2012 erworben, kann es zu
+Problemen kommen. Schreiben Sie in diesem Fall an nils.eilers@gmx.de, 
+um weitere Informationen zu erhalten.
+
+\subsection{Installation der Server-Software}
+\label{serverinst}
+\subsubsection{Installation der Server-Software unter Linux}
+Die Installation aus dem letzten Stand des Programm-Quelltextes
+ist mit ein paar Befehlen erledigt:
+\lstset{language=,}
+\begin{lstlisting}
+git clone https://github.com/fachat/XD2031
+cd XD2031/
+make pcserver/fsser
+sudo make install
+\end{lstlisting}
+
+Wenn Sie lieber eine bestimmte Release-Version installieren möchten, 
+laden Sie von 
+\url{https://github.com/fachat/XD2031/downloads}
+den Quelltext herunter, und führen im Unterverzeichnis des
+entpackten Quelltextes die folgenden Befehle aus:
+
+\begin{lstlisting}
+make pcserver/fsser
+sudo make install
+\end{lstlisting}
+
+\subsubsection{Installation der Server-Software unter OS X}
+Laden Sie von \url{\osxbinaries} den Server herunter und installieren ihn 
+wie üblich.
+
+\section{Erste Schritte}
+Die meiste Arbeit ist nun geschafft. Bevor wir nun zum vergnüglichen
+Teil kommen, sollen kurz drei Begriffe geklärt werden, die von nun
+an in dieser Anleitung verwendet werden:
+\begin{itemize}
+\item Ihr moderner Computer wird fortan kurz \textit{Host}\footnote
+	{Wenn diese Anleitung das Wort \glqq Host\grqq\ statt dem 
+	verständlicherem \glqq PC\grqq\ verwendet, dann möchte sie betonen, 
+	dass damit nicht unbedingt Computer nach dem IBM-PC-Standard 
+	gemeint sind.}
+genannt.
+\item Ihr alter Commodore wird fortan der Einfachkeit halber als 
+\textit{CBM} bezeichnet, ganz gleich, ob es sich um einen CBM / PET / C64 
+oder anderen 8-Bitter handelt.
+\item Ihr XS-1541 oder petSD wird als \textit{Adapter} bezeichnet.
+\end{itemize}
+
+\subsection{Adapter anschließen}
+Auch wenn es hier erwähnt wird, sollten Sie vorerst auf das Anschließen
+weiterer Diskettenlaufwerke verzichten, um Konflikte um Geräteadresse 8
+auszuschließen.
+\begin{enumerate}
+\item Stellen Sie sicher, dass am Adapter \textit{keine(!)} Kabel angeschlossen sind.
+\item Stellen Sie sicher, dass der CBM ausgeschaltet ist.
+\item Wenn neben dem CBM noch weitere Hardware am IEEE-488-Bus oder CBM-Bus
+angeschlossen ist, wie etwa weitere Diskettenlaufwerke oder Drucker,
+müssen diese ebenfalls alle ausgeschaltet sein.
+\item Der Host darf zu diesem Zeitpunkt bereits eingeschaltet sein. Falls er das noch nicht ist, schalten Sie ihn jetzt ein.
+\item Verbinden Sie den Adapter mit dem CBM über ein IEEE-488- oder CBM-Bus-Kabel.
+\item Verbinden Sie den Adapter mit dem Host mittels USB-Kabel.
+\item Schalten Sie Peripherie wie Diskettenlaufwerke oder Drucker ein.
+\item Wenn der Adapter über eine separate Stromzufuhr verfügt, schalten Sie diese jetzt ein.
+\item Schalten Sie den CBM ein.
+\end{enumerate}
+
+Vielleicht staunen Sie über dieses Prozedere. Tatsache ist, das weder
+IEEE-488-Bus noch CBM-Bus \textit{hot-pluggable} sind; das bedeutet:
+Ein- oder Ausstecken nur im ausgeschalteten Zustand -- auch wenn man es in
+der Praxis immer wieder anders sieht. Nichtbeachtung kann erforderlich
+machen, dass Sie Ersatzteile für Ihren CBM besorgen müssen und Chips
+aus- und einlöten müssen. Nebenbei bemerkt: der Bustreiber MC3446 ist
+teuer geworden.
+
+Falls Sie ein XS-1541 verwenden, und doch erst den CBM einschalten, bevor
+das XS-1541 eingeschaltet ist, werden Sie ein Glimmen der Power-LED
+beobachten können. Das rührt daher, dass die Spannung, die am Bus auch im
+Ruhezustand anliegt, über die internen Sicherungsdioden des Mikrocontrollers
+in das Stromnetz des Adapters fließt. Das ist ein Zustand, der
+eindeutig außerhalb der \glqq absolute maximum ratings\grqq\ liegt,
+die der Hersteller Atmel in seinem Datenblatt nennt. Atmel warnt,
+dass dadurch die Zuverlässigkeit beeinträchtigt werden kann und bleibende
+Schäden entstehen können. 
+
+\subsection{XS-1541 ein- und ausschalten}
+Natürlich wollen wir den Adapter jetzt eingeschaltet lassen, aber dies
+ist die richtige Stelle, die Ein- und Ausschaltreihenfolge für das
+XS-1541 zu besprechen. Beim petSD ist die Reihenfolge unerheblich.
+
+\subsection*{XS-1541 einschalten}
+\begin{enumerate}
+\item Schalten Sie immer erst den Host ein. 
+\item Stellen Sie sicher, dass das USB-Kabel am XS-1541 eingesteckt ist und 
+die Power-LED hell leuchtet.
+\item Wenn vorhanden, schalten Sie jetzt weitere Peripherie wie 
+Diskettenlaufwerke oder Drucker ein.
+\item Zuletzt schalten Sie den CBM ein, damit alle angeschlossenen
+Geräte in den Grundzustand versetzt werden.
+\end{enumerate}
+
+\subsection*{XS-1541 ausschalten}
+\begin{enumerate}
+\item Schalten Sie den CBM und alle am Bus hängenden Peripheriegeräte
+wie Diskettenlaufwerke und Drucker aus.
+\item Ziehen Sie erst jetzt den USB-Stecker vom XS-1541 ab bzw.
+schalten Sie erst jetzt den Host aus.
+\end{enumerate}
+
+\subsection{Server starten}
+
+Die Konfiguration des Servers ist für diese Beispiele nicht erforderlich.
+Sie wird später beschrieben.
+Öffnen Sie ein Terminal. Unter OS X klicken Sie dazu auf \glqq Programme\grqq\  
+$\to$ \glqq Dienstprogramme\grqq $\to$ \glqq Terminal\grqq\ .
+
+Starten Sie dann den Server mit seiner Standard-Konfiguration, indem Sie
+den folgenden Befehl eingeben und mit der Eingabetaste bestätigen:
+
+\begin{verbatim}
+fsser
+\end{verbatim}
+
+
+\subsection{Inhaltsverzeichnis laden}
+Gegenüber dem CBM erscheint der Adapter wie ein klassisches Diskettenlaufwerk
+unter einer einzigen Geräteadresse. Voreingestellt ist Geräteadresse 8.
+So können Sie sich direkt wie früher das Inhaltsverzeichnis anzeigen
+lassen:
+
+\begin{verbatim}
+LOAD"$",8
+LIST
+\end{verbatim}
+
+Probieren Sie es aus. Sie sollten das Heimatverzeichnis Ihres Hosts
+angezeigt bekommen.
+
+\subsection{LOAD und SAVE}
+Geben Sie ein kleines Programm ein:
+
+\lstset{language=,} %[Visual]Basic}
+\begin{lstlisting}
+10 FOR I=1 TO 10
+20 PRINT I,I*I
+30 NEXT
+
+RUN
+\end{lstlisting}
+
+Läuft es? Wenn Sie mit der Ausgabe zufrieden sind, speichern Sie Ihr Werk:
+
+\texttt{SAVE"TEST",8}
+
+Laden Sie dann erneut das Inhaltsverzeichnis:
+
+\begin{verbatim}
+LOAD"$",8
+LIST
+\end{verbatim}
+
+Dort sollte nun neben den bereits bekannten Dateien auch Ihr
+kleines Programm erscheinen. Nun hat das Inhaltsverzeichnis 
+aber Ihr Programm im Speicher überschrieben, wovon Sie sich
+gerne mit \texttt{LIST} oder \texttt{RUN} überzeugen können.
+Holen Sie sich Ihr Programm zurück:
+
+\begin{verbatim}
+LOAD"TEST",8
+RUN
+\end{verbatim}
+
+
+\subsection{Mehrere Laufwerke unter einer Geräteadresse}
+\index{Laufwerke}
+Unter einer Geräteadresse können mehrere Laufwerke gleichzeitig zur
+Verfügung gestellt werden. 
+
+Während das für Benutzer von Doppellaufwerken
+wie CBM 8050 selbstverständlich ist, mag dieses Konzept für Benutzer
+von Einzellaufwerken wie VC 1541 am C64 ungewohnt sein, weshalb es
+hier kurz erklärt werden soll: vor Dateinamen kann die Nummer des gewünschten
+Laufwerks durch Doppelpunkt getrennt angegeben werden. Geräte mit
+mehreren Laufwerken wissen dann, auf welches Laufwerk der Zugriff
+erfolgen soll.
+
+Sehen wir uns doch einfach mal die dämliche Demo auf Laufwerk 1 an:
+
+\begin{verbatim}
+LOAD"$1:DUMB*",8
+LIST
+
+ 0  "DUMB*           " XD2031
+ 1     "DUMBDEMO64"       PRG
+ 1     "DUMBDEMOPET"      PRG
+ 1     "DUMBDEMOVIC20"    PRG
+ 1  BLOCKS FREE
+READY.
+\end{verbatim}
+
+Nicht gerade viel versprechend, aber sehen Sie selbst... 
+Wählen Sie dazu den Dateinamen, der für Ihr System passt.
+
+\begin{verbatim}
+LOAD"DUMBDEMOPET",8
+RUN
+\end{verbatim}
+
+Wieso wurde das Programm geladen, obwohl wir doch \texttt{LOAD"DUMBDEMOPET",8} 
+geschrieben haben? Hätten wir nicht \texttt{LOAD"1:DUMBDEMOPET",8} schreiben müssen,
+um von Laufwerk 1 zu laden?
+
+Nun, \textit{ohne} Laufwerksnummer wird die \textit{zuletzt verwendete}
+Laufwerksnummer verwendet. Und das war die von Laufwerk 1, von dem wir
+das Inhaltsverzeichnis geladen haben.
+
+Wenn Sie nun Ihr Testprogramm zurück erhalten wollen, können Sie
+es sich mit \texttt{LOAD"0:TEST",8} wieder zurück holen.
+
+XD-2031 erlaubt die Verwendung von bis zu 10 Laufwerken gleichzeitig,
+die mit den vorgestellten Laufwerksziffern 0 bis 9 angesprochen
+werden.
+
+\subsection{BASIC 4.0 Disketten-Befehle}
+Prinzipiell sind die zusätzlichen Disketten-Befehle des BASIC 4.0
+nützlich und werden auch von der Firmware unterstützt. 
+Eine gute Gelegenheit, das Hauptverzeichnis Ihres Hosts
+wieder zu säubern:
+
+\begin{verbatim}
+SCRATCH"TEST",D0
+
+ARE YOU SURE ?Y
+01,FILES SCRATCHED,01,00
+\end{verbatim}
+
+Leider wird die Laufwerksangabe streng geprüft. Bei Angaben größer 1
+wird ein \texttt{ILLEGAL QUANTITY ERROR} gemeldet. Dreifachlaufwerke
+waren Commodore dann wohl doch nicht geheuer.
+
+Immerhin sind ist bei der Angabe der Geräteadresse über ONU alle
+sinnvollen Werte möglich. Mit \texttt{CATALOG ONU 20} würde das
+Inhaltsverzeichnis eines Laufwerks an Geräteadresse 20 angezeigt werden.
+Werte größer als 31 oder kleiner als drei werden verweigert. 
+
+BASIC prüft hier zwar falsch, da die größtmögliche Geräteadresse nicht 31
+sondern nur 30 ist, aber wenigstens stellt das keine Einschränkung dar.
+
+\subsection{Geräteadresse ändern}
+Das Ändern der Geräteadresse Ihres Adapters erfolgt durch Senden
+eines Befehls an den Kommandokanal mit Sekundäradresse 15. Eine einfache
+Möglichkeit, mit BASIC-Bordmitteln Befehle zu senden, ist das Anhängen
+des Befehls an den OPEN-Befehl.
+
+\begin{verbatim}
+OPEN 1,8,15,"XU=30" : CLOSE 1
+\end{verbatim}
+
+Dies sendet dem Adapter an Geräteadresse 8 über den Kommandokanal 15
+den Befehl, fortan die neue Geräteadresse 30 zu verwenden.
+
+Wenn Sie BASIC 4 haben, probieren Sie ein \texttt{CATALOG ONU 30}, ansonsten:
+\begin{verbatim}
+LOAD"$",30
+LIST
+\end{verbatim}
+
+Für die Assembler- oder C-Programmierer kann es einfacher sein,
+die Laufwerksangabe binär statt ASCII-dezimal zu übertragen. Mit diesem
+zugegeberweise BASIC-Beispiel hierfür stellen wir die Geräteadresse
+wieder von 30 zurück auf 8:
+
+\begin{verbatim}
+OPEN 1,30,15
+PRINT#1,"XU=";CHR$(8)
+CLOSE 1
+\end{verbatim}
+
+Nach dem Ausschalten verwendet der Adapter wieder die voreingestellte
+Geräteadresse 8. Folgende Software-Versionen werden die Möglichkeit 
+bieten, den eingestellten Wert dauerhaft auch über das Ausschalten hinweg
+beizubehalten.
+
+\subsection{Laufwerken Inhalte zuweisen}
+Bei klassischen Diskettenlaufwerken würden Sie eine Diskette 
+einlegen. Hier muss dem Adapter mitgeteilt werden, \textit{wo} wo die Daten 
+liegen, die als virtuelle Diskette erscheinen sollen.
+
+Weil der Zugriff auf eine Festplatte aber grundsätzlich anders abläuft
+als beispielsweise der Zugriff auf einen FTP-Server im Internet, 
+muss man dem Adapter auch noch mitteilen \textit{wie} er darauf
+zugreifen soll.
+
+Für jeden Speicherort (Dateisystem/FTP/HTTP) gibt es daher einen 
+\textit{Provider}. Auf Deutsch bedeutet das etwa \textit{Lieferant}
+oder \textit{Leistungserbringer}. 
+
+Hier ein Beispiel mit vier zugewiesenen Laufwerken:
+
+\begin{tabular}[c]{c l l}
+\toprule
+Laufwerk & Provider & Ort \\
+\midrule
+0 & Dateisystem & sample/ \\
+1 & Dateisystem & tools/ \\
+2 & FTP & ftp.zimmers.net \\
+3 & HTTP & www.gutenberg.org/ebooks/ \\
+\bottomrule
+\end{tabular}
+
+\section{Dateien und Verzeichnisse}
+\subsection{Regeln für Datei- und Verzeichnisnamen}
+Als maximale Länge eines Datei- oder Verzeichnisnamens sollten
+16 Zeichen nicht überschritten werden, damit alte Programme nicht
+durch unerwartet lange Dateinamen Schwierigkeiten bekommen.
+
+Generell sollten Sie Sonderzeichen in Dateinamen unbedingt 
+vermeiden. Absolut verboten sind:
+\begin{itemize}
+\item Doppelpunkte :
+\item Schrägstriche /
+\item umgekehrte Schrägstriche \textbackslash
+\item der Klammeraffe @
+\item das Paragraphenzeichen $\S$
+\item der Stern *
+\item das Fragezeichen ? 
+\item das Dollar-Zeichen \$
+\end{itemize}
+Leerzeichen können dagegen problemlos verwendet werden.
+Wenn Sie einen sichtbaren Trenner verwenden möchten, sollten
+Sie das Minus-Zeichen '-' bevorzugen, da der Unterstrich '\_' 
+auf einem CBM schwierig einzugeben sein kann.
+
+\subsection{Wildcards -- Dateimasken}
+Wildcards funktionieren im CBM-Umfeld anders, als Sie es von DOS,
+Windows oder unixoiden Betriebssystemen gewöhnt sein werden, weshalb 
+Sie sich wenigstens den nächsten Abschnitt \glqq \nameref{starwc}\grqq\ 
+ansehen sollten.
+
+Aber zunächst sei erst einmal sei erklärt, was Wildcards oder Dateimasken 
+überhaupt sind: nämlich
+eine Art Joker für Dateinamen, die das Arbeiten mit mehreren Dateien
+auf einmal sehr erleichtern.
+
+Das Fragezeichen '?' steht dabei für ein beliebiges vorhandenes einzelnes 
+Zeichen, das '*' für mehrere beliebige Zeichen oder nichts.
+
+Angenommen, Sie hätten eine Liste von Dateien:
+
+\begin{verbatim}
+BUDGET1977
+BUDGET1978
+BUDGET1979
+BUDGET1979.Q1
+BUDGET1979.Q2
+BUDGET1979.Q3
+\end{verbatim}
+
+\texttt{@\$:BUDGET197?} würde dann BUDGET1977, BUDGET1978 und BUDGET 1979
+anzeigen, nicht aber BUDGET1979.Q1, BUDGET1979.Q2 und BUDGET1979.Q3.
+
+\texttt{@\$:BUDGET1979?} würde gar keine Datei anzeigen, da es keine
+Datei gibt, deren Name nach \glqq BUDGET1979\grqq\ noch genau ein
+weiteres Zeichen enthält.
+
+\texttt{@\$:BUDGET1979*} würde alle vier Dateien BUDGET1979 und 
+BUDGET1979.Q1, BUDGET1979.Q2 und BUDGET1979.Q3 anzeigen, da bei
+einem Stern nicht notwendigerweise ein Zeichen folgen muss.
+
+\subsubsection*{Arbeitsweise der '*'-Wildcard}
+\label{starwc}
+Im Unterschied zu anderen Betriebssystem erfolgt nach '*' keine
+weitere Auswertung. Wenn Sie also versuchen würden, die Daten
+der ersten Quartale durch \texttt{*.Q1} zu kopieren, werden Sie
+feststellen, dass statt dessen \textit{alle} Dateien kopiert werden.
+Probieren Sie es aus, indem Sie sich mit \texttt{@\$:*.Q1} die
+etroffenen Dateien anzeigen lassen.
+
+\subsection{Verzeichnisse}
+Um einzelne Verzeichnisnamen in Pfad-Angaben zu trennen, muss der
+einfache Schrägstrich '/' verwendet werden.
+
+Richtig: /Spiele/Strategie\\
+Unzulässig: \textbackslash Spiele\textbackslash Strategie
+
+Neben absoluten können auch relative Pfadangaben verwendet werden.
+Was bedeutet das?
+
+Nehmen wir an, Sie hätten Ihre Dateien 
+in Unterverzeichnissen unter anderem wie folgt strukturiert:
+
+\tikzstyle{every node}=[draw=black,thick,anchor=west]
+\tikzstyle{selected}=[draw=red,fill=red!30]
+\tikzstyle{optional}=[dashed,fill=gray!50]
+\begin{tikzpicture}[%
+  grow via three points={one child at (0.5,-0.7) and
+    two children at (0.5,-0.7) and (0.5,-1.4)},
+      edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}]
+\node {Hauptverzeichnis}
+  child { node {Spiele} 
+    child { node {Autorennen} }
+    child { node {Ballern} }
+    child { node [selected] {Strategie} }
+  }
+%  child [missing] {}
+%  child [missing] {}
+%  child [missing] {}
+%  child { node {Texte} 
+%    child { node {Arbeit} }
+%    child { node {Briefe} }
+%    child { node {Tagebuch} }
+%  }
+;
+\end{tikzpicture}
+
+Nehmen wir weiter an, sie befänden Sich im Unterverzeichnis Strategie
+und wollten Sich nun in das Ballerspiel-Verzeichnis wechseln.
+
+Absolute Pfadangaben beinhalten immer den kompletten Pfad vom
+Hauptverzeichnis an. Mit \texttt{@CD:/SPIELE/BALLERN} würden Sie nun
+das Verzeichnis wechseln.
+
+Bei tiefer verschachtelten Verzeichnissen kann das eine Menge Tipp-Arbeit
+bedeuten, weshalb sich relative Angaben anbieten. Zwei Punkte hintereinander
+bezeichnen dabei immer das übergeordnete Verzeichnis, ohne dass
+dieser Name ausdrücklich bekannt sein müsste. \texttt{@CD:../BALLERN}
+bringt Sie dann direkt in das gewünschte Verzeichnis.
+
+Mit \texttt{@CD:..} gelangen Sie immer eine Verzeichnisebene höher.
+
+\texttt{@CD:/} bringt Sie in das Hauptverzeichnis.
+
+\section{DOS-Befehle}
+\subsection{Verwendete Notation}
+\subsection*{Ersetzung durch tatsächlich passende Werte}
+In spitzen Klammern und kursiver Schrift werden Werte angegeben, die 
+Sie durch für Sie im Einzelfall tatsächlich
+zutreffenden Werte ersetzen müssen. Beispiel:
+
+\texttt{LOAD"}\textit{<Dateiname>}\texttt{",}\textit{<Geräteadresse>}
+
+\texttt{LOAD"TEST",8}
+
+\subsection*{Eine von mehreren Möglichkeiten wählen}
+Soll aus mehreren Möglichkeiten genau eine Auswahl getroffen werden,
+werden die Wahlmöglichkeiten in Klammern angegeben und durch einen
+senkrechten Strich getrennt. Beispiel:
+
+\mbox{\Big( Fisch \Big| \normalsize Fleisch \Big) \normalsize} 
+
+Fleisch
+
+\subsection*{Parameter angeben oder auslassen}
+Wenn eine Angabe \textit{optional} ist, können Sie sie entweder
+angeben oder weg lassen. Optionale Angaben stehen in eckigen Klammern.
+
+\texttt{LOAD"} \Big[ Laufwerk-Nummer \texttt{:} \Big] \textit{<Dateiname>}
+\texttt{",}\textit{<Geräteadresse>}
+
+\texttt{LOAD"TEST",8} lädt die Datei TEST vom zuletzt 
+verwendeten Laufwerk
+
+\texttt{LOAD"2:TEST",8} lädt die Datei TEST von Laufwerk 2
+
+\subsection*{Optionale Wiederholung}
+Manche Befehle fordern mindestens einen Parameter, können aber beliebig
+viele weitere\footnote{
+	In der Praxis wird die Anzahl durch andere Umstände begrent, 
+	wie etwa die Größe des Zwischenspeichers, der einen Befehl
+	aufnehmen soll
+} durch Komma getrennte Parameter annehmen. Die optionale Wiederholung
+wird dann durch ein Komma gefolgt von drei Punkten dargestellt:
+
+\mbox{\textit{<Name>} \Big[ \texttt{,} \ldots \ \Big]}
+
+\begin{verbatim}
+PETER
+PETER,PAUL,MARY
+\end{verbatim}
+
+\subsection{I -- Initialize -- Laufwerk initialisieren}
+
+\texttt{I} \Big[ \textit{<Laufwerk-Nummer>} \Big]
+
+Dieser Befehl ist nur aus Kompatibilitätsgründen enthalten.
+Seine einzige Wirkung ist das Rücksetzen der Statusmeldung.
+
+Er stammt aus der Zeit, als Diskettenlaufwerke noch keine Schalter
+eingebaut hatten, die einen Diskettenwechsel hätten erkennen können.
+Mit diesem Befehl musste nach dem Einlegen einer Diskette dem
+Laufwerk mitgeteilt werden, dass eine neue Diskette initialisiert
+werden soll, also zur weiteren Benutzung vorbereitet werden soll.
+
+Beispiele:
+\begin{verbatim}
+I
+I0
+\end{verbatim}
+
+\subsection{R -- Rename -- Datei oder Verzeichnis umbenennen}
+Benennt eine Datei oder ein Verzeichnis um. Beachten Sie die Reihenfolge:
+der neue Dateiname wird zuerst genannt.
+
+\texttt{R}\Big[ \textit{<Laufwerk-Nummer>} \Big] \texttt{:}
+\textit{<Neuer Name>} \texttt{=} \textit{<Alter Name>}
+
+Beispiele:
+\begin{verbatim}
+@R:REZEPTE PIZZEN=REZEPT PIZZA
+@R0:WUENSCHE2013.TXT=WUENSCHE2012.TXT
+\end{verbatim}
+
+\subsection{S -- Scratch -- Datei(en) löschen}
+\texttt{S} \Big[ \textit{<Laufwerk-Nummer>} \Big] \texttt{:}
+\textit{<Dateimaske>} \Big[ \texttt{,} \ldots \  \Big]
+
+Löscht die angegebenen Datei(en). Mehrere Dateinamen bzw. Suchmuster
+können durch Komma getrennt angegeben werden.
+
+Beispiele:
+
+\texttt{@S:MIST} löscht die Datei MIST\\
+\texttt{@S:STATISTIK198?.SEQ} löscht die Statistiken der Jahre 1980, 1981 
+\ldots \ bis 1989 \\
+\texttt{@S:MIST,UNSINN,ENTWURF,ENTWURF2} löscht alle genannten Dateien \\
+\texttt{@S:*} löscht alle Dateien(!) des Unterverzeichnisses
+
+\subsection{CD / CHDIR -- Change directory -- Unterverzeichnis wechseln}
+\mbox{\Big( \texttt{CD} \Big| \texttt{CHDIR} \Big) 
+\Big[ \textit{<Laufwerk-Nummer>} \Big]
+\texttt{:} \textit{<Verzeichnis>}}
+
+Wechselt in das angegebene Unterverzeichnis.
+
+Beispiele:
+\begin{verbatim}
+@CD:SPIELE
+@CD:..
+@CD:TEXTE/HAUSAUFGABEN
+\end{verbatim}
+
+\subsection{MD / MKDIR -- Make directory}
+
+\mbox{\Big( \texttt{MD} \Big| \texttt{MKDIR} \Big) 
+\Big[ \textit{<Laufwerk-Nummer>} \Big]
+\texttt{:} \textit{<Verzeichnis>}}
+
+Erstellt das angegebene Unterverzeichnis. 
+
+Bei Pfadangaben müssen
+alle vorgenannten Verzeichnisse bereits existieren. Bei der
+Angabe SOFTWARE/SPIELE/AUTORENNEN müssen also die Verzeichnisse
+SOFTWARE/SPIELE bereits existieren, damit das Verzeichnis AUTORENNEN 
+erstellt werden kann.
+
+Beispiele:
+\begin{verbatim}
+@MD:SKIZZEN
+@MD:TOPGAMES
+\end{verbatim}
+
+
+
+\subsection{RD / RMDIR -- Remove directory}
+
+\mbox{\Big( \texttt{RD} \Big| \texttt{RMDIR} \Big) 
+\Big[ \textit{<Laufwerk-Nummer>} \Big]
+\texttt{:} \textit{<Verzeichnis>}}
+
+Löscht das angegebene Unterverzeichnis, wenn es weder
+Dateien noch Unterverzeichnisse enthält.
+
+Beispiel:
+\begin{verbatim}
+@RM:EXPERIMENT2
+\end{verbatim}
+
+
+
+
+\subsection{XU -- Change unit -- Geräteadresse ändern}
+
+\texttt{XU=}\Big( \textit{<Geräteadresse in ASCII Ziffern>} \Big|
+\textit{<Geräteadresse binär>} \Big)
+
+Soll die Einstellung dauerhaft auch nach dem Ausschalten erhalten 
+bleiben, muss die Konfiguraton durch den Befehl \texttt{XW} gesichert werden.
+
+Beispiele:
+
+\begin{verbatim}
+@XU=9
+OPEN 1,8,15,"XU=9" : CLOSE 1
+OPEN 1,8,15 : PRINT#1,"XU=";CHR$(9) : CLOSE 1
+\end{verbatim}
+
+\subsection{XD - Change last drive - Letztes Laufwerk setzen}
+
+\texttt{XD=}\Big( \textit{<Laufwerk-Nummer in ASCII Ziffern>} \Big|
+\textit{<Laufwerk-Nummer binär>} \Big)
+
+Das zuletzt verwendete Laufwerk wird als \glqq Standardlaufwerk\grqq\  für
+Zugriffe verwendet, bei denen im Dateinamen durch vorangestelltes
+\textit{<Laufwerk-Nummer>}: nicht ausdrücklich ein bestimmtes
+Laufwerk angegeben wird.  
+Zusätzlich kann dieses Laufwerk auch mit dem XD Befehl gesetzt werden.
+
+Soll die Einstellung dauerhaft auch nach dem Ausschalten erhalten 
+bleiben, muss die Konfiguraton durch den Befehl \texttt{XW} gesichert werden.
+
+Beispiele:
+
+\begin{verbatim}
+@XD=0
+OPEN 1,8,15,"XD=0" : CLOSE 1
+OPEN 1,8,15 : PRINT#1,"XD=";CHR$(0) : CLOSE 1
+\end{verbatim}
+
+\subsection{XI -- Init -- Einschaltkonfiguration wieder herstellen}
+
+\texttt{XI}
+
+Wenn der Adapter über einen nicht flüchtigen Speicher für die
+Konfiguration besitzt, wird die dort gespeicherte Konfiguration beim
+Einschalten des Adapters automatisch wieder hergestellt. 
+Ist das nicht möglich, werden Standard-Werte eingesetzt.
+Mit \texttt{XI} kann diese Einschaltkonfiguration jederzeit wieder
+hergestellt werden.
+
+Standardkonfiguration, falls keine gespeicherte Konfiguration verfügbar:
+
+\begin{tabular}[c]{l l l}
+\toprule 
+Einstellung & Befehl & Wert\\
+\midrule
+Geräteadresse		& XU= & 8 \\
+Letztes Laufwerk	& XD= & 0 \\
+\bottomrule
+\end{tabular}
+
+\subsection{XW -- Write configuration -- Konfiguration schreiben}
+
+\texttt{XW}
+
+Speichert die aktuelle Konfiguration in einem nicht flüchtigem Speicher.
+Beim nächsten Einschalten des Adapters werden die gespeicherten Werte
+automatisch wieder hergestellt. Eine Übersicht der gespeicherten
+Einstellungen ist in der Beschreibung des \texttt{XI}-Befehls enthalten.
+
+\subsection{XRESET - Adapter zurück setzen}
+
+\texttt{XRESET}
+
+Dieser Befehl ist die Software-Entsprechung zum Druck auf die Reset-Taste
+des Adapters. Alle nicht gespeicherten Daten und Einstellungen gehen
+dabei verloren.
+
+Wenn der Adapter über einen Bootloader zur Aktualisierung der Firmware
+verfügt, wird dieser vor dem Starten der Firmware aktiv. \texttt{XRESET}
+kann daher dazu verwendet werden, den Aktualisierungsvorgang anzustoßen.
+
+\section{Anhang}
+\subsection{Verwendete Lizenzen}
+\input{gpl-2.0.tex}
+
+% Erzeugt falschen Link im PDF
+% \addcontentsline{toc}{subsection}{Stichwortverzeichnis}
+
+\renewcommand{\indexname}{Stichwortverzeichnis}
+\printindex
+
+\end{document}
+
+
+
+
