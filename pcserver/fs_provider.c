@@ -587,7 +587,9 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 		// file or directory exists
 		er = ERROR_FILE_EXISTS;
 	} else {
-		int rv = mkdir(newpath, 0557);
+		mode_t oldmask=umask(0);
+		int rv = mkdir(newpath, 0755);
+		umask(oldmask);
 
 		if (rv < 0) {
 			log_errno("Error trying to make a directory");
