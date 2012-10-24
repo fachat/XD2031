@@ -41,8 +41,10 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <libgen.h>
 
 // to get a proper definition of realpath()
+#define _XOPEN_SOURCE
 #define	__USE_XOPEN_EXTENDED
 #include <stdlib.h>
 
@@ -50,6 +52,7 @@
 #include "fscmd.h"
 #include "provider.h"
 #include "errors.h"
+#include "mem.h"
 
 #include "log.h"
 
@@ -258,38 +261,102 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	}
 }
 
+static int path_under_base(char *path, char *base) {
+/* 
+ * Return
+ * -3 if malloc() failed
+ * -2 if realpath(path) failed
+ * -1 if realpath(base) failed
+ *  0 if it is
+ *  1 if it is not
+ */
+	int res = 1;
+	char *base_realpathc = NULL;
+	char *base_dirc = NULL;
+	char *path_dname = NULL;
+	char *path_realpathc = NULL;
+
+	if(!base) return -1;
+	if(!path) return -2;
+
+	base_realpathc = realpath(base, NULL);
+	if(!base_realpathc) {
+		res = -1;
+		log_error("Unable to get real path for '%s'\n", base);
+		goto exit;
+	}
+	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
+	strcpy(base_dirc, base_realpathc);
+	if(!base_dirc) {
+		res = -3;
+		goto exit;
+	}
+	strcat(base_dirc, "/");
+
+	path_realpathc = realpath(path, NULL);
+	if(!path_realpathc) {
+		path_dname = dirname(path);
+		path_realpathc = realpath(path_dname, NULL);
+	}
+	if(!path_realpathc) {
+		log_error("Unable to get real path for '%s'\n", path);
+		res = -2;
+		goto exit;
+	}
+
+	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
+	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
+		res = 0;
+	} else {
+		log_error("Path '%s' is not in base dir '%s'\n", path_realpathc, base_dirc);
+	}
+exit:
+	mem_free(base_realpathc);
+	mem_free(base_dirc);
+	mem_free(path_realpathc);
+	return res;  
+}
+
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+	int er = ERROR_FAULT;
+	File *file;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
 
-        File *file = reserve_file(ep, tfd);
+	char *fullname = malloc_path(fsep->curpath, buf);
+	if(path_under_base(fullname, fsep->basepath)) return ERROR_FAULT;
 
-	if (file != NULL) {
-		/* no directory separators - security rules! */
-		char *nm = (char*)buf;
-		if(*nm=='/') nm++;
-		if(strchr(nm, '/')) {
-			// should give a security error
-			// TODO: replace with correct error number
-			return ERROR_SYNTAX_DIR_SEPARATOR;
+	char *dirc = mem_alloc_str(fullname); char *path     = dirname(dirc);
+	char *fnc  = mem_alloc_str(fullname); char *filename = basename(fnc);
+
+	FILE *fp = open_first_match(path, filename, mode);	
+	if(fp) {
+	
+		file = reserve_file(ep, tfd);
+
+		if (file) {
+			file->fp = fp;
+			file->dp = NULL;
+			er = ERROR_OK;
+		} else {
+			fclose(fp);
+			log_error("Could not reserve file\n");
+			er = ERROR_FAULT;
 		}
 
-		FILE *fp = open_first_match(fsep->curpath, nm, mode);
-
-		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, buf, buf, (void*)file, (void*)fp);
-
-		if(fp) {
-		  file->fp = fp;
-		  file->dp = NULL;
-		  return ERROR_OK;
-		}
-		// TODO: open error (maybe depending on errno?)
-		close_fd(file);
+	} else {
+		
+		log_errno("Error opening file '%s/%s'", path, filename);
+		er = errno_to_error(errno);
 	}
-	return ERROR_FAULT;
+
+	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, filename, filename, (void*)file, (void*)fp);
+
+	mem_free(dirc); mem_free(fnc);
+	return er;
 }
 
 // open a directory read
