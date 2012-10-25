@@ -35,15 +35,15 @@ void mem_init(void);
 void mem_free(void *ptr);
 
 // alloc single object
-void *mem_alloc_(type_t *type, char *file, int line);
+void *mem_alloc_(const type_t *type, char *file, int line);
 #define mem_alloc(t) mem_alloc_(t, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
-void *mem_alloc_n_(size_t n, type_t *type, char *file, int line);
+void *mem_alloc_n_(size_t n, const type_t *type, char *file, int line);
 #define mem_alloc_n(n, type) mem_alloc_n_(n, type, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
-void *mem_alloc_c_(size_t n, char *name, char *file, int line);
+void *mem_alloc_c_(size_t n, const char *name, char *file, int line);
 #define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__)
 
 // allocate memory and copy given string

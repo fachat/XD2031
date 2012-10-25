@@ -54,6 +54,7 @@
 #include "privs.h"
 #include "log.h"
 #include "provider.h"
+#include "mem.h"
 
 #define FALSE 0
 #define TRUE 1
@@ -205,6 +206,8 @@ int main(int argc, char *argv[]) {
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
+
+	mem_init();
 
 
 	i=1;

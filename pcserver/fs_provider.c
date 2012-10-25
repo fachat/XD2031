@@ -31,7 +31,7 @@
  * In this file the actual command work is done for the 
  * local filesystem.
  */
-
+void *dumb_realpath_root_ptr;
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -123,9 +123,9 @@ static void fsp_free(endpoint_t *ep) {
         for(i=0;i<MAXFILES;i++) {
                 close_fd(&(cep->files[i]));
         }
-	free(cep->basepath);
-	free(cep->curpath);
-        free(ep);
+	mem_free(cep->basepath);
+	mem_free(cep->curpath);
+        mem_free(ep);
 }
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
@@ -148,7 +148,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	// malloc's a buffer and stores the canonical real path in it
 	fsep->basepath = realpath(dirpath, NULL);
 
-	free(dirpath);
+	mem_free(dirpath);
 
 	if (fsep->basepath == NULL) {
 		// some problem with dirpath - maybe does not exist...
@@ -574,7 +574,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *topath = malloc_path(fsep->curpath, to);
 
 	char *fromreal = realpath(frompath, NULL);
-	free(frompath);
+	mem_free(frompath);
 	char *toreal = realpath(topath, NULL);
 
 	if (toreal != NULL) {
@@ -596,9 +596,9 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 			}
 		}
 	}
-	free(topath);
-	free(toreal);
-	free(fromreal);
+	mem_free(topath);
+	mem_free(toreal);
+	mem_free(fromreal);
 
 	return er;
 }
@@ -615,7 +615,7 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	// canonicalize it
 	char *newreal = realpath(newpath, NULL);
 	// free buffer so we don't forget it
-	free(newpath);
+	mem_free(newpath);
 
 	log_debug("Checking that new path '%s' is under base '%s'\n",
 		newreal, fsep->basepath);
@@ -628,13 +628,15 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	// check if the new path is still under the base path
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// the needle base path is found at the start of the new real path -> ok
-		free(fsep->curpath);
+		mem_free(fsep->curpath);
 		fsep->curpath = newreal;
 	} else {
 		// needle (base path) is not in haystack (new path)
 		// -> security error
 		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
-		free(newreal);
+		log_debug("dumb_realpath_root_ptr: %p newreal: %p\n", dumb_realpath_root_ptr, newreal);
+		log_debug("NULL: %p\n, strcmp(newreal,\"/\"): %d\n", NULL, strcmp(newreal,"/"));
+		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
 	}
 	return ERROR_OK;
@@ -666,8 +668,8 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newpath);
-	free(newreal);
+	mem_free(newpath);
+	mem_free(newreal);
 	return er;
 }
 
@@ -681,7 +683,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	char *newreal = realpath(newpath, NULL);
-	free(newpath);
+	mem_free(newpath);
 
 	if (newreal == NULL) {
 		// directory does not exist
@@ -701,7 +703,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newreal);
+	mem_free(newreal);
 	return er;
 }
 

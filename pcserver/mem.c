@@ -35,20 +35,32 @@
 #include <stdlib.h>
 
 #include "types.h"
+#include "log.h"
+#include "mem.h"
 
 void *dumb_realpath_root_ptr = NULL;
 
 void mem_init (void)
 {
-  dumb_realpath_root_ptr = realpath("/", NULL);
+	char *p1, *p2;
+	p1 = realpath("/", NULL);
+	p2 = realpath("/", NULL);
+	if(p1 == p2) {
+		dumb_realpath_root_ptr = p1;
+		log_debug("realpath(\"/\", NULL) doesn't allocate memory\n");
+	}
+	mem_free(p1);
+	mem_free(p2);
 }
 
-#define check_alloc(ptr, file, line) { \
-	if(!ptr) { \
-		fprintf(stderr, "Could not allocate memory, " \
-		"file: %s line: %d\n", file, line); \
-		exit(1); \
-	} \
+#define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
+
+static void check_alloc_(void *ptr, char *file, int line) {
+	if(!ptr) {
+		fprintf(stderr, "Could not allocate memory, "
+		"file: %s line: %d\n", file, line);
+		exit(1);
+	}
 }
 
 // allocate memory and copy given string
