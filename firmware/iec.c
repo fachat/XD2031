@@ -36,6 +36,7 @@
 
 #include "debug.h"
 #include "led.h"
+#include "system.h"
 
 #undef DEBUG_BUS
 
@@ -188,12 +189,10 @@ static void listenloop() {
 	int16_t c;
 
 	do {
-		// disable interrupts
-		cli();
+		disable_interrupts();
 		// read byte from IEC
 		c = iecin(0);
-		// enable ints
-		sei();
+		enable_interrupts();
 		if (c < 0) {
 			break;
 		}
@@ -316,12 +315,10 @@ static void talkloop()
 		debug_printf("rx->iecout: %02\n", c); debug_flush();
 #endif
 
-		// disable ints
-		cli(); // TODO: arch-dependent
+		disable_interrupts();
 		// send byte to IEC
 		er = iecout(c, ser_status & 0x40);
-		// enable ints
-		sei();
+		enable_interrupts();
 
 		if (er >= 0) {
             		ser_status = bus_receivebyte(&bus, &c, BUS_SYNC);
@@ -360,12 +357,10 @@ void iec_mainloop_iteration(void)
         // Loop to get commands during ATN lo ----------------------------
 
 	do {
-		// disable ints - TODO: arch-specific
-		cli();
+		disable_interrupts();
 		// get byte (under ATN) - call to E9C9
 		cmd = iecin(1);
-		// enable ints again
-		sei();
+		enable_interrupts();
 
 		if (cmd >= 0) {
 			ser_status = bus_attention(&bus, 0xff & cmd);

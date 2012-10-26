@@ -22,6 +22,20 @@
 
 **************************************************************************/
 
-#include "arch.h"
+/* This file contains arch-specific stuff included by system.h */
 
-void reset_mcu (void);
+#include <avr/interrupt.h>
+
+
+static inline void enable_interrupts (void) __attribute__((always_inline));
+static inline void disable_interrupts (void) __attribute__((always_inline));
+
+static inline void enable_interrupts (void) 
+{
+  sei();
+}
+
+static inline void disable_interrupts (void) 
+{
+  cli();
+}

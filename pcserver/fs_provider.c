@@ -31,7 +31,7 @@
  * In this file the actual command work is done for the 
  * local filesystem.
  */
-
+void *dumb_realpath_root_ptr;
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -41,8 +41,10 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <libgen.h>
 
 // to get a proper definition of realpath()
+#define _XOPEN_SOURCE
 #define	__USE_XOPEN_EXTENDED
 #include <stdlib.h>
 
@@ -50,6 +52,7 @@
 #include "fscmd.h"
 #include "provider.h"
 #include "errors.h"
+#include "mem.h"
 
 #include "log.h"
 
@@ -120,9 +123,9 @@ static void fsp_free(endpoint_t *ep) {
         for(i=0;i<MAXFILES;i++) {
                 close_fd(&(cep->files[i]));
         }
-	free(cep->basepath);
-	free(cep->curpath);
-        free(ep);
+	mem_free(cep->basepath);
+	mem_free(cep->curpath);
+        mem_free(ep);
 }
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
@@ -145,7 +148,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	// malloc's a buffer and stores the canonical real path in it
 	fsep->basepath = realpath(dirpath, NULL);
 
-	free(dirpath);
+	mem_free(dirpath);
 
 	if (fsep->basepath == NULL) {
 		// some problem with dirpath - maybe does not exist...
@@ -258,38 +261,102 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	}
 }
 
+static int path_under_base(char *path, char *base) {
+/* 
+ * Return
+ * -3 if malloc() failed
+ * -2 if realpath(path) failed
+ * -1 if realpath(base) failed
+ *  0 if it is
+ *  1 if it is not
+ */
+	int res = 1;
+	char *base_realpathc = NULL;
+	char *base_dirc = NULL;
+	char *path_dname = NULL;
+	char *path_realpathc = NULL;
+
+	if(!base) return -1;
+	if(!path) return -2;
+
+	base_realpathc = realpath(base, NULL);
+	if(!base_realpathc) {
+		res = -1;
+		log_error("Unable to get real path for '%s'\n", base);
+		goto exit;
+	}
+	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
+	strcpy(base_dirc, base_realpathc);
+	if(!base_dirc) {
+		res = -3;
+		goto exit;
+	}
+	strcat(base_dirc, "/");
+
+	path_realpathc = realpath(path, NULL);
+	if(!path_realpathc) {
+		path_dname = dirname(path);
+		path_realpathc = realpath(path_dname, NULL);
+	}
+	if(!path_realpathc) {
+		log_error("Unable to get real path for '%s'\n", path);
+		res = -2;
+		goto exit;
+	}
+
+	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
+	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
+		res = 0;
+	} else {
+		log_error("Path '%s' is not in base dir '%s'\n", path_realpathc, base_dirc);
+	}
+exit:
+	mem_free(base_realpathc);
+	mem_free(base_dirc);
+	mem_free(path_realpathc);
+	return res;  
+}
+
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+	int er = ERROR_FAULT;
+	File *file;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
 
-        File *file = reserve_file(ep, tfd);
+	char *fullname = malloc_path(fsep->curpath, buf);
+	if(path_under_base(fullname, fsep->basepath)) return ERROR_FAULT;
 
-	if (file != NULL) {
-		/* no directory separators - security rules! */
-		char *nm = (char*)buf;
-		if(*nm=='/') nm++;
-		if(strchr(nm, '/')) {
-			// should give a security error
-			// TODO: replace with correct error number
-			return ERROR_SYNTAX_DIR_SEPARATOR;
+	char *dirc = mem_alloc_str(fullname); char *path     = dirname(dirc);
+	char *fnc  = mem_alloc_str(fullname); char *filename = basename(fnc);
+
+	FILE *fp = open_first_match(path, filename, mode);	
+	if(fp) {
+	
+		file = reserve_file(ep, tfd);
+
+		if (file) {
+			file->fp = fp;
+			file->dp = NULL;
+			er = ERROR_OK;
+		} else {
+			fclose(fp);
+			log_error("Could not reserve file\n");
+			er = ERROR_FAULT;
 		}
 
-		FILE *fp = open_first_match(fsep->curpath, nm, mode);
-
-		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, buf, buf, (void*)file, (void*)fp);
-
-		if(fp) {
-		  file->fp = fp;
-		  file->dp = NULL;
-		  return ERROR_OK;
-		}
-		// TODO: open error (maybe depending on errno?)
-		close_fd(file);
+	} else {
+		
+		log_errno("Error opening file '%s/%s'", path, filename);
+		er = errno_to_error(errno);
 	}
-	return ERROR_FAULT;
+
+	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, filename, filename, (void*)file, (void*)fp);
+
+	mem_free(dirc); mem_free(fnc);
+	return er;
 }
 
 // open a directory read
@@ -507,7 +574,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *topath = malloc_path(fsep->curpath, to);
 
 	char *fromreal = realpath(frompath, NULL);
-	free(frompath);
+	mem_free(frompath);
 	char *toreal = realpath(topath, NULL);
 
 	if (toreal != NULL) {
@@ -529,9 +596,9 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 			}
 		}
 	}
-	free(topath);
-	free(toreal);
-	free(fromreal);
+	mem_free(topath);
+	mem_free(toreal);
+	mem_free(fromreal);
 
 	return er;
 }
@@ -548,7 +615,7 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	// canonicalize it
 	char *newreal = realpath(newpath, NULL);
 	// free buffer so we don't forget it
-	free(newpath);
+	mem_free(newpath);
 
 	log_debug("Checking that new path '%s' is under base '%s'\n",
 		newreal, fsep->basepath);
@@ -561,13 +628,15 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	// check if the new path is still under the base path
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// the needle base path is found at the start of the new real path -> ok
-		free(fsep->curpath);
+		mem_free(fsep->curpath);
 		fsep->curpath = newreal;
 	} else {
 		// needle (base path) is not in haystack (new path)
 		// -> security error
 		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
-		free(newreal);
+		log_debug("dumb_realpath_root_ptr: %p newreal: %p\n", dumb_realpath_root_ptr, newreal);
+		log_debug("NULL: %p\n, strcmp(newreal,\"/\"): %d\n", NULL, strcmp(newreal,"/"));
+		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
 	}
 	return ERROR_OK;
@@ -587,7 +656,9 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 		// file or directory exists
 		er = ERROR_FILE_EXISTS;
 	} else {
-		int rv = mkdir(newpath, 0557);
+		mode_t oldmask=umask(0);
+		int rv = mkdir(newpath, 0755);
+		umask(oldmask);
 
 		if (rv < 0) {
 			log_errno("Error trying to make a directory");
@@ -597,8 +668,8 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newpath);
-	free(newreal);
+	mem_free(newpath);
+	mem_free(newreal);
 	return er;
 }
 
@@ -612,7 +683,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	char *newreal = realpath(newpath, NULL);
-	free(newpath);
+	mem_free(newpath);
 
 	if (newreal == NULL) {
 		// directory does not exist
@@ -632,7 +703,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newreal);
+	mem_free(newreal);
 	return er;
 }
 
