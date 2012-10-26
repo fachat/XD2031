@@ -362,7 +362,7 @@ void iec_mainloop_iteration(void)
 	// It looks as if in this case the C64 first does ATN low, but has not
 	// correctly figured out the other lines yet, thus a fall-though into
 	// iecin and after wiggling with clk once, the C64 hangs.
-	delayms(2);
+	delayms(1);
 
 	disable_interrupts();
 
