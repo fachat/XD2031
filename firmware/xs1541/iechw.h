@@ -157,6 +157,9 @@ static inline void satnalo() {
 	}
 }
 
+static inline uint8_t satna() {
+	return !is_satna;
+}
 
 // general functions
 

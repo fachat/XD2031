@@ -72,6 +72,25 @@ static uint8_t checkatn(uint8_t underatn)
 	} else {
 		return satnislo();
 	}
+//	if (underatn) {
+//		if (satnishi()) {
+//			if (!satna()) {
+////				datalo();
+//			}
+//			return 1;
+//		} else {
+//			return 0;
+//		}
+//	} else {
+//		if (satnislo()) {
+//			if (satna()) {
+////				datalo();
+//			}
+//			return 1;
+//		} else {
+//			return 0;
+//		}
+//	}
 }
 
 // read a byte from IEEE - E9C9 in VC1541
@@ -392,6 +411,8 @@ void iec_mainloop_iteration(void)
 		} else {
 			uint8_t port = 0;
 
+			// it does not matter whether datahi is before or after the delay
+			datahi();
 
 		        // wait for the host to set data and clk hi
 			// well, we could, but it doesn't make a difference
@@ -405,8 +426,6 @@ void iec_mainloop_iteration(void)
 			// anything below 11ms hangs :-(
 			delayms(11);
 
-			// it does not matter whether datahi is before or after the delay
-			datahi();
 		}
         }
 
