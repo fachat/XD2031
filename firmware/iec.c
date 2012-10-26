@@ -38,7 +38,7 @@
 #include "led.h"
 #include "system.h"
 
-#define DEBUG_BUS
+#undef DEBUG_BUS
 
 // Prototypes
 
@@ -103,7 +103,6 @@ static int16_t iecin(uint8_t underatn)
 	uint8_t cnt = 8;
 	uint8_t data = 0;
 
-	//clkhi();
 
 	do {
 		if (checkatn(underatn)) 
@@ -177,6 +176,10 @@ static int16_t iecin(uint8_t underatn)
 		// ea1a
 		do {
 			if (checkatn(underatn)) {
+// on the first bit wait for clk hi ATN is released
+// you can get here from the start of iecin 
+// with clk=data=1, then togglig clk=0, clk=1 once
+if ((underatn) && (cnt == 8)) { led_on(); }
 				return -1;
 			}
 		} while (is_port_clkhi(read_debounced()));
@@ -184,6 +187,7 @@ static int16_t iecin(uint8_t underatn)
 		cnt--;
 
 	} while (cnt > 0);
+led_off();
 
 	datalo();
 
@@ -352,6 +356,14 @@ void iec_mainloop_iteration(void)
 		return;
 	}
 
+#if 0 //def DEBUG_BUS
+	debug_printf("start of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	//debug_putcrlf();
+#endif
+
+	delayms(2);
+
 	disable_interrupts();
 
 	clkhi();
@@ -387,6 +399,7 @@ void iec_mainloop_iteration(void)
 			if (waitAtnHi()) {
 				// e902
 				dataforcelo();
+				// wait for ATN hi
 				while (satnislo());
 				// and exit loop
 				goto cmd;
@@ -401,12 +414,14 @@ void iec_mainloop_iteration(void)
 	
         // ---------------------------------------------------------------
 	// ATN is high now
-	// parallelattention has set status what to do
+	// bus_attention has set status what to do
 	// now transfer the data
 cmd:
 
-#ifdef DEBUG_BUS
-	debug_printf("stat=%04x", ser_status); debug_putcrlf();
+#if 0 ///def DEBUG_BUS
+	debug_printf("stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_putcrlf();
 #endif
 
 	// E8D7
@@ -448,11 +463,18 @@ cmd:
 //        		} while (is_port_datalo(port) || is_port_clklo(port));
 
 			// anything below 11ms hangs :-(
-			delayms(11);
-//			delayms(5);
+//			delayms(11);
+			delayms(5);
+
 
 		}
         }
+
+#if 0 //def DEBUG_BUS
+	debug_printf("end of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_putcrlf();
+#endif
 
 #ifdef DEBUG_BUS
 	debug_putc('X'); debug_flush();
