@@ -38,7 +38,7 @@
 #include "led.h"
 #include "system.h"
 
-#undef DEBUG_BUS
+#define DEBUG_BUS
 
 // Prototypes
 
@@ -57,6 +57,7 @@ static int16_t ser_status = 0;
 
 #define isListening()   ((ser_status&0xe000)==0x2000)
 #define isTalking()     ((ser_status&0xe000)==0x4000)
+#define waitAtnHi()     (ser_status&STAT_WAITEND)
 
 
 /***************************************************************************
@@ -68,30 +69,30 @@ static int16_t ser_status = 0;
 // returns !=0 when ATN has changed
 static uint8_t checkatn(uint8_t underatn) 
 {
-	if (underatn) {
-		return satnishi();
-	} else {
-		return satnislo();
-	}
 //	if (underatn) {
-//		if (satnishi()) {
-//			if (!satna()) {
-////				datalo();
-//			}
-//			return 1;
-//		} else {
-//			return 0;
-//		}
+//		return satnishi();
 //	} else {
-//		if (satnislo()) {
-//			if (satna()) {
-////				datalo();
-//			}
-//			return 1;
-//		} else {
-//			return 0;
-//		}
+//		return satnislo();
 //	}
+	if (underatn) {
+		if (satnishi()) {
+			//if (!satna()) {
+				dataforcelo();
+			//}
+			return -1;
+		} else {
+			return 0;
+		}
+	} else {
+		if (satnislo()) {
+			//if (satna()) {
+				dataforcelo();
+			//}
+			return -1;
+		} else {
+			return 0;
+		}
+	}
 }
 
 // read a byte from IEEE - E9C9 in VC1541
@@ -102,14 +103,14 @@ static int16_t iecin(uint8_t underatn)
 	uint8_t cnt = 8;
 	uint8_t data = 0;
 
-	clkhi();
+	//clkhi();
 
 	do {
 		if (checkatn(underatn)) 
 			return -1;
 	} while (is_port_clklo(read_debounced()));
 	
-	// (not so?) unlikely race condition:
+	// unlikely race condition:
 	// between the checkatn() and the is_port_clklo() the 
 	// sectalk ends the previous atn sequence with a 
 	// atn hi and clk hi - so we might fall through here;
@@ -121,6 +122,8 @@ static int16_t iecin(uint8_t underatn)
 	datahi();
 
 	// wait until data is really hi (other devices may delay this)
+	// actualy there's a vc1541 patch in the wild from e9dc to ff20 that 
+	// does exactly that but I found only afterwards...
 	do {
 		if (checkatn(underatn))
 			return -1;
@@ -130,18 +133,22 @@ static int16_t iecin(uint8_t underatn)
 	timer_set_us(256);
 
 	do {
+		// e9df (vc1541)
+
 		if (checkatn(underatn)) {
 			return -1;
 		}
 
 		if (timer_is_timed_out()) { 
 			// handle EOI condition
+			// e9f2
 			datalo();
 			// at least 23 cycles + 43+ for C64 bad video lines
 			delayus(80);
 
 			datahi();
 
+			// e9fd
 			do {
 				if (checkatn(underatn)) {
 					return -1;
@@ -157,6 +164,7 @@ static int16_t iecin(uint8_t underatn)
 
 	// shift in all bits
 	do {
+		// ea0b
 		do {
 			port = read_debounced();
 		} while (is_port_clklo(port));
@@ -166,6 +174,7 @@ static int16_t iecin(uint8_t underatn)
 			data |= 128;
 		}
 
+		// ea1a
 		do {
 			if (checkatn(underatn)) {
 				return -1;
@@ -343,12 +352,22 @@ void iec_mainloop_iteration(void)
 		return;
 	}
 
+	disable_interrupts();
+
 	clkhi();
 
 	datalo();
 
 	// acknowledge ATN
 	satnalo();
+
+	// E87B (vc1541)
+	do {
+		if (satnishi()) {
+			dataforcelo();
+			goto cmd;
+		}
+	} while (is_port_clklo(read_debounced()));
 
 	// on the C64, CLK is set high directly after setting ATN
 	// but here we are possibly faster than that, so do a delay
@@ -364,6 +383,14 @@ void iec_mainloop_iteration(void)
 
 		if (cmd >= 0) {
 			ser_status = bus_attention(&bus, 0xff & cmd);
+
+			if (waitAtnHi()) {
+				// e902
+				dataforcelo();
+				while (satnislo());
+				// and exit loop
+				goto cmd;
+			}
 		}
 
 		// cmd might be <0 if iecin ran into an ATN hi condition
@@ -376,6 +403,7 @@ void iec_mainloop_iteration(void)
 	// ATN is high now
 	// parallelattention has set status what to do
 	// now transfer the data
+cmd:
 
 #ifdef DEBUG_BUS
 	debug_printf("stat=%04x", ser_status); debug_putcrlf();
@@ -407,6 +435,7 @@ void iec_mainloop_iteration(void)
 			uint8_t port = 0;
 
 			// it does not matter whether datahi is before or after the delay
+			clkhi();
 			datahi();
 
 		        // wait for the host to set data and clk hi
@@ -420,6 +449,7 @@ void iec_mainloop_iteration(void)
 
 			// anything below 11ms hangs :-(
 			delayms(11);
+//			delayms(5);
 
 		}
         }

@@ -66,6 +66,15 @@ typedef struct {
 #define	BUS_FLUSH	PUT_FLUSH		// from channel.h
 #define	BUS_PRELOAD	0x80		
 
+// status word values (similar to commodore status in $90/$96)
+// it is not fully used though
+#define STAT_NODEV      0x80
+#define STAT_EOF        0x40
+#define STAT_WAITEND    0x20    // this is a new one for the serial bus
+#define STAT_RDTIMEOUT  0x01
+#define STAT_WRTIMEOUT  0x02
+
+
 // init
 // needs to be called before any concrete bus instance init
 void bus_init();

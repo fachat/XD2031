@@ -65,9 +65,13 @@ static inline uint8_t satnishi() {
 
 // DATA & CLK handling
 
-static inline void datalo() {
+static inline void dataforcelo() {
       	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_DATA);    	// DATA low
       	IEC_DDR |= _BV(IEC_PIN_DATA);              	// DATA as output
+}
+
+static inline void datalo() {
+	dataforcelo();
 	is_dataout = 0;
 }
 
