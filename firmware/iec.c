@@ -176,10 +176,6 @@ static int16_t iecin(uint8_t underatn)
 		// ea1a
 		do {
 			if (checkatn(underatn)) {
-// on the first bit wait for clk hi ATN is released
-// you can get here from the start of iecin 
-// with clk=data=1, then togglig clk=0, clk=1 once
-if ((underatn) && (cnt == 8)) { led_on(); }
 				return -1;
 			}
 		} while (is_port_clkhi(read_debounced()));
@@ -187,7 +183,6 @@ if ((underatn) && (cnt == 8)) { led_on(); }
 		cnt--;
 
 	} while (cnt > 0);
-led_off();
 
 	datalo();
 
@@ -362,6 +357,11 @@ void iec_mainloop_iteration(void)
 	//debug_putcrlf();
 #endif
 
+	// This delay fixes a problem that would otherwise require an 11ms
+	// wait at the end of this function when we don't do listenloop() or talkloo().
+	// It looks as if in this case the C64 first does ATN low, but has not
+	// correctly figured out the other lines yet, thus a fall-though into
+	// iecin and after wiggling with clk once, the C64 hangs.
 	delayms(2);
 
 	disable_interrupts();
@@ -447,26 +447,8 @@ cmd:
 
 			datahi();
 		} else {
-			uint8_t port = 0;
-
-			// it does not matter whether datahi is before or after the delay
 			clkhi();
 			datahi();
-
-		        // wait for the host to set data and clk hi
-			// well, we could, but it doesn't make a difference
-//        		do {
-//                		if (checkatn(0)) {
-//                        		break;
-//                		}
-//				port = read_debounced();
-//        		} while (is_port_datalo(port) || is_port_clklo(port));
-
-			// anything below 11ms hangs :-(
-//			delayms(11);
-			delayms(5);
-
-
 		}
         }
 
