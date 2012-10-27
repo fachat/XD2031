@@ -18,16 +18,8 @@ LIBS=-lcurl
 
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
-all: fstcp fsser
-#all: fsser
-
-fstcp: fstcp.c $(COMMONC) $(COMMONH)
-	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} fstcp.c $(COMMONC) -o fstcp ${LIBS}
-	# The following lines are only necessary if you want to listen on
-	# privileged ports (<1024)
-	#sudo chown root $@
-	#sudo chmod u+s $@
+#all: fstcp fsser
+all: fsser
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
