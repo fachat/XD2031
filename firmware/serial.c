@@ -395,7 +395,7 @@ static void push_data_to_packet(int8_t rxdata)
 			// yes, send sync
 			uarthw_send(FS_SYNC);
 		} else
-		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF) {
+		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF || rxdata == FS_SETOPT) {
 			// note EOI flag
 			current_is_eoi = rxdata;
 			// start a reply handling
@@ -427,25 +427,30 @@ static void push_data_to_packet(int8_t rxdata)
 		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
 		if (current_data_left == 0) {
 			// we are actually already done. do callback and set status to idle
-			if (rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+			if ((rxstate == RX_DATA) 
+				&& (rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0) == 0)) {
 				rx_channels[current_channelpos].channelno = -1;
-				rxstate = RX_IDLE;
 			}
+			rxstate = RX_IDLE;
 		}
 		break;
 	case RX_DATA:
 		packet_write_char(current_rxpacket, rxdata);
-		// fallthrough
-	case RX_IGNORE:
 		current_data_left --;
 //if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
 			if (rx_channels[current_channelpos].callback(current_channelno, 
 					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
 				rx_channels[current_channelpos].channelno = -1;
-				rxstate = RX_IDLE;
 			}
+			rxstate = RX_IDLE;
+		}
+		break;
+	case RX_IGNORE:
+		current_data_left --;
+		if (current_data_left <= 0) {
+			rxstate = RX_IDLE;
 		}
 		break;
 	default:
