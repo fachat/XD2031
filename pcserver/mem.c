@@ -32,6 +32,8 @@
 
 #define _XOPEN_SOURCE
 #define _XOPEN_SOURCE_EXTENDED
+// Linux (3.4.11)
+#define __USE_XOPEN_EXTENDED
 #include <stdlib.h>
 
 #include "types.h"
@@ -48,9 +50,11 @@ void mem_init (void)
 	if(p1 == p2) {
 		dumb_realpath_root_ptr = p1;
 		log_debug("realpath(\"/\", NULL) doesn't allocate memory\n");
+	} else {
+		// we should only free p1,p2 when they are allocated
+		mem_free(p1);
+		mem_free(p2);
 	}
-	mem_free(p1);
-	mem_free(p2);
 }
 
 #define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
@@ -103,11 +107,21 @@ void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 }
 
 // NOTE: does not handle padding, this must be fixed in the type->sizeofstruct value!
-#define mem_alloc_n(n, type) mem_alloc_n_(n, type, __FILE__, __LINE__)
 void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 	// for now just malloc()
 
 	void *ptr = calloc(n, type->sizeoftype);
+
+	check_alloc(ptr, file, line);
+
+	return ptr;
+}
+
+// NOTE: does not handle padding, this must be fixed in the type->sizeofstruct value!
+// NOTE: this does currently not zero-fill the added area when the array size is increased
+void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, int line) {
+
+	ptr = realloc(ptr, n * type->sizeoftype);
 
 	check_alloc(ptr, file, line);
 
