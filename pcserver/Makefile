@@ -9,8 +9,8 @@ DROPDIR=xd2031
 CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
 
-COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c
-COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h mem.h types.h
+COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c
+COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h mem.h types.h xcmd.h
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions

@@ -44,7 +44,7 @@ void *mem_alloc_n_(size_t n, const type_t *type, char *file, int line);
 
 // re-alloc multiple object, returning a pointer to an array
 void *mem_realloc_n_(size_t n, const type_t *type, void *ptr, char *file, int line);
-#define mem_realloc_n(n, type, ptr) mem_alloc_n_(n, type, ptr, __FILE__, __LINE__)
+#define mem_realloc_n(n, type, ptr) mem_realloc_n_(n, type, ptr, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
 void *mem_alloc_c_(size_t n, const char *name, char *file, int line);

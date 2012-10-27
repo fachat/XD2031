@@ -26,6 +26,7 @@
 #include "cmd.h"
 #include "channel.h"
 #include "rtconfig.h"
+#include "provider.h"
 
 /*
  * IEEE488 impedance layer
@@ -77,7 +78,7 @@ typedef struct {
 
 // init
 // needs to be called before any concrete bus instance init
-void bus_init();
+void bus_init(provider_t *provider);
 
 // IEEE/IEC protocol routines
 int16_t bus_receivebyte(bus_t *bus, uint8_t *c, uint8_t newbyte);

@@ -234,7 +234,8 @@ int main(int argc, char *argv[]) {
 		}
  	     	break;
 	    case 'A':
-		// ignore that one, as it will be evaluated later by cmd_...
+	    case 'X':
+		// ignore these, as those will be evaluated later by cmd_...
 		break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);

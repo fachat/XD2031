@@ -72,7 +72,7 @@ void serial_submit(void *epdata, packet_t *buf);
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
+                uint8_t (*callback)(int8_t channelno, int8_t errnum));
 
 static int8_t directory_converter(packet_t *p, uint8_t drive);
 static int8_t to_provider(packet_t *p);
@@ -116,7 +116,7 @@ static int8_t		txstate;
 static struct {
 	int8_t		channelno;	// -1 is unused
 	packet_t	*rxpacket;
-	void		(*callback)(int8_t channelno, int8_t errnum);
+	uint8_t		(*callback)(int8_t channelno, int8_t errnum);
 } rx_channels[NUMBER_OF_SLOTS];
 
 #define	RX_IDLE		0
@@ -427,10 +427,11 @@ static void push_data_to_packet(int8_t rxdata)
 		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
 		if (current_data_left == 0) {
 			// we are actually already done. do callback and set status to idle
-			rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0);
-			rx_channels[current_channelpos].channelno = -1;
-			rxstate = RX_IDLE;
+			if (rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+				rx_channels[current_channelpos].channelno = -1;
+				rxstate = RX_IDLE;
+			}
 		}
 		break;
 	case RX_DATA:
@@ -440,10 +441,11 @@ static void push_data_to_packet(int8_t rxdata)
 		current_data_left --;
 //if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
-			rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0);
-			rx_channels[current_channelpos].channelno = -1;
-			rxstate = RX_IDLE;
+			if (rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+				rx_channels[current_channelpos].channelno = -1;
+				rxstate = RX_IDLE;
+			}
 		}
 		break;
 	default:
@@ -523,7 +525,7 @@ void serial_submit(void *epdata, packet_t *buf) {
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
-		void (*callback)(int8_t channelno, int8_t errnum)) {
+		uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
 
 	if (channelno < 0) {
 		debug_printf("!!!! submit with channelno=%d\n", channelno);

@@ -42,7 +42,7 @@
 
 channel_t channels[MAX_CHANNELS];
 
-static void _push_callback(int8_t channelno, int8_t errnum);
+static uint8_t _push_callback(int8_t channelno, int8_t errnum);
 static void channel_close_int(channel_t *chan, uint8_t force);
 
 void channel_init(void) {
@@ -51,7 +51,7 @@ void channel_init(void) {
 	}
 }
 
-static void _pull_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
 		p->last_pull_errorno = errorno;
@@ -65,6 +65,7 @@ static void _pull_callback(int8_t channel_no, int8_t errorno) {
 			p->pull_state = PULL_TWOCONV;
 		}
 	}
+	return 0;
 }
 
 /**
@@ -335,7 +336,7 @@ channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	return NULL;
 }
 
-static void _push_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _push_callback(int8_t channelno, int8_t errnum) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
                 p->last_push_errorno = errnum;
@@ -351,6 +352,7 @@ static void _push_callback(int8_t channelno, int8_t errnum) {
 			p->push_state = PUSH_OPEN;
 		}
         }
+	return 0;
 }
 	
 

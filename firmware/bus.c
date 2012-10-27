@@ -88,10 +88,12 @@ static errormsg_t error;
 
 static uint8_t secaddr_offset_counter;
 
-void bus_init() {
+void bus_init(provider_t *provider) {
 	secaddr_offset_counter = 0;
 
 	set_error(&error, ERROR_DOSVERSION);
+
+//	provider->submit_call(
 }
 
 uint8_t get_default_device_address(void) {

@@ -133,7 +133,9 @@ int main()
 	channel_init();
 
 	// bus init	
-	bus_init();			// first the general bus (with bus counter)
+	// first the general bus (with bus counter)
+	// note it gets the provider to register a listener for X command line params
+	bus_init(serial);		
 
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on

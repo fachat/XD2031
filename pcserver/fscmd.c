@@ -44,6 +44,7 @@
 #include "dir.h"
 #include "provider.h"
 #include "log.h"
+#include "xcmd.h"
 
 #undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -116,6 +117,7 @@ void set_chan(int channo, endpoint_t *ep) {
 void cmd_init() {
 	provider_init();
 	chan_init();
+	xcmd_init();
 }
 
 /**
@@ -126,8 +128,22 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 
 	for (int i = 0; i < argc; i++) {
 
+		if (argv[i][0] != '-') {
+			continue;
+		}
+
+		if ((strlen(argv[i]) >2) 
+			&& argv[i][1] == 'X') {
+
+			if (index(argv[i]+2, ':') == NULL) {
+				// we need a ':' as separator between bus name and actual command
+				log_error("Could not find bus name separator ':' in '%s'\n", argv[i]+2);
+				continue;
+			}
+
+			xcmd_register(argv[i]+2);
+		}
 		if ((strlen(argv[i]) >4) 
-			&& argv[i][0] == '-'
 			&& argv[i][1] == 'A') {
 
 			if (!isdigit(argv[i][2])) {
@@ -181,6 +197,30 @@ static void cmd_sync(int readfd, int writefd) {
 	} while (n != 1 || (0xff & syncbuf[0]) != FS_SYNC);
 }
 
+
+static void cmd_sendxcmd(int writefd, char buf[]) {
+	// now send all the X-commands
+	int ncmds = xcmd_num_options();
+	log_debug("Got %d options to send:", ncmds);
+	for (int i = 0; i < ncmds; i++) {
+		const char *opt = xcmd_option(i);
+		log_debug("Option %d: %s", i, opt);
+
+		int len = strlen(opt);
+		if (len > MAX_BUFFER_SIZE - FSP_DATA) {
+			log_error("Option is too long to be sent: '%s'\n", opt);
+		} else {
+			buf[FSP_CMD] = FS_SETOPT;
+			buf[FSP_LEN] = FSP_DATA + strlen(opt);
+			buf[FSP_FD] = FSFD_SETOPT;
+			strncpy(buf+FSP_DATA, opt, MAX_BUFFER_SIZE);
+
+			// TODO: error handling
+			write(writefd, buf, buf[FSP_LEN] & 255);
+		}
+	}
+}
+
 /**
  * this is the main loop of the program
  *
@@ -196,6 +236,8 @@ void cmd_loop(int readfd, int writefd) {
 
 	// sync device and server
 	cmd_sync(readfd, writefd);
+
+	cmd_sendxcmd(writefd, buf);
 
         /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
@@ -488,7 +530,7 @@ static void do_cmd(char *buf, int fd) {
 		// The drive number in buf[FSP_DATA] is the one to assign,
 		// while the rest of the name determines which provider to use
 		//
-		// A provider can be determines relative to an existing one. In 
+		// A provider can be determined relative to an existing one. In 
 		// this case the provider name is the endpoint (drive) number,
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
