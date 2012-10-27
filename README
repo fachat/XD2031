@@ -58,7 +58,7 @@ Planned features for Release 1.0
 - SD card provider on the atmega side
 	-> started
 - IEC support so C64 et al can use the device 
-	-> beta
+	-> done for C64, C128 and VIC20 still to test
 - Use other providers without ASSIGN before, e.g. LOAD"sd:filename",8
 	-> open
 - bidirectional file support, together with TELNET functionality
