@@ -31,10 +31,12 @@
 #include <stdlib.h>
 
 #ifdef __APPLE__
+#include <sys/syslimits.h>
+
 static inline char *os_realpath (char *path) 
 {
 	// OS X 10.6.8, Darwin Kernel Version 10.8.0
-	return (realpath(path, mem_alloc_c(path, "realpath")));
+	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
 }
 #else
 static inline char *os_realpath (char *path) 
