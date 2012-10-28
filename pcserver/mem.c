@@ -25,36 +25,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef __APPLE__
 #include <malloc.h>
 #endif
 
-#define _XOPEN_SOURCE
-#define _XOPEN_SOURCE_EXTENDED
-// Linux (3.4.11)
-#define __USE_XOPEN_EXTENDED
-#include <stdlib.h>
-
 #include "types.h"
 #include "log.h"
 #include "mem.h"
 
-void *dumb_realpath_root_ptr = NULL;
-
-void mem_init (void)
-{
-	char *p1, *p2;
-	p1 = realpath("/", NULL);
-	p2 = realpath("/", NULL);
-	if(p1 == p2) {
-		dumb_realpath_root_ptr = p1;
-		log_debug("realpath(\"/\", NULL) doesn't allocate memory\n");
-	} else {
-		// we should only free p1,p2 when they are allocated
-		mem_free(p1);
-		mem_free(p2);
-	}
+void mem_init (void) {
 }
 
 #define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
@@ -130,7 +111,7 @@ void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, 
 
 void mem_free(void* ptr) {
 
-  if(ptr!=dumb_realpath_root_ptr) free(ptr);
+	free(ptr);
 
 }
 

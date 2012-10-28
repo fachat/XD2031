@@ -31,7 +31,7 @@
  * In this file the actual command work is done for the 
  * local filesystem.
  */
-void *dumb_realpath_root_ptr;
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -634,8 +634,6 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 		// needle (base path) is not in haystack (new path)
 		// -> security error
 		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
-		log_debug("dumb_realpath_root_ptr: %p newreal: %p\n", dumb_realpath_root_ptr, newreal);
-		log_debug("NULL: %p\n, strcmp(newreal,\"/\"): %d\n", NULL, strcmp(newreal,"/"));
 		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
 	}
