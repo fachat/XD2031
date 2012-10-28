@@ -324,7 +324,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
-	if(path_under_base(fullname, fsep->basepath)) return ERROR_FAULT;
+	if(path_under_base(fullname, fsep->basepath)) return ERROR_NO_PERMISSION;
 
 	char *dirc = mem_alloc_str(fullname); char *path     = dirname(dirc);
 	char *fnc  = mem_alloc_str(fullname); char *filename = basename(fnc);
