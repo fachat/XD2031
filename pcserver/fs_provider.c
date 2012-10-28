@@ -300,6 +300,9 @@ static int path_under_base(char *path, char *base) {
 		res = -2;
 		goto exit;
 	}
+	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
+	if(!path_realpathc) return -3;
+	strcat(path_realpathc, dir_separator_string());
 
 	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
 	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
