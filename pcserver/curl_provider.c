@@ -155,6 +155,8 @@ static curl_endpoint_t *_new(const char *path) {
 
 static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 
+	(void) parent; // silence warning unused parameter
+
 	curl_endpoint_t *fsep = _new(path);
 
 	// not sure if this is needed...
@@ -166,6 +168,8 @@ static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 }
 
 static endpoint_t *http_new(endpoint_t *parent, const char *path) {
+
+	(void) parent; // silence warning unused parameter
 
 	curl_endpoint_t *fsep = _new(path);
 
