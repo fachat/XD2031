@@ -32,6 +32,8 @@
  * local filesystem.
  */
 
+#include "os.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -42,11 +44,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
-
-// to get a proper definition of realpath()
-#define _XOPEN_SOURCE
-#define	__USE_XOPEN_EXTENDED
-#include <stdlib.h>
 
 #include "dir.h"
 #include "fscmd.h"
@@ -146,7 +143,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 				path);
 
 	// malloc's a buffer and stores the canonical real path in it
-	fsep->basepath = realpath(dirpath, NULL);
+	fsep->basepath = os_realpath(dirpath);
 
 	mem_free(dirpath);
 
@@ -279,7 +276,7 @@ static int path_under_base(char *path, char *base) {
 	if(!base) return -1;
 	if(!path) return -2;
 
-	base_realpathc = realpath(base, NULL);
+	base_realpathc = os_realpath(base);
 	if(!base_realpathc) {
 		res = -1;
 		log_error("Unable to get real path for '%s'\n", base);
@@ -293,10 +290,10 @@ static int path_under_base(char *path, char *base) {
 	}
 	strcat(base_dirc, "/");
 
-	path_realpathc = realpath(path, NULL);
+	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
 		path_dname = dirname(path);
-		path_realpathc = realpath(path_dname, NULL);
+		path_realpathc = os_realpath(path_dname);
 	}
 	if(!path_realpathc) {
 		log_error("Unable to get real path for '%s'\n", path);
@@ -573,9 +570,9 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *frompath = malloc_path(fsep->curpath, from);
 	char *topath = malloc_path(fsep->curpath, to);
 
-	char *fromreal = realpath(frompath, NULL);
+	char *fromreal = os_realpath(frompath);
 	mem_free(frompath);
-	char *toreal = realpath(topath, NULL);
+	char *toreal = os_realpath(topath);
 
 	if (toreal != NULL) {
 		// target already exists
@@ -613,7 +610,7 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	// canonicalize it
-	char *newreal = realpath(newpath, NULL);
+	char *newreal = os_realpath(newpath);
 	// free buffer so we don't forget it
 	mem_free(newpath);
 
@@ -648,7 +645,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 
-	char *newreal = realpath(newpath, NULL);
+	char *newreal = os_realpath(newpath);
 
 	if (newreal != NULL) {
 		// file or directory exists
@@ -680,7 +677,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 
-	char *newreal = realpath(newpath, NULL);
+	char *newreal = os_realpath(newpath);
 	mem_free(newpath);
 
 	if (newreal == NULL) {
