@@ -614,26 +614,20 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	// free buffer so we don't forget it
 	mem_free(newpath);
 
-	log_debug("Checking that new path '%s' is under base '%s'\n",
-		newreal, fsep->basepath);
-
 	if (newreal == NULL) {
 		// target does not exist
 		return ERROR_FILE_NOT_FOUND;
 	}
 
 	// check if the new path is still under the base path
-	if (strstr(newreal, fsep->basepath) == newreal) {
-		// the needle base path is found at the start of the new real path -> ok
-		mem_free(fsep->curpath);
-		fsep->curpath = newreal;
-	} else {
-		// needle (base path) is not in haystack (new path)
+	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
-		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
 		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
 	}
+
+	mem_free(fsep->curpath);
+	fsep->curpath = newreal;
 	return ERROR_OK;
 }
 
