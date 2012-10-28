@@ -135,7 +135,7 @@ int main()
 	// bus init	
 	// first the general bus (with bus counter)
 	// note it gets the provider to register a listener for X command line params
-	bus_init(serial);		
+	bus_init(&term_endpoint);		
 
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
@@ -147,6 +147,9 @@ int main()
 
 	// sync with the server
 	serial_sync();		
+
+	// pull in command line config options from server
+	bus_pullconfig();
 
 	// show our version...
   	ListVersion();

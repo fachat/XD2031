@@ -78,7 +78,10 @@ typedef struct {
 
 // init
 // needs to be called before any concrete bus instance init
-void bus_init(provider_t *provider);
+void bus_init(endpoint_t *endpoint);
+
+// send an FS_RESET packet and pull in cmdline options
+void bus_pullconfig();
 
 // IEEE/IEC protocol routines
 int16_t bus_receivebyte(bus_t *bus, uint8_t *c, uint8_t newbyte);

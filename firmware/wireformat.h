@@ -38,8 +38,8 @@
 
 // reserved file descriptors 
 // Note: -1 = 0xff is reserved
-#define	FSFD_TERM	0xfe	// terminal output from device to server
-#define	FSFD_SETOPT	0xfd	// send options from server to device
+#define	FSFD_TERM	126	// terminal output from device to server
+#define	FSFD_SETOPT	125	// send options from server to device
 
 /** 
  * filesystem commands 
@@ -68,6 +68,7 @@
 #define   FS_CHDIR       14	/* change into another directory */
 #define   FS_ASSIGN      15	/* assign a drive number to a directory */
 #define   FS_SETOPT      16	/* set an option using an X-command string as payload */
+#define   FS_RESET       17	/* device sends this to notify it has reset */
 
 /*
  * additional FS commands to be sent between fstcp client & server

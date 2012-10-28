@@ -54,6 +54,8 @@
 #define	MAX_BUFFER_SIZE			64
 
 static void do_cmd(char *buf, int fs);
+static void write_packet(int fd, char *retbuf);
+
 
 //------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
@@ -201,22 +203,23 @@ static void cmd_sync(int readfd, int writefd) {
 static void cmd_sendxcmd(int writefd, char buf[]) {
 	// now send all the X-commands
 	int ncmds = xcmd_num_options();
-	log_debug("Got %d options to send:", ncmds);
+	log_debug("Got %d options to send:\n", ncmds);
 	for (int i = 0; i < ncmds; i++) {
 		const char *opt = xcmd_option(i);
-		log_debug("Option %d: %s", i, opt);
+		log_debug("Option %d: %s\n", i, opt);
 
 		int len = strlen(opt);
 		if (len > MAX_BUFFER_SIZE - FSP_DATA) {
 			log_error("Option is too long to be sent: '%s'\n", opt);
 		} else {
 			buf[FSP_CMD] = FS_SETOPT;
-			buf[FSP_LEN] = FSP_DATA + strlen(opt);
+			buf[FSP_LEN] = FSP_DATA + len + 1;
 			buf[FSP_FD] = FSFD_SETOPT;
 			strncpy(buf+FSP_DATA, opt, MAX_BUFFER_SIZE);
+			buf[FSP_DATA + len] = 0;
 
 			// TODO: error handling
-			write(writefd, buf, buf[FSP_LEN] & 255);
+			write_packet(writefd, buf);
 		}
 	}
 }
@@ -356,6 +359,7 @@ static void do_cmd(char *buf, int fd) {
 
 	int eof = 0;
 	int outdeleted = 0;
+	int sendreply = 1;
 
 	switch(cmd) {
 		// file-oriented commands
@@ -541,8 +545,20 @@ static void do_cmd(char *buf, int fd) {
 		}
 		retbuf[FSP_DATA] = rv;
 		break;
+	case FS_RESET:
+		// send the X command line options again
+		cmd_sendxcmd(fd, retbuf);
+		// we have already sent everything
+		sendreply = 0;
+		break;
 	}
 
+	if (sendreply) {
+		write_packet(fd, retbuf);
+	}
+}
+
+static void write_packet(int fd, char *retbuf) {
 
 	int e = write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
 	if (e < 0) {
