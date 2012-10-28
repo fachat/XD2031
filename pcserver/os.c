@@ -20,36 +20,17 @@
 
 ****************************************************************************/
 
-#ifndef OS_H
-#define OS_H
+#include "os.h"
 
-char *patch_dir_separator (char *path);
+// patch dir separator characters to value suitable for this OS
+char *patch_dir_separator(char *path) {
+	char *newpath = path;
 
-static inline char dir_separator_char(void) { return '/'; }
-static inline char* dir_separator_string(void) { return "/"; }
+	while(*path) {
+		if(*path == '/' || *path == '\\') *path = dir_separator_char();
+		path++;
+	}
 
-#include "mem.h"
-
-// Linux (3.4.11)
-#define _XOPEN_SOURCE
-#define __USE_XOPEN_EXTENDED
-#include <stdlib.h>
-
-#ifdef __APPLE__
-#include <sys/syslimits.h>
-
-static inline char *os_realpath (char *path) 
-{
-	// OS X 10.6.8, Darwin Kernel Version 10.8.0
-	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
+	return newpath;
 }
-#else
-static inline char *os_realpath (char *path) 
-{
-	return (realpath(path, NULL));
-}
-#endif
 
-
-
-#endif

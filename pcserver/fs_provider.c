@@ -91,7 +91,6 @@ static void init_fp(File *fp) {
 	fp->dp = NULL;
 }
 
-
 // close a file descriptor
 static int close_fd(File *file) {
 	int er = 0;
@@ -288,7 +287,7 @@ static int path_under_base(char *path, char *base) {
 		res = -3;
 		goto exit;
 	}
-	strcat(base_dirc, "/");
+	strcat(base_dirc, dir_separator_string());
 
 	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
@@ -327,6 +326,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
+	patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) return ERROR_NO_PERMISSION;
 
 	char *dirc = mem_alloc_str(fullname); char *path     = dirname(dirc);
@@ -518,6 +518,8 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	int matches = 0;
 	char *p = buf;
 
+	patch_dir_separator(buf);
+
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	do {
@@ -564,7 +566,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *from = buf+p+1;
 	char *to = buf;
 
-	if (index(to, '/') != NULL) {
+	if ((index(to, '/') != NULL) || (index(to,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return ERROR_SYNTAX_DIR_SEPARATOR;
@@ -607,6 +609,8 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 static int fs_cd(endpoint_t *ep, char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	patch_dir_separator(buf);
+
 	log_debug("Change dir to: %s\n", buf);
 
 	//  concat new path to current path
@@ -640,6 +644,8 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	patch_dir_separator(buf);
+
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	char *newreal = os_realpath(newpath);
@@ -671,6 +677,8 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 	int er = ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	patch_dir_separator(buf);
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 

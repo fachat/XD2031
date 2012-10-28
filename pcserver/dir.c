@@ -257,7 +257,7 @@ int dir_fill_disk(char *dest) {
  * them with the path separator. Ignore base for absolute paths in name.
  */
 char *malloc_path(const char *base, const char *name) {
-	if(name[0] == '/') base=NULL;	// omit base for absolute paths
+	if(name[0] == '/' || name[0]=='\\') base=NULL;	// omit base for absolute paths
         int l = (base == NULL) ? 0 : strlen(base);
         l += (name == NULL) ? 0 : strlen(name);
         l += 3; // dir separator, terminating zero, optional "."
