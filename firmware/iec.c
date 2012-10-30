@@ -472,7 +472,7 @@ void iec_init(uint8_t deviceno) {
         iechw_setup();
 
 	// register bus instance
-	bus_init_bus(&bus);
+	bus_init_bus("iec", &bus);
 }
 
 #endif // HAS_IEC

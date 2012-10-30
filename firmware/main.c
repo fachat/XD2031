@@ -42,6 +42,7 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "device.h"
+#include "rtconfig.h"
 
 // those are currently still needed for *_mainloop_iteration
 #ifdef HAS_IEC
@@ -132,10 +133,13 @@ int main()
 	// init main channel handling
 	channel_init();
 
+	// before we init any busses, we init the runtime config code
+	// note it gets the provider to register a listener for X command line params
+	rtconfig_init(&term_endpoint);
+
 	// bus init	
 	// first the general bus (with bus counter)
-	// note it gets the provider to register a listener for X command line params
-	bus_init(&term_endpoint);		
+	bus_init();		
 
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
@@ -149,7 +153,7 @@ int main()
 	serial_sync();		
 
 	// pull in command line config options from server
-	bus_pullconfig();
+	rtconfig_pullconfig();
 
 	// show our version...
   	ListVersion();

@@ -89,46 +89,14 @@ static errormsg_t error;
  * options packets 
  */
 
-#define	OPT_BUFFER_LENGTH	68
-
-static char buf[OPT_BUFFER_LENGTH];
-
-static endpoint_t *endpoint;
-static packet_t buspack;
-
-uint8_t setopt_callback(int8_t channelno, int8_t errno) {
-
-	debug_printf("setopt callback err=%d\n", errno);
-	if (errno == ERROR_OK) {
-		debug_printf("received command: %s\n", buf+FSP_DATA);
-	}	
-	return 1;
-}
-
-
 /********************************************************************************/
 
 static uint8_t secaddr_offset_counter;
 
-void bus_init(endpoint_t *_endpoint) {
+void bus_init() {
 	secaddr_offset_counter = 0;
 
 	set_error(&error, ERROR_DOSVERSION);
-
-	endpoint = _endpoint;
-}
-
-void bus_pullconfig() {
-	// init the packet struct
-        packet_init(&buspack, OPT_BUFFER_LENGTH, (uint8_t*)buf);
-
-	// prepare FS_RESET packet
-        packet_set_filled(&buspack, FSFD_SETOPT, FS_RESET, 0);
-
-	// send request, receive in same buffer we sent from
-	endpoint->provider->submit_call(endpoint->provdata, FSFD_SETOPT, &buspack, &buspack, setopt_callback);
-
-	debug_printf("sent reset packet on fd %d\n", FSFD_SETOPT);
 }
 
 uint8_t get_default_device_address(void) {
@@ -144,7 +112,7 @@ uint8_t get_default_device_address(void) {
 }
 
 /* Init IEEE bus */
-void bus_init_bus(bus_t *bus) {
+void bus_init_bus(const char *name, bus_t *bus) {
 
 	bus->secaddr_offset = secaddr_offset_counter;
 	secaddr_offset_counter += 16;
@@ -152,7 +120,8 @@ void bus_init_bus(bus_t *bus) {
 	/* Init vars and flags */
   	bus->command.command_length = 0;
 
-	rtconfig_init(&(bus->rtconf), get_default_device_address());
+	bus->rtconf.name = name;
+	rtconfig_init_rtc(&(bus->rtconf), get_default_device_address());
 
 	bus->channel = NULL;
 }

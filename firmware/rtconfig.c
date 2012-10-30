@@ -40,14 +40,89 @@
 
 #include "debug.h"
 
+#define	MAX_RTCONFIG	3
+
+static endpoint_t *endpoint;
+
+static rtconfig_t *rtcs[MAX_RTCONFIG];
+
+static int num_rtcs = 0;
+
+void rtconfig_init(endpoint_t *_endpoint) {
+	num_rtcs = 0;
+	endpoint = _endpoint;
+}
+
 // initialize a runtime config block
-void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr) {
+void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr) {
 	// Default values
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
 
 	if(nv_restore_config(rtc)) nv_save_config(rtc);
+
+	if (num_rtcs < MAX_RTCONFIG) {
+		rtcs[num_rtcs] = rtc;
+		num_rtcs++;
+	} else {
+		term_printf("too many rtconfigs!\n");
+	}
 }
+
+/********************************************************************************/
+
+#define	OPT_BUFFER_LENGTH	64
+
+static char buf[OPT_BUFFER_LENGTH];
+
+static packet_t buspack;
+
+static uint8_t setopt_callback(int8_t channelno, int8_t errno) {
+
+        debug_printf("setopt callback err=%d\n", errno);
+        if (errno == ERROR_OK) {
+                debug_printf("received command: %s\n", buf);
+
+		uint8_t len = buf[FSP_LEN];
+
+		// find the correct rtconfig
+		for (uint8_t i = 0; i < num_rtcs; i++) {
+			rtconfig_t *rtc = rtcs[i];
+			const char *name = rtc->name;
+
+			uint8_t j;
+			for (j = 0; j < len; j++) {
+				if (name[j] == 0
+					|| name[j] != buf[j]) {
+					break;
+				}
+			}
+			if ( buf[j] == ':') {
+				// found it, now set the config
+				buf[j] = 'X';
+				rtconfig_set(rtc, buf+j);
+				break;
+			}
+		}
+        }
+        return 1;
+}
+
+
+void rtconfig_pullconfig() {
+        // init the packet struct
+        packet_init(&buspack, OPT_BUFFER_LENGTH, (uint8_t*)buf);
+
+        // prepare FS_RESET packet
+        packet_set_filled(&buspack, FSFD_SETOPT, FS_RESET, 0);
+
+        // send request, receive in same buffer we sent from
+        endpoint->provider->submit_call(endpoint->provdata, FSFD_SETOPT, &buspack, &buspack, setopt_callback);
+
+        debug_printf("sent reset packet on fd %d\n", FSFD_SETOPT);
+}
+
+/********************************************************************************/
 
 // set from an X command
 errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
@@ -105,7 +180,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		break;
 	case 'I':
 		// INIT: restore default values
-		rtconfig_init(rtc, get_default_device_address());
+		rtconfig_init_rtc(rtc, get_default_device_address());
 		er = ERROR_OK;
 		debug_puts("RUNTIME CONFIG INITIALIZED\n");
 	case 'W':

@@ -30,16 +30,23 @@
 #define RTCONFIG_H
 
 #include "errors.h"
+#include "provider.h"
 
 typedef struct {
+	const char	*name;
 	uint8_t		device_address;		// current unit number
 	uint8_t		last_used_drive;	// init with 0
 } rtconfig_t;
 
+void rtconfig_init(endpoint_t *ep);
+
 // initialize a runtime config block
-void rtconfig_init(rtconfig_t *rtc, uint8_t devaddr);
+void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr);
 
 // set from an X command
 errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
+
+// send an FS_RESET packet and pull in cmdline options
+void rtconfig_pullconfig();
 
 #endif

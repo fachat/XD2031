@@ -302,7 +302,7 @@ void ieee_init(uint8_t deviceno) {
         ieeehw_setup();
 
 	// register bus instance
-	bus_init_bus(&bus);
+	bus_init_bus("ieee", &bus);
 }
 
 #endif // HAS_IEEE
