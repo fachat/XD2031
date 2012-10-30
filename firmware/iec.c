@@ -399,8 +399,18 @@ void iec_mainloop_iteration(void)
 			if (waitAtnHi()) {
 				// e902
 				dataforcelo();
+
 				// wait for ATN hi
-				while (satnislo());
+				// note that due to us having enabled ints again,
+				// we cannot wait for ATN low, as the C64 might have
+				// overtaken us due to interrupt handling.
+				// so we just wait a certain time to make sure
+				// we're not too fast for the cbm. Note 50us is too fast.
+				// Also note that in previous commits the time needed for the 
+				// debug output in bus_attention() has hidden this delay
+				//while (satnislo());
+				delayus(75);
+
 				// and exit loop
 				goto cmd;
 			}
@@ -447,8 +457,10 @@ cmd:
 
 			datahi();
 		} else {
+
 			clkhi();
 			datahi();
+			//delayms(11);
 		}
         }
 
