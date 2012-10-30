@@ -409,7 +409,10 @@ void iec_mainloop_iteration(void)
 				// Also note that in previous commits the time needed for the 
 				// debug output in bus_attention() has hidden this delay
 				//while (satnislo());
-				delayus(75);
+				//delayus(75);
+				// Note that 150 instead of 75us make the c128 boot sequence
+				// more stable
+				delayus(150);
 
 				// and exit loop
 				goto cmd;
