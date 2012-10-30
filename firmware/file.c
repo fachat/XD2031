@@ -111,6 +111,13 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		set_error(errormsg, ERROR_FILE_EXISTS);
 		return -1;
 	}
+	if (nameinfo.name[1] == '#') {
+		// trying to open up a direct channel
+		// Note: needs to be supported for D64 support with U1/U2/...
+		debug_puts("NO DIRECT CHANNEL SUPPORTED!"); debug_putcrlf();
+		set_error(errormsg, ERROR_NO_CHANNEL);
+		return -1;
+	}
 
 	uint8_t type = FS_OPEN_RD;
 	// either ",W" or secondary address is one, i.e. save
