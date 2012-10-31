@@ -184,9 +184,7 @@ static int16_t cmd_handler (bus_t *bus)
       	if (rv < 0) {
 		// open ran into an error
 		// -- errormsg should be already set, so nothing left to do here
-		// TODO
-		debug_printf("Received direct error number on open: %d\n", rv);
-        	set_error(&error, ERROR_DRIVE_NOT_READY);
+		debug_puts("Received error on open/cmd!\n");
 		st = STAT_RDTIMEOUT;
       	} else {
 		// as this code is not (yet?) prepared for async operation, we 
