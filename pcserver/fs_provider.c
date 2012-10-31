@@ -257,7 +257,33 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	}
 }
 
-static int path_under_base(char *path, char *base) {
+static char *safe_dirname (const char *path) {
+/* a dirname that leaves it's parameter unchanged and doesn't 
+ * overwrite it's result at subsequent calls. Allocates memory
+ * that should be free()ed later */
+	char *pathc, *dirname_result, *mem_dirname;
+
+	pathc = mem_alloc_str(path);
+	dirname_result = dirname(pathc);
+	mem_dirname = mem_alloc_str(dirname_result);
+	mem_free(pathc);
+	return mem_dirname;
+}
+
+static char *safe_basename (const char *path) {
+/* a basename that leaves it's parameter unchanged and doesn't
+ * overwrite it's result at subsequent calls. Allocates memory
+ * that should be free()ed later */
+	char *pathc, *basename_result, *mem_basename;
+
+	pathc = mem_alloc_str(path);
+	basename_result = basename(pathc);
+	mem_basename = mem_alloc_str(basename_result);
+	mem_free(pathc);
+	return mem_basename;
+}    
+
+static int path_under_base(const char *path, const char *base) {
 /* 
  * Return
  * -3 if malloc() failed
@@ -291,7 +317,7 @@ static int path_under_base(char *path, char *base) {
 
 	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
-		path_dname = dirname(path);
+		path_dname = safe_dirname(path);
 		path_realpathc = os_realpath(path_dname);
 	}
 	if(!path_realpathc) {
@@ -313,6 +339,7 @@ exit:
 	mem_free(base_realpathc);
 	mem_free(base_dirc);
 	mem_free(path_realpathc);
+	mem_free(path_dname);
 	return res;  
 }
 
@@ -329,8 +356,8 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) return ERROR_NO_PERMISSION;
 
-	char *dirc = mem_alloc_str(fullname); char *path     = dirname(dirc);
-	char *fnc  = mem_alloc_str(fullname); char *filename = basename(fnc);
+	char *path     = safe_dirname(fullname);
+	char *filename = safe_basename(fullname);
 
 	FILE *fp = open_first_match(path, filename, mode);	
 	if(fp) {
@@ -355,7 +382,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 
 	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, filename, filename, (void*)file, (void*)fp);
 
-	mem_free(dirc); mem_free(fnc);
+	mem_free(path); mem_free(filename);
 	return er;
 }
 
