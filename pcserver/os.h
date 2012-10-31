@@ -38,13 +38,13 @@ static inline char* dir_separator_string(void) { return "/"; }
 #ifdef __APPLE__
 #include <sys/syslimits.h>
 
-static inline char *os_realpath (char *path) 
+static inline char *os_realpath (const char *path) 
 {
 	// OS X 10.6.8, Darwin Kernel Version 10.8.0
 	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
 }
 #else
-static inline char *os_realpath (char *path) 
+static inline char *os_realpath (const char *path) 
 {
 	return (realpath(path, NULL));
 }
