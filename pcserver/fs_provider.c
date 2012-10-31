@@ -224,12 +224,12 @@ static File *reserve_file(endpoint_t *ep, int chan) {
                         init_fp(fp);
                         fp->chan = chan;
 
-			//log_debug("reserving file %p for chan %d\n", fp, chan);
+			log_debug("reserving file %p for chan %d\n", fp, chan);
 
                         return &(cep->files[i]);
                 }
         }
-        log_warn("Did not find free curl session for channel=%d\n", chan);
+        log_warn("Did not find free fs session for channel=%d\n", chan);
         return NULL;
 }
 
@@ -241,7 +241,7 @@ static File *find_file(endpoint_t *ep, int chan) {
                         return &(cep->files[i]);
                 }
         }
-        log_warn("Did not find curl session for channel=%d\n", chan);
+        log_warn("Did not find fs session for channel=%d\n", chan);
         return NULL;
 }
 
@@ -259,7 +259,7 @@ static void close_fds(endpoint_t *ep, int tfd) {
 
 static char *safe_dirname (const char *path) {
 /* a dirname that leaves it's parameter unchanged and doesn't 
- * overwrite it's result at subsequent calls. Allocates memory
+ * overwrite its result at subsequent calls. Allocates memory
  * that should be free()ed later */
 	char *pathc, *dirname_result, *mem_dirname;
 
@@ -350,11 +350,14 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
+	log_info("open file for fd=%d in dir %s with name %s\n", tfd, fsep->curpath, buf);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
 	patch_dir_separator(fullname);
-	if(path_under_base(fullname, fsep->basepath)) return ERROR_NO_PERMISSION;
+	if(path_under_base(fullname, fsep->basepath)) {
+		mem_free(fullname);
+		return ERROR_NO_PERMISSION;
+	}
 
 	char *path     = safe_dirname(fullname);
 	char *filename = safe_basename(fullname);
@@ -475,6 +478,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  if(n<len) {
 		    // short read, so either error or eof
 		    *eof = 1;
+		    log_debug("Close fd=%d on short read\n", tfd);
 		    close_fds(ep, tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
@@ -483,7 +487,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
-		      //printf("Setting EOF!\n");
+		      log_debug("Close fd=%d on EOF read\n", tfd);
 		      close_fds(ep, tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
@@ -510,12 +514,12 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		  int n = fwrite(buf, 1, len, fp);
 		  if (n < len) {
 			// short write indicates an error
-			log_debug("Short write on file!\n");
+			log_debug("Close fd=%d on short write!\n", tfd);
 			close_fds(ep, tfd);
 			return -ERROR_WRITE_ERROR;
 		  }
 		  if(is_eof) {
-		    log_debug("Write file received an EOF\n");
+		    log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
 		    close_fds(ep, tfd);
 		  }
 		  return ERROR_OK;
