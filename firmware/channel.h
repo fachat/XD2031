@@ -37,14 +37,27 @@
 
 /**
  * writetype values as seen from the IEEE device
+ *
+ * READONLY and WRITEONLY files use the two buffers as 
+ * alternating double-buffering buffers. So one buffer is loaded
+ * from the device while the other is being sent to the server
+ * or vice versa. 
+ * The READWRITE files use buffer 0 to send to host, and buffer 1
+ * to receive from host only, so no double-buffering is done there.
  */
 #define	WTYPE_READONLY	0		
 #define	WTYPE_WRITEONLY	1
 #define	WTYPE_READWRITE	2	/* NOTE: absolutely broken! */
 
 /**
- * pull_state values. The interrupt callback updates the state, so state manipulation
- * must be irq-protected
+ * R/W buffer definitions
+ */
+#define	RW_PUSHBUF	0
+#define	RW_PULLBUF	1
+
+/**
+ * pull_state values. The delay callback updates the state
+ * pull means read (pull) data from the server
  */
 #define	PULL_OPEN	0		// after open
 #define	PULL_PRELOAD	1		// during read pre-load
@@ -55,8 +68,8 @@
 #define	PULL_TWOREAD	6		// both buffers read and valid
 
 /**
- * push_state values. The interrupt callback updates the state, so state manipulation
- * must be irq-protected
+ * push_state values. The delay callback updates the state
+ * push means send (push) data to the server
  */
 #define	PUSH_OPEN	0		// after open
 #define	PUSH_FILLONE	1		// filling the first buffer
