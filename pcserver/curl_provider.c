@@ -53,6 +53,7 @@
 
 extern provider_t ftp_provider;
 extern provider_t http_provider;
+extern provider_t telnet_provider;
 
 
 //#define	min(a,b)	(((a)<(b))?(a):(b))
@@ -61,7 +62,8 @@ typedef enum {
 	PROTO_FTP,
 	PROTO_FTPS,
 	PROTO_HTTP,
-	PROTO_HTTPS
+	PROTO_HTTPS,
+	PROTO_TELNET
 } proto_t;
 
 struct curl_endpoint_t;
@@ -177,6 +179,20 @@ static endpoint_t *http_new(endpoint_t *parent, const char *path) {
 	fsep->protocol = PROTO_HTTP;
 
 	fsep->ptype = (struct provider_t *) &http_provider;
+	
+	return (endpoint_t*) fsep;
+}
+
+static endpoint_t *telnet_new(endpoint_t *parent, const char *path) {
+
+	(void) parent; // silence warning unused parameter
+
+	curl_endpoint_t *fsep = _new(path);
+
+	// not sure if this is needed...
+	fsep->protocol = PROTO_TELNET;
+
+	fsep->ptype = (struct provider_t *) &telnet_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -752,6 +768,27 @@ provider_t http_provider = {
 	"http",
 	curl_init,
 	http_new,
+	prov_free,
+
+	close_fds,
+	open_rd,
+	NULL, //open_ftp_wr,
+	NULL, //open_ftp_ap,
+	NULL, //open_ftp_rw,
+	NULL, //open_dr,
+	read_file,
+	NULL, // write_file,
+	NULL, // do_scratch,
+	NULL, // do_rename,
+	do_chdir,
+	NULL, // do_mkdir,
+	NULL  // do_rmdir
+};
+
+provider_t telnet_provider = {
+	"telnet",
+	curl_init,
+	telnet_new,
 	prov_free,
 
 	close_fds,
