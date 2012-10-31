@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#define	DEBUG_NAME 0
+#undef	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
@@ -65,7 +65,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	result->drive = NAMEINFO_UNUSED_DRIVE;
 	result->cmd = CMD_NONE;	// no command
 	result->type = 0;	// PRG
-	result->access = 'R';	// read
+	result->access = 0;	// read
 
 	// start either for command or file name
 	uint8_t state;
@@ -81,7 +81,9 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
 	uint8_t drv = 0;
 	while (len > 0) {
-
+#ifdef DEBUG_NAME
+		debug_printf("len=%d, curr=%c, state=%d\n", len, *p, state);
+#endif
 		switch(state) {
 		case NAME_COMMAND:
 			// save first char as potential command	
@@ -159,6 +161,10 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 		p++;
 	}
 
+	if (result->access == 0) {
+		result->access = 'R';
+	}
+
 //	if (result->cmd == 0 && cmd == '$') {
 //	 	// no command detected, but name starts with "$"
 //	 	// so this is a directory name without file name filter
@@ -181,10 +187,10 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
         }
         result->name[0] = result->drive;
 
-#if DEBUG_NAME
-	debug_printf("CMD=%s\n", result->cmd == CMD_NONE ? '-' : command_to_name(result->cmd));
+#ifdef DEBUG_NAME
+	debug_printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
 	debug_printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' : result->drive + 0x30);
-	debug_puts("NAME="); debug_puts((char*)result->name); debug_putcrlf();
+	debug_printf("NAME=%s\n", result->name+1);
 	debug_puts("ACCESS="); debug_putc(result->access); debug_putcrlf();
 	debug_puts("TYPE="); debug_putc(result->type); debug_putcrlf();
 #endif
