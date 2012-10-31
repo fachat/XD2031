@@ -65,7 +65,7 @@ void log_errno(const char *msg, ...) {
 		vsprintf(buffer, msg, args);
 		msg = buffer;
 	}
-        printf(">> %s: errno=%d: %s\n", msg, errno, strerror(errno));
+        printf("ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
 }
 
 void log_warn(const char *msg, ...) {
