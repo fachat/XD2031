@@ -130,6 +130,9 @@ static void talkloop()
 	debug_putc('T'); debug_flush();
 #endif
         settx();            /* enables sending */
+        /* We're faster than the PET, so we have to wait for NDAC low first
+         * to avoid running in DEVICE NOT PRESENT error */
+        while(ndacishi() && atnishi());     // Wait for NDAC low
 
         er=0;
         /*sec=secadr&0x0f;*/
