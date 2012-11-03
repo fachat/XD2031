@@ -166,8 +166,8 @@ void provider_init() {
         http_provider.init();
 	provider_register(&http_provider);
 
-        telnet_provider.init();
-	provider_register(&telnet_provider);
+        //telnet_provider.init();
+	//provider_register(&telnet_provider);
 
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
