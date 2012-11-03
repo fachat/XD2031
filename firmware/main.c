@@ -36,6 +36,7 @@
 #include <alloca.h>
 
 #include "config.h"
+#include "arch.h"
 #include "version.h"
 #include "main.h"
 #include "packet.h"
@@ -147,7 +148,7 @@ int main()
 	device_init();
 
 	// enable interrupts
-	sei();
+	enable_interrupts();
 
 	// sync with the server
 	serial_sync();		
@@ -173,7 +174,7 @@ int main()
 		ieee_mainloop_iteration();
 #endif
 #ifdef HAS_IEC
-		// handle IEEE488 bus
+		// handle IEC bus
 		iec_mainloop_iteration();
 #endif
 	}
