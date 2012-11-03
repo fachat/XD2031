@@ -101,7 +101,7 @@ typedef struct {
 } curl_endpoint_t;
 
 
-static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user);
+//static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user);
 
 static void curl_init() {
 	// according to the curl man page, this init can be done multiple times
@@ -746,9 +746,6 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 	log_debug("CHDIR: Current path is '%s', name is '%s'\n", cep->path_buffer, name);
 
-	// path buffer is a static buffer, so we can check it in-place
-	char *curpath = cep->path_buffer;
-	
 	if (name[0] == '/') {
 		// absolute path - just copy over old path
 		strncpy(cep->path_buffer, name, MAX_BUFFER_SIZE);
