@@ -38,11 +38,11 @@
 #include "led.h"
 #include "debug.h"
 
-#define	MAX_CHANNELS	8		// number of maximum open channels
+#define	MAX_CHANNELS	4		// number of maximum open channels
 
 channel_t channels[MAX_CHANNELS];
 
-static void _push_callback(int8_t channelno, int8_t errnum);
+static uint8_t _push_callback(int8_t channelno, int8_t errnum);
 static void channel_close_int(channel_t *chan, uint8_t force);
 
 void channel_init(void) {
@@ -51,7 +51,7 @@ void channel_init(void) {
 	}
 }
 
-static void _pull_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
 		p->last_pull_errorno = errorno;
@@ -65,12 +65,15 @@ static void _pull_callback(int8_t channel_no, int8_t errorno) {
 			p->pull_state = PULL_TWOCONV;
 		}
 	}
+	return 0;
 }
 
 /**
  * pull in a buffer from the server
+ *
+ * The "slot" number determines which of the channel packet buffers is used
  */
-static void channel_pull(channel_t *c, uint8_t slot) {
+static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	packet_t *p = &c->buf[slot];
 
 	//debug_printf("pull: chan=%p, channo=%d\n", c, c->channel_no);
@@ -84,14 +87,24 @@ static void channel_pull(channel_t *c, uint8_t slot) {
 	if (c->pull_state == PULL_OPEN) {
 		c->pull_state = PULL_PRELOAD;
 		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
+
+		if (options & GET_SYNC) {
+			while (c->pull_state == PULL_PRELOAD) {
+				delayms(1);
+			}
+		}
 	} else
 	if (c->pull_state == PULL_ONEREAD && c->writetype == WTYPE_READONLY) {
+		// only if we're read-only pull in second buffer
 		c->pull_state = PULL_PULL2ND;
 		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
-	}
 
-//led_on();
-//debug_puts("pull_state is "); debug_puthex(c->pull_state); debug_putcrlf();
+		if (options & GET_SYNC) {
+			while (c->pull_state == PULL_PULL2ND) {
+				delayms(1);
+			}
+		}
+	}
 }
 
 /*
@@ -135,36 +148,61 @@ channel_t* channel_find(int8_t chan) {
 	return NULL;
 }
 
-static void channel_preload_int(channel_t *chan, uint8_t wait) {
+static inline uint8_t pull_slot(channel_t *chan) {
+	return (chan->writetype == WTYPE_READWRITE) ? RW_PULLBUF : chan->current;
+}
+
+static inline uint8_t push_slot(channel_t *chan) {
+	return (chan->writetype == WTYPE_READWRITE) ? RW_PUSHBUF : chan->current;
+}
+
+// returns 0 when data is available, and -1 when no data is available
+static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 
 	// TODO:fix for read/write
-	if (chan->writetype != WTYPE_READONLY) return;
+	if (chan->writetype == WTYPE_WRITEONLY) return -1;
 
 	do {
 	    if (chan->pull_state == PULL_OPEN) {
 		chan->current = 0;
-		channel_pull(chan, 0);
+		chan->current = pull_slot(chan);
+		channel_pull(chan, chan->current, GET_SYNC);
 	    }
 	    if (wait) {
+		// if we need to wait, well, wait until the 
+		// request has been received, processed, and answered, and the
+		// pull_callback (called from deep within delayms()) has updated
+		// the status
 		while (chan->pull_state == PULL_PRELOAD) {
 			delayms(1);
 		}
 	    }
 	    if (chan->pull_state == PULL_ONECONV) {
+		//debug_puts("Got one packet (PULL_ONECONV)!\n");
+		// one packet received
 		packet_t *curpack = &(chan->buf[chan->current]);
 		if ((!packet_has_data(curpack)) && (!packet_is_last(curpack))) {
 			// zero length packet received
 			chan->pull_state = PULL_OPEN;
+			// if we have a read/write channel, a zero-length packet is 
+			// fully ok. 
+			if (chan->writetype == WTYPE_READWRITE) {
+				return -1;
+			}
 		} else {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
 				//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
 				chan->directory_converter(&chan->buf[chan->current], chan->drive);
 			}
+			// we have one packet, and it's already converted as well
 			chan->pull_state = PULL_ONEREAD;
 		}
 	    }
 	    if (chan->pull_state == PULL_TWOCONV) {
+		// we already have received a second packet
+		// (so we basically did a fall-through through the code above)
+		// should only happen on READONLY anyway
 		packet_t *opack = &(chan->buf[1-chan->current]);
 		if ((!packet_has_data(opack)) && (!packet_is_last(opack))) {
 			// zero length packet received
@@ -180,7 +218,8 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 	    }
 	}
 	while (chan->pull_state == PULL_OPEN);
-//led_on();
+
+	return 0;
 }
 
 /**
@@ -194,37 +233,48 @@ void channel_preload(int8_t chan) {
 	}
 }
 
-void channel_preloadp(channel_t *chan) {
-	channel_preload_int(chan, 1);
+int8_t channel_preloadp(channel_t *chan) {
+	return channel_preload_int(chan, 1);
 }
 
 char channel_current_byte(channel_t *chan) {
 	channel_preload_int(chan, 1);
-        return packet_peek_data(&chan->buf[chan->current]);
+        return packet_peek_data(&chan->buf[pull_slot(chan)]);
 }
 
 /**
  * return true (non-zero) when there is still a byte available in the buffer
  */
-uint8_t channel_next(channel_t *chan) {
+uint8_t channel_next(channel_t *chan, uint8_t options) {
 
 	// make sure we do have something at least
-	channel_preload_int(chan, 1);
+	int8_t no_data = channel_preload_int(chan, 1);
 
-//debug_puts("_next: "); debug_puthex(chan->pull_state); debug_putcrlf();
-
-	// this is an optimization:
-	// pull in the "other" buffer in the background
-	uint8_t other = 1-chan->current;
-	//if (packet_is_done(&chan->buf[other]) && (!packet_is_eoi(&chan->buf[chan->current]))) {
-	if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_last(&chan->buf[chan->current]))) {
-		// if the other packet is free ("done"), and the current packet is not the last one ("eoi")
-		// We should only do this on "standard" files though, not relative or others
-		channel_pull(chan, other);
+	if (chan->writetype == WTYPE_READONLY) {
+		// this is an optimization:
+		// pull in the "other" buffer in the background
+		uint8_t other = 1-chan->current;
+		//if (packet_is_done(&chan->buf[other]) && (!packet_is_eoi(&chan->buf[chan->current]))) {
+		if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_last(&chan->buf[chan->current]))) {
+			// if the other packet is free ("done"), and the current packet is not the last one ("eoi")
+			// We should only do this on "standard" files though, not relative or others
+			channel_pull(chan, other, options);
+		}
 	}
 
-	// return the actual value requested
-	return packet_next(&chan->buf[chan->current]);
+	if (!no_data) {
+		// we should have some data
+		if (packet_next(&chan->buf[pull_slot(chan)])) {
+			return 1;	// ok
+		}
+
+		if (!packet_is_eof(&chan->buf[pull_slot(chan)])) {
+			// not eof packet, so pull another one
+			channel_refill(chan, options);
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /*
@@ -234,7 +284,7 @@ uint8_t channel_next(channel_t *chan) {
 uint8_t channel_has_more(channel_t *chan) {
 	// make sure at least one packet is there
 	channel_preload_int(chan, 1);
-	return !packet_is_eof(&chan->buf[chan->current]);
+	return !packet_is_eof(&chan->buf[pull_slot(chan)]);
 }
 
 static void channel_close_int(channel_t *chan, uint8_t force) {
@@ -259,10 +309,13 @@ void channel_close(int8_t channel_no) {
 			// if it's not PUSH_FILLONE, then it is in the process
 			// of being pushed
 			while (chan->push_state != PUSH_FILLONE) {
+				// wait until it has been received by the server
+				// and the push_callback being called from the server's
+				// FS_REPLY message, which changes the push_state
 				delayms(1);
 			}
 
-			packet_t *curpack = &chan->buf[chan->current];
+			packet_t *curpack = &chan->buf[pull_slot(chan)];
 			int l = packet_get_contentlen(curpack);
 
 			// even if l==0, send an EOF packet to close the file
@@ -286,12 +339,13 @@ void channel_close(int8_t channel_no) {
  * the current buffer is empty, but channel_has_more() true has indicated
  * that the current buffer is not the last one
  */
-channel_t* channel_refill(channel_t *chan) {
+channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	// buf->refill();
 	// buf = find_buffer(...)
 	//
-	uint8_t other = 1-chan->current;
-	if (!packet_is_last(&chan->buf[chan->current])) {
+	if (chan->writetype == WTYPE_READONLY) {
+	    uint8_t other = 1-chan->current;
+	    if (!packet_is_last(&chan->buf[chan->current])) {
 		// current packet is not last one
 		// other packet should have been pulled in channel_next()
 		// so it is either empty (request, or FS_EOF), or has data
@@ -303,8 +357,6 @@ channel_t* channel_refill(channel_t *chan) {
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
-//debug_printf(">>3: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
-//debug_printf(">>3: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
 				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
@@ -317,10 +369,15 @@ channel_t* channel_refill(channel_t *chan) {
 			chan->pull_state = PULL_ONEREAD;
 
 			if (!packet_is_last(&chan->buf[chan->current])) {
-				channel_pull(chan, 1-other);
+				channel_pull(chan, 1-other, options);
 			}
 			return chan;
 		}
+	    }
+	} else {
+		// WTYPE_READWRITE
+		chan->pull_state = PULL_OPEN;
+		return chan;
 	}
 
 	// no more data - close it
@@ -328,7 +385,7 @@ channel_t* channel_refill(channel_t *chan) {
 	return NULL;
 }
 
-static void _push_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _push_callback(int8_t channelno, int8_t errnum) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
                 p->last_push_errorno = errnum;
@@ -344,21 +401,24 @@ static void _push_callback(int8_t channelno, int8_t errnum) {
 			p->push_state = PUSH_OPEN;
 		}
         }
+	return 0;
 }
 	
 
-channel_t* channel_put(channel_t *chan, char c, int forceflush) {
+channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
+
+	uint8_t channo = chan->channel_no;
+	packet_t *curpack = &chan->buf[push_slot(chan)];
 
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;
+		packet_reset(curpack, channo);
 	}
 
-	uint8_t channo = chan->channel_no;
-	packet_t *curpack = &chan->buf[chan->current];
 
 	packet_write_char(curpack, (uint8_t) c);
 
-	if (packet_is_full(curpack) || forceflush) {
+	if (packet_is_full(curpack) || (forceflush & PUT_FLUSH)) {
 		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
 
 		// wait until the other packet has been replied to,
@@ -366,10 +426,10 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 		// which we need for the next channel_put
 		while (chan->push_state == PUSH_FILLTWO) {
 			delayms(1);
-			//serial_delay();
 		}
 
-		// note that we pushed one and are now filling the second
+		// note that we are pushing one and are now filling the second
+		// change that before pushing, as callback might already be done during push
 		chan->push_state = PUSH_FILLTWO;
 
 		// use same packet as rx/tx buffer
@@ -377,9 +437,32 @@ channel_t* channel_put(channel_t *chan, char c, int forceflush) {
 		endpoint->provider->submit_call(endpoint->provdata, 
 			channo, curpack, curpack, _push_callback);
 
-		// switch
-		chan->current = 1-chan->current;
-		packet_reset(&chan->buf[chan->current], channo);
+		if (chan->writetype == WTYPE_WRITEONLY) {
+			// switch packet buffers for double buffering
+			chan->current = 1-chan->current;
+			packet_reset(&chan->buf[chan->current], channo);
+		}
+
+		if ((chan->writetype == WTYPE_READWRITE) || (forceflush & PUT_SYNC)) {
+			// we are forced to wait for the reply, e.g. from the IEC code
+			// as the interrupt block prevents us from really receiving all
+			// replies - so we have to make sure we really got it
+
+			// we also wait in case we're read/write, to make sure the 
+			// buffer is free for the next write.
+
+			// wait until the other packet has been replied to,
+			// i.e. it has been sent, the buffer is free again 
+			// which we need for the next channel_put
+			while (chan->push_state == PUSH_FILLTWO) {
+				delayms(1);
+				main_delay();
+			}
+
+			if (chan->writetype == WTYPE_READWRITE) {
+				chan->push_state = PUSH_OPEN;
+			}
+		}
 	}
 	return chan;
 }

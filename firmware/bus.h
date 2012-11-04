@@ -26,6 +26,7 @@
 #include "cmd.h"
 #include "channel.h"
 #include "rtconfig.h"
+#include "provider.h"
 
 /*
  * IEEE488 impedance layer
@@ -61,6 +62,20 @@ typedef struct {
 	rtconfig_t	rtconf;		
 } bus_t;
 
+// definitions for bus_sendbyte
+#define	BUS_SYNC	PUT_SYNC		// from channel.h
+#define	BUS_FLUSH	PUT_FLUSH		// from channel.h
+#define	BUS_PRELOAD	0x80		
+
+// status word values (similar to commodore status in $90/$96)
+// it is not fully used though
+#define STAT_NODEV      0x80
+#define STAT_EOF        0x40
+#define STAT_WAITEND    0x20    // this is a new one for the serial bus
+#define STAT_RDTIMEOUT  0x01
+#define STAT_WRTIMEOUT  0x02
+
+
 // init
 // needs to be called before any concrete bus instance init
 void bus_init();
@@ -70,10 +85,12 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *c, uint8_t newbyte);
 
 int16_t bus_attention(bus_t *bus, uint8_t cmd);
 
-int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t with_eoi);
+int16_t bus_sendbyte(bus_t *bus, uint8_t cmd, uint8_t options);
 
 // init the bus_t structure
-void bus_init_bus(bus_t *bus);
+void bus_init_bus(const char *name, bus_t *bus);
+
+uint8_t get_default_device_address(void);
 
 // helper method
 

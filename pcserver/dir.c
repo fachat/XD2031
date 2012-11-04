@@ -254,9 +254,13 @@ int dir_fill_disk(char *dest) {
 
 /**
  * malloc a new path and copy the given base path and name, concatenating
- * them with the path separator
+ * them with the path separator. Ignore base for absolute paths in name.
  */
 char *malloc_path(const char *base, const char *name) {
+
+	log_debug("malloc_path: base=%s, name=%s\n", base, name);
+
+	if(name[0] == '/' || name[0]=='\\') base=NULL;	// omit base for absolute paths
         int l = (base == NULL) ? 0 : strlen(base);
         l += (name == NULL) ? 0 : strlen(name);
         l += 3; // dir separator, terminating zero, optional "."

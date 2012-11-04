@@ -1,6 +1,6 @@
 
 # specific switches for this device
-DEVICEOPTS=-DHAS_IEC -DHAS_IEEE
+DEVICEOPTS=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM
 
 # MCU name madness
 ARCHDEVICE = -mmcu=atmega644p   # for compiling

@@ -42,14 +42,18 @@
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((par_status&0xe000)==0x2000)
-#define isTalking()     ((par_status&0xe000)==0x4000)
-
 // bus state
 static bus_t bus;
 
-// TODO: make that ... different...
+// This status value has in its lower byte the status similar as it
+// is used in the Commodore line of computers, mostly used for 0x40 as EOF.
+// In the upper byte it contains the current "first" command byte, i.e.
+// whether we are talking or listening. This is returned from the bus layer
+// so we can react on it.
 static int16_t par_status = 0;
+
+#define isListening()   ((par_status&0xe000)==0x2000)
+#define isTalking()     ((par_status&0xe000)==0x4000)
 
 
 /***************************************************************************
@@ -105,7 +109,7 @@ static void listenloop() {
 #endif
         int er, c;
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
-            par_status = bus_sendbyte(&bus, c, er & E_EOI);
+            par_status = bus_sendbyte(&bus, c, (er & E_EOI) ? BUS_FLUSH : 0);
         }
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
@@ -126,6 +130,9 @@ static void talkloop()
 	debug_putc('T'); debug_flush();
 #endif
         settx();            /* enables sending */
+        /* We're faster than the PET, so we have to wait for NDAC low first
+         * to avoid running in DEVICE NOT PRESENT error */
+        while(ndacishi() && atnishi());     // Wait for NDAC low
 
         er=0;
         /*sec=secadr&0x0f;*/
@@ -140,8 +147,23 @@ static void talkloop()
             } while( nrfdislo() );
 
             /* write data & eoi */
-            par_status = bus_receivebyte(&bus, &c, 1);
-            if(par_status & 0x40)
+            par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
+
+#ifdef DEBUG_BUS
+		debug_printf(" %02x", c);
+#endif
+
+	    if (par_status & STAT_RDTIMEOUT) {
+		// we should create a read timeout, by not setting DAV low
+		// in time. This happens on r/w channels, when no data is
+		// available
+#ifdef DEBUG_BUS
+		debug_putc('R');
+#endif
+		break;
+	    }
+
+            if(par_status & STAT_EOF)
             {
                 eoilo();
                 er|=E_EOI;
@@ -298,7 +320,7 @@ void ieee_init(uint8_t deviceno) {
         ieeehw_setup();
 
 	// register bus instance
-	bus_init_bus(&bus);
+	bus_init_bus("ieee", &bus);
 }
 
 #endif // HAS_IEEE

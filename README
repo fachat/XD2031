@@ -41,6 +41,9 @@ Fix bugs:
 	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
 	  and most commands (CHDIR works)
 
+	- C128 can not start with it, as XD2031 gets confused by the C128's 
+	  boot commands
+
 	- ...
 
 
@@ -48,6 +51,26 @@ ROADMAP
 --------
 
 Here are some ideas about what can be implemented.
+
+Planned features for Release 1.0
+--------------------------------
+
+- SD card provider on the atmega side
+	-> started
+- IEC support so C64 et al can use the device 
+	-> done for C64, C128 and VIC20 still to test
+- Use other providers without ASSIGN before, e.g. LOAD"sd:filename",8
+	-> open
+- bidirectional file support, together with TELNET functionality
+	-> open
+- store configuration parameters in EEPROM
+	-> beta
+- set configuration parameters from the PC
+	-> open
+
+
+Further plans
+-------------
 
 With the ASSIGN command it is (will be) possible to assign drive numbers (like the "0" in "$0") 
 to different service providers. Some of those will be in the atmega, some will be on the PC side.
@@ -59,7 +82,7 @@ help with one of these ideas, feel free to contact me!
 In the future these providers can be implemented:
 
 	- A D64 provider on the PC side, to use D64/D80/D82 etc files
-	- An sdcard provider on the atmega side to use files on an SD card
+	- A D64 provider on the atmega side, to use D64/D80/D82 etc files from the SD card
 	- An iec provider - so a PET can "call out" to a serial IEC floppy
 	- And vice versa, an ieee provider and a serial iec bus interface to
 	  allow e.g. the C64 to use an IEEE488 disk
@@ -67,6 +90,10 @@ In the future these providers can be implemented:
 
 On the XS1541 I'm actually willing to sacrifice the parallel user port connector (for C64 fastloaders)
 in favour of a device number switch, an SD card interface, and maybe a serial configuration PROM.
+
+Further ideas:
+
+	- support a non-parallel fast loader for the C64 (e.g. Jiffy-DOS?)
 
 
 REFERENCES

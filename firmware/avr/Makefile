@@ -3,8 +3,8 @@
 # AVR ATMega Architecture
 #
 
-ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timerhw.c avr/avr.c
-ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timerhw.h avr/timerint.o
+ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timerhw.c avr/avr.c avr/nvconfighw.c avr/reset.c
+ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timerhw.h avr/timerint.o avr/arch.h
 ARCHASMOBJ=avr/uartints.o avr/timerint.o
 # FatFs monitor (=test+demo) uses it's own kind of printf:
 ifeq ($(strip $(FAT_TESTDEMO)),y)
@@ -59,13 +59,17 @@ fuses:
 	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 # 
 
-# Info about memory usage
+# Info about memory usage, give only supported options
 size:
 	@FORMAT=berkeley ;\
 	if avr-size --help | grep -e "--format=" | grep -q avr ; then\
 	  FORMAT=avr ;\
 	fi ;\
-	avr-size --format $$FORMAT $(BINDIR)/$(TARGET).elf --mcu=$(SIZE_MCU)
+	MCU= ;\
+	if avr-size --help | grep -q -e "--mcu=" ; then\
+	  MCU=--mcu=$(SIZE_MCU) ;\
+	fi ;\
+	avr-size --format $$FORMAT $$MCU $(BINDIR)/$(TARGET).elf 
 
 archclean:
 	rm -f $(ARCHASMOBJ)

@@ -35,6 +35,7 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "petscii.h"
+#include "main.h"
 
 #include "debug.h"
 #include "led.h"
@@ -72,7 +73,7 @@ void serial_submit(void *epdata, packet_t *buf);
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
+                uint8_t (*callback)(int8_t channelno, int8_t errnum));
 
 static int8_t directory_converter(packet_t *p, uint8_t drive);
 static int8_t to_provider(packet_t *p);
@@ -116,7 +117,7 @@ static int8_t		txstate;
 static struct {
 	int8_t		channelno;	// -1 is unused
 	packet_t	*rxpacket;
-	void		(*callback)(int8_t channelno, int8_t errnum);
+	uint8_t		(*callback)(int8_t channelno, int8_t errnum);
 } rx_channels[NUMBER_OF_SLOTS];
 
 #define	RX_IDLE		0
@@ -395,7 +396,7 @@ static void push_data_to_packet(int8_t rxdata)
 			// yes, send sync
 			uarthw_send(FS_SYNC);
 		} else
-		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF) {
+		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF || rxdata == FS_SETOPT) {
 			// note EOI flag
 			current_is_eoi = rxdata;
 			// start a reply handling
@@ -412,6 +413,7 @@ static void push_data_to_packet(int8_t rxdata)
 		current_channelno = rxdata;
 		rxstate = RX_IGNORE;	// fallback
 		// find the current receive buffer
+
 		for (uint8_t i = 0; i < NUMBER_OF_SLOTS; i++) {
 			if (rx_channels[i].channelno == current_channelno) {
 //if (current_is_eoi == FS_EOF && current_data_left == 0) led_toggle();
@@ -419,6 +421,7 @@ static void push_data_to_packet(int8_t rxdata)
 				current_rxpacket = rx_channels[current_channelpos].rxpacket;
 				if (packet_set_write(current_rxpacket, current_channelno,
 						current_is_eoi, current_data_left) >= 0) {
+//if (current_is_eoi == FS_SETOPT && current_channelno == FSFD_SETOPT) led_on();
 					rxstate = RX_DATA;
 				}
 				break;
@@ -427,22 +430,29 @@ static void push_data_to_packet(int8_t rxdata)
 		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
 		if (current_data_left == 0) {
 			// we are actually already done. do callback and set status to idle
-			rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0);
-			rx_channels[current_channelpos].channelno = -1;
+			if ((rxstate == RX_DATA) 
+				&& (rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0) == 0)) {
+				rx_channels[current_channelpos].channelno = -1;
+			}
 			rxstate = RX_IDLE;
 		}
 		break;
 	case RX_DATA:
 		packet_write_char(current_rxpacket, rxdata);
-		// fallthrough
-	case RX_IGNORE:
 		current_data_left --;
 //if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
-			rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0);
-			rx_channels[current_channelpos].channelno = -1;
+			if (rx_channels[current_channelpos].callback(current_channelno, 
+					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+				rx_channels[current_channelpos].channelno = -1;
+			}
+			rxstate = RX_IDLE;
+		}
+		break;
+	case RX_IGNORE:
+		current_data_left --;
+		if (current_data_left <= 0) {
 			rxstate = RX_IDLE;
 		}
 		break;
@@ -523,7 +533,7 @@ void serial_submit(void *epdata, packet_t *buf) {
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
-		void (*callback)(int8_t channelno, int8_t errnum)) {
+		uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
 
 	if (channelno < 0) {
 		debug_printf("!!!! submit with channelno=%d\n", channelno);

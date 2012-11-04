@@ -39,7 +39,7 @@
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2
 
-static void _file_open_callback(int8_t channelno, int8_t errnum);
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum);
 
 typedef struct {
 	int8_t 		channel_no;
@@ -65,6 +65,9 @@ void file_init(void) {
 //
 // The command buffer is used as transmit buffer, so it must not be overwritten
 // until the open has been sent.
+// 
+// note that if it returns a value <0 on error, it has to have the error message
+// set appropriately.
 //
 int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, 
 			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
@@ -99,9 +102,9 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		return -1;
 	}
 	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
-			&& nameinfo.access != 'A') {
+			&& nameinfo.access != 'A' && nameinfo.access != 'X') {
 		debug_puts("UNKOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
-		// not set, or set as not read, write, or append
+		// not set, or set as not read, write, or append, or r/w ('X')
 		set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
 		return -1;
 	}
@@ -113,11 +116,25 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 	uint8_t type = FS_OPEN_RD;
+
+	if (nameinfo.name[1] == '#' || nameinfo.access == 'X') {
+		// trying to open up a direct channel
+		// Note: needs to be supported for D64 support with U1/U2/...
+		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
+		type = FS_OPEN_RW;
+	}
+
 	// either ",W" or secondary address is one, i.e. save
 	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
 	if (nameinfo.access == 'A') type = FS_OPEN_AP;
 	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
 
+#ifdef DEBUG_FILE
+	debug_printf("NAME=%s\n", nameinfo.name+1);
+	debug_printf("ACCESS=%c\n", nameinfo.access);
+	debug_printf("CMD=%d\n", nameinfo.cmd);
+	debug_flush();
+#endif
 
 	return file_submit_call(channel_no, type, errormsg, rtconf, callback);
 
@@ -131,7 +148,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 
 	// check for default drive (here is the place to set the last used one)
 	if (nameinfo.drive == 0xff) {
-		// there currently only is a single drive, 0
 		nameinfo.drive = rtconf->last_used_drive;
 		// TODO: fix this hack!
 		nameinfo.name[0] = rtconf->last_used_drive;
@@ -185,7 +201,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	}
 
 	// open channel
-	uint8_t writetype = (type == FS_OPEN_WR || type == FS_OPEN_AP) ? 1 : 0;
+	uint8_t writetype = WTYPE_READONLY;
+	if (type == FS_OPEN_WR || type == FS_OPEN_AP) {
+		writetype = WTYPE_WRITEONLY;
+	} else
+	if (type == FS_OPEN_RW) {
+		writetype = WTYPE_READWRITE;
+	}
+
 	int8_t (*converter)(packet_t*, uint8_t) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
 	channel_t *channel = channel_find(channel_no);
@@ -224,7 +247,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	return 0;
 }
 
-static void _file_open_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum) {
 
 	// callback to opener
 	// free data structure for next open	
@@ -245,6 +268,7 @@ static void _file_open_callback(int8_t channelno, int8_t errnum) {
 			break;
 		}
 	}
+	return 0;
 }
 
 

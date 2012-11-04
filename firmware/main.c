@@ -36,12 +36,14 @@
 #include <alloca.h>
 
 #include "config.h"
+#include "arch.h"
 #include "version.h"
 #include "main.h"
 #include "packet.h"
 #include "serial.h"
 #include "uarthw.h"
 #include "device.h"
+#include "rtconfig.h"
 
 // those are currently still needed for *_mainloop_iteration
 #ifdef HAS_IEC
@@ -67,7 +69,7 @@ void ListVersion()
 {
 	term_putcrlf();
 	
-	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION" ###"));
+	term_rom_puts(IN_ROM_STR("### "HW_NAME"/"SW_NAME" v"VERSION LONGVERSION" ###"));
 	term_putcrlf();
 }
 
@@ -132,8 +134,13 @@ int main()
 	// init main channel handling
 	channel_init();
 
+	// before we init any busses, we init the runtime config code
+	// note it gets the provider to register a listener for X command line params
+	rtconfig_init(&term_endpoint);
+
 	// bus init	
-	bus_init();			// first the general bus (with bus counter)
+	// first the general bus (with bus counter)
+	bus_init();		
 
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
@@ -141,16 +148,20 @@ int main()
 	device_init();
 
 	// enable interrupts
-	sei();
+	enable_interrupts();
 
 	// sync with the server
 	serial_sync();		
+
+	// pull in command line config options from server
+	rtconfig_pullconfig();
 
 	// show our version...
   	ListVersion();
 	// ... and some system info
 	term_printf((" %u Bytes free"), BytesFree());
 	term_printf((", %d kHz"), (int32_t)(F_CPU/1000));
+	fuse_info();
 	term_putcrlf();
 	term_putcrlf();
 
@@ -163,7 +174,7 @@ int main()
 		ieee_mainloop_iteration();
 #endif
 #ifdef HAS_IEC
-		// handle IEEE488 bus
+		// handle IEC bus
 		iec_mainloop_iteration();
 #endif
 	}

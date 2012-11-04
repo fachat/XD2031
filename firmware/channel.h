@@ -37,14 +37,27 @@
 
 /**
  * writetype values as seen from the IEEE device
+ *
+ * READONLY and WRITEONLY files use the two buffers as 
+ * alternating double-buffering buffers. So one buffer is loaded
+ * from the device while the other is being sent to the server
+ * or vice versa. 
+ * The READWRITE files use buffer 0 to send to host, and buffer 1
+ * to receive from host only, so no double-buffering is done there.
  */
 #define	WTYPE_READONLY	0		
 #define	WTYPE_WRITEONLY	1
 #define	WTYPE_READWRITE	2	/* NOTE: absolutely broken! */
 
 /**
- * pull_state values. The interrupt callback updates the state, so state manipulation
- * must be irq-protected
+ * R/W buffer definitions
+ */
+#define	RW_PUSHBUF	0
+#define	RW_PULLBUF	1
+
+/**
+ * pull_state values. The delay callback updates the state
+ * pull means read (pull) data from the server
  */
 #define	PULL_OPEN	0		// after open
 #define	PULL_PRELOAD	1		// during read pre-load
@@ -55,8 +68,8 @@
 #define	PULL_TWOREAD	6		// both buffers read and valid
 
 /**
- * push_state values. The interrupt callback updates the state, so state manipulation
- * must be irq-protected
+ * push_state values. The delay callback updates the state
+ * push means send (push) data to the server
  */
 #define	PUSH_OPEN	0		// after open
 #define	PUSH_FILLONE	1		// filling the first buffer
@@ -119,16 +132,23 @@ static inline uint8_t channel_current_is_eof(channel_t *chan) {
         return packet_current_is_eof(&chan->buf[chan->current]);
 }       
 
-uint8_t channel_next(channel_t *chan);
+uint8_t channel_next(channel_t *chan, uint8_t options);
 
 uint8_t channel_has_more(channel_t *chan);
 
-channel_t* channel_refill(channel_t *chan);
+channel_t* channel_refill(channel_t *chan, uint8_t options);
 
 void channel_preload(int8_t channelno);
-void channel_preloadp(channel_t *chan);
+// returns 0 when data is available, or -1 when not (r/w channel)
+int8_t channel_preloadp(channel_t *chan);
 
-channel_t* channel_put(channel_t *chan, char c, int forceflush);
+#define	PUT_FLUSH	0x01
+#define	PUT_SYNC	0x02
+
+#define	GET_WAIT	0x01
+#define	GET_SYNC	0x02
+
+channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush);
 
 void channel_close(int8_t secondary_address);
 

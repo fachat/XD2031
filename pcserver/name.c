@@ -2,6 +2,7 @@
 
     Serial line filesystem server
     Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2012 Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -42,32 +43,27 @@
  */
 int compare_pattern(const char *name, const char *pattern) {
 
-	int namep = 0;		// current position in name
-	int patternp = 0;	// current position in 
+	int p = 0;		// current position
 
-	while ( name[namep] != 0 && pattern[patternp] != 0 ) {
-		if (pattern[patternp] == '*') {
+	do {
+		if (pattern[p] == '*') {
 			// For Commodore, we are basically done here - anything else does not count
 			return 1;
 		} else
-		if (pattern[patternp] != '?') {
-			if (pattern[patternp] != name[namep]) {
+		if (pattern[p] != '?') {
+			if (pattern[p] != name[p]) {
 				// not equal
 				return 0;
 			}
 		}
-		namep++;
-		patternp++;
-	}
+	} while (name[p] && pattern[p++]);
 
-	if (name[namep] == 0 && pattern[patternp] == 0) {
+	if(name[p] == 0 && pattern[p] == 0) {
 		// both, name and pattern are finished, and
 		// not exited so far, so both match
 		return 1;
 	}
+
 	// no match
 	return 0;
 }
-
-
-

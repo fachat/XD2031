@@ -30,4 +30,7 @@
 #define	VERSION			"0.9"
 #define	LONGVERSION		".1"
 
+#define VER32(major,minor,patch) (major*65536 + minor*256 + patch)
+#define VERSION_U32 VER32(0,9,1)
+
 #endif

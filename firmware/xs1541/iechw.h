@@ -46,11 +46,14 @@
 extern uint8_t is_satna;
 // last output of DATA before ATNA handling
 extern uint8_t is_dataout;
-// last output of CLK before ATNA handling
-extern uint8_t is_clkout;
 
 // ATN handling
 // (input only)
+
+static inline void atn_init() {
+      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
+	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
+}
 
 static inline uint8_t satnislo() {
 	return !(IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
@@ -60,12 +63,15 @@ static inline uint8_t satnishi() {
 	return (IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
 }
 
-// NDAC & NRFD handling
-// Note the order of method definition in this file depends on dependencies
+// DATA & CLK handling
 
-static inline void datalo() {
+static inline void dataforcelo() {
       	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_DATA);    	// DATA low
       	IEC_DDR |= _BV(IEC_PIN_DATA);              	// DATA as output
+}
+
+static inline void datalo() {
+	dataforcelo();
 	is_dataout = 0;
 }
 
@@ -74,22 +80,15 @@ static inline void clklo() {
       	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    	// CLK as output
 }
 
-static inline void atn_init() {
-      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
-	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
-}
-
 static inline void datahi() {
-	// disable interrupt to avoid race condition
-	// of ATN irq between the satnishi() check and
+	// note: do not fiddle with ints, as iecout and iecin
+	// alread run interrupt-protected
+
 	// setting DATA hi
-	cli();	
 	if (satnishi() || is_satna) {
 	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_DATA);    // DATA as input
       		IEC_PORT |= _BV(IEC_PIN_DATA);             // Enable pull-up
 	}
-	// allow interrupt again
-	sei();
 	is_dataout = 1;
 }
 
@@ -117,12 +116,13 @@ static inline uint8_t clkishi() {
 
 // returns a debounced port byte, to be checked with 
 // the methods is_port_*(port_byte)
+// only check for changes in the actual IEC bus lines
 static inline uint8_t read_debounced() {
 	uint8_t port;
 
 	do {
 		port = IEC_INPUT;
-	} while (port != IEC_INPUT);
+	} while ( (port ^ IEC_INPUT) & (_BV(IEC_PIN_CLK) | _BV(IEC_PIN_DATA)) );
 	
 	return port;
 }
@@ -155,12 +155,15 @@ static inline void satnahi() {
 
 // disarm ATN acknowledge handling
 static inline void satnalo() {
-	if (!is_dataout) {
-		datalo();
-	}
 	is_satna = 1;
+	if (is_dataout) {
+		datahi();
+	}
 }
 
+static inline uint8_t satna() {
+	return !is_satna;
+}
 
 // general functions
 

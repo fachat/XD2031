@@ -34,6 +34,9 @@
 #include "packet.h"
 #include "errormsg.h"
 
+// all 10 drives can be used
+#define	MAX_DRIVES	10
+
 typedef struct {
 	// get a new void data pointer to be given to submit() for each ASSIGN
 	void *(*prov_assign)(const char *name);
@@ -41,9 +44,11 @@ typedef struct {
 	void (*prov_free)(void *);
 	// submit a fire-and-forget packet (log_*, terminal)
 	void (*submit)(void *pdata, packet_t *buf);
-	// submit a request/response packet
+	// submit a request/response packet; call the callback function when the 
+	// response is received; If callback returns != 0 then the call is kept open,
+	// and further responses can be received
 	void (*submit_call)(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                void (*callback)(int8_t channelno, int8_t errnum));
+                uint8_t (*callback)(int8_t channelno, int8_t errnum));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
 	int8_t (*directory_converter)(packet_t *p, uint8_t);

@@ -32,6 +32,8 @@
  * local filesystem.
  */
 
+#include "os.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -41,15 +43,13 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-// to get a proper definition of realpath()
-#define	__USE_XOPEN_EXTENDED
-#include <stdlib.h>
+#include <libgen.h>
 
 #include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
 #include "errors.h"
+#include "mem.h"
 
 #include "log.h"
 
@@ -91,7 +91,6 @@ static void init_fp(File *fp) {
 	fp->dp = NULL;
 }
 
-
 // close a file descriptor
 static int close_fd(File *file) {
 	int er = 0;
@@ -120,9 +119,9 @@ static void fsp_free(endpoint_t *ep) {
         for(i=0;i<MAXFILES;i++) {
                 close_fd(&(cep->files[i]));
         }
-	free(cep->basepath);
-	free(cep->curpath);
-        free(ep);
+	mem_free(cep->basepath);
+	mem_free(cep->curpath);
+        mem_free(ep);
 }
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
@@ -143,9 +142,9 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 				path);
 
 	// malloc's a buffer and stores the canonical real path in it
-	fsep->basepath = realpath(dirpath, NULL);
+	fsep->basepath = os_realpath(dirpath);
 
-	free(dirpath);
+	mem_free(dirpath);
 
 	if (fsep->basepath == NULL) {
 		// some problem with dirpath - maybe does not exist...
@@ -225,12 +224,12 @@ static File *reserve_file(endpoint_t *ep, int chan) {
                         init_fp(fp);
                         fp->chan = chan;
 
-			//log_debug("reserving file %p for chan %d\n", fp, chan);
+			log_debug("reserving file %p for chan %d\n", fp, chan);
 
                         return &(cep->files[i]);
                 }
         }
-        log_warn("Did not find free curl session for channel=%d\n", chan);
+        log_warn("Did not find free fs session for channel=%d\n", chan);
         return NULL;
 }
 
@@ -242,7 +241,7 @@ static File *find_file(endpoint_t *ep, int chan) {
                         return &(cep->files[i]);
                 }
         }
-        log_warn("Did not find curl session for channel=%d\n", chan);
+        log_warn("Did not find fs session for channel=%d\n", chan);
         return NULL;
 }
 
@@ -258,38 +257,136 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	}
 }
 
+static char *safe_dirname (const char *path) {
+/* a dirname that leaves it's parameter unchanged and doesn't 
+ * overwrite its result at subsequent calls. Allocates memory
+ * that should be free()ed later */
+	char *pathc, *dirname_result, *mem_dirname;
+
+	pathc = mem_alloc_str(path);
+	dirname_result = dirname(pathc);
+	mem_dirname = mem_alloc_str(dirname_result);
+	mem_free(pathc);
+	return mem_dirname;
+}
+
+static char *safe_basename (const char *path) {
+/* a basename that leaves it's parameter unchanged and doesn't
+ * overwrite it's result at subsequent calls. Allocates memory
+ * that should be free()ed later */
+	char *pathc, *basename_result, *mem_basename;
+
+	pathc = mem_alloc_str(path);
+	basename_result = basename(pathc);
+	mem_basename = mem_alloc_str(basename_result);
+	mem_free(pathc);
+	return mem_basename;
+}    
+
+static int path_under_base(const char *path, const char *base) {
+/* 
+ * Return
+ * -3 if malloc() failed
+ * -2 if realpath(path) failed
+ * -1 if realpath(base) failed
+ *  0 if it is
+ *  1 if it is not
+ */
+	int res = 1;
+	char *base_realpathc = NULL;
+	char *base_dirc = NULL;
+	char *path_dname = NULL;
+	char *path_realpathc = NULL;
+
+	if(!base) return -1;
+	if(!path) return -2;
+
+	base_realpathc = os_realpath(base);
+	if(!base_realpathc) {
+		res = -1;
+		log_error("Unable to get real path for '%s'\n", base);
+		goto exit;
+	}
+	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
+	strcpy(base_dirc, base_realpathc);
+	if(!base_dirc) {
+		res = -3;
+		goto exit;
+	}
+	strcat(base_dirc, dir_separator_string());
+
+	path_realpathc = os_realpath(path);
+	if(!path_realpathc) {
+		path_dname = safe_dirname(path);
+		path_realpathc = os_realpath(path_dname);
+	}
+	if(!path_realpathc) {
+		log_error("Unable to get real path for '%s'\n", path);
+		res = -2;
+		goto exit;
+	}
+	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
+	if(!path_realpathc) return -3;
+	strcat(path_realpathc, dir_separator_string());
+
+	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
+	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
+		res = 0;
+	} else {
+		log_error("Path '%s' is not in base dir '%s'\n", path_realpathc, base_dirc);
+	}
+exit:
+	mem_free(base_realpathc);
+	mem_free(base_dirc);
+	mem_free(path_realpathc);
+	mem_free(path_dname);
+	return res;  
+}
+
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+	int er = ERROR_FAULT;
+	File *file;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	log_info("open file in dir %s with name %s\n", fsep->curpath, buf);
+	log_info("open file for fd=%d in dir %s with name %s\n", tfd, fsep->curpath, buf);
 
-        File *file = reserve_file(ep, tfd);
-
-	if (file != NULL) {
-		/* no directory separators - security rules! */
-		char *nm = (char*)buf;
-		if(*nm=='/') nm++;
-		if(strchr(nm, '/')) {
-			// should give a security error
-			// TODO: replace with correct error number
-			return ERROR_SYNTAX_DIR_SEPARATOR;
-		}
-
-		FILE *fp = open_first_match(fsep->curpath, nm, mode);
-
-		log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, buf, buf, (void*)file, (void*)fp);
-
-		if(fp) {
-		  file->fp = fp;
-		  file->dp = NULL;
-		  return ERROR_OK;
-		}
-		// TODO: open error (maybe depending on errno?)
-		close_fd(file);
+	char *fullname = malloc_path(fsep->curpath, buf);
+	patch_dir_separator(fullname);
+	if(path_under_base(fullname, fsep->basepath)) {
+		mem_free(fullname);
+		return ERROR_NO_PERMISSION;
 	}
-	return ERROR_FAULT;
+
+	char *path     = safe_dirname(fullname);
+	char *filename = safe_basename(fullname);
+
+	FILE *fp = open_first_match(path, filename, mode);	
+	if(fp) {
+	
+		file = reserve_file(ep, tfd);
+
+		if (file) {
+			file->fp = fp;
+			file->dp = NULL;
+			er = ERROR_OK;
+		} else {
+			fclose(fp);
+			log_error("Could not reserve file\n");
+			er = ERROR_FAULT;
+		}
+
+	} else {
+		
+		log_errno("Error opening file '%s/%s'", path, filename);
+		er = errno_to_error(errno);
+	}
+
+	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, filename, filename, (void*)file, (void*)fp);
+
+	mem_free(path); mem_free(filename);
+	return er;
 }
 
 // open a directory read
@@ -381,6 +478,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  if(n<len) {
 		    // short read, so either error or eof
 		    *eof = 1;
+		    log_debug("Close fd=%d on short read\n", tfd);
 		    close_fds(ep, tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
@@ -389,7 +487,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
-		      //printf("Setting EOF!\n");
+		      log_debug("Close fd=%d on EOF read\n", tfd);
 		      close_fds(ep, tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
@@ -416,12 +514,12 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		  int n = fwrite(buf, 1, len, fp);
 		  if (n < len) {
 			// short write indicates an error
-			log_debug("Short write on file!\n");
+			log_debug("Close fd=%d on short write!\n", tfd);
 			close_fds(ep, tfd);
 			return -ERROR_WRITE_ERROR;
 		  }
 		  if(is_eof) {
-		    log_debug("Write file received an EOF\n");
+		    log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
 		    close_fds(ep, tfd);
 		  }
 		  return ERROR_OK;
@@ -450,6 +548,8 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 
 	int matches = 0;
 	char *p = buf;
+
+	patch_dir_separator(buf);
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -497,7 +597,7 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *from = buf+p+1;
 	char *to = buf;
 
-	if (index(to, '/') != NULL) {
+	if ((index(to, '/') != NULL) || (index(to,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return ERROR_SYNTAX_DIR_SEPARATOR;
@@ -506,9 +606,9 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 	char *frompath = malloc_path(fsep->curpath, from);
 	char *topath = malloc_path(fsep->curpath, to);
 
-	char *fromreal = realpath(frompath, NULL);
-	free(frompath);
-	char *toreal = realpath(topath, NULL);
+	char *fromreal = os_realpath(frompath);
+	mem_free(frompath);
+	char *toreal = os_realpath(topath);
 
 	if (toreal != NULL) {
 		// target already exists
@@ -529,9 +629,9 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 			}
 		}
 	}
-	free(topath);
-	free(toreal);
-	free(fromreal);
+	mem_free(topath);
+	mem_free(toreal);
+	mem_free(fromreal);
 
 	return er;
 }
@@ -540,18 +640,17 @@ static int fs_rename(endpoint_t *ep, char *buf) {
 static int fs_cd(endpoint_t *ep, char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	patch_dir_separator(buf);
+
 	log_debug("Change dir to: %s\n", buf);
 
 	//  concat new path to current path
 	char *newpath = malloc_path(fsep->curpath, buf);
 
 	// canonicalize it
-	char *newreal = realpath(newpath, NULL);
+	char *newreal = os_realpath(newpath);
 	// free buffer so we don't forget it
-	free(newpath);
-
-	log_debug("Checking that new path '%s' is under base '%s'\n",
-		newreal, fsep->basepath);
+	mem_free(newpath);
 
 	if (newreal == NULL) {
 		// target does not exist
@@ -559,17 +658,14 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	}
 
 	// check if the new path is still under the base path
-	if (strstr(newreal, fsep->basepath) == newreal) {
-		// the needle base path is found at the start of the new real path -> ok
-		free(fsep->curpath);
-		fsep->curpath = newreal;
-	} else {
-		// needle (base path) is not in haystack (new path)
+	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
-		log_error("Tried to chdir outside base dir %s, to %s\n", fsep->basepath, newreal);
-		free(newreal);
+		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
 	}
+
+	mem_free(fsep->curpath);
+	fsep->curpath = newreal;
 	return ERROR_OK;
 }
 
@@ -579,15 +675,19 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	patch_dir_separator(buf);
+
 	char *newpath = malloc_path(fsep->curpath, buf);
 
-	char *newreal = realpath(newpath, NULL);
+	char *newreal = os_realpath(newpath);
 
 	if (newreal != NULL) {
 		// file or directory exists
 		er = ERROR_FILE_EXISTS;
 	} else {
-		int rv = mkdir(newpath, 0557);
+		mode_t oldmask=umask(0);
+		int rv = mkdir(newpath, 0755);
+		umask(oldmask);
 
 		if (rv < 0) {
 			log_errno("Error trying to make a directory");
@@ -597,8 +697,8 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newpath);
-	free(newreal);
+	mem_free(newpath);
+	mem_free(newreal);
 	return er;
 }
 
@@ -609,10 +709,12 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	patch_dir_separator(buf);
+
 	char *newpath = malloc_path(fsep->curpath, buf);
 
-	char *newreal = realpath(newpath, NULL);
-	free(newpath);
+	char *newreal = os_realpath(newpath);
+	mem_free(newpath);
 
 	if (newreal == NULL) {
 		// directory does not exist
@@ -632,7 +734,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 			er = ERROR_OK;
 		}
 	}
-	free(newreal);
+	mem_free(newreal);
 	return er;
 }
 

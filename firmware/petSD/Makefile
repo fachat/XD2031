@@ -6,7 +6,7 @@ USE_FAT=y                       # Enable optional FAT module?
 # Should not be modified
 
 # specific switches for this device
-DEVICEOPTS=-DHAS_IEEE -DHAS_RTC
+DEVICEOPTS=-DHAS_IEEE -DHAS_RTC -DHAS_EEPROM
 
 # MCU name madness
 ARCHDEVICE = -mmcu=atmega1284p  # for compiling

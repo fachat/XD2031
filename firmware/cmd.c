@@ -199,6 +199,8 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		return 0;
 	}
 
+	// need to have the error message set when returning <0
+        set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
 	return -1;
 }
 

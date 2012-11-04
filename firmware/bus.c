@@ -84,6 +84,11 @@
 static errormsg_t error;
 
 
+/* 
+ * send a RESET request and open a receive channel for setopt (X command line
+ * options packets 
+ */
+
 /********************************************************************************/
 
 static uint8_t secaddr_offset_counter;
@@ -94,24 +99,29 @@ void bus_init() {
 	set_error(&error, ERROR_DOSVERSION);
 }
 
-/* Init IEEE bus */
-void bus_init_bus(bus_t *bus) {
-
+uint8_t get_default_device_address(void) {
   	uint8_t devaddr = 8;
 #	ifdef DEV_ADDR
 		devaddr = DEV_ADDR;
 #	endif
 
-	bus->secaddr_offset = secaddr_offset_counter;
-	secaddr_offset_counter += 16;
-
   	/* Read the hardware-set device address */
 	//  device_address = device_hw_address();
+
+	return devaddr;
+}
+
+/* Init IEEE bus */
+void bus_init_bus(const char *name, bus_t *bus) {
+
+	bus->secaddr_offset = secaddr_offset_counter;
+	secaddr_offset_counter += 16;
 
 	/* Init vars and flags */
   	bus->command.command_length = 0;
 
-	rtconfig_init(&(bus->rtconf), devaddr);
+	bus->rtconf.name = name;
+	rtconfig_init_rtc(&(bus->rtconf), get_default_device_address());
 
 	bus->channel = NULL;
 }
@@ -174,10 +184,8 @@ static int16_t cmd_handler (bus_t *bus)
       	if (rv < 0) {
 		// open ran into an error
 		// -- errormsg should be already set, so nothing left to do here
-		// TODO
-		debug_printf("Received direct error number on open: %d\n", rv);
-        	set_error(&error, ERROR_DRIVE_NOT_READY);
-		st = 2;
+		debug_puts("Received error on open/cmd!\n");
+		st = STAT_RDTIMEOUT;
       	} else {
 		// as this code is not (yet?) prepared for async operation, we 
 		// need to wait here until the response from the server comes
@@ -235,7 +243,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     } else {
       bus->channel = channel_put(bus->channel, data, with_eoi);
       if (bus->channel == NULL) {
-	st = 0x83;	// TODO correct code
+	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
     }
     return st + (bus->device << 8);
@@ -258,9 +266,9 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 		if (error.error_buffer[error.readp+1] == 0) {
 			// send EOF
-			st |= 0x40;
+			st |= STAT_EOF;
 		}
-		if (!preload) {
+		if (!(preload & BUS_PRELOAD)) {
 			// the real thing
 			error.readp++;
 			if (error.error_buffer[error.readp] == 0) {
@@ -275,28 +283,34 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		debug_printf("Setting file not open on secaddr %d\n", bus->secondary);
 
 		set_error(&error, ERROR_FILE_NOT_OPEN);
-		st = 0x83;
+		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
 #ifdef DEBUG_SERIAL
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
 		// first fillup the buffers
-		channel_preloadp(channel);
-
-		*data = channel_current_byte(channel);
-		if (channel_current_is_eof(channel)) {
+		if (channel_preloadp(channel) < 0) {
+			// no data available
+			st |= STAT_RDTIMEOUT;
 #ifdef DEBUG_SERIAL
-			debug_puts("EOF!\n");
+			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
+				channel->channel_no, st);
 #endif
-			st |= 0x40;
-		}
+		} else {
 
-		if (!preload) {
-			// make sure the next call does have a data byte
-			if (!channel_next(channel)) {
-				if (channel_has_more(channel)) {
-					channel_refill(channel);
-				} else {
+			*data = channel_current_byte(channel);
+			if (channel_current_is_eof(channel)) {
+#ifdef DEBUG_SERIAL
+				debug_puts("EOF!\n");
+#endif
+				st |= STAT_EOF;
+			}
+
+			// TODO: simplify the channel interface for the code here
+			if (!(preload & BUS_PRELOAD)) {
+				// make sure the next call does have a data byte
+				if (!channel_next(channel, preload & BUS_SYNC)) {
+					// no further data on channel available
       					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
         					// autoclose when load is done, or after reading status channel
 						channel_close(bus_secaddr_adjust(bus, secaddr));
@@ -335,13 +349,13 @@ static int16_t bus_prepare(bus_t *bus)
 	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 		if (bus->channel == NULL) {
 			debug_puts("Did not find channel!\n");
-			st |= 0x40;	// TODO correct code?
+			st |= STAT_EOF | STAT_RDTIMEOUT;	// correct code?
 		}
 	  }
           if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
 	      	// if we should TALK, prepare the first data byte
 	      	if (!st) {
-              		st = bus_receivebyte(bus, &b, 1) & 0xbf;   /* any error, except eof */
+              		st = bus_receivebyte(bus, &b, BUS_PRELOAD | BUS_SYNC) & 0xbf;   /* any error, except eof */
 			//debug_printf("receive gets st=%04x\n", st);
 		} else {
 			// cause a FILE NOT FOUND
@@ -379,7 +393,8 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 		// note: may change bus->rtconf.device_address!
         	st = cmd_handler(bus);
         }
-
+	// as it's unlisten, we need to wait for ATN end
+	st |= STAT_WAITEND;
     } else {
 
 	// not unlisten, or not open, not command:
@@ -422,6 +437,9 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
   	      		if (is_config_device) {
               			bus->secondary = b;
 	      			// TODO: close previously opened file
+				
+				// on OPEN we need to wait for ATN end to get the file name
+				st |= STAT_WAITEND;
 	      		}
               		break;
 		  default:
@@ -430,6 +448,10 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 		}
 	      	break;
         }
+    }
+
+    if ((b == BUSCMD_UNLISTEN) || (b == BUSCMD_UNTALK) || ((b & BUSSEC_MASK) == BUSSEC_OPEN)) {
+	st |= STAT_WAITEND;
     }
 
     if ((b == BUSCMD_UNLISTEN) || (b == BUSCMD_UNTALK) || ((b & BUSSEC_MASK) == BUSSEC_CLOSE)) {
@@ -441,7 +463,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
     } else {
     	if (!is_config_device) {
 		// not this device
-        	st |= 0x80;
+        	st |= STAT_NODEV;
     	} else {
 		led_set(ACTIVE);
 	}

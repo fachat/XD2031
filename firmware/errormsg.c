@@ -31,7 +31,7 @@
 #include "debug.h"
 #include "led.h"
 
-#define	DEBUG_ERROR
+#undef	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
 const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION LONGVERSION;
@@ -155,6 +155,8 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
 
 	if (errornum != ERROR_OK && errornum != ERROR_DOSVERSION && errornum != ERROR_SCRATCHED) {
 		led_set(ERROR);
+
+		term_printf("Setting status to: %s\n", err->error_buffer);
 	} else {
 		// same as idle, but clears error
 		led_set(OFF);

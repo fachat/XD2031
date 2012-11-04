@@ -36,22 +36,28 @@
 
 #include "debug.h"
 #include "led.h"
+#include "system.h"
 
-#define DEBUG_BUS
+#undef DEBUG_BUS
 
 // Prototypes
 
 static void talkloop(void);
 static void listenloop(void);
 
-#define isListening()   ((ser_status&0xe000)==0x2000)
-#define isTalking()     ((ser_status&0xe000)==0x4000)
-
 // bus state
 static bus_t bus;
 
-// TODO: make that ... different...
+// This status value has in its lower byte the status similar as it
+// is used in the Commodore line of computers, mostly used for 0x40 as EOF.
+// In the upper byte it contains the current "first" command byte, i.e.
+// whether we are talking or listening. This is returned from the bus layer
+// so we can react on it.
 static int16_t ser_status = 0;
+
+#define isListening()   ((ser_status&0xe000)==0x2000)
+#define isTalking()     ((ser_status&0xe000)==0x4000)
+#define waitAtnHi()     (ser_status&STAT_WAITEND)
 
 
 /***************************************************************************
@@ -63,10 +69,29 @@ static int16_t ser_status = 0;
 // returns !=0 when ATN has changed
 static uint8_t checkatn(uint8_t underatn) 
 {
+//	if (underatn) {
+//		return satnishi();
+//	} else {
+//		return satnislo();
+//	}
 	if (underatn) {
-		return satnishi();
+		if (satnishi()) {
+			//if (!satna()) {
+				dataforcelo();
+			//}
+			return -1;
+		} else {
+			return 0;
+		}
 	} else {
-		return satnislo();
+		if (satnislo()) {
+			//if (satna()) {
+				dataforcelo();
+			//}
+			return -1;
+		} else {
+			return 0;
+		}
 	}
 }
 
@@ -78,31 +103,51 @@ static int16_t iecin(uint8_t underatn)
 	uint8_t cnt = 8;
 	uint8_t data = 0;
 
+
 	do {
 		if (checkatn(underatn)) 
 			return -1;
-
 	} while (is_port_clklo(read_debounced()));
-
+	
+	// unlikely race condition:
+	// between the checkatn() and the is_port_clklo() the 
+	// sectalk ends the previous atn sequence with a 
+	// atn hi and clk hi - so we might fall through here;
+	// thus check ATN here again to be sure
+	if (checkatn(underatn)) {
+		return -1;
+	}
+	
 	datahi();
 
-	// TODO: wait for data being really hi, as other listeners
-	// may delay the transition, and we misunderstand this for an EOI
+	// wait until data is really hi (other devices may delay this)
+	// actualy there's a vc1541 patch in the wild from e9dc to ff20 that 
+	// does exactly that but I found only afterwards...
+	do {
+		if (checkatn(underatn))
+			return -1;
+	} while (is_port_datalo(read_debounced()));
 
 	// set timer with 256 us
 	timer_set_us(256);
 
 	do {
+		// e9df (vc1541)
+
 		if (checkatn(underatn)) {
 			return -1;
 		}
 
 		if (timer_is_timed_out()) { 
 			// handle EOI condition
+			// e9f2
 			datalo();
-			delayus(50);
+			// at least 23 cycles + 43+ for C64 bad video lines
+			delayus(80);
+
 			datahi();
 
+			// e9fd
 			do {
 				if (checkatn(underatn)) {
 					return -1;
@@ -118,6 +163,7 @@ static int16_t iecin(uint8_t underatn)
 
 	// shift in all bits
 	do {
+		// ea0b
 		do {
 			port = read_debounced();
 		} while (is_port_clklo(port));
@@ -127,6 +173,7 @@ static int16_t iecin(uint8_t underatn)
 			data |= 128;
 		}
 
+		// ea1a
 		do {
 			if (checkatn(underatn)) {
 				return -1;
@@ -134,6 +181,7 @@ static int16_t iecin(uint8_t underatn)
 		} while (is_port_clkhi(read_debounced()));
 
 		cnt--;
+
 	} while (cnt > 0);
 
 	datalo();
@@ -149,17 +197,14 @@ static void listenloop() {
 	int16_t c;
 
 	do {
-		// disable interrupts
-		cli();
+		disable_interrupts();
 		// read byte from IEC
 		c = iecin(0);
-		// enable ints
-		sei();
-
+		enable_interrupts();
 		if (c < 0) {
 			break;
 		}
-            	ser_status = bus_sendbyte(&bus, c, (c & 0x4000) ? 1 : 0);
+            	ser_status = bus_sendbyte(&bus, c, BUS_SYNC | ((c & 0x4000) ? BUS_FLUSH : 0));
         } while (1);
 
 	return;
@@ -170,8 +215,8 @@ static void listenloop() {
 // more info see here: https://groups.google.com/forum/?hl=de&fromgroups=#!msg/comp.sys.cbm/e4qxrtt5RP0/0q1EVUkV8moJ
 
 static int16_t iecout(uint8_t data, uint8_t witheoi) {
-	
-	uint8_t port;
+
+	uint8_t port;	
 	uint8_t cnt = 8;
 
 	if (checkatn(0)) {
@@ -181,14 +226,17 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 	// just in case, release the data line
 	datahi();
 
-	// make sure data is actually lo
+	// make sure data is actually lo (done by controller)
 	do {
 		if (checkatn(0)) {
 			return -1;
 		}
-//led_toggle();
 	} while (is_port_datahi(read_debounced()));
 
+	// e916 ff
+	port = read_debounced();
+	
+	delayus(60);	// sd2iec
 	
 	// e91f
 	clkhi();
@@ -200,7 +248,7 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		}
 	} while (is_port_datalo(read_debounced()));
 
-	if (witheoi) {
+	if (witheoi || is_port_datahi(port)) {
 		// signal the EOI
 		// wait for data low as acknowledge from the listener
 		do {
@@ -236,6 +284,8 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 		}
 		data >>= 1;
 
+		// here and in the next delay, maybe build a switch to 
+		// support faster speeds for VIC-20
 		delayus(80);
 
 		clkhi();
@@ -264,32 +314,24 @@ static int16_t iecout(uint8_t data, uint8_t witheoi) {
 
 static void talkloop()
 {
-        int16_t er /*,sec*/;
+        int16_t er;
         uint8_t c;
 
 	do {
-            	ser_status = bus_receivebyte(&bus, &c, 1);
-//debug_printf("reading byte from bus: %02x, ser_status=%04x\n", c,ser_status);debug_flush();
+            	ser_status = bus_receivebyte(&bus, &c, BUS_PRELOAD | BUS_SYNC);
+#ifdef BUS_DEBUG_DATA
+		debug_printf("rx->iecout: %02\n", c); debug_flush();
+#endif
 
-		// disable ints
-		cli();
+		disable_interrupts();
 		// send byte to IEC
 		er = iecout(c, ser_status & 0x40);
-		// enable ints
-		sei();
-
-//		delayus(4000);
-
-//debug_printf("next, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
+		enable_interrupts();
 
 		if (er >= 0) {
-            		ser_status = bus_receivebyte(&bus, &c, 0);
+            		ser_status = bus_receivebyte(&bus, &c, BUS_SYNC);
 		}
-//debug_printf("commited, er=%d, ser_status=%04x\n", er, ser_status);debug_flush();
-
-	} while (er >= 0);
-
-debug_printf("bailing out with er=%d\n", er);
+	} while (er >= 0 && ((ser_status & 0xff) == 0));
 }
 
 /***************************************************************************
@@ -302,21 +344,27 @@ void iec_mainloop_iteration(void)
 {
         int16_t cmd = 0;
 
-#if 0
-	// debug
-	timer_set_us(256);
-	led_toggle();
-	while(!timer_is_timed_out());
-	led_toggle();
-	// end debug
-#endif
-
         ser_status=0;
 
 	// only do something on ATN low
 	if (satnishi()) {
 		return;
 	}
+
+#if 0 //def DEBUG_BUS
+	debug_printf("start of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	//debug_putcrlf();
+#endif
+
+	// This delay fixes a problem that would otherwise require an 11ms
+	// wait at the end of this function when we don't do listenloop() or talkloo().
+	// It looks as if in this case the C64 first does ATN low, but has not
+	// correctly figured out the other lines yet, thus a fall-though into
+	// iecin and after wiggling with clk once, the C64 hangs.
+	delayus(60);
+
+	disable_interrupts();
 
 	clkhi();
 
@@ -325,61 +373,106 @@ void iec_mainloop_iteration(void)
 	// acknowledge ATN
 	satnalo();
 
+	// E87B (vc1541)
+	do {
+		if (satnishi()) {
+			dataforcelo();
+			goto cmd;
+		}
+	} while (is_port_clklo(read_debounced()));
+
 	// on the C64, CLK is set high directly after setting ATN
 	// but here we are possibly faster than that, so do a delay
 	delayus(20);
 
         // Loop to get commands during ATN lo ----------------------------
-#if 0 
-	// this is also on top of liecin()
-	do {
-		if (satnishi()) {
-			goto cmd;
-		}
-	} while (clkislo());
-#endif
 
 	do {
-		// disable ints
-		cli();
+		disable_interrupts();
 		// get byte (under ATN) - call to E9C9
 		cmd = iecin(1);
-		// enable ints again
-		sei();
+		enable_interrupts();
 
-		if (cmd < 0) {
-debug_printf("cmd=%d", cmd);
-			break;
+		if (cmd >= 0) {
+			ser_status = bus_attention(&bus, 0xff & cmd);
+
+			if (waitAtnHi()) {
+				// e902
+				dataforcelo();
+
+				// wait for ATN hi
+				// note that due to us having enabled ints again,
+				// we cannot wait for ATN low, as the C64 might have
+				// overtaken us due to interrupt handling.
+				// so we just wait a certain time to make sure
+				// we're not too fast for the cbm. Note 50us is too fast.
+				// Also note that in previous commits the time needed for the 
+				// debug output in bus_attention() has hidden this delay
+				//while (satnislo());
+				//delayus(75);
+				// Note that 150 instead of 75us make the c128 boot sequence
+				// more stable
+				delayus(150);
+
+				// and exit loop
+				goto cmd;
+			}
 		}
-		ser_status = bus_attention(&bus, 0xff & cmd);
 
+		// cmd might be <0 if iecin ran into an ATN hi condition
+		// If ATN should have been re-asserted here, do we really
+		// have a problem just staying in the loop?
+		// TODO: check if cmd<0 condition is needed
 	} while (satnislo());
 	
         // ---------------------------------------------------------------
 	// ATN is high now
-	// parallelattention has set status what to do
+	// bus_attention has set status what to do
 	// now transfer the data
 cmd:
-#ifdef DEBUG_BUS
-	debug_printf("stat=%04x", ser_status); debug_putcrlf();
+
+#if 0 ///def DEBUG_BUS
+	debug_printf("stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_putcrlf();
 #endif
-	
+
 	// E8D7
 	satnahi();
 
 	if(isListening())
         {
 		listenloop();
+
+		clkhi();
         } else
         {
+
 		if (isTalking()) {
+			// does not work without delay (why?)
+			// but this is fast enough so I won't complain
+			// Duration is a wild guess though, which seems to work
+			delayus(60);
+
 			datahi();
 			clklo();
 			talkloop();
+
+			datahi();
+		} else {
+
+			clkhi();
+			datahi();
+			//delayms(11);
 		}
         }
 
-	iechw_setup();
+#if 0 //def DEBUG_BUS
+	debug_printf("end of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_putcrlf();
+#endif
+
 #ifdef DEBUG_BUS
 	debug_putc('X'); debug_flush();
 #endif	
@@ -394,7 +487,7 @@ void iec_init(uint8_t deviceno) {
         iechw_setup();
 
 	// register bus instance
-	bus_init_bus(&bus);
+	bus_init_bus("iec", &bus);
 }
 
 #endif // HAS_IEC

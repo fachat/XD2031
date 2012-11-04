@@ -33,6 +33,7 @@
 
 
 // TODO: this is ... awkward
+extern provider_t telnet_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
 extern provider_t fs_provider;
@@ -164,6 +165,9 @@ void provider_init() {
 
         http_provider.init();
 	provider_register(&http_provider);
+
+        telnet_provider.init();
+	provider_register(&telnet_provider);
 
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
