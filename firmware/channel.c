@@ -156,10 +156,11 @@ static inline uint8_t push_slot(channel_t *chan) {
 	return (chan->writetype == WTYPE_READWRITE) ? RW_PUSHBUF : chan->current;
 }
 
-static void channel_preload_int(channel_t *chan, uint8_t wait) {
+// returns 0 when data is available, and -1 when no data is available
+static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 
 	// TODO:fix for read/write
-	if (chan->writetype == WTYPE_WRITEONLY) return;
+	if (chan->writetype == WTYPE_WRITEONLY) return -1;
 
 	do {
 	    if (chan->pull_state == PULL_OPEN) {
@@ -177,6 +178,7 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 		}
 	    }
 	    if (chan->pull_state == PULL_ONECONV) {
+debug_puts("Got one packet (PULL_ONECONV)!\n");
 		// one packet received
 		packet_t *curpack = &(chan->buf[chan->current]);
 		if ((!packet_has_data(curpack)) && (!packet_is_last(curpack))) {
@@ -185,7 +187,7 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 			// if we have a read/write channel, a zero-length packet is 
 			// fully ok. 
 			if (chan->writetype == WTYPE_READWRITE) {
-				return;
+				return -1;
 			}
 		} else {
 			if (chan->directory_converter != NULL) {
@@ -216,6 +218,8 @@ static void channel_preload_int(channel_t *chan, uint8_t wait) {
 	    }
 	}
 	while (chan->pull_state == PULL_OPEN);
+
+	return 0;
 }
 
 /**
@@ -229,8 +233,8 @@ void channel_preload(int8_t chan) {
 	}
 }
 
-void channel_preloadp(channel_t *chan) {
-	channel_preload_int(chan, 1);
+int8_t channel_preloadp(channel_t *chan) {
+	return channel_preload_int(chan, 1);
 }
 
 char channel_current_byte(channel_t *chan) {
@@ -244,7 +248,7 @@ char channel_current_byte(channel_t *chan) {
 uint8_t channel_next(channel_t *chan, uint8_t options) {
 
 	// make sure we do have something at least
-	channel_preload_int(chan, 1);
+	int8_t no_data = channel_preload_int(chan, 1);
 
 	if (chan->writetype == WTYPE_READONLY) {
 		// this is an optimization:
@@ -257,8 +261,20 @@ uint8_t channel_next(channel_t *chan, uint8_t options) {
 			channel_pull(chan, other, options);
 		}
 	}
-	// return the actual value requested
-	return packet_next(&chan->buf[pull_slot(chan)]);
+
+	if (!no_data) {
+		// we should have some data
+		if (packet_next(&chan->buf[pull_slot(chan)])) {
+			return 1;	// ok
+		}
+
+		if (!packet_is_eof(&chan->buf[pull_slot(chan)])) {
+			// not eof packet, so pull another one
+			channel_refill(chan, options);
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /*
@@ -360,6 +376,7 @@ channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	    }
 	} else {
 		// WTYPE_READWRITE
+		chan->pull_state = PULL_OPEN;
 		return chan;
 	}
 

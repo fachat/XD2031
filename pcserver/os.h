@@ -31,6 +31,7 @@ static inline char* dir_separator_string(void) { return "/"; }
 #include "mem.h"
 
 // Linux (3.4.11)
+#define	__USE_POSIX
 #define _XOPEN_SOURCE
 #define __USE_XOPEN_EXTENDED
 #include <stdlib.h>

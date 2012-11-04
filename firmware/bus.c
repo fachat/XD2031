@@ -289,27 +289,36 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
 		// first fillup the buffers
-		channel_preloadp(channel);
-
-		*data = channel_current_byte(channel);
-		if (channel_current_is_eof(channel)) {
-#ifdef DEBUG_SERIAL
-			debug_puts("EOF!\n");
+		if (channel_preloadp(channel) < 0) {
+			// no data available
+			st |= STAT_RDTIMEOUT;
+#if 1 //def DEBUG_SERIAL
+			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
+				channel->channel_no, st);
 #endif
-			st |= STAT_EOF;
-		}
+		} else {
 
-		if (!(preload & BUS_PRELOAD)) {
-			// make sure the next call does have a data byte
-			if (!channel_next(channel, preload & BUS_SYNC)) {
-				if (channel_has_more(channel)) {
-					channel_refill(channel, preload & BUS_SYNC);
-				} else {
-      					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
-        					// autoclose when load is done, or after reading status channel
-						channel_close(bus_secaddr_adjust(bus, secaddr));
-						bus->channel = NULL;
-					}
+			*data = channel_current_byte(channel);
+			if (channel_current_is_eof(channel)) {
+#ifdef DEBUG_SERIAL
+				debug_puts("EOF!\n");
+#endif
+				st |= STAT_EOF;
+			}
+
+			// TODO: simplify the channel interface for the code here
+			if (!(preload & BUS_PRELOAD)) {
+				// make sure the next call does have a data byte
+				if (!channel_next(channel, preload & BUS_SYNC)) {
+//					if (channel_has_more(channel)) {
+//						channel_refill(channel, preload & BUS_SYNC);
+//					} else {
+      						if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
+        						// autoclose when load is done, or after reading status channel
+							channel_close(bus_secaddr_adjust(bus, secaddr));
+							bus->channel = NULL;
+						}
+//					}
 				}
 			}
 		}

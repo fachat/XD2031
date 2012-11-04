@@ -139,7 +139,8 @@ uint8_t channel_has_more(channel_t *chan);
 channel_t* channel_refill(channel_t *chan, uint8_t options);
 
 void channel_preload(int8_t channelno);
-void channel_preloadp(channel_t *chan);
+// returns 0 when data is available, or -1 when not (r/w channel)
+int8_t channel_preloadp(channel_t *chan);
 
 #define	PUT_FLUSH	0x01
 #define	PUT_SYNC	0x02

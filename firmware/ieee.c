@@ -35,7 +35,7 @@
 #include "debug.h"
 #include "led.h"
 
-#undef DEBUG_BUS
+#define DEBUG_BUS
 
 // Prototypes
 
@@ -148,7 +148,22 @@ static void talkloop()
 
             /* write data & eoi */
             par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
-            if(par_status & 0x40)
+
+#ifdef DEBUG_BUS
+		debug_printf(" %02x", c);
+#endif
+
+	    if (par_status & STAT_RDTIMEOUT) {
+		// we should create a read timeout, by not setting DAV low
+		// in time. This happens on r/w channels, when no data is
+		// available
+#ifdef DEBUG_BUS
+		debug_putc('R');
+#endif
+		break;
+	    }
+
+            if(par_status & STAT_EOF)
             {
                 eoilo();
                 er|=E_EOI;
