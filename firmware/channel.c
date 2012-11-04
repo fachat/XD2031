@@ -178,7 +178,7 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 		}
 	    }
 	    if (chan->pull_state == PULL_ONECONV) {
-debug_puts("Got one packet (PULL_ONECONV)!\n");
+		//debug_puts("Got one packet (PULL_ONECONV)!\n");
 		// one packet received
 		packet_t *curpack = &(chan->buf[chan->current]);
 		if ((!packet_has_data(curpack)) && (!packet_is_last(curpack))) {

@@ -35,7 +35,7 @@
 #include "debug.h"
 #include "led.h"
 
-#define DEBUG_BUS
+#undef DEBUG_BUS
 
 // Prototypes
 
