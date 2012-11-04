@@ -54,8 +54,8 @@
 
 #include "device.h"
 
-#undef	DEBUG_SERIAL
-#undef	DEBUG_SERIAL_DATA
+#define	DEBUG_SERIAL
+#define	DEBUG_SERIAL_DATA
 
 #define	DEVICE_MASK	0x1f
 #define	SECADDR_MASK	0x0f
@@ -321,6 +321,12 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		}
 	    }
 	}
+#ifdef DEBUG_SERIAL_DATA
+	if (!(preload & BUS_PRELOAD)) {
+	        debug_printf("receivebyte: %02x (%c)\n", *data, (isprint(*data) ? *data : '-'));
+	}
+#endif
+
 	return st + (bus->device << 8);
 }
 

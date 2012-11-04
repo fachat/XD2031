@@ -223,14 +223,20 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	int er = ERROR_FAULT;
 	File *file;
 	struct addrinfo *addr, *ap;
+	struct addrinfo hints;
 	int sockfd;
 
 	tn_endpoint_t *tnep = (tn_endpoint_t*) ep;
 
 	log_info("open file for fd=%d on host %s with service/port %s\n", tfd, tnep->hostname, buf);
 
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = 0;
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_flags = (AI_V4MAPPED | AI_ADDRCONFIG);
+
 	// 1. get the internet address for it via getaddrinfo
-	ern = getaddrinfo(tnep->hostname, buf, NULL, &addr);
+	ern = getaddrinfo(tnep->hostname, buf, &hints, &addr);
 	if (ern != 0) {
 		log_errno("Did not get address info for %s:%s\n", tnep->hostname, buf);
 		return er;
@@ -242,13 +248,23 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
            and) try the next address. */
 
         for (ap = addr; ap != NULL; ap = ap->ai_next) {
+
+	    log_debug("Trying to connect to: ap=%p\n", ap);
+	    
             sockfd = socket(ap->ai_family, ap->ai_socktype,
                     ap->ai_protocol);
-            if (sockfd == -1)
-                continue;
 
-            if (connect(sockfd, ap->ai_addr, ap->ai_addrlen) == 0)
+            if (sockfd == -1) {
+		log_errno("Could not connect");
+                continue;
+	    }
+
+	    int ern = connect(sockfd, ap->ai_addr, ap->ai_addrlen);
+	    if (ern == 0) {
                 break;                  /* Success */
+	    }
+
+	    log_warn("Could not connect due to %s\n", gai_strerror(ern));
 
             close(sockfd);
         }
@@ -322,10 +338,15 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 			// got some real data
 			// what's in the buffer?
 			len = n + (file->has_lastbyte ? 1 : 0);
+
+			// NOTE: this probably belongs into an option, or
+			// make it different defaults for read only and read/write files
+
 			// keep one for EOF handling (note: len here always >= 1)
-			len--;
-			file->lastbyte = retbuf[len];
-			file->has_lastbyte = 1;
+			//len--;
+			//file->lastbyte = retbuf[len];
+			//file->has_lastbyte = 1;
+			file->has_lastbyte = 0;
 		} else
 		if (n == 0) {
 			// got an EOF
