@@ -75,6 +75,21 @@ int wait_ready (void)   /* 1:OK, 0:Timeout */
 
 
 
+
+/*-----------------------------------------------------------------------*/
+/* SD card chip select                                                   */
+/*-----------------------------------------------------------------------*/
+
+static inline void sdcard_cs(uint8_t cs)
+{
+        if(cs) {
+                PORT_SD_CS |= _BV(PIN_SD_CS);
+        } else {
+                PORT_SD_CS &= ~_BV(PIN_SD_CS);
+        }
+}
+
+
 /*-----------------------------------------------------------------------*/
 /* Deselect the card and release SPI bus                                 */
 /*-----------------------------------------------------------------------*/
@@ -82,7 +97,7 @@ int wait_ready (void)   /* 1:OK, 0:Timeout */
 static
 void deselect (void)
 {
-    CS_HIGH();
+    sdcard_cs(1);
     xchg_spi(0xFF); /* Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
@@ -95,7 +110,7 @@ void deselect (void)
 static
 int select (void)   /* 1:Successful, 0:Timeout */
 {
-    CS_LOW();
+    sdcard_cs(0);
     xchg_spi(0xFF); /* Dummy clock (force DO enabled) */
 
     if (wait_ready()) return 1; /* OK */
