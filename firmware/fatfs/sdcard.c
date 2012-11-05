@@ -17,7 +17,7 @@
 #  include "debug.h"
 #endif
 
-#undef DEBUG
+#define DEBUG_CMD
 
 /*--------------------------------------------------------------------------
 
@@ -187,19 +187,22 @@ BYTE send_cmd (     /* Returns R1 resp (bit7==1:Send failed) */
 {
     BYTE n, res;
 
-#   ifdef DEBUG
-      debug_printf(PSTR("cmd(%02X)"),cmd);
-#   endif
+#ifdef DEBUG_CMD
+      debug_printf("cmd(%02X)",cmd);
+#endif
 
     if (cmd & 0x80) {   /* ACMD<n> is the command sequense of CMD55-CMD<n> */
         cmd &= 0x7F;
         res = send_cmd(CMD55, 0);
-        if (res > 1) return res;
+        if (res > 1) goto exit;
     }
 
     /* Select the card and wait for ready */
     deselect();
-    if (!select()) return 0xFF;
+    if (!select()) {
+        res = 0xFF;
+	goto exit;
+    }
 
     /* Send command packet */
     xchg_spi(0x40 | cmd);               /* Start + Command index */
@@ -219,11 +222,35 @@ BYTE send_cmd (     /* Returns R1 resp (bit7==1:Send failed) */
         res = xchg_spi(0xFF);
     while ((res & 0x80) && --n);
 
-#   ifdef DEBUG
-      debug_printf(PSTR("=%02X\n"),res);
-#    endif
+exit:
+
+#ifdef DEBUG_CMD
+      debug_printf("=%02X\n",res);
+#endif
 
     return res;         /* Return with the response value */
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Media change                                                          */
+/*-----------------------------------------------------------------------*/
+
+static inline void update_media_status (void) 
+{
+    uint8_t s = media_status;
+
+    if (SOCKWP)             /* Write protected */
+        s |= STA_PROTECT;
+    else                    /* Write enabled */
+        s &= ~STA_PROTECT;
+
+    if (SOCKINS)            /* Card inserted */
+        s &= ~STA_NODISK;
+    else                    /* Socket empty */
+        s |= (STA_NODISK | STA_NOINIT);
+
+    media_status  = s;      /* Update media status */
 }
 
 
@@ -249,6 +276,7 @@ DSTATUS SD_disk_initialize (
 
     if (drv) return STA_NOINIT;         /* Supports only single drive */
     power_off();                        /* Turn off the socket power to reset the card */
+    update_media_status();
     if (media_status & STA_NODISK) {
       return media_status; /* No card in the socket */
     }
@@ -519,23 +547,6 @@ DRESULT SD_disk_ioctl (
 /*-----------------------------------------------------------------------*/
 /* Media change                                                          */
 /*-----------------------------------------------------------------------*/
-
-static inline void update_media_status (void) 
-{
-    uint8_t s = media_status;
-
-    if (SOCKWP)             /* Write protected */
-        s |= STA_PROTECT;
-    else                    /* Write enabled */
-        s &= ~STA_PROTECT;
-
-    if (SOCKINS)            /* Card inserted */
-        s &= ~STA_NODISK;
-    else                    /* Socket empty */
-        s |= (STA_NODISK | STA_NOINIT);
-
-    media_status  = s;      /* Update media status */
-}
 
 /* This function should get called by an pin change interrupt @ card detect
  * If your HW lacks a card detect switch, define it as ordinary function
