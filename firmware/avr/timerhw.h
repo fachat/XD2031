@@ -32,6 +32,8 @@
 
 #include "debug.h"
 
+uint16_t timer10ms;
+
 void timerhw_init(void);
 
 static inline void timerhw_set_us(uint16_t us) {
@@ -47,4 +49,12 @@ static inline uint8_t timerhw_has_timed_out() {
 	//return TIFR0 & _BV(TOV0);
 }
 
+static inline void timerhw2_set_ms(uint16_t ms) {
+	// resolution is 10 ms, thus divide by 10 to get counter value
+	timer10ms = ms / 10;
+}
+
+static inline uint8_t timer2hw_has_timed_out (void) {
+	return (timer10ms ? 0 : 1);
+}
 #endif

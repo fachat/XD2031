@@ -2,6 +2,7 @@
 
     XD-2031 - Serial line filesystem server for CBMs
     Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2012 Nils Eilers
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@
 #include "config.h"		// LED definitions
 
 /**
- * LED interrupt handler
+ * LED interrupt handler / timer with 10ms resolution
  */
 
 .extern led_program
@@ -33,6 +34,7 @@
 .extern led_bit
 .extern led_shift
 .extern led_code
+.extern timer10ms
 
 
 ;---------------------------------------------------------------------------
@@ -43,82 +45,92 @@ TIMER1_COMPA_vect:
 	in	r2, _SFR_IO_ADDR(SREG)	; save status register			; 1
 
 	sei			; 	allow other nested interrupts, esp. ATN	; 1
-	push	r16		; 	save working register			
-	push	r17		; 	save working register			
+	push	r24		; 	save working register			
+	push	r25		; 	save working register			
 	push 	YL
 	push 	YH
 
 	;---------------------------------------------------------
+	; Decrement timer if nonzero
+	lds	r24, timer10ms
+	lds	r25, timer10ms + 1
+	sbiw	r24, 0
+	breq	do_led		;	don't decrement if already zero
+	sbiw	r24, 1		;	decrement
+	sts	timer10ms, r24
+	sts	timer10ms+1,r25	;	store
+
+	;---------------------------------------------------------
 	; LED handling
-	lds 	r16, led_program
-	cpi	r16, 0		; 	is zero?
+do_led:	lds 	r24, led_program
+	cpi	r24, 0		; 	is zero?
 	brne	led		;	if yes, then no LED irq handling
 	jmp	ledend
 led:
 	; bit counter
-	lds 	r16, led_bit	; 	bit counter
-	cpi	r16, 0		;	done?
+	lds 	r24, led_bit	; 	bit counter
+	cpi	r24, 0		;	done?
 	brne	ledbit		;	no, next bit
 	; interval counter
-	lds	r16, led_counter
-	cpi	r16, 0
+	lds	r24, led_counter
+	cpi	r24, 0
 	brne	endcnt
 	; program counter - get next prg byte
-	lds	r16, led_current
+	lds	r24, led_current
 retry:	ldi	YL, lo8(led_code-1)
 	ldi	YH, hi8(led_code-1)
-	add	YL, r16
+	add	YL, r24
 	brcc	nocarry
 	inc	YH
 nocarry:
-	ld	r17, Y+		; 	load byte from address pointed to by Y, post-autoinc Y
-	cpi 	r17, 0		; 	reached end of prg?
+	ld	r25, Y+		; 	load byte from address pointed to by Y, post-autoinc Y
+	cpi 	r25, 0		; 	reached end of prg?
 	brne	notend
 	; end of prg, re-init program counter and retry
-	lds	r16, led_program
+	lds	r24, led_program
 	jmp 	retry
 notend:
-	sts	led_counter, r17 ;	interval counter
-	ld	r17, Y		; 	is now pointing to shift byte
-	sts	led_pattern, r17
-	inc 	r16
-	inc	r16
-	sts	led_current, r16
+	sts	led_counter, r25 ;	interval counter
+	ld	r25, Y		; 	is now pointing to shift byte
+	sts	led_pattern, r25
+	inc 	r24
+	inc	r24
+	sts	led_current, r24
 	jmp 	endcnt2
 endcnt:	
-	dec	r16
-	sts	led_counter, r16
+	dec	r24
+	sts	led_counter, r24
 endcnt2:
 	; re-init shift register
-	lds	r16, led_pattern
-	sts	led_shift, r16
-	ldi	r16, 8
+	lds	r24, led_pattern
+	sts	led_shift, r24
+	ldi	r24, 8
 ledbit:
-	dec	r16
-	sts	led_bit, r16
+	dec	r24
+	sts	led_bit, r24
 
 	; shift one bit
-	lds 	r16, led_shift
-	ror	r16
-	sts	led_shift, r16
+	lds 	r24, led_shift
+	ror	r24
+	sts	led_shift, r24
 	brcc 	ledoff
 ledon:	
-	lds 	r16, LED_PORT
-	ori	r16, _BV(LED_BIT)
-	sts	LED_PORT, r16
+	lds 	r24, LED_PORT
+	ori	r24, _BV(LED_BIT)
+	sts	LED_PORT, r24
 	jmp	ledend
 ledoff:
-	lds 	r16, LED_PORT
-	andi	r16, 255-_BV(LED_BIT)
-	sts	LED_PORT, r16
+	lds 	r24, LED_PORT
+	andi	r24, 255-_BV(LED_BIT)
+	sts	LED_PORT, r24
 ledend:
 	;---------------------------------------------------------
 
 	; end of interrupt
 	pop	YH
 	pop	YL
-	pop	r17
-	pop	r16
+	pop	r25
+	pop	r24
 	out	_SFR_IO_ADDR(SREG), r2
 	pop	r2
 	reti
