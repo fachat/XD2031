@@ -8,6 +8,7 @@
 #include "diskio.h"
 #include "sdcard.h"
 #include "spi.h"
+#include "timer.h"
 
 // i#####   FIXME: debug output does not yet work here   #####
 #ifdef XITOA
@@ -44,11 +45,8 @@
 #define CMD58   (58)        /* READ_OCR */
 
 
-static volatile
-DSTATUS Stat = STA_NOINIT;  /* Disk status */
-
-static volatile
-BYTE Timer1, Timer2;        /* 100Hz decrement timer */
+volatile
+uint8_t media_status = STA_NOINIT;  /* Disk status */
 
 static
 BYTE CardType;              /* Card type flags */
@@ -65,10 +63,10 @@ int wait_ready (void)   /* 1:OK, 0:Timeout */
     BYTE d;
 
 
-    Timer2 = 50;    /* Wait for ready in timeout of 500ms */
+    timer2_set_ms(500);
     do
         d = xchg_spi(0xFF);
-    while (d != 0xFF && Timer2);
+    while (d != 0xFF && !timer2_is_timed_out());
 
     return (d == 0xFF) ? 1 : 0;
 }
@@ -133,10 +131,10 @@ int rcvr_datablock (
     BYTE token;
 
 
-    Timer1 = 20;
+    timer2_set_ms(200);
     do {                            /* Wait for data packet in timeout of 200ms */
         token = xchg_spi(0xFF);
-    } while ((token == 0xFF) && Timer1);
+    } while ((token == 0xFF) && !timer2_is_timed_out());
     if (token != 0xFE) return 0;    /* If not valid data token, retutn with error */
 
     rcvr_spi_multi(buff, btr);      /* Receive the data block into buffer */
@@ -247,24 +245,26 @@ DSTATUS SD_disk_initialize (
 {
     BYTE n, cmd, ty, ocr[4];
 
+    debug_printf("SD_disk_initialize(%i)", drv); debug_putcrlf();
 
     if (drv) return STA_NOINIT;         /* Supports only single drive */
     power_off();                        /* Turn off the socket power to reset the card */
-    if (Stat & STA_NODISK) {
-      return Stat; /* No card in the socket */
+    if (media_status & STA_NODISK) {
+      return media_status; /* No card in the socket */
     }
     power_on();                         /* Turn on the socket power */
+    spi_init();
     slow_spi_clk();
     for (n = 10; n; n--) xchg_spi(0xFF);    /* 80 dummy clocks */
 
     ty = 0;
     if (send_cmd(CMD0, 0) == 1) {           /* Enter Idle state */
-        Timer1 = 100;                       /* Initialization timeout of 1000 msec */
+        timer2_set_ms(1000);                /* Initialization timeout of 1000 msec */
         if (send_cmd(CMD8, 0x1AA) == 1) {   /* SDv2? */
             for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);    /* Get trailing return value of R7 resp */
             if (ocr[2] == 0x01 && ocr[3] == 0xAA) {             /* The card can work at vdd range of 2.7-3.6V */
-                while (Timer1 && send_cmd(ACMD41, 1UL << 30));  /* Wait for leaving idle state (ACMD41 with HCS bit) */
-                if (Timer1 && send_cmd(CMD58, 0) == 0) {        /* Check CCS bit in the OCR */
+                while (!timer2_is_timed_out()  && send_cmd(ACMD41, 1UL << 30));  /* Wait for leaving idle state (ACMD41 with HCS bit) */
+                if (!timer2_is_timed_out()  && send_cmd(CMD58, 0) == 0) {        /* Check CCS bit in the OCR */
                     for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);
                     ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;  /* SDv2 */
                 }
@@ -275,8 +275,8 @@ DSTATUS SD_disk_initialize (
             } else {
                 ty = CT_MMC; cmd = CMD1;    /* MMCv3 */
             }
-            while (Timer1 && send_cmd(cmd, 0));         /* Wait for leaving idle state */
-            if (!Timer1 || send_cmd(CMD16, 512) != 0)   /* Set R/W block length to 512 */
+            while (!timer2_is_timed_out()  && send_cmd(cmd, 0));         /* Wait for leaving idle state */
+            if (timer2_is_timed_out() || send_cmd(CMD16, 512) != 0)   /* Set R/W block length to 512 */
                 ty = 0;
         }
     }
@@ -284,13 +284,13 @@ DSTATUS SD_disk_initialize (
     deselect();
 
     if (ty) {           /* Initialization succeded */
-        Stat &= ~STA_NOINIT;        /* Clear STA_NOINIT */
+        media_status &= ~STA_NOINIT;        /* Clear STA_NOINIT */
         fast_spi_clk();
     } else {            /* Initialization failed */
         power_off();
     }
 
-    return Stat;
+    return media_status;
 }
 
 
@@ -304,7 +304,7 @@ DSTATUS SD_disk_status (
 )
 {
     if (drv) return STA_NOINIT;     /* Supports only single drive */
-    return Stat;
+    return media_status;
 }
 
 
@@ -321,7 +321,7 @@ DRESULT SD_disk_read (
 )
 {
     if (drv || !count) return RES_PARERR;
-    if (Stat & STA_NOINIT) return RES_NOTRDY;
+    if (media_status & STA_NOINIT) return RES_NOTRDY;
 
     if (!(CardType & CT_BLOCK)) sector *= 512;  /* Convert to byte address if needed */
 
@@ -359,8 +359,8 @@ DRESULT SD_disk_write (
 )
 {
     if (drv || !count) return RES_PARERR;
-    if (Stat & STA_NOINIT) return RES_NOTRDY;
-    if (Stat & STA_PROTECT) return RES_WRPRT;
+    if (media_status & STA_NOINIT) return RES_NOTRDY;
+    if (media_status & STA_PROTECT) return RES_WRPRT;
 
     if (!(CardType & CT_BLOCK)) sector *= 512;  /* Convert to byte address if needed */
 
@@ -422,7 +422,7 @@ DRESULT SD_disk_ioctl (
         }
     }
     else {
-        if (Stat & STA_NOINIT) return RES_NOTRDY;
+        if (media_status & STA_NOINIT) return RES_NOTRDY;
 
         switch (ctrl) {
         case CTRL_SYNC :        /* Make sure that no pending write process. Do not remove this or written sector might not left updated. */
@@ -497,7 +497,7 @@ DRESULT SD_disk_ioctl (
             }
             break;
 
-        case MMC_GET_SDSTAT :   /* Receive SD statsu as a data block (64 bytes) */
+        case MMC_GET_SDSTAT :   /* Receive SD status as a data block (64 bytes) */
             if (send_cmd(ACMD13, 0) == 0) { /* SD_STATUS */
                 xchg_spi(0xFF);
                 if (rcvr_datablock(ptr, 64))
@@ -514,25 +514,15 @@ DRESULT SD_disk_ioctl (
 
     return res;
 }
-#endif
-
+#endif // _USE_IOCTL
 
 /*-----------------------------------------------------------------------*/
-/* Device Timer Interrupt Procedure                                      */
+/* Media change                                                          */
 /*-----------------------------------------------------------------------*/
-/* This function must be called in period of 10ms                        */
 
-void disk_timerproc (void)
+static inline void update_media_status (void) 
 {
-    BYTE n, s;
-
-
-    n = Timer1;             /* 100Hz decrement timer */
-    if (n) Timer1 = --n;
-    n = Timer2;
-    if (n) Timer2 = --n;
-
-    s = Stat;
+    uint8_t s = media_status;
 
     if (SOCKWP)             /* Write protected */
         s |= STA_PROTECT;
@@ -544,13 +534,25 @@ void disk_timerproc (void)
     else                    /* Socket empty */
         s |= (STA_NODISK | STA_NOINIT);
 
-    Stat = s;               /* Update MMC status */
+    media_status  = s;      /* Update media status */
 }
 
+/* This function should get called by an pin change interrupt @ card detect
+ * If your HW lacks a card detect switch, define it as ordinary function
+ * and call it at power-on 
+ */
 
+MEDIA_CHANGE_HANDLER
+{
+    update_media_status();
+}
+
+/*-----------------------------------------------------------------------*/
+/* Glue to ff.c                                                          */
+/*-----------------------------------------------------------------------*/
 
 /* petSD has only SD cards, XS-1541 might have only SD-cards.
- * No need to care about ATA, USB...
+ * No need to care about ATA, USB... thus no diskio.c
  * Alias all routines to SD versions */
 
 DSTATUS                          disk_initialize (BYTE)

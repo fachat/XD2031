@@ -5,6 +5,10 @@
 #ifndef SDCARD_H_DEFINED
 #define SDCARD_H_DEFINED
 
+#include "integer.h"
+
+volatile uint8_t media_status;
+
 /* Prototypes for disk control functions */
 
 DSTATUS SD_disk_initialize (BYTE);

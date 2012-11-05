@@ -28,6 +28,8 @@
 #ifndef PETSD_H
 #define PETSD_H
 
+#include <avr/interrupt.h>
+
 // we have the 75160/75161 pairs - unused
 //#define HAVE_7516X
 
@@ -89,6 +91,10 @@
 #define PIN_ETH_INT             PD3
 
 /* ---- SD card ----------------------------------------------------------- */
+
+#define CARD_DETECT_INT_VECT	PCINT3_vect
+#define MEDIA_CHANGE_HANDLER	ISR(CARD_DETECT_INT_VECT)
+
 #define PORT_SD_CS              PORTB           /* SD card select */
 #define DDR_SD_CS               DDRB
 #define PIN_SD_CS               PB4
