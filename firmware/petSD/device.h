@@ -94,6 +94,10 @@
 
 #define CARD_DETECT_INT_VECT	PCINT3_vect
 #define MEDIA_CHANGE_HANDLER	ISR(CARD_DETECT_INT_VECT)
+#define SDCD_PCIF		PCIF3
+#define SDCD_PCMSK		PCMSK3
+#define SDCD_PCINT		PCINT28
+#define SDCD_PCIE		PCIE3
 
 #define PORT_SD_CS              PORTB           /* SD card select */
 #define DDR_SD_CS               DDRB

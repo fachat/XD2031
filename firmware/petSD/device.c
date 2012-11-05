@@ -25,6 +25,26 @@
 #include "device.h"
 #include "ieeehw.h"
 #include "ieee.h"
+#include "rtc.h"
+#include "diskio.h"
+#include "sdcard.h"
+#include "debug.h"
+
+static void sdcard_init(void) {
+
+	DDR_SD_CD |= _BV(PIN_SD_CD);	// SD CD as input
+	PORT_SD_CD |= _BV(PIN_SD_CD);	// enable pull-up
+
+	DDR_SD_WP |= _BV(PIN_SD_WP);	// SD WP as input
+	PORT_SD_WP |= _BV(PIN_SD_WP);	// enable pull-up
+
+	// enable pin change interrupt for SD card detect
+	PCIFR |= _BV(SDCD_PCIF);	// clear interrupt flag
+	SDCD_PCMSK |= _BV(SDCD_PCINT);	// enable SD CD in pin change enable mask
+	PCICR |= _BV(SDCD_PCIE);	// enable pin change interrupt
+
+	SD_disk_initialize(0);
+}
 
 void device_init(void) {
 
@@ -32,6 +52,9 @@ void device_init(void) {
         ieeehw_init();                  // hardware
         ieee_init(8);                   // hardware-independent part; registers as bus
 
+	// Real time clock
+	rtc_init();
+
+	// SD card
+	sdcard_init();
 }
-
-
