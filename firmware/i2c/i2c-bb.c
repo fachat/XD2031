@@ -4,38 +4,38 @@
 #include "delay.h"
 #include "integer.h"
 #include "config.h"	// I2C speed
-#include "fatfshw.h"	// I2C ports
+#include "device.h"	// I2C ports
 
-#define iic_delay() delayus(I2C_BB_DELAY_US)
+#define i2c_delay() delayus(I2C_BB_DELAY_US)
 
 /* Generate start condition on the IIC bus */
-void iic_start (void)
+void i2c_start (void)
 {
     SDA_HIGH();
-    iic_delay();
+    i2c_delay();
     SCL_HIGH();
-    iic_delay();
+    i2c_delay();
     SDA_LOW();
-    iic_delay();
+    i2c_delay();
     SCL_LOW();
-    iic_delay();
+    i2c_delay();
 }
 
 
 /* Generate stop condition on the IIC bus */
-void iic_stop (void)
+void i2c_stop (void)
 {
     SDA_LOW();
-    iic_delay();
+    i2c_delay();
     SCL_HIGH();
-    iic_delay();
+    i2c_delay();
     SDA_HIGH();
-    iic_delay();
+    i2c_delay();
 }
 
 
 /* Send a byte to the IIC bus */
-int iic_send (BYTE dat)
+int i2c_send (BYTE dat)
 {
     BYTE b = 0x80;
     int ack;
@@ -46,25 +46,25 @@ int iic_send (BYTE dat)
         } else {
             SDA_LOW();
         }
-        iic_delay();
+        i2c_delay();
         SCL_HIGH();
-        iic_delay();
+        i2c_delay();
         SCL_LOW();
-        iic_delay();
+        i2c_delay();
     } while (b >>= 1);
     SDA_HIGH();
-    iic_delay();
+    i2c_delay();
     SCL_HIGH();
     ack = SDA_VAL ? 0 : 1;  /* Sample ACK */
-    iic_delay();
+    i2c_delay();
     SCL_LOW();
-    iic_delay();
+    i2c_delay();
     return ack;
 }
 
 
 /* Receive a byte from the IIC bus */
-BYTE iic_rcvr (int ack)
+BYTE i2c_rcvr (int ack)
 {
     UINT d = 1;
 
@@ -73,21 +73,21 @@ BYTE iic_rcvr (int ack)
         d <<= 1;
         SCL_HIGH();
         if (SDA_VAL) d++;
-        iic_delay();
+        i2c_delay();
         SCL_LOW();
-        iic_delay();
+        i2c_delay();
     } while (d < 0x100);
     if (ack) {      /* SDA = ACK */
         SDA_LOW();
     } else {
         SDA_HIGH();
     }
-    iic_delay();
+    i2c_delay();
     SCL_HIGH();
-    iic_delay();
+    i2c_delay();
     SCL_LOW();
     SDA_HIGH();
-    iic_delay();
+    i2c_delay();
 
     return (BYTE)d;
 }

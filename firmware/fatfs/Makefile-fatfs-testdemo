@@ -41,17 +41,18 @@ ifeq ($(DEVICE),petSD)
 	ARCHDEVICE= -mmcu=atmega1284p
 	TARGET_MCU=m1284p
 	SIZE_MCU=atmega1284p
-	DEVICEFILES+=rtc-ds1307.c	# DS1307 Real time clock routines
-	DEVICEFILES+=i2c.c		# I2C high level routines
-	DEVICEFILES+=i2c-bb.c		# I2C bit banging routines
-	DEVICEDEPS+=rtc.h		# Real time clock defs  and prototypes
-	DEVICEDEPS+=i2c.h		# I2C high level routines
+	DEVICEFILES+=../rtc/ds1307.c	# DS1307 Real time clock routines
+	DEVICEFILES+=../i2c/i2c.c	# I2C high level routines
+	DEVICEFILES+=../i2c/i2c-bb.c	# I2C bit banging routines
+	DEVICEDEPS+=../rtc/rtc.h	# Real time clock defs  and prototypes
+	DEVICEDEPS+=../i2c/i2c.h	# I2C high level routines
 endif
 
 DEVICEFILES+=sdcard.c         		# SD card low level routines
-DEVICEFILES+=../$(DEVICE)/fatfshw.c	# HW specific code for FatFs
-DEVICEDEPS+=../$(DEVICE)/fatfshw.h	# HW specific defs / protos for FatFs
+DEVICEDEPS+=../avr/spi.h		# SPI routines
+DEVICEDEPS+=../$(DEVICE)/device.h	# HW specific defs / protos for FatFs
 DEVICEDEPS+=../$(DEVICE)/ffconf.h	# HW specific FatFs configuration
+
 
 
 all:	../bin/$(TARGET).hex size
@@ -68,7 +69,7 @@ deviceclean:
 # AVR ATMega Architecture
 #
 
-ARCHFILES=../avr/uarthw.c ../avr/ledhw.c ../avr/timerhw.c ../avr/avr.c
+ARCHFILES=../avr/uarthw.c ../avr/ledhw.c ../avr/timerhw.c
 ARCHDEPS=../avr/compat.h ../avr/delayhw.h ../avr/uarthw.h ../avr/uartints.o ../avr/mem.h ../avr/timerhw.h ../avr/timerint.o xitoa.o
 ARCHASMOBJ=../avr/uartints.o ../avr/timerint.o xitoa.o
 
@@ -90,6 +91,7 @@ ASMFLAGS=
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I../$(DEVICE) -I../ -DXITOA
 
+CFLAGS+=-I../rtc -I../spi -I../i2c -I.
 
 clean: archclean deviceclean rootclean
 

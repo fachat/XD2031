@@ -25,6 +25,8 @@
 #ifndef XS1541_H
 #define XS1541_H
 
+#include <avr/io.h>
+
 // we don't have the 75160/75161 pairs - unused
 //#undef HAVE_7516X
 
@@ -95,7 +97,35 @@
 #define XS1541_ATN_INT_VECT  	PCINT3_vect
 #define XS1541_ATN_HANDLER  	ISR(XS1541_ATN_INT_VECT)
 
-void device_init(void);
+/* ---- SPI --------------------------------------------------------------- */
+#define SPI_PORT                PORTB           /* SPI port */
+#define SPI_DDR                 DDRB
+#define SPI_PIN_SCK             PB7
+#define SPI_PIN_MISO            PB6
+#define SPI_PIN_MOSI            PB5
 
+/* ---- SD card ----------------------------------------------------------- */
+#define PORT_SD_CS              PORTB           /* SD card select */
+#define DDR_SD_CS               DDRB
+#define PIN_SD_CS               PB4
+
+// #define INPUT_SD_WP          PINB            /* SD card write protect */
+// #define PORT_SD_WP           PORTB
+// #define DDR_SD_WP            DDRB
+// #define PIN_SD_WP            PB3
+// #define SOCKWP               (INPUT_SD_WP & _BV(PIN_SD_WP))  
+#define SOCKWP                  0               /* always writable */
+/* Write protected. yes:true, no:false, default:false */
+
+// #define INPUT_SD_CD             PINB            /* SD card detect */
+// #define PORT_SD_CD              PORTB
+// #define DDR_SD_CD               DDRB
+// #define PIN_SD_CD               PB2
+// #define SOCKINS                 (!(INPUT_SD_CD & _BV(PIN_SD_CD)))       
+#define SOCKINS                    1 /* assume card is always available */
+/* Card detected?   yes:true, no:false, default:true */
+
+/* ---- Prototypes -------------------------------------------------------- */
+void device_init(void);
 
 #endif

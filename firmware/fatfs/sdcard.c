@@ -4,9 +4,10 @@
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
-#include "fatfshw.h"     /* Device dependent I/O definitions */
+#include "device.h"     /* Device dependent I/O definitions */
 #include "diskio.h"
 #include "sdcard.h"
+#include "spi.h"
 
 // i#####   FIXME: debug output does not yet work here   #####
 #ifdef XITOA

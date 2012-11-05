@@ -1,7 +1,7 @@
 #ifndef RTC_DEFINED
 #define RTC_DEFINED
 
-#include "integer.h"
+#include "../fatfs/integer.h"
 
 typedef struct {
     WORD    year;   /* 2000..2099 */
@@ -25,17 +25,10 @@ int rtc_settime (const RTC*);		/* Set time */
 #ifndef HAS_RTC
   static uint8_t RTC_OK=0;			/* RTC not available */
 
-  static int rtc_init (void) {			/* Initialize RTC */
-    return 0;
-  }
-
   static int rtc_gettime (RTC* x) {		/* Get time */	
-    return 0;
+    return 0;					/* TODO: insert default timestamp here */
   }					
 
-  static int rtc_settime (const RTC* x) {	/* Set time */
-    return 0;
-  }					
 #endif
 
 #endif

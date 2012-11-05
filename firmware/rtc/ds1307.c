@@ -8,14 +8,14 @@
 #include <string.h>
 #include "rtc.h"
 #include "i2c.h"
-#include "fatfshw.h"
+#include "device.h"
 
 uint8_t RTC_OK = 0;     /* Nonzero clock is available and contains valid time */
 static uint8_t buf[8];  /* RTC R/W buffer */
 
 int rtc_gettime (RTC *rtc) 
 {
-  if (!iic_read(0xD0, 0, 7, buf)) return 0;
+  if (!i2c_read(0xD0, 0, 7, buf)) return 0;
 
   rtc->sec   = (buf[0] & 0x0F) + ((buf[0] >> 4) & 7) * 10;
   rtc->min   = (buf[1] & 0x0F) + (buf[1] >> 4) * 10;
@@ -37,7 +37,7 @@ int rtc_settime (const RTC *rtc)
   buf[4] = rtc->mday / 10 * 16 + rtc->mday % 10;
   buf[5] = rtc->month / 10 * 16 + rtc->month % 10;
   buf[6] = (rtc->year - 2000) / 10 * 16 + (rtc->year - 2000) % 10;
-  return iic_write(0xD0, 0, 7, buf);
+  return i2c_write(0xD0, 0, 7, buf);
 }
 
 int rtc_init (void)
@@ -47,16 +47,16 @@ int rtc_init (void)
   IIC_INIT();           /* Initialize IIC function */
 
   /* Read RTC registers */
-  if (!iic_read(0xD0, 0, 8, buf)) return 0;     /* IIC error */
+  if (!i2c_read(0xD0, 0, 8, buf)) return 0;     /* IIC error */
 
   if (buf[7] & 0x20) {  /* When data has been volatiled, set default time */
           /* Clear nv-ram. Reg[8..63] */
           memset(buf, 0, 8);
           for (adr = 8; adr < 64; adr += 8)
-                  iic_write(0x0D, adr, 8, buf);
+                  i2c_write(0x0D, adr, 8, buf);
           /* Reset time to Jan 1, '08. Reg[0..7] */
           buf[4] = 1; buf[5] = 1; buf[6] = 8;
-          iic_write(0x0D, 0, 8, buf);
+          i2c_write(0x0D, 0, 8, buf);
   }
   return 1;
 }

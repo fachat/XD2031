@@ -104,7 +104,7 @@
 #if _FS_READONLY
 # define get_fattime() 0
 #else 
-#include "rtc.h"        /* RTC only needed for write access / time stamps */
+#include "rtc/rtc.h"    /* RTC only needed for write access / time stamps */
 
 DWORD get_fattime (void)
 {

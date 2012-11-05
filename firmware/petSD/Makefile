@@ -24,16 +24,14 @@ DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h petSD/device
 DEVICEASMOBJ=atn.o
 
 ifeq ($(strip $(USE_FAT)),y)
-	DEVICEFILES+=petSD/fatfshw.c	    # HW specific code for FatFs
+	DEVICEDEPS+=avr/spi.h               # SPI routines
 	DEVICEFILES+=fatfs/sdcard.c         # SD card low level routines
-	DEVICEFILES+=fatfs/rtc-ds1307.c     # DS1307 Real time clock routines
-	DEVICEFILES+=fatfs/i2c.c            # I2C high level routines
-	DEVICEFILES+=fatfs/i2c-bb.c         # I2C bit banging routines
-	DEVICEDEPS+=petSD/fatfshw.h	    # HW specific defs / protos for FatFs
-	DEVICEDEPS+=fatfs/rtc.h             # Real time clock defs  and prototypes
-	DEVICEDEPS+=fatfs/i2c.h             # I2C high level routines
+	DEVICEDEPS+=rtc/rtc.h               # Real time clock defs and prototypes
+	DEVICEFILES+=rtc/ds1307.c           # DS1307 Real time clock routines
+	DEVICEDEPS+=i2c/i2c.h               # I2C prototypes
+	DEVICEFILES+=i2c/i2c.c              # I2C high level routines
+	DEVICEFILES+=i2c/i2c-bb.c           # I2C bit banging routines
 endif
-
 
 ## Assembler files
 petSD/atn.o: petSD/atn.S
@@ -44,5 +42,3 @@ deviceclean:
 
 # include platform specific Makefile
 include avr/Makefile
-
-

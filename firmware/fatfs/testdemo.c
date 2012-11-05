@@ -11,7 +11,7 @@
 #include "ff.h"
 #include "diskio.h"
 #include "rtc.h"
-#include "fatfshw.h"
+#include "device.h"
 
 DWORD AccSize;              /* Work register for fs command */
 WORD AccFiles, AccDirs;
@@ -50,6 +50,11 @@ void uart_put (uint8_t c) {
 
 void main_delay(void) {
 }
+
+#ifndef HAS_RTC
+static inline int8_t rtc_init(void) { return 0; }
+static inline int8_t rtc_settime(RTC* x) { return 0;}
+#endif
 
 #if 0
 /*---------------------------------------------------------*/

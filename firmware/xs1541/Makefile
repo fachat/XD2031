@@ -1,3 +1,10 @@
+# XS-1541 Options
+
+USE_FAT=y                       # Enable optional FAT module?
+
+#########################################################################
+# Should not be modified
+
 
 # specific switches for this device
 DEVICEOPTS=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM
@@ -17,6 +24,11 @@ DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h xs1541/i
 
 DEVICEASMOBJ=xs1541/atn.o
 
+ifeq ($(strip $(USE_FAT)),y)
+        DEVICEDEPS+=avr/spi.h               # SPI routines
+        DEVICEFILES+=fatfs/sdcard.c         # SD card low level routines
+endif
+
 ## Assembler files
 xs1541/%.o: xs1541/%.S
 	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -o $@ -c  $<
@@ -26,4 +38,3 @@ deviceclean:
 
 # include platform specific Makefile
 include avr/Makefile
-

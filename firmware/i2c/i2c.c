@@ -6,7 +6,7 @@
 #include "i2c.h"
 #include "device.h"
 
-int iic_read (
+int8_t i2c_read (
     BYTE dev,           /* Device address */
     UINT adr,           /* Read start address */
     UINT cnt,           /* Read byte count */
@@ -22,28 +22,28 @@ int iic_read (
 
     n = 10;
     do {                                /* Select device */
-        iic_start();
-    } while (!iic_send(dev) && --n);
+        i2c_start();
+    } while (!i2c_send(dev) && --n);
     if (n) {
-        if (iic_send((BYTE)adr)) {      /* Set start address */
-            iic_start();                /* Reselect device in read mode */
-            if (iic_send(dev | 1)) {
+        if (i2c_send((BYTE)adr)) {      /* Set start address */
+            i2c_start();                /* Reselect device in read mode */
+            if (i2c_send(dev | 1)) {
                 do {                    /* Receive data */
                     cnt--;
-                    *rbuff++ = iic_rcvr(cnt ? 1 : 0);
+                    *rbuff++ = i2c_rcvr(cnt ? 1 : 0);
                 } while (cnt);
             }
         }
     }
 
-    iic_stop();                         /* Deselect device */
+    i2c_stop();                         /* Deselect device */
 
     return cnt ? 0 : 1;
 }
 
 
 
-int iic_write (
+int8_t i2c_write (
     BYTE dev,           /* Device address */
     UINT adr,           /* Write start address */
     UINT cnt,           /* Write byte count */
@@ -58,17 +58,17 @@ int iic_write (
 
     n = 10;
     do {                                /* Select device */
-        iic_start();
-    } while (!iic_send(dev) && --n);
+        i2c_start();
+    } while (!i2c_send(dev) && --n);
     if (n) {
-        if (iic_send((BYTE)adr)) {      /* Set start address */
+        if (i2c_send((BYTE)adr)) {      /* Set start address */
             do {                        /* Send data */
-                if (!iic_send(*wbuff++)) break;
+                if (!i2c_send(*wbuff++)) break;
             } while (--cnt);
         }
     }
 
-    iic_stop();                         /* Deselect device */
+    i2c_stop();                         /* Deselect device */
 
     return cnt ? 0 : 1;
 }
