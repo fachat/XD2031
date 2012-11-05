@@ -14,10 +14,10 @@ typedef struct {
 } RTC;
 
 #ifdef HAS_RTC
-int rtc_init (void);			/* Initialize RTC */
+int8_t rtc_init (void);			/* Initialize RTC */
 uint8_t RTC_OK;				/* Nonzero if RTC available and valid */
-int rtc_gettime (RTC*);			/* Get time */
-int rtc_settime (const RTC*);		/* Set time */
+int8_t rtc_gettime (RTC*);		/* Get time */
+int8_t rtc_settime (const RTC*);	/* Set time */
 #endif
 
 /* -------------------------------------------------------------------------- */
@@ -25,7 +25,7 @@ int rtc_settime (const RTC*);		/* Set time */
 #ifndef HAS_RTC
   static uint8_t RTC_OK=0;			/* RTC not available */
 
-  static int rtc_gettime (RTC* x) {		/* Get time */	
+  static int8_t rtc_gettime (RTC* x) {		/* Get time */	
     return 0;					/* TODO: insert default timestamp here */
   }					
 

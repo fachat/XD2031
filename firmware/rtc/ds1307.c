@@ -13,7 +13,7 @@
 uint8_t RTC_OK = 0;     /* Nonzero clock is available and contains valid time */
 static uint8_t buf[8];  /* RTC R/W buffer */
 
-int rtc_gettime (RTC *rtc) 
+int8_t rtc_gettime (RTC *rtc) 
 {
   if (!i2c_read(0xD0, 0, 7, buf)) return 0;
 
@@ -28,7 +28,7 @@ int rtc_gettime (RTC *rtc)
   return 1;
 }
 
-int rtc_settime (const RTC *rtc) 
+int8_t rtc_settime (const RTC *rtc) 
 {
   buf[0] = rtc->sec / 10 * 16 + rtc->sec % 10;
   buf[1] = rtc->min / 10 * 16 + rtc->min % 10;
@@ -40,7 +40,7 @@ int rtc_settime (const RTC *rtc)
   return i2c_write(0xD0, 0, 7, buf);
 }
 
-int rtc_init (void)
+int8_t rtc_init (void)
 {
   UINT adr;
 
