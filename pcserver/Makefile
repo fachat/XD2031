@@ -50,7 +50,7 @@ install:
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
 	install -m 0755 fsser $(PREFIX)/$(BINDIR)
 	chmod u+s $(PREFIX)/$(BINDIR)/fsser
-	install -m 0755 fstcp $(PREFIX)/$(BINDIR)
+	# install -m 0755 fstcp $(PREFIX)/$(BINDIR)
 	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
 	cp ../doc/* $(PREFIX)/$(DOCDIR)
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
