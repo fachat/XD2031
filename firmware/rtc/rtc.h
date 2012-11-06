@@ -23,6 +23,7 @@ int8_t rtc_settime (const RTC*);	/* Set time */
 /* -------------------------------------------------------------------------- */
 
 #ifndef HAS_RTC
+  static int8_t rtc_init(void) { return 0; }
   static uint8_t RTC_OK=0;			/* RTC not available */
 
   static int8_t rtc_gettime (RTC* x) {		/* Get time */	
