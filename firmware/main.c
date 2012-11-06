@@ -53,6 +53,10 @@
 #include "ieee.h"
 #endif
 
+#ifdef USE_FAT
+#include "fat_provider.h"
+#endif
+
 #include "term.h"
 #include "file.h"
 #include "channel.h"
@@ -155,6 +159,11 @@ int main()
 
 	// pull in command line config options from server
 	rtconfig_pullconfig();
+
+#ifdef USE_FAT
+	// register fat provider
+	provider_register("FAT", &fat_provider);
+#endif
 
 	// show our version...
   	ListVersion();

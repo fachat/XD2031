@@ -6,7 +6,7 @@ USE_FAT=y                       # Enable optional FAT module?
 # Should not be modified
 
 # specific switches for this device
-DEVICEOPTS=-DHAS_IEEE -DHAS_RTC -DHAS_EEPROM
+DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM
 
 # MCU name madness
 ARCHDEVICE = -mmcu=atmega1284p  # for compiling
@@ -34,6 +34,8 @@ ifeq ($(strip $(USE_FAT)),y)
 	DEVICEDEPS+=i2c/i2c.h               # I2C prototypes
 	DEVICEFILES+=i2c/i2c.c              # I2C high level routines
 	DEVICEFILES+=i2c/i2c-bb.c           # I2C bit banging routines
+	DEVICEFILES+=fat_provider.c         # FAT provider
+	DEVICEDEPS+=fat_provider.h
 endif
 
 ## Assembler files
