@@ -43,7 +43,7 @@ static void sdcard_init(void) {
 	SDCD_PCMSK |= _BV(SDCD_PCINT);	// enable SD CD in pin change enable mask
 	PCICR |= _BV(SDCD_PCIE);	// enable pin change interrupt
 
-	SD_disk_initialize(0);
+	// Don't init SPI here since it's done by f_mount -> disk_initalize -> spi_init
 }
 
 void device_init(void) {
