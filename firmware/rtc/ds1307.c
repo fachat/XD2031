@@ -10,6 +10,8 @@
 #include "i2c.h"
 #include "device.h"
 
+#ifdef HAS_RTC
+
 uint8_t RTC_OK = 0;     /* Nonzero clock is available and contains valid time */
 static uint8_t buf[8];  /* RTC R/W buffer */
 
@@ -44,7 +46,7 @@ int8_t rtc_init (void)
 {
   UINT adr;
 
-  IIC_INIT();           /* Initialize IIC function */
+  i2c_init();           /* Initialize IIC function */
 
   /* Read RTC registers */
   if (!i2c_read(0xD0, 0, 8, buf)) return 0;     /* IIC error */
@@ -60,3 +62,5 @@ int8_t rtc_init (void)
   }
   return 1;
 }
+
+#endif // HAS_RTC
