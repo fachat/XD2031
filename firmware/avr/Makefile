@@ -52,11 +52,11 @@ load:
 
 # ISP programming 
 flash:
-	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
+	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # Fuse programming
 fuses:
-	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
+	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) $(DUDE_SPEED) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 # 
 
 # Info about memory usage, give only supported options

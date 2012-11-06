@@ -19,6 +19,9 @@ LFUSE = ff
 HFUSE = d4
 EFUSE = fc
 
+# SCK period
+DUDE_SPEED=-B 2.0
+
 DEVICEFILES=xs1541/ieeehw.c xs1541/iechw.c xs1541/device.c
 DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h xs1541/iechw.h xs1541/device.h
 
