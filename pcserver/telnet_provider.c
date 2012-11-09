@@ -321,7 +321,9 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		ssize_t n = read(sockfd, file->has_lastbyte ? retbuf+1 : retbuf, 
 					file->has_lastbyte ? len - 1 : len);
 
+#ifdef DEBUG_READ
 		log_debug("Read %ld bytes from socket fd=%d\n", n, sockfd);
+#endif
 
 		if (n < 0) {
 			// error condition
@@ -363,7 +365,9 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
+#ifdef DEBUG_WRITE
 	log_debug("Write_file (telnet): fd=%p\n", file);
+#endif
 
 	if (file != NULL) {
 

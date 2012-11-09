@@ -53,7 +53,7 @@ static bus_t bus;
 static int16_t par_status = 0;
 
 #define isListening()   ((par_status&0xe000)==0x2000)
-#define isTalking()     ((par_status&0xe000)==0x4000)
+#define isTalking()     ((par_status&(0xe000|STAT_RDTIMEOUT))==0x4000)
 
 
 /***************************************************************************
