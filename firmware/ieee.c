@@ -52,9 +52,6 @@ static bus_t bus;
 // so we can react on it.
 static int16_t par_status = 0;
 
-#define isListening()   ((par_status&0xe000)==0x2000)
-#define isTalking()     ((par_status&(0xe000|STAT_RDTIMEOUT))==0x4000)
-
 
 /***************************************************************************
  * Listen handling
@@ -153,7 +150,7 @@ static void talkloop()
 		debug_printf(" %02x", c);
 #endif
 
-	    if (par_status & STAT_RDTIMEOUT) {
+	    if (isReadTimeout(par_status)) {
 		// we should create a read timeout, by not setting DAV low
 		// in time. This happens on r/w channels, when no data is
 		// available
@@ -288,7 +285,7 @@ cmd:
 	debug_printf("stat=%04x", par_status); debug_putcrlf();
 #endif
 
-	if(isListening())
+	if(isListening(par_status))
         {
 		// make sure nrfd stays lo...
 		nrfdlo();
@@ -301,7 +298,7 @@ cmd:
                 atnahi();
                 nrfdhi();
 
-                if(isTalking()) {
+                if(isTalking(par_status) && !isReadTimeout(par_status)) {
                     talkloop();
                 }
         }

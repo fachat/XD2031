@@ -76,6 +76,11 @@ typedef struct {
 #define STAT_WRTIMEOUT  0x02
 
 
+#define isListening(_stat)   (((_stat)&0xe000)==0x2000)
+#define isTalking(_stat)     (((_stat)&0xe000)==0x4000)
+#define waitAtnHi(_stat)     ((_stat)&STAT_WAITEND)
+#define isReadTimeout(_stat) ((_stat)&STAT_RDTIMEOUT)
+
 // init
 // needs to be called before any concrete bus instance init
 void bus_init();
