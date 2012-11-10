@@ -36,6 +36,7 @@
 #include "led.h"
 
 #undef DEBUG_BUS
+#undef DEBUG_BUS_DATA
 
 // Prototypes
 
@@ -146,8 +147,8 @@ static void talkloop()
             /* write data & eoi */
             par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
 
-#ifdef DEBUG_BUS
-		debug_printf(" %02x", c);
+#ifdef DEBUG_BUS_DATA
+		debug_printf(" %02x, (%04x)", c, par_status);
 #endif
 
 	    if (isReadTimeout(par_status)) {
@@ -162,6 +163,9 @@ static void talkloop()
 
             if(par_status & STAT_EOF)
             {
+#ifdef DEBUG_BUS
+		debug_putc('E');
+#endif
                 eoilo();
                 er|=E_EOI;
             }

@@ -247,6 +247,10 @@ char channel_current_byte(channel_t *chan) {
  */
 uint8_t channel_next(channel_t *chan, uint8_t options) {
 
+	if (channel_is_eof(chan)) {
+		return 0;
+	}
+
 	// make sure we do have something at least
 	int8_t no_data = channel_preload_int(chan, 1);
 
