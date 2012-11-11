@@ -45,9 +45,13 @@
  * The READWRITE files use buffer 0 to send to host, and buffer 1
  * to receive from host only, so no double-buffering is done there.
  */
-#define	WTYPE_READONLY	0		
-#define	WTYPE_WRITEONLY	1
-#define	WTYPE_READWRITE	2	/* NOTE: absolutely broken! */
+#define	WTYPE_READONLY		0		
+#define	WTYPE_WRITEONLY		1
+#define	WTYPE_READWRITE		2
+
+#define	WTYPE_MASK		0x03		// mask to get rid of the following options
+
+#define	WTYPE_NONBLOCKING	128		// ORd with one of the other three
 
 /**
  * R/W buffer definitions
@@ -80,6 +84,7 @@ typedef struct {
 	int8_t		channel_no;
 	uint8_t		current;
 	uint8_t		writetype;
+	uint8_t		options;
 	endpoint_t	*endpoint;
 	// directory handling
 	uint8_t		drive;

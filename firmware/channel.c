@@ -122,7 +122,9 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 		if (channels[i].channel_no < 0) {
 			channels[i].channel_no = chan;
 			channels[i].current = 0;
-			channels[i].writetype = writetype;
+			channels[i].writetype = writetype & WTYPE_MASK;
+			channels[i].options = writetype & ~WTYPE_MASK;
+debug_printf("wtype=%d, option=%d\n", channels[i].writetype, channels[i].options);
 			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
 			channels[i].drive = drive;
@@ -184,9 +186,9 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 		if ((!packet_has_data(curpack)) && (!packet_is_last(curpack))) {
 			// zero length packet received
 			chan->pull_state = PULL_OPEN;
-			// if we have a read/write channel, a zero-length packet is 
+			// if we have a non-blocking channel, a zero-length packet is 
 			// fully ok. 
-			if (chan->writetype == WTYPE_READWRITE) {
+			if (chan->options & WTYPE_NONBLOCKING) {
 				return -1;
 			}
 		} else {
