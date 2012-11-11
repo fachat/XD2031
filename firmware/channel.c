@@ -44,6 +44,7 @@ channel_t channels[MAX_CHANNELS];
 
 static uint8_t _push_callback(int8_t channelno, int8_t errnum);
 static void channel_close_int(channel_t *chan, uint8_t force);
+static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush);
 
 void channel_init(void) {
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
@@ -124,7 +125,7 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 			channels[i].current = 0;
 			channels[i].writetype = writetype & WTYPE_MASK;
 			channels[i].options = writetype & ~WTYPE_MASK;
-debug_printf("wtype=%d, option=%d\n", channels[i].writetype, channels[i].options);
+//debug_printf("wtype=%d, option=%d\n", channels[i].writetype, channels[i].options);
 			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
 			channels[i].drive = drive;
@@ -156,6 +157,27 @@ static inline uint8_t pull_slot(channel_t *chan) {
 
 static inline uint8_t push_slot(channel_t *chan) {
 	return (chan->writetype == WTYPE_READWRITE) ? RW_PUSHBUF : chan->current;
+}
+
+void channel_flush(int8_t channo) {
+
+	channel_t *chan = channel_find(channo);
+	if (chan == NULL) {
+		return;
+	}
+
+	packet_t *curpack = &chan->buf[push_slot(chan)];
+
+	if (chan->push_state != PUSH_OPEN) {
+		channel_write_flush(chan, curpack, PUT_SYNC);
+	}
+
+	while (chan->pull_state == PULL_PRELOAD
+		|| chan->pull_state == PULL_PULL2ND) {
+
+		delayms(1);
+		main_delay();
+	}
 }
 
 // returns 0 when data is available, and -1 when no data is available
@@ -425,6 +447,17 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 	packet_write_char(curpack, (uint8_t) c);
 
 	if (packet_is_full(curpack) || (forceflush & PUT_FLUSH)) {
+
+		channel_write_flush(chan, curpack, forceflush);
+
+	}
+	return chan;
+}
+
+static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush) {
+
+		uint8_t channo = chan->channel_no;
+
 		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
 
 		// wait until the other packet has been replied to,
@@ -469,8 +502,6 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 				chan->push_state = PUSH_OPEN;
 			}
 		}
-	}
-	return chan;
 }
 
 // close all channels for channel numbers between (including) the given range

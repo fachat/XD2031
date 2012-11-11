@@ -116,6 +116,13 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 
 channel_t* channel_find(int8_t chan);
 
+/**
+ * flushes all messages, i.e. waits until writes are acknowledged
+ * and in-progress reads are thrown away.
+ * Used for block/user commands
+ */
+void channel_flush(int8_t chan);
+
 static inline int8_t channel_is_writable(channel_t *chan) {
 	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;
 }

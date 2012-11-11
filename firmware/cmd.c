@@ -23,6 +23,7 @@
 
 #include "cmd.h"
 #include "cmd2.h"
+#include "bufcmd.h"
 #include "file.h"
 #include "name.h"
 #include "wireformat.h"
@@ -59,11 +60,21 @@ command_t command_find(uint8_t *input) {
 		return CMD_SYNTAX;
 		break;
 	case 'M':
-		// MKDIR or MD
-		return CMD_MKDIR;
+		if (*(input+1) == 'D' || *(input+1) == 'K') {
+			// MKDIR or MD
+			return CMD_MKDIR;
+		}
+		// here we would have M-R/M-W/M-E
+		return CMD_SYNTAX;
 		break;
 	case 'A':
 		return CMD_ASSIGN;
+		break;
+	case 'U':
+		return CMD_UX;
+		break;
+	case 'B':
+		return CMD_BLOCK;
 		break;
 	case 'X':
 		// extensions for XD2031
@@ -104,6 +115,12 @@ const char *command_to_name(command_t cmd) {
                 break;
         case CMD_ASSIGN:
                 return "ASSIGN";
+                break;
+        case CMD_UX:
+                return "USER";
+                break;
+        case CMD_BLOCK:
+                return "BLOCK";
                 break;
 	case CMD_EXT:
 		return "EXT";
@@ -161,7 +178,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			break;
 		default:
 			// should not happen, all if() conditions are accounted for
-        	        debug_puts("ILLEGAL COMMAND!");
+        	        debug_puts("ILLEGAL COMMAND!\n");
         	        set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
 			return ERROR_FAULT;
 		}
@@ -187,13 +204,25 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		return 0;
 	} else
 	if (nameinfo.cmd == CMD_INITIALIZE) {
-		debug_puts("INITIALIZE");
+		debug_puts("INITIALIZE\n");
 		// need to unlock the caller by calling the callback function
 		callback(ERROR_OK, NULL);
 		return 0;
 	} else
+	if (nameinfo.cmd == CMD_UX) {
+		debug_puts("USER COMMAND\n");
+		int8_t rv = cmd_user(bus, (char*) command->command_buffer, errormsg);
+		callback(rv, NULL);
+		return 0;
+	} else
+	if (nameinfo.cmd == CMD_BLOCK) {
+		debug_puts("BLOCK COMMAND\n");
+		int8_t rv = cmd_block(bus, (char*) command->command_buffer, errormsg);
+		callback(rv, NULL);
+		return 0;
+	} else
 	if (nameinfo.cmd == CMD_EXT) {
-		debug_puts("CONFIGURATION EXTENSION");
+		debug_puts("CONFIGURATION EXTENSION\n");
 		int8_t rv = rtconfig_set(rtconf, (char*) command->command_buffer);
 		callback(rv, NULL);
 		return 0;

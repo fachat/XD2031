@@ -53,10 +53,8 @@ typedef enum {
         // CMD_COPY,
         // CMD_DUPLICATE,
         // CMD_NEW,
-        // CMD_POSITION,
-        // CMD_BLOCKREAD,
-        // CMD_BLOCKWRITE,
-        // CMD_UX,
+        CMD_BLOCK,
+        CMD_UX,
         // CMD_MEM_READ,
         // CMD_MEM_WRITE,
         // CMD_MEM_EXEC,
@@ -81,9 +79,6 @@ typedef struct {
 command_t command_find(uint8_t *buf);
 
 const char* command_to_name(command_t cmd);
-
-//int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
-//						void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
 #endif
