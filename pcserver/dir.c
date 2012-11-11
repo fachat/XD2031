@@ -56,7 +56,8 @@ static int path_is_file(const char *name) {
 
 	if (lstat(name, &sbuf) < 0) {
 		log_errno("Error stat'ing file");
-		isfile = 0;
+		// note we still return 1, as open may succeed - e.g. for save where the 
+		// file does not exist in the first place
 	} else {
 		if (S_ISDIR(sbuf.st_mode)) {
 			isfile = 0;
