@@ -37,8 +37,7 @@
 
 #define	NAME_DRIVE	0
 #define	NAME_NAME	1
-#define	NAME_TYPE	2
-#define	NAME_ACCESS	3
+#define	NAME_OPTS	2
 #define	NAME_COMMAND	4
 #define	NAME_CMDDRIVE	5
 #define	NAME_FILE	6
@@ -60,12 +59,14 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	// runtime vars
 	uint8_t *p = in->command_buffer;
 	uint8_t len = in->command_length;
+	uint8_t ch;
 
 	// init output
 	result->drive = NAMEINFO_UNUSED_DRIVE;
 	result->cmd = CMD_NONE;	// no command
 	result->type = 0;	// PRG
 	result->access = 0;	// read
+	result->options = 0;	// read
 
 	// start either for command or file name
 	uint8_t state;
@@ -81,6 +82,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
 	uint8_t drv = 0;
 	while (len > 0) {
+		ch = *p;
 #ifdef DEBUG_NAME
 		debug_printf("len=%d, curr=%c, state=%d\n", len, *p, state);
 #endif
@@ -96,29 +98,29 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			// fallthrough
 		case NAME_CMDDRIVE:
 			// last digit as drive
-			if (isdigit(*p)) {
-				result->drive = *p - 0x30;
+			if (isdigit(ch)) {
+				result->drive = ch - 0x30;
 			}
 			// command parameters following?
-			if (*p == ':') {
+			if (ch == ':') {
 				result->name = (p+1);
 				result->namelen = len-1;
 				state = NAME_NAME;
 			}
 			break;
 		case NAME_FILE:
-			if (*p == '$') {
+			if (ch == '$') {
 				result->cmd = CMD_DIR;	// directory
 				result->namelen = 0;	// just to be sure, until we parsed it
 				state = NAME_CMDDRIVE;	// jump into command parser
 			}
 		case NAME_DRIVE:
 			// last digit as potential drive
-			if (isdigit(*p)) {
-				drv = *p - 0x30;
+			if (isdigit(ch)) {
+				drv = ch - 0x30;
 				//p++;
 			}
-			if (*p == ':') {
+			if (ch == ':') {
 				// found drive separator
 				result->drive = drv;
 				result->name = (p+1);
@@ -134,24 +136,23 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 				// - further processing is done in command handling
 				break;
 			}
-			if (*p == ',') {
+			if (ch == ',') {
 				// found file type/access separator
 				result->namelen = p - result->name;
-				state = NAME_TYPE;
+				state = NAME_OPTS;
 				break;
 			}
 			break;
-		case NAME_TYPE:
-			if (result->type == 0) {
-				result->type = *p;
-			}
-			if (*p == ',') {
-				state = NAME_ACCESS;
-			}
-			break;
-		case NAME_ACCESS:
-			if (result->access == 0) {
-				result->access = *p;
+		case NAME_OPTS:
+			// options can be used in any order, but each type only once
+			if ((ch == 'P' || ch == 'S' || ch == 'R') && result->type == 0) {
+				result->type = ch;
+			} else
+			if ((ch == 'R' || ch == 'W' || ch == 'A' || ch == 'X') && result->access == 0) {
+				result->access = ch;
+			} else
+			if (ch == 'N') {
+				result->options |= NAMEOPT_NONBLOCKING;
 			}
 			break;
 		default:

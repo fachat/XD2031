@@ -34,12 +34,16 @@ typedef struct {
 	uint8_t	drive;		// starts from 0 (real zero, not $30 = ASCII "0")
 	command_t cmd;		// command, "$" for directory open
 	uint8_t	type;		// file type requested ("S", "P", ...)
-	uint8_t access;		// access type requested ("R", "W", ...)
+	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
+	uint8_t options;	// access options, as bit mask
 	uint8_t *name;		// pointer to the actual name
 	uint8_t	namelen;	// length of remaining file name
 } nameinfo_t;
 
 #define	NAMEINFO_UNUSED_DRIVE	0xff
+
+// nameinfo option bits
+#define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 
 // shared global variable to be used in parse_filename, as long as it's threadsafe
 extern nameinfo_t nameinfo;
