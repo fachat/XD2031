@@ -24,6 +24,8 @@
 
 ****************************************************************************/
 
+#include "os.h"
+
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
@@ -42,28 +44,68 @@
 
 #define min(a,b)        (((a)<(b))?(a):(b))
 
-/**
- *  fopen the first matching directory entry, using the given
- *  options string
+
+/** 
+ * check a path, making sure it's something readable, not a directory
  */
-FILE *open_first_match(const char *dir, const char *pattern, const char *options) {
+static int path_is_file(const char *name) {
+	struct stat sbuf;
+	int isfile = 1;
+
+	log_info("checking file with name %s\n",name);
+
+	if (lstat(name, &sbuf) < 0) {
+		log_errno("Error stat'ing file");
+		isfile = 0;
+	} else {
+		if (S_ISDIR(sbuf.st_mode)) {
+			isfile = 0;
+			log_error("Error trying to open a directory as file");
+		}
+	}
+	return isfile;
+}
+
+/** 
+ * check a path, making sure it's a directory
+ */
+static int path_is_dir(const char *name) {
+	struct stat sbuf;
+	int isfile = 1;
+
+	log_info("checking dir with name %s\n",name);
+
+	if (lstat(name, &sbuf) < 0) {
+		log_errno("Error stat'ing file");
+		isfile = 0;
+	} else {
+		if (!S_ISDIR(sbuf.st_mode)) {
+			isfile = 0;
+			log_error("Error trying to open a directory as file");
+		}
+	}
+	return isfile;
+}
+
+/**
+ * traverse a directory and find the first match for the pattern,
+ * using the Commodore file search pattern matching algorithm.
+ * Returns a malloc'd pathname, which has to be freed
+ */
+static char *find_first_match(const char *dir, const char *pattern, int (*check)(const char *name)) {
 	DIR *dp;
-	FILE *fp;
 	struct dirent *de;
 
 	// shortcut - if we don't have wildcards, just open it
 	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
 		char *namebuf = malloc_path(dir, pattern);
 
-		log_info("opening file with name %s\n",namebuf);
-
-		fp = fopen(namebuf, options);
-
-		if (fp == NULL) {
-			log_errno("Error opening file with first match");
+		if (check(namebuf)) {
+			return namebuf;
 		}
+
 		free(namebuf);
-		return fp;
+		return NULL;
 	}
 
 
@@ -77,20 +119,35 @@ FILE *open_first_match(const char *dir, const char *pattern, const char *options
 
 				char *namebuf = malloc_path(dir, de->d_name);
 
-				log_info("opening file with name %s\n",namebuf);
-
-				fp = fopen(namebuf, options);
-				if (fp == NULL) {
-					log_errno("Error opening file with match");
+				if (check(namebuf)) {
+					closedir(dp);
+					return namebuf;
 				}
-
-				free(namebuf);
-				closedir(dp);
-				return fp;
 			}
 			de = readdir(dp);
 		}
 		
+		closedir(dp);
+	}
+	return NULL;
+}
+
+/**
+ *  fopen the first matching directory entry of type "file", using the given
+ *  options string
+ */
+FILE *open_first_match(const char *dir, const char *pattern, const char *options) {
+	FILE *fp = NULL;
+
+	char *name = find_first_match(dir, pattern, path_is_file);
+	if (name != NULL) {
+		fp = fopen(name, options);
+		if (fp == NULL) {
+			log_errno("Error opening file with first match");
+		}
+
+		free(name);
+		return fp;
 	}
 	return NULL;
 }
