@@ -118,13 +118,16 @@
 /* Card detected?   yes:true, no:false, default:true */
 
 /* ---- I2C bus ----------------------------------------------------------- */
-#define IIC_INIT()      // DDRE &= 0xF3; PORTE &= 0xF3  /* Set SCL/SDA as hi-z */
-#define SCL_LOW()       // DDRE |=      0x04                    /* SCL = LOW */
-#define SCL_HIGH()      // DDRE &=      0xFB                    /* SCL = High-Z */
-#define SCL_VAL         0 // ((PINE & 0x04) ? 1 : 0)    /* SCL input level */
-#define SDA_LOW()       // DDRE |=      0x08                    /* SDA = LOW */
-#define SDA_HIGH()      // DDRE &=      0xF7                    /* SDA = High-Z */
-#define SDA_VAL         0 // ((PINE & 0x08) ? 1 : 0)    /* SDA input level */
+static inline void i2c_init (void) {
+	DDRC &= ~ (_BV(PC0) | _BV(PC1));		/* SCL/SDA as hi-z */
+	PORTC &= ~ (_BV(PC0) | _BV(PC1));
+}
+#define SCL_LOW()       DDRC |= _BV(PC0)		/* SCL = LOW */
+#define SCL_HIGH()      DDRC &= ~_BV(PC0)		/* SCL = High-Z */
+#define SCL_VAL         ((PINC & _BV(PC0)) ? 1 : 0)	/* SCL input level */
+#define SDA_LOW()       DDRC |= _BV(PC1)		/* SDA = LOW */
+#define SDA_HIGH()      DDRC &= ~ _BV(PC1)              /* SDA = High-Z */
+#define SDA_VAL         ((PINC & _BV(PC1)) ? 1 : 0)	/* SDA input level */
 #define I2C_BB_DELAY_US		6
 
 /* ---- Prototypes -------------------------------------------------------- */
