@@ -51,6 +51,22 @@ static inline uint8_t ascii_to_petscii(uint8_t v) {
 	return v;
 }
 
+static inline uint8_t *petscii_to_ascii_str (uint8_t *s) {
+	uint8_t *r = s;
+	while(*s) {
+		*s = petscii_to_ascii(*s);
+		s++;
+	}
+	return r;
+}
+
+static inline uint8_t *ascii_to_petscii_str (uint8_t *s) {
+	uint8_t *r = s;
+	while(*s) {
+		*s = ascii_to_petscii(*s);
+		s++;
+	}
+	return r;
+}
 
 #endif
-

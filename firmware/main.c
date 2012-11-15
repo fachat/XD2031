@@ -163,6 +163,7 @@ int main()
 #ifdef USE_FAT
 	// register fat provider
 	provider_register("FAT", &fat_provider);
+	provider_assign(9, "FAT:ABC");
 #endif
 
 	// show our version...

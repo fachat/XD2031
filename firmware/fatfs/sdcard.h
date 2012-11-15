@@ -6,6 +6,7 @@
 #define SDCARD_H_DEFINED
 
 #include "integer.h"
+#include "diskio.h"
 
 volatile uint8_t media_status;
 

@@ -10,14 +10,14 @@
 #include "spi.h"
 #include "timer.h"
 
-// i#####   FIXME: debug output does not yet work here   #####
 #ifdef XITOA
+   // #####   FIXME: debug output does not yet work here   #####
 #  include "xitoa.h"
 #else
 #  include "debug.h"
 #endif
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 
 /*--------------------------------------------------------------------------
 
@@ -271,8 +271,6 @@ DSTATUS SD_disk_initialize (
 )
 {
     BYTE n, cmd, ty, ocr[4];
-
-    debug_printf("SD_disk_initialize(%i)", drv); debug_putcrlf();
 
     if (drv) return STA_NOINIT;         /* Supports only single drive */
     power_off();                        /* Turn off the socket power to reset the card */
