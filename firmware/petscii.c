@@ -20,38 +20,27 @@
 
 ****************************************************************************/
 
+#include <stdint.h>
+#include "petscii.h"
+
 /**
  * conversion between PETSCII and ASCII
  */
 
-#ifndef PETSCII_H
-#define PETSCII_H
-
-uint8_t *petscii_to_ascii_str (uint8_t *s);
-uint8_t *ascii_to_petscii_str (uint8_t *s);
-
-/**
- * simple conversion
- */
-static inline uint8_t petscii_to_ascii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x20;	// lower PETSCII to lower ASCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// upper C64 PETSCII to upper ASCII
-	if (v < 0xc1) return v;
-	if (v < 0xdb) return v & 0x7f;	// upper PET PETSCII to upper ASCII
-	return v;
+uint8_t *petscii_to_ascii_str (uint8_t *s) {
+	uint8_t *r = s;
+	while(*s) {
+		*s = petscii_to_ascii(*s);
+		s++;
+	}
+	return r;
 }
 
-/**
- * simple conversion
- */
-static inline uint8_t ascii_to_petscii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x80;	// upper ASCII to upper PETSCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// lower ASCII to lower C64/PET PETSCII
-	return v;
+uint8_t *ascii_to_petscii_str (uint8_t *s) {
+	uint8_t *r = s;
+	while(*s) {
+		*s = ascii_to_petscii(*s);
+		s++;
+	}
+	return r;
 }
-
-#endif
