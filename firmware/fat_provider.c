@@ -54,16 +54,22 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 static int8_t directory_converter(packet_t *p, uint8_t drive);
 static int8_t to_provider(packet_t *p);
 
-FATFS Fatfs[_VOLUMES];      /* File system object for each logical drive */
+static FATFS Fatfs[_VOLUMES];	/* File system object for each logical drive */
+static FIL file[15];		/* TODO: save memory */
 
 static char *size_unit_char = "KM";
 
 void dump_packet(packet_t *p)
 {
-	debug_printf("type: %i\n", (int8_t) p->type);
-	debug_printf("rp: %d wp: %d len: %d chan: %d\n", p->rp, p->wp, p->len, p->chan);
-	debug_printf("buffer: %p\n", p->buffer);
-	if(p->len) debug_printf("buffer: '%s'\n", p->buffer);
+	debug_puts("--- dump packet ---"); debug_putcrlf();
+	debug_printf("type: %d\n", p->type);
+	debug_printf("rp: %d wp: %d len: %d", p->rp, p->wp, p->len);
+	debug_putcrlf();
+	if(p->len > 2) {
+		debug_printf("chan: %d\n", p->chan); debug_putcrlf();
+		debug_printf("buffer: '%s'\n", p->buffer);
+	}
+	debug_puts("--- Ende des dumps ---"); debug_putcrlf();
 }
 
 
@@ -72,7 +78,12 @@ static void *prov_assign(const char *name) {
 
 	debug_printf("fat_prov_assign name=%s\n", name); 
 	/* mount (but don't remount) volume, this will always succeed regardless of the drive status */
-	if(disk_status(0)) f_mount(0, &Fatfs[0]);
+	debug_printf("disk_status(0): %d\n", disk_status(0));
+	if(disk_status(0) & STA_NOINIT) {
+		debug_puts ("Mounting card... ");
+		f_mount(0, &Fatfs[0]);
+		debug_printf("disk_status(0): %d\n", disk_status(0));
+	}
 
 /* ------------------------------------------------------------------------------------------- */
 	/* Show directory to proof SD card's alive */
@@ -154,10 +165,12 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 {
 	uint8_t res = ERROR_FAULT;
 
-	debug_puts("fat_submit_call\n"); debug_putcrlf();
+#if 0
+	debug_puts("*** FAT_SUBMIT_CALL ***"); debug_putcrlf();
 	debug_printf("chan: %d\n", channelno);
 	debug_puts("--- txbuf ---\n"); dump_packet(txbuf);
 	debug_puts("--- rxbuf ---\n"); dump_packet(rxbuf);
+#endif
 
 	if(channelno == 15) {
 		switch(txbuf->type) {
@@ -165,7 +178,35 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 				petscii_to_ascii_str(txbuf->buffer + 1);
 				debug_printf("CHDIR into '%s'\n", txbuf->buffer + 1);
 				res = f_chdir(txbuf->buffer + 1);
+				packet_write_char(rxbuf, res);
 				break;
+			default:
+				break;
+		}
+	} else {
+		switch(txbuf->type) {
+			case FS_OPEN_WR:
+				res = f_open(&file[channelno], txbuf->buffer + 1, FA_WRITE | FA_CREATE_NEW);
+				debug_printf("FS_OPEN_WR '%s' #%d, res=%d\n", txbuf->buffer + 1, channelno, res);
+				break;
+
+			case (uint8_t) (FS_WRITE & 0xFF): 
+			case (uint8_t) (FS_EOF & 0xFF):
+				if(txbuf->rp < txbuf->wp) {
+					uint8_t len = txbuf->wp - txbuf->rp;
+					UINT written = 0;
+					res = f_write(&file[channelno], txbuf->buffer, len, &written);
+					
+					debug_printf("%d/%d bytes written to #%d, res=%d\n", written, len, channelno, res);
+					if(res) break;
+				}
+
+				if(txbuf->type == ((uint8_t) (FS_EOF & 0xFF))) {
+					res = f_close(&file[channelno]);
+					debug_printf("f_close channel %d, res=%d", channelno, res); debug_putcrlf();
+					break;
+				}
+
 			default:
 				break;
 		}
@@ -173,7 +214,6 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 
 	// do something
 	// then callback
-	packet_write_char(rxbuf, res);
 	callback(channelno, res);
 }
 
@@ -189,7 +229,7 @@ static int8_t to_provider(packet_t *p)
 	/* OPEN lands here. First byte of p->buffer is drive, open string follows */
 	/* packet_type contains FS_ commands like 1=FS_OPEN_RD, 2=FS_OPEN_WR rtc. */
 	debug_puts("fat_to_provider\n");
-	dump_packet(p);
+	// dump_packet(p);
 	return 0;
 }
 
