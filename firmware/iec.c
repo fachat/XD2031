@@ -39,6 +39,7 @@
 #include "system.h"
 
 #undef DEBUG_BUS
+#undef DEBUG_BUS_DATA
 
 // Prototypes
 
@@ -55,9 +56,6 @@ static bus_t bus;
 // so we can react on it.
 static int16_t ser_status = 0;
 
-#define isListening()   ((ser_status&0xe000)==0x2000)
-#define isTalking()     ((ser_status&0xe000)==0x4000)
-#define waitAtnHi()     (ser_status&STAT_WAITEND)
 
 
 /***************************************************************************
@@ -319,9 +317,25 @@ static void talkloop()
 
 	do {
             	ser_status = bus_receivebyte(&bus, &c, BUS_PRELOAD | BUS_SYNC);
-#ifdef BUS_DEBUG_DATA
-		debug_printf("rx->iecout: %02\n", c); debug_flush();
+#ifdef DEBUG_BUS_DATA
+		debug_printf("rx->iecout: %02x, status=%04x\n", c, ser_status); debug_flush();
 #endif
+
+            	if (isReadTimeout(ser_status)) {
+                	// we should create a read timeout
+			datahi();
+			clkhi();
+
+			do {
+				if (checkatn(0)) {
+					break;
+				}
+			} while (is_port_datalo(read_debounced()));
+#ifdef DEBUG_BUS
+                	debug_putc('R');
+#endif
+			break;
+		}
 
 		disable_interrupts();
 		// send byte to IEC
@@ -351,8 +365,8 @@ void iec_mainloop_iteration(void)
 		return;
 	}
 
-#if 0 //def DEBUG_BUS
-	debug_printf("start of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
+#ifdef DEBUG_BUS
+	debug_printf("start of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d\n", 
 		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
 	//debug_putcrlf();
 #endif
@@ -396,7 +410,13 @@ void iec_mainloop_iteration(void)
 		if (cmd >= 0) {
 			ser_status = bus_attention(&bus, 0xff & cmd);
 
-			if (waitAtnHi()) {
+			if (ser_status & STAT_RDTIMEOUT) {
+				datahi();
+				clkhi();
+				delayus(150);
+				goto cmd;
+			}  else
+			if (waitAtnHi(ser_status)) {
 				// e902
 				dataforcelo();
 
@@ -431,7 +451,7 @@ void iec_mainloop_iteration(void)
 	// now transfer the data
 cmd:
 
-#if 0 ///def DEBUG_BUS
+#ifdef DEBUG_BUS
 	debug_printf("stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
 		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
 	debug_putcrlf();
@@ -440,7 +460,7 @@ cmd:
 	// E8D7
 	satnahi();
 
-	if(isListening())
+	if(isListening(ser_status))
         {
 		listenloop();
 
@@ -448,7 +468,7 @@ cmd:
         } else
         {
 
-		if (isTalking()) {
+		if (isTalking(ser_status)) {
 			// does not work without delay (why?)
 			// but this is fast enough so I won't complain
 			// Duration is a wild guess though, which seems to work

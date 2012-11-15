@@ -208,6 +208,9 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	if (type == FS_OPEN_RW) {
 		writetype = WTYPE_READWRITE;
 	}
+	if (nameinfo.options & NAMEOPT_NONBLOCKING) {
+		writetype |= WTYPE_NONBLOCKING;
+	}
 
 	int8_t (*converter)(packet_t*, uint8_t) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 

@@ -36,6 +36,7 @@
 #include "led.h"
 
 #undef DEBUG_BUS
+#undef DEBUG_BUS_DATA
 
 // Prototypes
 
@@ -51,9 +52,6 @@ static bus_t bus;
 // whether we are talking or listening. This is returned from the bus layer
 // so we can react on it.
 static int16_t par_status = 0;
-
-#define isListening()   ((par_status&0xe000)==0x2000)
-#define isTalking()     ((par_status&0xe000)==0x4000)
 
 
 /***************************************************************************
@@ -149,11 +147,11 @@ static void talkloop()
             /* write data & eoi */
             par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
 
-#ifdef DEBUG_BUS
-		debug_printf(" %02x", c);
+#ifdef DEBUG_BUS_DATA
+		debug_printf(" %02x, (%04x)", c, par_status);
 #endif
 
-	    if (par_status & STAT_RDTIMEOUT) {
+	    if (isReadTimeout(par_status)) {
 		// we should create a read timeout, by not setting DAV low
 		// in time. This happens on r/w channels, when no data is
 		// available
@@ -165,6 +163,9 @@ static void talkloop()
 
             if(par_status & STAT_EOF)
             {
+#ifdef DEBUG_BUS
+		debug_putc('E');
+#endif
                 eoilo();
                 er|=E_EOI;
             }
@@ -288,7 +289,7 @@ cmd:
 	debug_printf("stat=%04x", par_status); debug_putcrlf();
 #endif
 
-	if(isListening())
+	if(isListening(par_status))
         {
 		// make sure nrfd stays lo...
 		nrfdlo();
@@ -301,7 +302,7 @@ cmd:
                 atnahi();
                 nrfdhi();
 
-                if(isTalking()) {
+                if(isTalking(par_status) && !isReadTimeout(par_status)) {
                     talkloop();
                 }
         }

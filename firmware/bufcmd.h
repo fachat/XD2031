@@ -20,35 +20,20 @@
 
 ****************************************************************************/
 
-#ifndef NAME_H
-#define NAME_H
-
-#include "cmd.h"		// for command_t
-
 /**
- * Structures and definitions for the file name handler
+ * This file implements the disk drive commands
  */
 
 
-typedef struct {
-	uint8_t	drive;		// starts from 0 (real zero, not $30 = ASCII "0")
-	command_t cmd;		// command, "$" for directory open
-	uint8_t	type;		// file type requested ("S", "P", ...)
-	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
-	uint8_t options;	// access options, as bit mask
-	uint8_t *name;		// pointer to the actual name
-	uint8_t	namelen;	// length of remaining file name
-} nameinfo_t;
+#ifndef BUFCMD_H
+#define BUFCMD_H
 
-#define	NAMEINFO_UNUSED_DRIVE	0xff
+#include "channel.h"
+#include "bus.h"
 
-// nameinfo option bits
-#define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 
-// shared global variable to be used in parse_filename, as long as it's threadsafe
-extern nameinfo_t nameinfo;
+uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error);
+uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error);
 
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command);
 
 #endif
-

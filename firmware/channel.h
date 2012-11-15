@@ -45,9 +45,13 @@
  * The READWRITE files use buffer 0 to send to host, and buffer 1
  * to receive from host only, so no double-buffering is done there.
  */
-#define	WTYPE_READONLY	0		
-#define	WTYPE_WRITEONLY	1
-#define	WTYPE_READWRITE	2	/* NOTE: absolutely broken! */
+#define	WTYPE_READONLY		0		
+#define	WTYPE_WRITEONLY		1
+#define	WTYPE_READWRITE		2
+
+#define	WTYPE_MASK		0x03		// mask to get rid of the following options
+
+#define	WTYPE_NONBLOCKING	128		// ORd with one of the other three
 
 /**
  * R/W buffer definitions
@@ -80,6 +84,7 @@ typedef struct {
 	int8_t		channel_no;
 	uint8_t		current;
 	uint8_t		writetype;
+	uint8_t		options;
 	endpoint_t	*endpoint;
 	// directory handling
 	uint8_t		drive;
@@ -110,6 +115,13 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 		uint8_t drive);
 
 channel_t* channel_find(int8_t chan);
+
+/**
+ * flushes all messages, i.e. waits until writes are acknowledged
+ * and in-progress reads are thrown away.
+ * Used for block/user commands
+ */
+void channel_flush(int8_t chan);
 
 static inline int8_t channel_is_writable(channel_t *chan) {
 	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;

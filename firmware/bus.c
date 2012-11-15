@@ -54,8 +54,8 @@
 
 #include "device.h"
 
-#define	DEBUG_SERIAL
-#define	DEBUG_SERIAL_DATA
+#undef	DEBUG_SERIAL
+#undef	DEBUG_SERIAL_DATA
 
 #define	DEVICE_MASK	0x1f
 #define	SECADDR_MASK	0x0f
@@ -369,7 +369,7 @@ static int16_t bus_prepare(bus_t *bus)
 			bus->device = 0;
 		}
           }
-	return 0;
+	return st;
 }
 
 static void bus_close(bus_t *bus) {
@@ -422,7 +422,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 
               	bus->secondary = b;
 	      	// process a command if necessary
-              	bus_prepare(bus);
+              	st |= bus_prepare(bus);
 	      }
               break;
 	  default:
