@@ -28,8 +28,11 @@ DEVICEDEPS=xs1541/device.h xs1541/config.h xs1541/atn.o xs1541/ieeehw.h xs1541/i
 DEVICEASMOBJ=xs1541/atn.o
 
 ifeq ($(strip $(USE_FAT)),y)
+	DEVICE_CFLAGS=-DUSE_FAT             # Define USE_FAT
         DEVICEDEPS+=avr/spi.h               # SPI routines
         DEVICEFILES+=fatfs/sdcard.c         # SD card low level routines
+	DEVICEFILES+=fat_provider.c         # FAT provider
+	DEVICEDEPS+=fat_provider.h
 endif
 
 ## Assembler files
