@@ -32,10 +32,10 @@
 
 static void sdcard_init(void) {
 
-	DDR_SD_CD |= _BV(PIN_SD_CD);	// SD CD as input
+	DDR_SD_CD &= ~_BV(PIN_SD_CD);	// SD CD as input
 	PORT_SD_CD |= _BV(PIN_SD_CD);	// enable pull-up
 
-	DDR_SD_WP |= _BV(PIN_SD_WP);	// SD WP as input
+	DDR_SD_WP &= ~_BV(PIN_SD_WP);	// SD WP as input
 	PORT_SD_WP |= _BV(PIN_SD_WP);	// enable pull-up
 
 	// enable pin change interrupt for SD card detect
