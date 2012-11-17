@@ -44,9 +44,6 @@ Fix bugs:
 	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
 	  and most commands (CHDIR works)
 
-	- The IEC bus seems to be flakey on the C128, with DEVICE NOT
-	  PRESENT errors even in 1 MHz. Untested in 2 MHz.
-
 	- ...
 
 
@@ -61,7 +58,7 @@ Planned features for Release 1.0
 - SD card provider on the atmega side
 	-> started
 - IEC support so C64 et al can use the device 
-	-> done for C64, mostly done for C128,
+	-> done for C64, done for C128,
 	   and VIC20 still to test
 - Use other providers without ASSIGN before, e.g. LOAD"sd:filename",8
 	-> open
