@@ -409,7 +409,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		log_debug("read_block: avail=%d, n=%d\n", avail, n);
 	
 		if (n > 0) {
-			memcpy(retbuf, file->block, n);
+			memcpy(retbuf, file->block+file->block_ptr, n);
 			file->block_ptr += n;
 		}
 		return n;
