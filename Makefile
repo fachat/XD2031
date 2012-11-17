@@ -1,5 +1,7 @@
 
-all:	pcserver/fsser firmware doc sample/telnet8
+all:	pcserver/fsser firmware doc samples
+
+samples: sample/telnet sample/u1test
 
 pcserver/fsser:
 	make -C pcserver
@@ -21,6 +23,8 @@ uninstall:
 	make -C pcserver uninstall
 
 sample/telnet8: sample/telnet8.lst
-	petcat -l 0401 -w4 sample/telnet8.lst > sample/telnet8
+	petcat -l 0401 -w4 sample/telnet.lst > sample/telnet
+sample/u1test: sample/u1test.lst
+	petcat -l 0401 -w4 sample/u1test.lst > sample/u1test
 
 .PHONY:	pcserver/fsser install uninstall firmware doc

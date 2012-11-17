@@ -1,9 +1,10 @@
 
 
 ;u1test ==0401==
-   10 open15,8,15
+    1 d=8
+   10 open15,d,15
    15 gosub 1000
-  100 open2,8,2,"#"
+  100 open2,d,2,"#"
   110 gosub 1000
   120 print#15,"ua:2 0 18 0"
   130 gosub 1000
