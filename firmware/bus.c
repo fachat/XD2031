@@ -114,6 +114,8 @@ uint8_t get_default_device_address(void) {
 /* Init IEEE bus */
 void bus_init_bus(const char *name, bus_t *bus) {
 
+	bus->active = 0;
+
 	bus->secaddr_offset = secaddr_offset_counter;
 	secaddr_offset_counter += 16;
 
