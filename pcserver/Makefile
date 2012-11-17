@@ -34,6 +34,9 @@ clean:
 run:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools .
 
+run9:
+	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools -Xiec:U=9 -Xieee:U=9 .
+
 debug:
 	echo "Start with: run -d auto ../sample"
 	sudo gdb ./fsser 
