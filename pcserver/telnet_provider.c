@@ -427,7 +427,8 @@ provider_t telnet_provider = {
 	NULL,	//fs_rename,
 	NULL,	//fs_cd,
 	NULL,	//fs_mkdir,
-	NULL	//fs_rmdir
+	NULL,	//fs_rmdir
+	NULL	// block
 };
 
 
