@@ -410,6 +410,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 	
 		if (n > 0) {
 			memcpy(retbuf, file->block, n);
+			file->block_ptr += n;
 		}
 		return n;
 	}
