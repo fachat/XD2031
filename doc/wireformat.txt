@@ -182,8 +182,59 @@ FS_OPEN_OW
 	(as CBM DOS does on @-save)
 FS_OPEN_AP
 	open an existing file for appending. Returns an error if it does not exist.
+FS_OPEN_DR
+	open a directory listing. A directory listing file is read-only and 
+	returns a list of directory entry records (All numbers are binary, not
+	hex or bcd or ascii):
+
+	FS_DIR_LEN	0-3	file length in bytes, four bytes, low byte first
+	FS_DIR_YEAR	4	last modification date, year-1900
+	FS_DIR_MONTH	5	-"- month
+	FS_DIR_DAY	6	-"- day
+	FS_DIR_HOUR	7	-"- hour
+	FS_DIR_MIN	8	-"- minute
+	FS_DIR_SEC	9	-"- second
+	FS_DIR_MODE	10	type of directory entry, see below
+	FS_DIR_NAME	11-	zero-terminated file name in ASCII
+
+	The mode byte contains the type of the file as:
+
+	FS_DIR_MOD_FIL	0	file
+	FS_DIR_MOD_NAM	1	disk name
+	FS_DIR_MOD_FRE	2	number of free bytes on disk (in FS_DIR_LEN)
+	FS_DIR_MOD_DIR	3	subdirectory
+
+	Each directory entry record is contained in a single packet.
+
 	
 FS_CLOSE
+	This closes a channel - TODO: currently not used, but probably should
+
+
+Read and Write
+--------------
+
+FS_READ
+	This sends a three byte (zero payload) packet with just the command,
+	the length and the channel number for which to read.
+	It is only sent from the firmware to the server.
+	The server responds either with an FS_WRITE or an FS_EOF for that channel.
+
+	TODO: need to accept FS_REPLY as well, to set error channel appropriately.
+
+FS_WRITE
+	An write command is either sent from the firmware to the server, where it 
+	expects an FS_REPLY, or from the server to the firmware as reply to an FS_READ
+	command.
+
+	The packet is the usual command, length and channel, and the data payload
+	is the data to be transmitted.
+
+FS_EOF
+	This one works exactly like FS_WRITE, except that it signals that there is no
+	further data available on this channel.
+	It tries to obeys the Commodore semantics, in that it always should have a valid data
+	byte with it.
 
 
 File operations
@@ -212,4 +263,14 @@ Direct access
 FS_BLOCK
 	
 	
+Examples
+========
+
+load a directory
+
+save a file
+
+disk command
+
+assign
 
