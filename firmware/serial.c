@@ -35,7 +35,6 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "petscii.h"
-#include "main.h"
 
 #include "debug.h"
 #include "led.h"
@@ -49,6 +48,8 @@
  * Note that using the endpoint->provdata information given to the submit methods
  * it would even be possible to use different UARTs at the same time.
  */
+
+static uint8_t serial_lock;
 
 /**
  * submit the contents of a buffer to the UART
@@ -443,10 +444,14 @@ static void push_data_to_packet(int8_t rxdata)
 		current_data_left --;
 //if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
+			// prohibit receiving just in case (we reuse the rx buffer e.g. 
+			// in X option)
+			serial_lock = 1;
 			if (rx_channels[current_channelpos].callback(current_channelno, 
 					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
+			serial_lock = 0;
 			rxstate = RX_IDLE;
 		}
 		break;
@@ -466,11 +471,13 @@ static void push_data_to_packet(int8_t rxdata)
  */
 void serial_delay() {
 	// can we receive?
-	int16_t data = uarthw_receive();
-	while (data >= 0) {
-		push_data_to_packet(0xff & data);
-		// try next byte
-		data = uarthw_receive();
+	if (!serial_lock) {
+		int16_t data = uarthw_receive();
+		while (data >= 0) {
+			push_data_to_packet(0xff & data);
+			// try next byte
+			data = uarthw_receive();
+		}
 	}
 	// try to send
 	send();
@@ -568,6 +575,7 @@ void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_
 */
 provider_t *serial_init() {
 	slots_used = 0;
+	serial_lock = 0;
 
 	for (int8_t i = NUMBER_OF_SLOTS-1; i >= 0; i--) {
 		rx_channels[i].channelno = -1;

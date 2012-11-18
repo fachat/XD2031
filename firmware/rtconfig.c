@@ -77,11 +77,14 @@ static char buf[OPT_BUFFER_LENGTH];
 
 static packet_t buspack;
 
+// there shouldn't be much debug output, as sending it may invariably 
+// receive the next option, triggering the option again. But it isn't
+// re-entrant!
 static uint8_t setopt_callback(int8_t channelno, int8_t errno) {
 
-        debug_printf("setopt callback err=%d\n", errno);
+        //debug_printf("setopt cb err=%d\n", errno);
         if (errno == ERROR_OK) {
-                debug_printf("received command: %s\n", buf);
+                //debug_printf("rx command: %s\n", buf);
 
 		uint8_t len = buf[FSP_LEN];
 
