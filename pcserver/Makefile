@@ -28,7 +28,7 @@ fsser: fsser.c $(COMMONC) $(COMMONH)
 	sudo chmod u+s $@
 
 clean:
-	rm -f fstcp fsser curltest
+	rm -f fsser curltest
 
 
 run:
@@ -53,7 +53,6 @@ install:
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
 	install -m 0755 fsser $(PREFIX)/$(BINDIR)
 	chmod u+s $(PREFIX)/$(BINDIR)/fsser
-	install -m 0755 fstcp $(PREFIX)/$(BINDIR)
 	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
 	cp ../doc/* $(PREFIX)/$(DOCDIR)
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
@@ -63,7 +62,6 @@ install:
 
 uninstall:
 	rm -f $(PREFIX)/$(BINDIR)/fsser
-	rm -f $(PREFIX)/$(BINDIR)/fstcp
 	rm -f $(PREFIX)/$(DOCDIR)/*
 	rmdir $(PREFIX)/$(DOCDIR) 2>/dev/null | exit 0
 	rm -f $(PREFIX)/$(SAMPLEDIR)/*
