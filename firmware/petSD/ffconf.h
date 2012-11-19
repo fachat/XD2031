@@ -57,7 +57,7 @@
 / Locale and Namespace Configurations
 /----------------------------------------------------------------------------*/
 
-#define _CODE_PAGE	1250
+#define _CODE_PAGE	1252
 /* The _CODE_PAGE specifies the OEM code page to be used on the target system.
 /  Incorrect setting of the code page can cause a file open failure.
 /
@@ -153,7 +153,7 @@
 / System Configurations
 /----------------------------------------------------------------------------*/
 
-#define _WORD_ACCESS	0	/* 0 or 1 */
+#define _WORD_ACCESS	1	/* 0 or 1 */
 /* Set 0 first and it is always compatible with all platforms. The _WORD_ACCESS
 /  option defines which access method is used to the word data on the FAT volume.
 /
