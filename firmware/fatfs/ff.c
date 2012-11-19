@@ -1263,7 +1263,7 @@ int cmp_lfn (           /* 1:Matched, 0:Not matched */
             if (i >= _MAX_LFN || wc != ff_wtoupper(lfnbuf[i++]))    /* Compare it */
                 return 0;               /* Not matched */
         } else {
-            if (uc != 0xFFFF) return 0; /* Check filler */
+            if (uc != (WCHAR) 0xFFFF) return 0; /* Check filler */
         }
     } while (++s < 13);             /* Repeat until all chars in the entry are checked */
 

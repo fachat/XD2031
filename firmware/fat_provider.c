@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "version.h"
 #include "packet.h"
@@ -61,15 +62,41 @@ static char *size_unit_char = "KM";
 
 void dump_packet(packet_t *p)
 {
+	uint16_t tot = 0;
+	uint8_t line = 0;
+	uint8_t x = 0;
+
 	debug_puts("--- dump packet ---"); debug_putcrlf();
-	debug_printf("type: %d\n", p->type);
-	debug_printf("rp: %d wp: %d len: %d", p->rp, p->wp, p->len);
+	debug_printf("ptr: %p ", p);
+	debug_printf("type: %d ", p->type);
+	debug_printf("chan: %d   ", p->chan); 
+	debug_printf("rp: %d wp: %d len: %d ", p->rp, p->wp, p->len);
 	debug_putcrlf();
-	if(p->len > 2) {
-		debug_printf("chan: %d\n", p->chan); debug_putcrlf();
-		debug_printf("buffer: '%s'\n", p->buffer);
+	if(p->len) {
+		while(tot < p->len) {
+			debug_printf("%04X  ", tot);
+			for(x=0; x<16; x++) {
+				if(line+x < p->len) {
+					tot++;
+					debug_printf("%02X ", p->buffer[line+x]);
+				}
+				else debug_puts("   ");
+				if(x == 7) debug_putc(' ');
+			}
+			debug_puts(" |");
+			for(x=0; x<16; x++) {
+				if(line+x < p->len) {
+					uint8_t c = p->buffer[line+x];
+					if(isprint(c)) debug_putc(c); else debug_putc(' ');
+				} else debug_putc(' ');
+			}
+			debug_putc('|');
+			debug_putcrlf();
+			line = tot;
+		}
+
 	}
-	debug_puts("--- Ende des dumps ---"); debug_putcrlf();
+	debug_puts("--- end of dump ---"); debug_putcrlf();
 }
 
 
@@ -160,17 +187,22 @@ void fat_submit(void *epdata, packet_t *buf) {
 	dump_packet(buf);
 }
 
-void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum)) 
-{
-	uint8_t res = ERROR_FAULT;
 
-#if 0
+static void fat_submit_dump(int8_t channelno, packet_t *txbuf, packet_t *rxbuf)
+{
 	debug_puts("*** FAT_SUBMIT_CALL ***"); debug_putcrlf();
 	debug_printf("chan: %d\n", channelno);
 	debug_puts("--- txbuf ---\n"); dump_packet(txbuf);
 	debug_puts("--- rxbuf ---\n"); dump_packet(rxbuf);
-#endif
+}
+
+void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*callback)(int8_t channelno, int8_t errnum)) 
+{
+	uint8_t res = ERROR_FAULT;
+	DIR dir;
+
+	// fat_submit_dump(channelno, txbuf, rxbuf);
 
 	if(channelno == 15) {
 		switch(txbuf->type) {
@@ -181,15 +213,50 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 				packet_write_char(rxbuf, res);
 				break;
 			default:
+				debug_puts("### UNKNOWN CMD ###"); debug_putcrlf();
+				fat_submit_dump(channelno, txbuf, rxbuf);
 				break;
 		}
 	} else {
 		switch(txbuf->type) {
 			case FS_OPEN_WR:
+				/* open file for writing (only); error if file exists */
 				res = f_open(&file[channelno], txbuf->buffer + 1, FA_WRITE | FA_CREATE_NEW);
+				// packet_write_char(rxbuf, res);
 				debug_printf("FS_OPEN_WR '%s' #%d, res=%d\n", txbuf->buffer + 1, channelno, res);
 				break;
 
+			case FS_OPEN_RW:
+				/* open file for read/write access */
+				res = f_open(&file[channelno], txbuf->buffer + 1, FA_READ | FA_WRITE);
+				// packet_write_char(rxbuf, res);
+				debug_printf("FS_OPEN_RW '%s' #%d, res=%d\n", txbuf->buffer + 1, channelno, res);
+				break;
+
+			case FS_OPEN_OW:
+				/* open file for write only, overwriting */
+				res = f_open(&file[channelno], txbuf->buffer + 1, FA_WRITE | FA_CREATE_ALWAYS);
+				// packet_write_char(rxbuf, res);
+				debug_printf("FS_OPEN_OW '%s' #%d, res=%d\n", txbuf->buffer + 1, channelno, res);
+				break;
+
+			case FS_OPEN_AP:
+				/* open file for appending data to it */
+				res = f_open(&file[channelno], txbuf->buffer + 1, FA_WRITE | FA_OPEN_EXISTING);
+				debug_printf("FS_OPEN_AP '%s' #%d, res=%d\n", txbuf->buffer + 1, channelno, res);
+				/* move to end of file to append data */
+				res = f_lseek(&file[channelno], f_size(&file[channelno]));
+				debug_printf("Move to EOF to append data: %d\n", res);
+				break;
+
+			case FS_OPEN_DR:
+				/* open a directory for reading */
+				fat_submit_dump(channelno, txbuf, rxbuf);
+				res = f_opendir(&dir, ".");	// TODO: get path from txbuf
+				packet_write_char(rxbuf, res);
+				debug_printf("f_opendir: %d", res); debug_putcrlf();
+				break;
+	
 			case (uint8_t) (FS_WRITE & 0xFF): 
 			case (uint8_t) (FS_EOF & 0xFF):
 				if(txbuf->rp < txbuf->wp) {
@@ -208,12 +275,11 @@ void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *
 				}
 
 			default:
+				debug_puts("### UNKNOWN CMD ###"); debug_putcrlf();
+				fat_submit_dump(channelno, txbuf, rxbuf);
 				break;
 		}
 	}
-
-	// do something
-	// then callback
 	callback(channelno, res);
 }
 

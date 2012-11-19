@@ -33,5 +33,7 @@
 
 extern provider_t fat_provider;
 
+void dump_packet(packet_t *p);
+
 #endif
 
