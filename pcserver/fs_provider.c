@@ -66,6 +66,8 @@ typedef struct {
 	char		dirpattern[MAX_BUFFER_SIZE];
 	struct dirent	*de;
 	unsigned int	is_first :1;	// is first directory entry?
+	char		*block;		// direct channel block buffer, 256 byte when allocated
+	unsigned char	block_ptr;
 } File;
 
 typedef struct {
@@ -76,6 +78,11 @@ typedef struct {
 	char			*curpath;			// malloc'd current path
 	File 			files[MAXFILES];
 } fs_endpoint_t;
+
+static type_t block_type = {
+	"direct_buffer",
+	sizeof(char[256])
+};
 
 void fsp_init() {
 }
@@ -89,6 +96,8 @@ static void init_fp(File *fp) {
         fp->chan = -1;
 	fp->fp = NULL;
 	fp->dp = NULL;
+	fp->block = NULL;
+	fp->block_ptr = 0;
 }
 
 // close a file descriptor
@@ -107,6 +116,10 @@ static int close_fd(File *file) {
 			log_errno("Error closing dp");
 		}
 		file->dp = NULL;
+	}
+	if (file->block != NULL) {
+		mem_free(file->block);
+		file->block = NULL;
 	}
 	init_fp(file);
 	return er;
@@ -246,16 +259,7 @@ static File *find_file(endpoint_t *ep, int chan) {
 }
 
 // ----------------------------------------------------------------------------------
-// commands as sent from the device
-
-// close a file descriptor
-static void close_fds(endpoint_t *ep, int tfd) {
-	File *file = find_file(ep, tfd); // ((fs_endpoint_t*)ep)->files;
-	if (file != NULL) {
-		close_fd(file);
-		init_fp(file);
-	}
-}
+// helpers
 
 static char *safe_dirname (const char *path) {
 /* a dirname that leaves it's parameter unchanged and doesn't 
@@ -341,6 +345,89 @@ exit:
 	mem_free(path_realpathc);
 	mem_free(path_dname);
 	return res;  
+}
+
+// ----------------------------------------------------------------------------------
+// commands as sent from the device
+
+// ----------------------------------------------------------------------------------
+// block command handling
+
+static int open_block_channel(File *fp) {
+
+	log_debug("Opening block channel %p\n", fp);
+
+	fp->block = mem_alloc(&block_type);
+	if (fp->block == NULL) {
+		// alloc failed
+
+		log_warn("Buffer memory alloc failed!");
+
+		return ERROR_NO_CHANNEL;
+	}
+	fp->block_ptr = 0;
+
+	return ERROR_OK;
+}
+
+// U1/U2/B-P/B-R/B-W
+static int fs_block(endpoint_t *ep, int chan, char *buf) {
+
+	// note: that is not true for all commands - B-P for example
+	unsigned char cmd = buf[0];
+	unsigned char drive = buf[1];
+	unsigned char track = buf[2];
+	unsigned char sector = buf[3];
+
+	log_debug("BLOCK cmd: %d, dr=%d, tr=%d, se=%d\n", cmd, drive, track, sector);
+
+	File *file = find_file(ep, chan);
+
+	if (file != NULL) {
+
+		// note: not for B-P
+		// also B-R / B-W use block[0] as length value!
+		file->block_ptr = 0;
+	}
+
+	return ERROR_OK;
+}
+
+static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
+	File *file = find_file(ep, tfd);
+
+	log_debug("read_block: file=%p, len=%d\n", file, len);
+
+	if (file != NULL) {
+		int avail = 256 - file->block_ptr;
+		int n = len;
+		if (len >= avail) {
+			n = avail;
+			*eof = 1;
+		}
+
+		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+	
+		if (n > 0) {
+			memcpy(retbuf, file->block+file->block_ptr, n);
+			file->block_ptr += n;
+		}
+		return n;
+	}
+	return -ERROR_FAULT;
+}
+	
+// ----------------------------------------------------------------------------------
+// file command handling
+
+
+// close a file descriptor
+static void close_fds(endpoint_t *ep, int tfd) {
+	File *file = find_file(ep, tfd); // ((fs_endpoint_t*)ep)->files;
+	if (file != NULL) {
+		close_fd(file);
+		init_fp(file);
+	}
 }
 
 // open a file for reading, writing, or appending
@@ -754,13 +841,36 @@ static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
        return open_file(ep, tfd, buf, "ab");
 }
 
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
+	if (*buf == '#') {
+		// ok, open a direct block channel
+		
+		fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+		File *file = reserve_file(ep, tfd);
+
+		int er = open_block_channel(file);
+
+		if (er) {
+			// error
+			close_fd(file);
+			log_error("Could not reserve file\n");
+		}
+		return er;
+
+	} else {
+		// no support for r/w for "standard" files for now
+		return ERROR_DRIVE_NOT_READY;
+	}
+}
+
 
 static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 
 	File *f = find_file(ep, chan); // ((fs_endpoint_t*)ep)->files;
 #ifdef DEBUG_READ
-	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, eof=%d)\n", 
-		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, *eof);
+	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, block=%p, eof=%d)\n", 
+		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *eof);
 #endif
 	int rv = 0;
 
@@ -769,11 +879,17 @@ static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 	} else
 	if (f->fp) {
 		// read a file
+		// standard file read
 		rv = read_file(ep, chan, retbuf, len, eof);
+	} else 
+	if (f->block != NULL) {
+		// direct channel block buffer read
+		rv = read_block(ep, chan, retbuf, len, eof);
 	}
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
 
 provider_t fs_provider = {
 	"fs",
@@ -784,7 +900,7 @@ provider_t fs_provider = {
 	open_file_rd,
 	open_file_wr,
 	open_file_ap,
-	NULL, //open_file_rw,
+	open_file_rw,
 	open_dr,
 	readfile,
 	write_file,
@@ -792,7 +908,8 @@ provider_t fs_provider = {
 	fs_rename,
 	fs_cd,
 	fs_mkdir,
-	fs_rmdir
+	fs_rmdir,
+	fs_block
 };
 
 

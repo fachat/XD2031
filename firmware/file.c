@@ -120,6 +120,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	if (nameinfo.name[1] == '#' || nameinfo.access == 'X') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
+		// Note: '#' is still blocking on read!
 		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
 		type = FS_OPEN_RW;
 	}

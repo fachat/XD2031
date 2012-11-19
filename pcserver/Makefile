@@ -28,11 +28,14 @@ fsser: fsser.c $(COMMONC) $(COMMONH)
 	sudo chmod u+s $@
 
 clean:
-	rm -f fstcp fsser curltest
+	rm -f fsser curltest
 
 
 run:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools .
+
+run9:
+	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools -Xiec:U=9 -Xieee:U=9 .
 
 debug:
 	echo "Start with: run -d auto ../sample"
@@ -50,7 +53,6 @@ install:
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
 	install -m 0755 fsser $(PREFIX)/$(BINDIR)
 	chmod u+s $(PREFIX)/$(BINDIR)/fsser
-	# install -m 0755 fstcp $(PREFIX)/$(BINDIR)
 	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
 	cp ../doc/* $(PREFIX)/$(DOCDIR)
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
@@ -60,7 +62,6 @@ install:
 
 uninstall:
 	rm -f $(PREFIX)/$(BINDIR)/fsser
-	rm -f $(PREFIX)/$(BINDIR)/fstcp
 	rm -f $(PREFIX)/$(DOCDIR)/*
 	rmdir $(PREFIX)/$(DOCDIR) 2>/dev/null | exit 0
 	rm -f $(PREFIX)/$(SAMPLEDIR)/*

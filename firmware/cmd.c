@@ -212,14 +212,20 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	if (nameinfo.cmd == CMD_UX) {
 		debug_puts("USER COMMAND\n");
 		int8_t rv = cmd_user(bus, (char*) command->command_buffer, errormsg);
-		callback(rv, NULL);
-		return 0;
+		if (rv >= 0) {
+			callback(rv, NULL);
+			return 0;
+		}
+		return 0;	// waiting for callback
 	} else
 	if (nameinfo.cmd == CMD_BLOCK) {
 		debug_puts("BLOCK COMMAND\n");
 		int8_t rv = cmd_block(bus, (char*) command->command_buffer, errormsg);
-		callback(rv, NULL);
-		return 0;
+		if (rv >= 0) {
+			callback(rv, NULL);
+			return 0;
+		}
+		return 0;	// waiting for callback
 	} else
 	if (nameinfo.cmd == CMD_EXT) {
 		debug_puts("CONFIGURATION EXTENSION\n");

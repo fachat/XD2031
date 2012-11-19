@@ -17,9 +17,12 @@ For more information see the README files in the subdirectories
 Notes
 -----
 
-- With the XS1541 hardware it seems that at least drives that are attached
-  to the IEEE488 bus must be switched on. But it works without another drive
-  attached.
+- With the XS1541 hardware all hardware attached to the device must be 
+  switched on. This holds for both, IEC and IEEE, i.e. even if you only
+  want to use IEEE, the IEC devices must be switched on. This is due to 
+  them pulling the ATN line low when switched off.
+  
+
 
 Copyright
 ---------
@@ -41,9 +44,6 @@ Fix bugs:
 	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
 	  and most commands (CHDIR works)
 
-	- C128 can not start with it, as XD2031 gets confused by the C128's 
-	  boot commands
-
 	- ...
 
 
@@ -58,15 +58,16 @@ Planned features for Release 1.0
 - SD card provider on the atmega side
 	-> started
 - IEC support so C64 et al can use the device 
-	-> done for C64, C128 and VIC20 still to test
+	-> done for C64, done for C128,
+	   and VIC20 still to test
 - Use other providers without ASSIGN before, e.g. LOAD"sd:filename",8
 	-> open
 - bidirectional file support, together with TELNET functionality
-	-> open
+	-> done
 - store configuration parameters in EEPROM
 	-> beta
 - set configuration parameters from the PC
-	-> open
+	-> done
 
 
 Further plans

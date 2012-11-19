@@ -543,6 +543,19 @@ static void do_cmd(char *buf, int fd) {
 			}
 		}
 		break;
+	case FS_BLOCK:
+		ep = chan_to_endpoint(tfd);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->block != NULL) {
+				rv = prov->block(ep, tfd, buf+FSP_DATA);
+				if (rv != 0) {
+					log_rv(rv);
+				}
+				retbuf[FSP_DATA] = rv;
+			}
+		}
+		break;
 	case FS_ASSIGN:
 		// assign an endpoint number (i.e. a drive number for the PET)
 		// to a filesystem provider and path

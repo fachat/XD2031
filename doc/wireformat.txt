@@ -1,0 +1,276 @@
+
+WIREFORMAT
+==========
+
+This file documents the data format that is exchanged between the firmware and the server.
+
+
+Principles
+==========
+
+The so-called wireformat implements a packet-oriented communication between the firmware
+and the server that is shared between multiple so-called channels. So the communication 
+is multiplexed between for example different open files, as well as the log or debug output
+from the firmware.
+
+
+Packet format
+-------------
+
+The packet format is in principle always the same:
+
+	byte	name		description
+	----	---------	---------------------------
+	0	FSP_CMD		command number (as described below)
+	1	FSP_LEN		total length of the packet (i.e. incl. FSP_CMD, _LEN)
+	2	FSP_FD		channel number for multplexing 
+	3...	FSP_DATA	payload
+
+Variations exist depending on the command - see the description there.
+The same packet structure is used for both directions, from server to firmware as well
+as back.
+
+
+Initiation
+----------
+
+The communication is always initiated by the firmware. I.e. the server only sends
+packets when explicitely requested by the firmware.
+
+The reason for this behaviour is that the firmware has limited resources and the server
+is only asked for something when the result can actually be handled.
+
+
+Types of communication
+----------------------
+
+There are three types of communication. One is "fire-and-forget" from firmware to 
+server, the other is "request-reply". The last one is the "sync".
+
+The "sync" communication is used to "sync" server and firmware after either a reset on the
+device, or a restart of the server. On start of the server, an FS_SYNC byte is sent and then
+the server waits for an FS_SYNC reply, ignoring all other bytes. When not within a packet 
+receive, the firmware flushes all packets, then echos the FS_SYNC byte. On firmware reset,
+a number of FS_SYNC bytes is sent as well. It's not perfect, but helps synchronizing the
+two over the serial line.
+
+The "fire-and-forget" is only used for the log output that is sent from the firmware
+to be displayed or logged by the server.
+
+All other commands are request-reply and their semantic depends on the command number.
+Most requests get an FS_REPLY answer from the server. This packet only contains a single
+byte of payload data, that is the error code (see errors.h).
+
+read-write files
+
+For each channel two buffers are reserved within the firmware.
+For read-only and write-only files the firmware uses a "double buffering" approach. I.e.
+when one buffer is sent to the server, a second buffer can already be filled by the CBM.
+For read-write files there is no double-buffering. Instead one buffer is used for sending
+(and the corresponding replies) and the other one for receiving (sending read requests
+and receiving the data)
+
+non-blocking access
+
+The firmware allows to open files "non-blocking". This is however separate from the 
+wireformat. If no data is available, the server returns a packet with a zero-length 
+data payload. The firmware detects this and handles this with a read timeout when
+opened non-blocking. Currently there is no non-blocking mode for write access.
+
+stream receive
+
+There is one special case where the firmware sends a single command only, and the server
+sends multiple replies. This is the case for the FS_RESET command. The firmware sends
+a single request, and the server sends a packet for each command line -X option.
+
+
+Commands
+========
+
+FS_TERM
+	Writes to the "TERMinal".
+	Sends ASCII data to be displayed on the server console or logged into a file.
+	This is a fire-and-forget and the server simply takes it without replying.
+
+	FSP_FD		set to FSFD_TERM
+	FSP_DATA	contains the payload data
+
+
+Open and close
+--------------
+
+FS_OPEN_*
+	All FS_OPEN_* commands share the same protocol syntax, so this is described
+	here before each of the actual commands.
+
+	FSP_FD		contains the channel; starts with 0, may legally be up to 120
+			(which is an arbitrary number below FSFD_SETOPT, which is 125)
+	FSP_DATA	contains the two things:
+			- first byte contains the drive number as binary number
+				This enables the server to determine the actual 
+				provider to use
+			- further bytes contain the file name, with a trailing zero
+				included
+	If the first byte in FSP_DATA is 255, then the drive given in the 
+	original file name is not valid but contains a provider name. This is thus
+	included in the file name payload data.
+
+	Examples:
+
+	Loading the file named "TELNET" from drive 0, e.g. via LOAD"0:TELNET",8
+
+		FSP_CMD		FS_OPEN_RD
+		FSP_LEN		11
+		FSP_FD		0
+		FSP_DATA	0
+				'TELNET'
+				0
+
+	Loading the file named "FOO" via HTTP protocol from the internet:
+
+		FSP_CMD		FS_OPEN_RD
+		FSP_LEN		22
+		FSP_FD		0
+		FSP_DATA	255
+				'HTTP:'
+				'HOSTNAME:'
+				'FOO'
+				0
+
+	NOTE: the latter example is not (yet) implemented
+
+	Each of the FS_OPEN_* calls gets an FS_REPLY answer from the server that 
+	contains the result of the OPEN call. Any value other than ERROR_OK means that
+	the file was not opened.
+	The error number depends e.g. on the C errno result of an fopen() call and is
+	mapped as follows:
+
+        case EEXIST:
+                return ERROR_FILE_EXISTS;
+        case EACCES:
+                return ERROR_NO_PERMISSION;
+        case ENAMETOOLONG:
+                return ERROR_FILE_NAME_TOO_LONG;
+        case ENOENT:
+                return ERROR_FILE_NOT_FOUND;
+        case ENOSPC:
+                return ERROR_DISK_FULL;
+        case EROFS:
+                return ERROR_WRITE_PROTECT;
+        case ENOTDIR:   // mkdir, rmdir
+        case EISDIR:    // open, rename
+                return ERROR_FILE_TYPE_MISMATCH;
+        case ENOTEMPTY:
+                return ERROR_DIR_NOT_EMPTY;
+        case EMFILE:
+                return ERROR_NO_CHANNEL;
+        case EINVAL:
+                return ERROR_SYNTAX_INVAL;
+        default:
+                return ERROR_FAULT;
+
+FS_OPEN_RD
+	open a file for reading (binary)
+FS_OPEN_WR
+	open a file for writing. This should return an error if the file
+	already exists.
+FS_OPEN_RW
+	open a file for read-write access.
+FS_OPEN_OW
+	open a file for overwriting. I.e. if a file exists it is truncated and
+	writing starts at the beginning. If it does not exist, create the file
+	(as CBM DOS does on @-save)
+FS_OPEN_AP
+	open an existing file for appending. Returns an error if it does not exist.
+FS_OPEN_DR
+	open a directory listing. A directory listing file is read-only and 
+	returns a list of directory entry records (All numbers are binary, not
+	hex or bcd or ascii):
+
+	FS_DIR_LEN	0-3	file length in bytes, four bytes, low byte first
+	FS_DIR_YEAR	4	last modification date, year-1900
+	FS_DIR_MONTH	5	-"- month
+	FS_DIR_DAY	6	-"- day
+	FS_DIR_HOUR	7	-"- hour
+	FS_DIR_MIN	8	-"- minute
+	FS_DIR_SEC	9	-"- second
+	FS_DIR_MODE	10	type of directory entry, see below
+	FS_DIR_NAME	11-	zero-terminated file name in ASCII
+
+	The mode byte contains the type of the file as:
+
+	FS_DIR_MOD_FIL	0	file
+	FS_DIR_MOD_NAM	1	disk name
+	FS_DIR_MOD_FRE	2	number of free bytes on disk (in FS_DIR_LEN)
+	FS_DIR_MOD_DIR	3	subdirectory
+
+	Each directory entry record is contained in a single packet.
+
+	
+FS_CLOSE
+	This closes a channel - TODO: currently not used, but probably should
+
+
+Read and Write
+--------------
+
+FS_READ
+	This sends a three byte (zero payload) packet with just the command,
+	the length and the channel number for which to read.
+	It is only sent from the firmware to the server.
+	The server responds either with an FS_WRITE or an FS_EOF for that channel.
+
+	TODO: need to accept FS_REPLY as well, to set error channel appropriately.
+
+FS_WRITE
+	An write command is either sent from the firmware to the server, where it 
+	expects an FS_REPLY, or from the server to the firmware as reply to an FS_READ
+	command.
+
+	The packet is the usual command, length and channel, and the data payload
+	is the data to be transmitted.
+
+FS_EOF
+	This one works exactly like FS_WRITE, except that it signals that there is no
+	further data available on this channel.
+	It tries to obeys the Commodore semantics, in that it always should have a valid data
+	byte with it.
+
+
+File operations
+---------------
+
+FS_RENAME
+FS_DELETE
+FS_FORMAT
+FS_CHKDSK
+FS_RMDIR
+FS_MKDIR
+FS_CHDIR
+
+
+Administrative commands
+-----------------------
+
+FS_ASSIGN
+FS_SETOPT
+FS_RESET
+
+
+Direct access
+-------------
+
+FS_BLOCK
+	
+	
+Examples
+========
+
+load a directory
+
+save a file
+
+disk command
+
+assign
+

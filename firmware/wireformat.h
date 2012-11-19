@@ -69,6 +69,7 @@
 #define   FS_ASSIGN      15	/* assign a drive number to a directory */
 #define   FS_SETOPT      16	/* set an option using an X-command string as payload */
 #define   FS_RESET       17	/* device sends this to notify it has reset */
+#define   FS_BLOCK       18	/* summary for U1,U2,B-P,B-R,B-W */
 
 /*
  * additional FS commands to be sent between fstcp client & server
@@ -79,7 +80,13 @@
 #define   FS_REPLY       -3     /* return value */
 #define   FS_EOF         -4     /* as FS_WRITE, but signal EOF with */
                                 /* last byte sent                    */
+/* BLOCK commands */
 
+#define	FS_BLOCK_U1	0
+#define	FS_BLOCK_U2	1
+#define	FS_BLOCK_BR	2
+#define	FS_BLOCK_BW	3
+#define	FS_BLOCK_BP	4
 
 /* structure of a directory entry when reading a directory */
 
