@@ -16,6 +16,16 @@ COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h mem.h types.h
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
 LIBS=-lcurl
 
+# Open the serial device with root or user rights
+PRIVILEGED=y
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
+	PRIVILEGED=n
+endif
+ifeq ($(PRIVILEGED),n)
+	CFLAGS+=-DUNPRIVILEGED
+endif
+
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
@@ -24,8 +34,13 @@ all: fsser
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
 	${CC} ${CFLAGS} fsser.c $(COMMONC) -o fsser ${LIBS}
+ifeq ($(PRIVILEGED),y)
 	sudo chown root $@
 	sudo chmod u+s $@
+	@echo 'fsser opens the serial device with root rights.'
+else
+	@echo 'fsser opens the serial device with user rights.'
+endif
 
 clean:
 	rm -f fsser curltest
@@ -52,7 +67,9 @@ install:
 	test -d $(PREFIX) || mkdir -p $(PREFIX)
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
 	install -m 0755 fsser $(PREFIX)/$(BINDIR)
+ifeq ($(PRIVILEGED),y)
 	chmod u+s $(PREFIX)/$(BINDIR)/fsser
+endif
 	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
 	cp ../doc/* $(PREFIX)/$(DOCDIR)
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)

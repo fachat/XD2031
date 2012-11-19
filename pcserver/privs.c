@@ -31,6 +31,13 @@
 #include <stdlib.h>	// exit()
 
 #include "privs.h"
+#include "log.h"
+
+#ifdef UNPRIVILEGED
+void drop_privileges() { 
+	log_info("Compiled with unprivileged rights\n");
+}
+#else
 
 static void drop_to_uid(uid_t ruid);
 
@@ -43,8 +50,8 @@ void drop_privileges() {
 	uid_t ruid = getuid();
 	uid_t euid = geteuid();
 
-	printf("Real user ID=%d\n", ruid);
-	printf("Effective user ID=%d\n", euid);
+	log_info("Real user ID=%d\n", ruid);
+	log_info("Effective user ID=%d\n", euid);
 
 	if (ruid != 0) {
 		// not root
@@ -70,7 +77,7 @@ static void drop_to_uid(uid_t ruid) {
 		exit(-1);
 	}
 
-	printf("New effective user ID=%d\n", new_ruid);
+	log_info("New effective user ID=%d\n", new_ruid);
 
 	e = setuid(0);
 
@@ -82,4 +89,4 @@ static void drop_to_uid(uid_t ruid) {
 
 }
 
-
+#endif /* __APPLE__ */
