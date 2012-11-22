@@ -2,3 +2,6 @@
 docsrc/doxygen/*
 *.DS_Store
 *.dSYM/
+.project
+.cproject
+.settings
