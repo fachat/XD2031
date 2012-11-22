@@ -64,7 +64,7 @@ typedef WCHAR TCHAR;
 
 #else                       /* ANSI/OEM string */
 #ifndef _INC_TCHAR
-typedef unsigned char TCHAR;
+typedef char TCHAR;
 #define _T(x) x
 #define _TEXT(x) x
 #endif
