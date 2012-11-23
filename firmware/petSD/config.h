@@ -30,6 +30,8 @@
 
 //#define DEV_ADDR	9	// default device address
 
+#define FAT_MAX_FILES	4	// max. opened files for FAT provider (SD card)
+
 #define F_CPU		18432000UL
 
 // LED configuration for single LED HW / error LED
