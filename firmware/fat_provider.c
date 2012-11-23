@@ -54,8 +54,8 @@
 provider_t fat_provider  = {
 	prov_assign,
 	prov_free,
-        fat_submit,
-        fat_submit_call,
+	fat_submit,
+	fat_submit_call,
 	directory_converter,
 	to_provider
 };
@@ -70,13 +70,16 @@ struct {
 	FIL f;
 } tbl[FAT_MAX_FILES];
 
-// TODO: fix directory stuff for multiple assigns
 
 #define FAT_MAX_ASSIGNS 2	/* Each ASSIGN keeps its own directory */
 uint8_t no_of_assigns = 0;	/* Number of assigns */
 
+// TODO: fix directory stuff for multiple assigns
 static DIR dir;
+static uint8_t dir_drive;
+static char dir_mask[_MAX_LFN+1];
 static FILINFO Finfo;
+
 #if _USE_LFN
 	static char Lfname[_MAX_LFN+1];
 #endif
@@ -127,7 +130,7 @@ static int8_t tbl_ins_dir(int8_t chan) {
 			return 0;
 		}
 		if(tbl[i].chan == AVAILABLE) {
-			debug_printf("@% initialized with DIR_HEAD", i); debug_putcrlf();
+			debug_printf("@%d initialized with DIR_HEAD", i); debug_putcrlf();
 			tbl[i].chan = chan;
 			tbl[i].dir_state = DIR_HEAD;
 			return 0;
@@ -187,7 +190,7 @@ static void fat_submit(void *epdata, packet_t *buf) {
 }
 
 static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum)) 
+	uint8_t (*callback)(int8_t channelno, int8_t errnum))
 {
 	// submit a request/response packet; call the callback function when the
 	// response is received; If callback returns != 0 then the call is kept open,
@@ -286,12 +289,26 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 		case FS_OPEN_DR:
 			/* open a directory for reading */
-			res = f_opendir(&dir, ".");
-			packet_write_char(rxbuf, res);
+			debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
+			if (txbuf->len > 1) {
+				debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
+				strncpy(dir_mask, path, _MAX_LFN);
+				dir_mask[_MAX_LFN] = 0;
+				res = f_opendir(&dir, path);
+			} else {
+				debug_puts("no dirmask\n");
+				dir_mask[0] = 0;
+				res = f_opendir(&dir, ".");
+			}
+
+			// TODO: split dirname / filename
+			dir_drive = txbuf->buffer[0];
 			if(tbl_ins_dir(channelno)) {
+				res = ERROR_NO_CHANNEL;
 				debug_puts("No channel for FS_OPEN_DR"); debug_putcrlf();
 			}
 			debug_printf("f_opendir: %d", res); debug_putcrlf();
+			packet_write_char(rxbuf, res);
 			break;
 
 		case (uint8_t) (FS_READ & 0xFF):
@@ -316,8 +333,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				// TODO: add FS_REPLY some day
 			}
 			break;
-	
-		case (uint8_t) (FS_WRITE & 0xFF): 
+
+		case (uint8_t) (FS_WRITE & 0xFF):
 		case (uint8_t) (FS_EOF & 0xFF):
 			fp = tbl_find_file(channelno);
 			if(fp) {
@@ -364,34 +381,46 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 
 		case DIR_HEAD:
 			/* Disk name */
-			debug_puts("DIR_HEAD"); debug_putcrlf();
-			p[FS_DIR_LEN+0] = 9;		// driveno & 255;
-		        p[FS_DIR_LEN+1] = 0;
-		        p[FS_DIR_LEN+2] = 0;
-		        p[FS_DIR_LEN+3] = 0;
-		        // don't set date for now
-		        p[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
-			// no pattern,  simple default
+			debug_puts("fs_read_dir/DIR_HEAD"); debug_putcrlf();
+			p[FS_DIR_LEN+0] = dir_drive;
+			p[FS_DIR_LEN+1] = 0;
+			p[FS_DIR_LEN+2] = 0;
+			p[FS_DIR_LEN+3] = 0;
+			// TODO: add date
+			p[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
+			// TODO: add dir pattern
 			strncpy(p+FS_DIR_NAME, ".               ", 16);
+			p[FS_DIR_NAME + 16] = 0;
 
-		        p[FS_DIR_NAME + 16] = 0;
-
-		        tbl[tblpos].dir_state = DIR_FILES;
-			packet->type = FS_EOF;
-			return FS_DIR_NAME + 17;
-
+			tbl[tblpos].dir_state = DIR_FILES;
+			packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
+			return 0;
 
 		case DIR_FILES:
 			/* Files and directories */
-			debug_puts("DIR_FILES"); debug_putcrlf();
+			debug_puts("fs_read_dir/DIR_FILES"); debug_putcrlf();
 			res = f_readdir(&dir, &Finfo);
 			if ((res == FR_OK) && Finfo.fname[0]) {
-				debug_printf("file '%s'", Finfo.fname); debug_putcrlf();
+				// TODO: skip or skip not hidden files
+				debug_printf("%c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  '%s'",
+						(Finfo.fattrib & AM_DIR) ? 'D' : '-',
+						(Finfo.fattrib & AM_RDO) ? 'R' : '-',
+						(Finfo.fattrib & AM_HID) ? 'H' : '-',
+						(Finfo.fattrib & AM_SYS) ? 'S' : '-',
+						(Finfo.fattrib & AM_ARC) ? 'A' : '-',
+						(Finfo.fdate >> 9) + 1980, (Finfo.fdate >> 5) & 15, Finfo.fdate & 31,
+						(Finfo.ftime >> 11), (Finfo.ftime >> 5) & 63,
+						Finfo.fsize, &(Finfo.fname[0]));
+#				if _USE_LFN
+					for (uint8_t i = strlen(Finfo.fname); i < 14; i++) debug_putc(' ');
+					debug_printf("'%s'", Lfname);
+#				endif
+				debug_putcrlf();
 
-			        p[FS_DIR_LEN] = Finfo.fsize & 255;
-			        p[FS_DIR_LEN+1] = (Finfo.fsize >> 8) & 255;
-			        p[FS_DIR_LEN+2] = (Finfo.fsize >> 16) & 255;
-			        p[FS_DIR_LEN+3] = (Finfo.fsize >> 24) & 255;
+				p[FS_DIR_LEN] = Finfo.fsize & 255;
+				p[FS_DIR_LEN+1] = (Finfo.fsize >> 8) & 255;
+				p[FS_DIR_LEN+2] = (Finfo.fsize >> 16) & 255;
+				p[FS_DIR_LEN+3] = (Finfo.fsize >> 24) & 255;
 
 				p[FS_DIR_YEAR] = (Finfo.fdate >> 9) + 80;
 				p[FS_DIR_MONTH] = (Finfo.fdate >> 5) & 15;
@@ -401,34 +430,44 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 
 				p[FS_DIR_MODE] = Finfo.fattrib & AM_DIR ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
 
-				strcpy(p + FS_DIR_NAME, Finfo.fname);
-		/*
-#				ifdef _USELFN
-					if(Lfname[0]) strncpy(p[FS_DIR_NAME], Lfname, 16);
-					p[FS_DIR_NAME + 16] = 0;
+#				ifdef _USE_LFN
+					if((strlen(Lfname) > 16 ) || (!Lfname[0])) {
+						// no LFN or too long LFN ==> use short name
+						strcpy(p + FS_DIR_NAME, Finfo.fname);
+					} else strcpy(p + FS_DIR_NAME, Lfname);
+#				else
+					strcpy(p + FS_DIR_NAME, Finfo.fname);
 #				endif
-		*/
-				packet->type = FS_EOF;
-				return FS_DIR_NAME + strlen(p+FS_DIR_NAME) + 1;
+
+				packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
+				return 0;
 			} else {
 				tbl[tblpos].dir_state = DIR_FOOTER;
-				// fall through to end of directory
+				return 0;
 			}
 
 		case DIR_FOOTER:
 		default:
 			/* number of free bytes / end of directory */
-			debug_puts("DIR_FOOTER"); debug_putcrlf();
-		        p[FS_DIR_LEN] = 1;
-		        p[FS_DIR_LEN+1] = 0;
-		        p[FS_DIR_LEN+2] = 0;
-		        p[FS_DIR_LEN+3] = 0;
-		        p[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
-		        p[FS_DIR_NAME] = 0;
-		        tbl[tblpos].dir_state = DIR_INACTIVE;
-		        tbl[tblpos].chan = AVAILABLE;
+			debug_puts("fs_read_dir/DIR_FOOTER"); debug_putcrlf();
+			FATFS *fs = &Fatfs[0];
+			DWORD free_clusters;
+			DWORD free_bytes = 0;	/* fallback default size */
+			if (f_getfree("0:/", &free_clusters, &fs) == FR_OK) {
+				// assuming 512 bytes/sector ==> * 512 ==> << 9
+				free_bytes = (free_clusters * fs->csize) << 9;
+			}
+			p[FS_DIR_LEN] = free_bytes & 255;
+			p[FS_DIR_LEN+1] = (free_bytes >> 8) & 255;
+			p[FS_DIR_LEN+2] = (free_bytes >> 16) & 255;
+			p[FS_DIR_LEN+3] = (free_bytes >> 24) & 255;
+			p[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
+			p[FS_DIR_NAME] = 0;
+			tbl[tblpos].dir_state = DIR_INACTIVE;
+			tbl[tblpos].chan = AVAILABLE;
+			packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
 			packet->type = FS_EOF;
-			return FS_DIR_NAME + 1;
+			return 0;
 	}
 }
 
