@@ -25,6 +25,12 @@
 
 ****************************************************************************/
 
+/* TODO:
+ * - dirmask for fs_read_dir
+ * - FS_RENAME
+ * - FS_DELETE
+ * - FS_CLOSE
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +57,14 @@
 
 /* ----- Glue to firmware -------------------------------------------------------------------- */
 
+static void *prov_assign(const char *name);
+static void prov_free(void *epdata);
+static void fat_submit(void *epdata, packet_t *buf);
+static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*callback)(int8_t channelno, int8_t errnum));
+static int8_t directory_converter(packet_t *p, uint8_t drive);
+static int8_t to_provider(packet_t *p);
+
 provider_t fat_provider  = {
 	prov_assign,
 	prov_free,
@@ -64,15 +78,18 @@ provider_t fat_provider  = {
 
 static FATFS Fatfs[_VOLUMES];	/* File system object for each logical drive */
 
+#define AVAILABLE -1
+enum enum_dir_state { DIR_INACTIVE, DIR_HEAD, DIR_FILES, DIR_FOOTER };
 struct {
-	int8_t chan;
-	int8_t dir_state;
-	FIL f;
+	int8_t chan;		// entry used by channel # or AVAILABLE
+	int8_t dir_state;	// DIR_INACTIVE for files or DIR_* when reading directories
+	FIL f;			// file data
 } tbl[FAT_MAX_FILES];
 
-
-#define FAT_MAX_ASSIGNS 2	/* Each ASSIGN keeps its own directory */
-uint8_t no_of_assigns = 0;	/* Number of assigns */
+#ifndef FAT_MAX_ASSIGNS
+#	define FAT_MAX_ASSIGNS 2	/* Each drive has a current directory */
+#endif
+uint8_t no_of_assigns = 0;		/* Number of assigns/drives */
 
 // TODO: fix directory stuff for multiple assigns
 static DIR dir;
@@ -83,6 +100,14 @@ static FILINFO Finfo;
 #if _USE_LFN
 	static char Lfname[_MAX_LFN+1];
 #endif
+
+/* ----- Prototypes -------------------------------------------------------------------------- */
+
+// helper functions
+static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
+
+// debug functions
+static void dump_packet(packet_t *p);
 
 /* ----- File / Channel table ---------------------------------------------------------------- */
 
@@ -174,8 +199,6 @@ static void *prov_assign(const char *name) {
 
 	tbl_init();			// TODO: move this to fat_provider_init();
 
-	show_root_directory();		/* Show directory to proof SD card's alive */
-
 	return NULL;
 }
 
@@ -219,6 +242,19 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			packet_write_char(rxbuf, res);
 			break;
 
+		case FS_MKDIR:
+			debug_printf("MKDIR '%s'\n", path);
+			res = f_mkdir(path);
+			packet_write_char(rxbuf, res);
+			break;
+
+		case FS_RMDIR:
+			// will unlink files as well. Should I test first, if "path" is really a directory?
+			debug_printf("RMDIR '%s'\n", path);
+			res = f_unlink(path);
+			packet_write_char(rxbuf, res);
+			break;
+
 		case FS_OPEN_RD:
 			/* open file for reading (only) */
 			fp = tbl_ins_file(channelno);
@@ -259,7 +295,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			break;
 
 		case FS_OPEN_OW:
-			/* open file for write only, overwriting */
+			/* open file for write only, overwriting. If the file exists it is truncated
+			 * and writing starts at the beginning. If it does not exist, create the file */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
 				res = f_open(fp, path, FA_WRITE | FA_CREATE_ALWAYS);
@@ -272,7 +309,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			break;
 
 		case FS_OPEN_AP:
-			/* open file for appending data to it */
+			/* open an existing file for appending data to it. Returns an error if it
+			 * does not exist */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
 				res = f_open(fp, path, FA_WRITE | FA_OPEN_EXISTING);
@@ -329,8 +367,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				if(transferred < rxbuf->len) rxbuf->type = FS_EOF;
 				else rxbuf->type = FS_WRITE;
 				if(res) rxbuf->type = FS_EOF;
-				// debug_puts("FS_READ delivers: "); debug_putcrlf(); dump_packet(rxbuf);
-				// TODO: add FS_REPLY some day
+				// TODO: add FS_REPLY when allowed (not yet)
 			}
 			break;
 
@@ -355,9 +392,15 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 			break;
 
+		case FS_FORMAT:
+		case FS_CHKDSK:
+			debug_printf("Command %d unsupported", txbuf->type);
+			packet_write_char(rxbuf, ERROR_SYNTAX_INVAL);
+			break;
+
 		default:
 			debug_puts("### UNKNOWN CMD ###"); debug_putcrlf();
-			fat_submit_dump(channelno, txbuf, rxbuf);
+			dump_packet(txbuf);
 			break;
 	}
 	callback(channelno, res);
@@ -512,77 +555,10 @@ static void dump_packet(packet_t *p)
 	debug_puts("--- end of dump ---"); debug_putcrlf();
 }
 
-static void fat_submit_dump(int8_t channelno, packet_t *txbuf, packet_t *rxbuf)
-{
-	debug_puts("*** FAT_SUBMIT_CALL ***"); debug_putcrlf();
-	debug_printf("chan: %d\n", channelno);
-	debug_puts("--- txbuf ---\n"); dump_packet(txbuf);
-	debug_puts("--- rxbuf ---\n"); dump_packet(rxbuf);
-}
-
-static void show_root_directory(void) {
-	/* Show directory to proof SD card's alive */
-	UINT s1, s2;
-	FRESULT res;
-	char *size_unit_char = "KM";
-
-#	ifdef _USE_LFN
-		Finfo.lfname = Lfname;
-		Finfo.lfsize = sizeof Lfname;
-#	endif
-	DWORD free_clusters;
-	uint32_t free_kb, tot_kb;
-	uint8_t free_size_unit, tot_size_unit;
-
-	res = f_opendir(&dir, "/");
-	if (res) {
-		debug_printf("f_opendir failed, res:%d\n", res);
-	} else {
-		s1 = s2 = 0;
-		for(;;) {
-			res = f_readdir(&dir, &Finfo);
-			if ((res != FR_OK) || !Finfo.fname[0]) break;
-			if (Finfo.fattrib & AM_DIR) {
-				s2++;
-			} else {
-				s1++;
-			}
-			debug_printf("%c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  %s",
-				(Finfo.fattrib & AM_DIR) ? 'D' : '-',
-				(Finfo.fattrib & AM_RDO) ? 'R' : '-',
-				(Finfo.fattrib & AM_HID) ? 'H' : '-',
-				(Finfo.fattrib & AM_SYS) ? 'S' : '-',
-				(Finfo.fattrib & AM_ARC) ? 'A' : '-',
-				(Finfo.fdate >> 9) + 1980, (Finfo.fdate >> 5) & 15, Finfo.fdate & 31,
-				(Finfo.ftime >> 11), (Finfo.ftime >> 5) & 63,
-				Finfo.fsize, &(Finfo.fname[0]));
-#			if _USE_LFN
-				for (uint8_t i = strlen(Finfo.fname); i < 14; i++) debug_putc(' ');
-				debug_printf("%s\n", Lfname);
-#			else
-				debug_putcrlf();
-#			endif
-		}
-		debug_printf("%4u File(s),%4u Dir(s)", s1, s2);
-		FATFS *fs = &Fatfs[0];
-		if (f_getfree("0:/", &free_clusters, &fs) == FR_OK) {
-			tot_kb = ((fs->n_fatent - 2) * fs->csize ) / 2;
-			tot_size_unit = 0;
-			if(tot_kb > 1024) { tot_kb /= 1024; tot_size_unit++; }
-
-			free_kb = (free_clusters * fs->csize) / 2;
-			free_size_unit = 0;
-			if(free_kb > 1024) { free_kb /= 1024; free_size_unit++; }
-
-			debug_printf(", %lu %cB / %lu %cB free\n", free_kb, size_unit_char[free_size_unit],
-					tot_kb, size_unit_char[tot_size_unit]);
-		}
-	}
-}
-
 /*****************************************************************************
  * conversion routines between wire format and packet format
  * shameless copied from serial.c
+ * TODO: don't waste flash space, let serial.c and fat_provider.c share these routines
  */
 
 /*
@@ -615,8 +591,6 @@ static uint8_t out[64];
 static int8_t directory_converter(packet_t *p, uint8_t drive) {
 	uint8_t *inp = NULL;
 	uint8_t *outp = &(out[0]);
-
-	debug_puts("directory_converter"); debug_putcrlf();
 
 	if (p == NULL) {
 		debug_puts("P IS NULL!");
