@@ -209,6 +209,7 @@ FS_OPEN_DR
 	
 FS_CLOSE
 	This closes a channel - TODO: currently not used, but probably should
+	Note that channels are also closed on receiving an FS_EOF packet.
 
 
 Read and Write
@@ -235,34 +236,129 @@ FS_EOF
 	further data available on this channel.
 	It tries to obeys the Commodore semantics, in that it always should have a valid data
 	byte with it.
+	Receiving an FS_EOF automatically closes the channel.
 
 
 File operations
 ---------------
 
+All file operations have the CBM command file name parameter as payload parameter. 
+The command parameter not always just gives a file name, but a search pattern in FS_DELETE
+for example, or a "NEW FILE=OLD FILE" rename parameter. The parameter is zero-terminated.
+File operation parameters are converted to ASCII before being sent over the wire, so
+the parameters are in ASCII. The exception is the very first payload byte, as it is 
+the drive number (in binary).
+
+All comamnds receive an FS_REPLY on the result, with the single payload byte being the 
+return error code. The FS_DELETE has two bytes in the FS_REPLY packet - one is the error
+code, the second one is the number of deleted files.
+
+
 FS_RENAME
+	The payload for this command is the CBM "rename" string, which is 
+
+		<new name> = <old name>
+
+	The file is renamed. No wildcards are allowed.
+
 FS_DELETE
-FS_FORMAT
-FS_CHKDSK
-FS_RMDIR
+	The payload is a delete pattern like the CBM file name pattern.
+	All of the matching files are deleted.
+	TODO: if there is a path separator allowed, the matching will most likely not work
+
 FS_MKDIR
+	Create a subdirectory
+
 FS_CHDIR
+	Change into a directory entry
+
+FS_RMDIR
+	Remove a directory
+
+FS_FORMAT
+	unused
+
+FS_CHKDSK
+	unused
 
 
 Administrative commands
 -----------------------
 
 FS_ASSIGN
-FS_SETOPT
+	This command assigns a provider endpoint to a drive number. The payload contains the
+	assign parameter, which is separated into the parsed drive number in the first byte, 
+	and the rest of the parameter directly afterwards.
+	It is replied to with an FS_REPLY packet.
+
 FS_RESET
+FS_SETOPT
+	The FS_RESET packet is sent by the firmware after the firmware reset, to notify the 
+	server about the reset. The FS_RESET packet is the only one that has no one-to-one 
+	relationship to its reply.
+	The server replies with FS_SETOPT packets when appropriate. Here zero, one, or more
+	packets can be sent without further FS_RESET.
+
+	The FS_SETOPT is sent by the server to execute X-commands on the firmware. X-commands
+	are "extension" commands that can be used on the device's command channel 15.
+	With the FS_SETOPT packet these can be executed from the server as well.
+	As X-commands are bus-specific, the bus name is prepended to th command.
+	The most useful command is thus: iec:U=9 to set the unit number of the device on the
+	IEC bus to 9. This is initiated on the server by a "-Xiec:U=9" command line parameter.
+
+	FS_SETOPT packets can be sent any time. This is especially working when the server
+	is restarted and the X-command line parameter has to be sent to the device.
+
+	Note that this created a reentry problem once, but blocks further receive during
+	command execution - this may be important on later extensions.
+
 
 
 Direct access
 -------------
 
 FS_BLOCK
+	This command is used on direct block channels. These are opened with a filename starting
+	with a '#' character. Those channels are also always read-write. 
+	The FS_BLOCK command allows to send the CBM U1/U2/B-R/B-W/B-P commands to the server, to
+	position the read or write pointer appropriately.
+
+	Before this command is sent, all pending FS_WRITE requests are processed and all FS_READ
+	requests or yet unread data is discarded for the specified channel.
+ 
+	The payload of the FS_BLOCK command is four bytes for U1/U2/B-R/B-W:
+
+	0:	command type to distinguish U1/U2/B-R/B-W/B-P
+	1:	drive number
+	2:	track
+	3:	sector
+
+	All numbers are binary. The channel number (in the packet header) is the one for which 
+	the command should be effective.
+
+	For B-P the parameters are different:
+
+	- to be defined - 
+
+FS_SEEK
+	This command seeks the file position for read, append, overwrite, write, or read/write files.
 	
+	Before this command is sent, all pending FS_WRITE requests are processed and all FS_READ
+	requests or yet unread data is discarded for the specified channel.
 	
+	For reading: seeking behind the file position will result in an FS_EOF on a read request.
+	
+	For writing: seeking backward (to the beginning of the file) changes the file to overwrite.
+	Seeking behind the file position fills the space in between with zeros (note this may be
+	implemented with sparse files). 
+
+	The command has only one parameter: the new file position in four bytes, low byte first.
+
+	The request is answered with an FS_REPLY packet.
+
+	NOTE: not yet implemented. Will be at least for relative files, or maybe all files.
+
+ 
 Examples
 ========
 
