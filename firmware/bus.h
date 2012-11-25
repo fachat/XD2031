@@ -39,6 +39,9 @@
 // these are the runtime variables for a bus end point like
 // the IEEE488 or the serial IEC bus.
 typedef struct {
+	// status
+	uint8_t		active;		// only used when >0
+
 	// configuration
 
 	uint8_t		secaddr_offset;	// offset to use on secondary address to get channel no
