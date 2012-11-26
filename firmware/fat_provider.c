@@ -27,9 +27,7 @@
 
 /* TODO:
  * - dirmask for fs_read_dir
- * - FS_RENAME
  * - FS_DELETE
- * - FS_CLOSE
  */
 
 #include <stdio.h>
@@ -105,6 +103,7 @@ static FILINFO Finfo;
 
 // helper functions
 static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
+static int8_t fs_rename(char *buf);
 
 // debug functions
 static void dump_packet(packet_t *p);
@@ -176,15 +175,13 @@ static FIL *tbl_find_file(uint8_t chan) {
 
 static FRESULT tbl_close_file(uint8_t chan) {
 	uint8_t pos;
+	FRESULT res = ERROR_OK;
 
-	if((pos = tbl_chpos(chan)) < 0) {
-		debug_printf("tbl_close_file: #%d not found!", chan); debug_putcrlf();
-		return ERROR_FAULT;
+	if((pos = tbl_chpos(chan)) != AVAILABLE) {
+		FRESULT res = f_close(&tbl[pos].f);
+		debug_printf("f_close (#%d @%d): %d", chan, pos, res); debug_putcrlf();
+		tbl[pos].chan = AVAILABLE;
 	}
-
-	FRESULT res = f_close(&tbl[pos].f);
-	debug_printf("f_close (#%d @%d): %d", chan, pos, res); debug_putcrlf();
-	tbl[pos].chan = AVAILABLE;
 	return res;
 }
 
@@ -347,6 +344,18 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			}
 			debug_printf("f_opendir: %d", res); debug_putcrlf();
 			packet_write_char(rxbuf, res);
+			break;
+
+		case FS_CLOSE:
+			/* close a file, ignored when not opened first */
+			debug_printf("FS_CLOSE #%d", channelno); debug_putcrlf();
+			packet_write_char(rxbuf, res);
+			break;
+
+		case FS_RENAME:
+			/* rename / move a file */
+			dump_packet(txbuf);
+			packet_write_char(rxbuf, fs_rename(path));
 			break;
 
 		case (uint8_t) (FS_READ & 0xFF):
@@ -512,6 +521,33 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			packet->type = FS_EOF;
 			return 0;
 	}
+}
+
+/* ----- Rename a file or directory ---------------------------------------------------------- */
+
+static int8_t fs_rename(char *buf) {
+	/* Rename/move a file or directory
+	 * DO NOT RENAME/MOVE OPEN OBJECTS!
+	 */
+	int8_t er = ERROR_FAULT;
+	uint8_t p = 0;
+	char *from, *to;
+	FILINFO fileinfo;
+
+	// first find the two names separated by "="
+	while (buf[p] != 0 && buf[p] != '=') p++;
+	if (!buf[p]) return ERROR_SYNTAX_NONAME;
+
+	buf[p] = 0;
+	from = buf + p + 1;
+	to = buf;
+
+	debug_printf("FS_RENAME '%s' to '%s'", from, to); debug_putcrlf();
+
+	if((er = f_stat(to, &fileinfo)) == ERROR_OK) return ERROR_FILE_EXISTS;
+	if(er != FR_NO_FILE) return er;
+
+	return f_rename(from, to);
 }
 
 /* ----- Debug routines ---------------------------------------------------------------------- */
