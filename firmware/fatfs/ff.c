@@ -103,7 +103,7 @@
 
 #if _FS_READONLY
 # define get_fattime() 0
-#else 
+#else
 #include "rtc/rtc.h"    /* RTC only needed for write access / time stamps */
 
 DWORD get_fattime (void)
@@ -981,7 +981,7 @@ FRESULT remove_chain (
 #if _USE_ERASE
             if (ecl + 1 == nxt) {   /* Is next cluster contiguous? */
                 ecl = nxt;
-            } else {                /* End of contiguous clusters */ 
+            } else {                /* End of contiguous clusters */
                 rt[0] = clust2sect(fs, scl);                    /* Start sector */
                 rt[1] = clust2sect(fs, ecl) + fs->csize - 1;    /* End sector */
                 disk_ioctl(fs->drv, CTRL_ERASE_SECTOR, rt);     /* Erase the block */
@@ -2732,7 +2732,7 @@ FRESULT f_close (
         FATFS *fs = fp->fs;;
         res = validate(fp);
         if (res == FR_OK) {
-            res = dec_lock(fp->lockid); 
+            res = dec_lock(fp->lockid);
             unlock_fs(fs, FR_OK);
         }
 #else
@@ -2831,7 +2831,7 @@ FRESULT f_getcwd (
                 res = dir_read(&dj);
                 if (res != FR_OK) break;
                 if (ccl == ld_clust(dj.fs, dj.dir)) break;  /* Found the entry */
-                res = dir_next(&dj, 0); 
+                res = dir_next(&dj, 0);
             } while (res == FR_OK);
             if (res == FR_NO_FILE) res = FR_INT_ERR;/* It cannot be 'not found'. */
             if (res != FR_OK) break;
