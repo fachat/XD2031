@@ -736,19 +736,31 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 
 	// canonicalize it
 	char *newreal = os_realpath(newpath);
-	// free buffer so we don't forget it
-	mem_free(newpath);
-
 	if (newreal == NULL) {
 		// target does not exist
+		log_error("Unable to change dir to '%s'\n", newpath);
 		return ERROR_FILE_NOT_FOUND;
 	}
+
+	// free buffer so we don't forget it
+	mem_free(newpath);
 
 	// check if the new path is still under the base path
 	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
 		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
+	}
+
+	// check if the new path really is a directory
+	struct stat path;
+	if(stat(newreal, &path) < 0) {
+		log_error("Could not stat '%s'\n", newreal);
+		return ERROR_DIR_ERROR;
+	}
+	if(!S_ISDIR(path.st_mode)) {
+		log_error("CHDIR: '%s' is not a directory\n", newreal);
+		return ERROR_DIR_ERROR;
 	}
 
 	mem_free(fsep->curpath);
