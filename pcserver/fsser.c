@@ -49,6 +49,7 @@
 #include <fnmatch.h>
 #include <string.h>
 #include <pwd.h>
+#include <unistd.h>
 
 #include "fscmd.h"
 #include "privs.h"
@@ -299,11 +300,16 @@ int main(int argc, char *argv[]) {
 		provider_assign(7, "http:www.zimmers.net/anonftp/pub/cbm/");
 	} else cmd_assign_from_cmdline(argc, argv);
 
-	cmd_loop(readfd, writefd);
+	int res = cmd_loop(readfd, writefd);
 
 	if (device != NULL) {
 		close(fdesc);
 	}
+
+	if(res) {
+		// could try to restart to open the device again
+	}	
+
 	return 0;	
 }
 

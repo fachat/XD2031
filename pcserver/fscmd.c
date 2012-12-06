@@ -230,8 +230,12 @@ static void cmd_sendxcmd(int writefd, char buf[]) {
  * Here the data is read from the given readfd, put into a packet buffer,
  * then given to do_cmd() for the actual execution, and the reply is 
  * again packeted and written to the writefd
+ *
+ * returns
+ *   1 if read fails (errno gives more information)
+ *   0 if other strange things happened
  */
-void cmd_loop(int readfd, int writefd) {
+int cmd_loop(int readfd, int writefd) {
 
         char buf[8192];
         int wrp,rdp,plen, cmd;
@@ -245,15 +249,17 @@ void cmd_loop(int readfd, int writefd) {
         /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
 
-        while((n=read(readfd, buf+wrp, 8192-wrp))!=0) {
+        for(;;) {
+	      n = read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
 	      printf("read %d bytes: ",n);
 	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
 #endif
 
-              if(n<0) {
-                fprintf(stderr,"fstcp: read error %d (%s)\n",errno,strerror(errno));
-                break;
+              if(n <= 0) {
+                fprintf(stderr,"fsser: read error %d (%s)\n",errno,strerror(errno));
+		fprintf(stderr,"Did you power off your device?\n");
+                return 1;
               }
               wrp+=n;
               if(rdp && (wrp==8192 || rdp==wrp)) {
@@ -284,7 +290,8 @@ void cmd_loop(int readfd, int writefd) {
                   do_cmd(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
-                  break;
+		  fprintf(stderr, "fsser: internal error (cmd_loop)");
+                  return 0; 
                 }
               }
             }
