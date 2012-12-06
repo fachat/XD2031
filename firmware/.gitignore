@@ -1,3 +1,6 @@
 *.o
 .svn
 bin/
+.project
+.cproject
+.settings
