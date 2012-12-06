@@ -317,7 +317,7 @@ static int path_under_base(const char *path, const char *base) {
 		res = -3;
 		goto exit;
 	}
-	strcat(base_dirc, dir_separator_string());
+	strcat(base_dirc, "/");
 
 	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
@@ -331,7 +331,7 @@ static int path_under_base(const char *path, const char *base) {
 	}
 	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
 	if(!path_realpathc) return -3;
-	strcat(path_realpathc, dir_separator_string());
+	strcat(path_realpathc, "/");
 
 	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
 	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
