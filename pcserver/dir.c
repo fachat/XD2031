@@ -45,10 +45,10 @@
 #define min(a,b)        (((a)<(b))?(a):(b))
 
 
-/** 
+/**
  * check a path, making sure it's something readable, not a directory
  */
-static int path_is_file(const char *name) {
+int path_is_file(const char *name) {
 	struct stat sbuf;
 	int isfile = 1;
 
@@ -56,7 +56,7 @@ static int path_is_file(const char *name) {
 
 	if (lstat(name, &sbuf) < 0) {
 		log_errno("Error stat'ing file");
-		// note we still return 1, as open may succeed - e.g. for save where the 
+		// note we still return 1, as open may succeed - e.g. for save where the
 		// file does not exist in the first place
 	} else {
 		if (S_ISDIR(sbuf.st_mode)) {
@@ -67,10 +67,10 @@ static int path_is_file(const char *name) {
 	return isfile;
 }
 
-/** 
+/**
  * check a path, making sure it's a directory
  */
-static int path_is_dir(const char *name) {
+int path_is_dir(const char *name) {
 	struct stat sbuf;
 	int isfile = 1;
 
@@ -93,7 +93,7 @@ static int path_is_dir(const char *name) {
  * using the Commodore file search pattern matching algorithm.
  * Returns a malloc'd pathname, which has to be freed
  */
-static char *find_first_match(const char *dir, const char *pattern, int (*check)(const char *name)) {
+char *find_first_match(const char *dir, const char *pattern, int (*check)(const char *name)) {
 	DIR *dp;
 	struct dirent *de;
 
@@ -127,7 +127,7 @@ static char *find_first_match(const char *dir, const char *pattern, int (*check)
 			}
 			de = readdir(dp);
 		}
-		
+
 		closedir(dp);
 	}
 	return NULL;
@@ -196,7 +196,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
 			}
 			de = readdir(dp);
 		}
-		
+
 	}
 	closedir(dp);
 	return matches;
@@ -248,7 +248,7 @@ struct dirent* dir_next(DIR *dp, char *dirpattern) {
 				return de;
 			}
 			de = readdir(dp);
-		}		
+		}
 	}
 
 	return de;
