@@ -290,8 +290,7 @@ int cmd_loop(int readfd, int writefd) {
                   do_cmd(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
-		  fprintf(stderr, "fsser: internal error (cmd_loop)");
-                  return 0; 
+		  break;
                 }
               }
             }
