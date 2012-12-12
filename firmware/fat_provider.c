@@ -26,8 +26,8 @@
 ****************************************************************************/
 
 /* TODO:
- * - dirmask for fs_read_dir
  * - FS_DELETE
+ * - directory listing aborts sometimes. Why?
  */
 
 #include <stdio.h>
@@ -46,9 +46,8 @@
 #include "fatfs/ff.h"
 #include "sdcard.h"
 #include "petscii.h"
-
-#define FAT_PROVIDER_C
 #include "fat_provider.h"
+#include "dir.h"
 
 
 #define  DEBUG_FAT
@@ -93,11 +92,8 @@ uint8_t no_of_assigns = 0;		/* Number of assigns/drives */
 static DIR dir;
 static uint8_t dir_drive;
 static char dir_mask[_MAX_LFN+1];
+static char dir_headline[_MAX_LFN+1];
 static FILINFO Finfo;
-
-#if _USE_LFN
-	static char Lfname[_MAX_LFN+1];
-#endif
 
 /* ----- Prototypes -------------------------------------------------------------------------- */
 
@@ -325,18 +321,35 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		case FS_OPEN_DR:
 			/* open a directory for reading */
 			debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
+			char *b, *d;
 			if (txbuf->len > 1) {
 				debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
-				strncpy(dir_mask, path, _MAX_LFN);
-				dir_mask[_MAX_LFN] = 0;
-				res = f_opendir(&dir, path);
+				// If path is a directory, list its contents
+				if(f_stat(path, &Finfo) == FR_OK) {
+					if(Finfo.fattrib & AM_DIR) {
+						debug_printf("'%s' is a directory\n", path);
+						res = f_opendir(&dir, path);
+						b = splitpath(path, &d);
+						strcpy(dir_headline, b);
+						strcpy(dir_mask, "*");
+					}
+				} else {
+					b = splitpath(path, &d);
+					strcpy(dir_headline, b);
+					debug_printf("DIR: %s NAME: %s\n", d, b);
+					res = f_opendir(&dir, d);
+					strncpy(dir_mask, b, _MAX_LFN);
+					dir_mask[_MAX_LFN] = 0;
+				}
 			} else {
 				debug_puts("no dirmask\n");
-				dir_mask[0] = 0;
+				strcpy(dir_mask, "*");
+				f_getcwd(dir_headline, sizeof(dir_headline));
+				// Remove drive string "0:"
+				memmove(dir_headline, dir_headline + 2, sizeof(dir_headline) - 2);
 				res = f_opendir(&dir, ".");
 			}
 
-			// TODO: split dirname / filename
 			dir_drive = txbuf->buffer[0];
 			if(tbl_ins_dir(channelno)) {
 				res = ERROR_NO_CHANNEL;
@@ -440,8 +453,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			p[FS_DIR_LEN+3] = 0;
 			// TODO: add date
 			p[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
-			// TODO: add dir pattern
-			strncpy(p+FS_DIR_NAME, ".               ", 16);
+			strncpy(p+FS_DIR_NAME, dir_headline, 16);
 			p[FS_DIR_NAME + 16] = 0;
 
 			tbl[tblpos].dir_state = DIR_FILES;
@@ -451,52 +463,60 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 		case DIR_FILES:
 			/* Files and directories */
 			debug_puts("fs_read_dir/DIR_FILES"); debug_putcrlf();
-			res = f_readdir(&dir, &Finfo);
-			if ((res == FR_OK) && Finfo.fname[0]) {
-				// TODO: skip or skip not hidden files
-				debug_printf("%c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  '%s'",
-						(Finfo.fattrib & AM_DIR) ? 'D' : '-',
-						(Finfo.fattrib & AM_RDO) ? 'R' : '-',
-						(Finfo.fattrib & AM_HID) ? 'H' : '-',
-						(Finfo.fattrib & AM_SYS) ? 'S' : '-',
-						(Finfo.fattrib & AM_ARC) ? 'A' : '-',
-						(Finfo.fdate >> 9) + 1980, (Finfo.fdate >> 5) & 15, Finfo.fdate & 31,
-						(Finfo.ftime >> 11), (Finfo.ftime >> 5) & 63,
-						Finfo.fsize, &(Finfo.fname[0]));
+			for(;;) {
+				res = f_readdir(&dir, &Finfo);
+				if(res != FR_OK || !Finfo.fname[0]) {
+					tbl[tblpos].dir_state = DIR_FOOTER;
+					return 0;
+				}
+				char *filename;
+				filename = Finfo.fname;
 #				if _USE_LFN
-					for (uint8_t i = strlen(Finfo.fname); i < 14; i++) debug_putc(' ');
-					debug_printf("'%s'", Lfname);
+					if(Lfname[0]) filename = Lfname;
 #				endif
-				debug_putcrlf();
-
-				p[FS_DIR_LEN] = Finfo.fsize & 255;
-				p[FS_DIR_LEN+1] = (Finfo.fsize >> 8) & 255;
-				p[FS_DIR_LEN+2] = (Finfo.fsize >> 16) & 255;
-				p[FS_DIR_LEN+3] = (Finfo.fsize >> 24) & 255;
-
-				p[FS_DIR_YEAR] = (Finfo.fdate >> 9) + 80;
-				p[FS_DIR_MONTH] = (Finfo.fdate >> 5) & 15;
-				p[FS_DIR_DAY] = Finfo.fdate & 31;
-				p[FS_DIR_HOUR] = Finfo.ftime >> 11;
-				p[FS_DIR_MIN] = (Finfo.ftime >> 5) & 63;
-
-				p[FS_DIR_MODE] = Finfo.fattrib & AM_DIR ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
-
-#				ifdef _USE_LFN
-					if((strlen(Lfname) > 16 ) || (!Lfname[0])) {
-						// no LFN or too long LFN ==> use short name
-						strcpy(p + FS_DIR_NAME, Finfo.fname);
-					} else strcpy(p + FS_DIR_NAME, Lfname);
-#				else
-					strcpy(p + FS_DIR_NAME, Finfo.fname);
-#				endif
-
-				packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
-				return 0;
-			} else {
-				tbl[tblpos].dir_state = DIR_FOOTER;
-				return 0;
+				if(compare_pattern(filename, dir_mask)) break;
 			}
+
+			// TODO: skip or skip not hidden files
+			debug_printf("%c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  '%s'",
+					(Finfo.fattrib & AM_DIR) ? 'D' : '-',
+					(Finfo.fattrib & AM_RDO) ? 'R' : '-',
+					(Finfo.fattrib & AM_HID) ? 'H' : '-',
+					(Finfo.fattrib & AM_SYS) ? 'S' : '-',
+					(Finfo.fattrib & AM_ARC) ? 'A' : '-',
+					(Finfo.fdate >> 9) + 1980, (Finfo.fdate >> 5) & 15, Finfo.fdate & 31,
+					(Finfo.ftime >> 11), (Finfo.ftime >> 5) & 63,
+					Finfo.fsize, &(Finfo.fname[0]));
+#			if _USE_LFN
+				for (uint8_t i = strlen(Finfo.fname); i < 14; i++) debug_putc(' ');
+				debug_printf("'%s'", Lfname);
+#			endif
+			debug_putcrlf();
+
+			p[FS_DIR_LEN] = Finfo.fsize & 255;
+			p[FS_DIR_LEN+1] = (Finfo.fsize >> 8) & 255;
+			p[FS_DIR_LEN+2] = (Finfo.fsize >> 16) & 255;
+			p[FS_DIR_LEN+3] = (Finfo.fsize >> 24) & 255;
+
+			p[FS_DIR_YEAR] = (Finfo.fdate >> 9) + 80;
+			p[FS_DIR_MONTH] = (Finfo.fdate >> 5) & 15;
+			p[FS_DIR_DAY] = Finfo.fdate & 31;
+			p[FS_DIR_HOUR] = Finfo.ftime >> 11;
+			p[FS_DIR_MIN] = (Finfo.ftime >> 5) & 63;
+
+			p[FS_DIR_MODE] = Finfo.fattrib & AM_DIR ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
+
+#			ifdef _USE_LFN
+				if((strlen(Lfname) > 16 ) || (!Lfname[0])) {
+					// no LFN or too long LFN ==> use short name
+					strcpy(p + FS_DIR_NAME, Finfo.fname);
+				} else strcpy(p + FS_DIR_NAME, Lfname);
+#			else
+				strcpy(p + FS_DIR_NAME, Finfo.fname);
+#			endif
+
+			packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
+			return 0;
 
 		case DIR_FOOTER:
 		default:
@@ -505,9 +525,13 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			FATFS *fs = &Fatfs[0];
 			DWORD free_clusters;
 			DWORD free_bytes = 0;	/* fallback default size */
-			if (f_getfree("0:/", &free_clusters, &fs) == FR_OK) {
+			int8_t res = f_getfree("0:/", &free_clusters, &fs);
+			if(res == FR_OK) {
 				// assuming 512 bytes/sector ==> * 512 ==> << 9
 				free_bytes = (free_clusters * fs->csize) << 9;
+			} else
+			{
+				debug_printf("f_getfree: %d\n", res);
 			}
 			p[FS_DIR_LEN] = free_bytes & 255;
 			p[FS_DIR_LEN+1] = (free_bytes >> 8) & 255;
