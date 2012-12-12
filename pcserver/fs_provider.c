@@ -26,9 +26,9 @@
 
 /*
  * This file is a filesystem provider implementation, to be
- * used with the FSTCP program on an OS/A65 computer. 
+ * used with the FSTCP program on an OS/A65 computer.
  *
- * In this file the actual command work is done for the 
+ * In this file the actual command work is done for the
  * local filesystem.
  */
 
@@ -50,6 +50,7 @@
 #include "provider.h"
 #include "errors.h"
 #include "mem.h"
+#include "wireformat.h"
 
 #include "log.h"
 
@@ -167,7 +168,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	}
 
 	if (parentep != NULL) {
-		// if we have a parent, make sure we do not 
+		// if we have a parent, make sure we do not
 		// escape the parent container, i.e. basepath
 		if (strstr(fsep->basepath, parentep->basepath) != fsep->basepath) {
 			// the parent base path is not at the start of the new base path
@@ -175,7 +176,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 			log_error("ASSIGN broke out of container (%s), was trying %s\n",
 				parentep->basepath, fsep->basepath);
 			fsp_free((endpoint_t*)fsep);
-				
+
 			return NULL;
 		}
 	}
@@ -262,7 +263,7 @@ static File *find_file(endpoint_t *ep, int chan) {
 // helpers
 
 static char *safe_dirname (const char *path) {
-/* a dirname that leaves it's parameter unchanged and doesn't 
+/* a dirname that leaves it's parameter unchanged and doesn't
  * overwrite its result at subsequent calls. Allocates memory
  * that should be free()ed later */
 	char *pathc, *dirname_result, *mem_dirname;
@@ -285,10 +286,10 @@ static char *safe_basename (const char *path) {
 	mem_basename = mem_alloc_str(basename_result);
 	mem_free(pathc);
 	return mem_basename;
-}    
+}
 
 static int path_under_base(const char *path, const char *base) {
-/* 
+/*
  * Return
  * -3 if malloc() failed
  * -2 if realpath(path) failed
@@ -317,7 +318,7 @@ static int path_under_base(const char *path, const char *base) {
 		res = -3;
 		goto exit;
 	}
-	strcat(base_dirc, dir_separator_string());
+	strcat(base_dirc, "/");
 
 	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
@@ -331,7 +332,7 @@ static int path_under_base(const char *path, const char *base) {
 	}
 	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
 	if(!path_realpathc) return -3;
-	strcat(path_realpathc, dir_separator_string());
+	strcat(path_realpathc, "/");
 
 	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
 	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
@@ -344,7 +345,7 @@ exit:
 	mem_free(base_dirc);
 	mem_free(path_realpathc);
 	mem_free(path_dname);
-	return res;  
+	return res;
 }
 
 // ----------------------------------------------------------------------------------
@@ -407,7 +408,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		}
 
 		log_debug("read_block: avail=%d, n=%d\n", avail, n);
-	
+
 		if (n > 0) {
 			memcpy(retbuf, file->block+file->block_ptr, n);
 			file->block_ptr += n;
@@ -416,7 +417,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 	}
 	return -ERROR_FAULT;
 }
-	
+
 // ----------------------------------------------------------------------------------
 // file command handling
 
@@ -431,9 +432,10 @@ static void close_fds(endpoint_t *ep, int tfd) {
 }
 
 // open a file for reading, writing, or appending
-static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	int er = ERROR_FAULT;
 	File *file;
+	enum boolean { FALSE, TRUE };
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -449,9 +451,53 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	char *path     = safe_dirname(fullname);
 	char *filename = safe_basename(fullname);
 
-	FILE *fp = open_first_match(path, filename, mode);	
+	char *options;
+	int file_required = FALSE;
+	int file_must_not_exist = FALSE;
+
+	switch(fs_cmd) {
+		case FS_OPEN_RD:
+			options = "rb";
+			file_required = TRUE;
+			break;
+		case FS_OPEN_WR:
+			options = "wb";
+			file_must_not_exist = TRUE;
+			break;
+		case FS_OPEN_AP:
+			options = "ap";
+			file_required = TRUE;
+			break;
+		case FS_OPEN_OW:
+			options = "wb";
+			break;
+		default:
+			log_error("Internal error: open_file with fs_cmd %d\n", fs_cmd);
+			goto exit;
+	}
+
+	char *name = find_first_match(path, filename, path_is_file);
+	if(!name) {
+		// something with that name exists that isn't a file
+		log_error("Unable to open '%s': not a file\n", filename);
+		er = ERROR_FILE_TYPE_MISMATCH;
+		goto exit;
+	}
+	int file_exists = !access(name, F_OK);
+	if(file_required && !file_exists) {
+		log_error("Unable to open '%s': file not found\n", name);
+		er = ERROR_FILE_NOT_FOUND;
+		goto exit;
+	}
+	if(file_must_not_exist && file_exists) {
+		log_error("Unable to open '%s': file exists\n", name);
+		er = ERROR_FILE_EXISTS;
+		goto exit;
+	}
+
+	FILE *fp = fopen(name, options);
 	if(fp) {
-	
+
 		file = reserve_file(ep, tfd);
 
 		if (file) {
@@ -465,14 +511,15 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 		}
 
 	} else {
-		
+
 		log_errno("Error opening file '%s/%s'", path, filename);
 		er = errno_to_error(errno);
 	}
 
-	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n",mode, filename, filename, (void*)file, (void*)fp);
+	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
 
-	mem_free(path); mem_free(filename);
+exit:
+	mem_free(name); mem_free(path); mem_free(filename);
 	return er;
 }
 
@@ -482,7 +529,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
         File *file = reserve_file(ep, tfd);
-	
+
 	if (file != NULL) {
 
 		// save pattern for later comparisons
@@ -628,7 +675,7 @@ static int _delete_callback(const int num_of_match, const char *name) {
 
 		return -errno_to_error(errno);
 	}
-	return ERROR_OK;	
+	return ERROR_OK;
 }
 
 static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
@@ -646,8 +693,8 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 		if (pnext != NULL) {
 			*pnext = 0;	// write file name terminator (replacing the ',')
 		}
-		
-		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);	
+
+		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);
 		if (rv < 0) {
 			// error happened
 			return -rv;
@@ -655,13 +702,13 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 		matches += rv;
 
 		p = (pnext == NULL) ? NULL : pnext+1;
-	} 
+	}
 	while (p != NULL);
 
 	*outdeleted = matches;
 
 	return ERROR_SCRATCHED;	// FILES SCRATCHED message
-}	
+}
 
 static int fs_rename(endpoint_t *ep, char *buf) {
 
@@ -736,19 +783,31 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 
 	// canonicalize it
 	char *newreal = os_realpath(newpath);
-	// free buffer so we don't forget it
-	mem_free(newpath);
-
 	if (newreal == NULL) {
 		// target does not exist
+		log_error("Unable to change dir to '%s'\n", newpath);
 		return ERROR_FILE_NOT_FOUND;
 	}
+
+	// free buffer so we don't forget it
+	mem_free(newpath);
 
 	// check if the new path is still under the base path
 	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
 		mem_free(newreal);
 		return ERROR_NO_PERMISSION;
+	}
+
+	// check if the new path really is a directory
+	struct stat path;
+	if(stat(newreal, &path) < 0) {
+		log_error("Could not stat '%s'\n", newreal);
+		return ERROR_DIR_ERROR;
+	}
+	if(!S_ISDIR(path.st_mode)) {
+		log_error("CHDIR: '%s' is not a directory\n", newreal);
+		return ERROR_DIR_ERROR;
 	}
 
 	mem_free(fsep->curpath);
@@ -810,7 +869,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// current path is still at the start of new path
 		// so it is not broken out of the container
-		
+
 		int rv = rmdir(newreal);
 
 		if (rv < 0) {
@@ -830,21 +889,21 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 // ----------------------------------------------------------------------------------
 
 static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
-       return open_file(ep, tfd, buf, "rb");
+       return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
 static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
-       return open_file(ep, tfd, buf, "wb");
+       return open_file(ep, tfd, buf, FS_OPEN_WR);
 }
 
 static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
-       return open_file(ep, tfd, buf, "ab");
+       return open_file(ep, tfd, buf, FS_OPEN_AP);
 }
 
 static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 	if (*buf == '#') {
 		// ok, open a direct block channel
-		
+
 		fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 		File *file = reserve_file(ep, tfd);
@@ -869,7 +928,7 @@ static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 
 	File *f = find_file(ep, chan); // ((fs_endpoint_t*)ep)->files;
 #ifdef DEBUG_READ
-	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, block=%p, eof=%d)\n", 
+	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, block=%p, eof=%d)\n",
 		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *eof);
 #endif
 	int rv = 0;
@@ -881,7 +940,7 @@ static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 		// read a file
 		// standard file read
 		rv = read_file(ep, chan, retbuf, len, eof);
-	} else 
+	} else
 	if (f->block != NULL) {
 		// direct channel block buffer read
 		rv = read_block(ep, chan, retbuf, len, eof);

@@ -236,8 +236,15 @@ void ieee_mainloop_iteration(void)
 
 	// only do something on ATN low
 	if (atnishi()) {
+		// if ATN is hi, devices have been switched on
+		bus.active = 1;
 		return;
 	}
+
+        // if bus not active (ATN was low on reset), do nothing
+        if (bus.active == 0) {
+                return;
+        }
 
 	// set receive mode
 	setrx();
@@ -322,6 +329,11 @@ void ieee_init(uint8_t deviceno) {
 
 	// register bus instance
 	bus_init_bus("ieee", &bus);
+
+	// ignore bus when ATN is constantly pulled low, e.g. by switched off devices
+	if (atnishi()) {
+		bus.active = 1;
+	}
 }
 
 #endif // HAS_IEEE

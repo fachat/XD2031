@@ -22,12 +22,16 @@
 
 #include "os.h"
 
-// patch dir separator characters to value suitable for this OS
+/* patch dir separator characters to '/'
+ * fs_provider (Linux / OS X), http and ftp require '/',
+ * Windows and FatFs can cope with '/' as well
+ */
+
 char *patch_dir_separator(char *path) {
 	char *newpath = path;
 
 	while(*path) {
-		if(*path == '/' || *path == '\\') *path = dir_separator_char();
+		if(*path == '\\') *path = '/';
 		path++;
 	}
 

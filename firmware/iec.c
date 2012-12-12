@@ -362,6 +362,13 @@ void iec_mainloop_iteration(void)
 
 	// only do something on ATN low
 	if (satnishi()) {
+		// ATN is high again, so back to using it
+		bus.active = 1;
+		return;
+	}
+
+	// if bus not active (ATN was low on reset), do nothing
+	if (bus.active == 0) {
 		return;
 	}
 
@@ -508,6 +515,11 @@ void iec_init(uint8_t deviceno) {
 
 	// register bus instance
 	bus_init_bus("iec", &bus);
+
+	// ignore bus when it is blocked by ATN=0, e.g. when devices are switched off
+	if (satnishi()) {
+		bus.active = 1;
+	}
 }
 
 #endif // HAS_IEC

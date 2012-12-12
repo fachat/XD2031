@@ -114,6 +114,8 @@ uint8_t get_default_device_address(void) {
 /* Init IEEE bus */
 void bus_init_bus(const char *name, bus_t *bus) {
 
+	bus->active = 0;
+
 	bus->secaddr_offset = secaddr_offset_counter;
 	secaddr_offset_counter += 16;
 
@@ -135,8 +137,11 @@ static volatile bus_t *bus_for_irq;
 
 static void _cmd_callback(int8_t errnum, uint8_t *rxdata) {
     	bus_for_irq->errnum = errnum;
-    	if (errnum == 1) {
+    	if (errnum == ERROR_SCRATCHED) {
+		// files deleted
 		if (rxdata != NULL) {
+			// this is the "number of files deleted" parameter
+			// rxdata[0] is the actual error code
 			bus_for_irq->errparam = rxdata[1];
 		} else {
 			bus_for_irq->errparam = 0;

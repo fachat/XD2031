@@ -193,6 +193,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 	packet_init(&activeslot->txbuf, nameinfo.namelen, nameinfo.name);
 	packet_set_filled(&activeslot->txbuf, channel_no, type, nameinfo.namelen);
 
+	// convert character set, e.g. from petscii to ascii
 	if (provider->to_provider != NULL && provider->to_provider(&activeslot->txbuf) < 0) {
 		// converting the file name to the provider exceeded the buffer space
 		debug_puts("NAME CONVERSION EXCEEDS BUFFER!");

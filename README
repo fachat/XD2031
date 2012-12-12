@@ -17,10 +17,12 @@ For more information see the README files in the subdirectories
 Notes
 -----
 
-- With the XS1541 hardware all hardware attached to the device must be 
-  switched on. This holds for both, IEC and IEEE, i.e. even if you only
-  want to use IEEE, the IEC devices must be switched on. This is due to 
-  them pulling the ATN line low when switched off.
+- With the XS1541 hardware all hardware attached to the device on the bus
+  you want to use must be switched on on reset. I.e. if you want to use the
+  IEEE bus, all IEEE devices must be switched on, the same holds for the IEC
+  bus. You can switch on the devices on the other bus later, but if you switch
+  a device off, the device hangs. This is due to the switched off devices
+  pulling down the ATN line, blocking the XS1541
   
 
 
