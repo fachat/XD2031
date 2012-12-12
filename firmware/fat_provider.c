@@ -29,7 +29,6 @@
  * - directory listing aborts sometimes. Why?
  * - fix directory stuff for multiple assigns
  * - skip or skip not hidden files
- * - fix EOF handling
  * - allow wildcards for OPEN ("LOAD *")
  * - allow wildcards for CD/RM etc.
  */
@@ -399,12 +398,16 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			} else {
 				// Read file
 				fp = tbl_find_file(channelno);
-				// FIXME: EOF handling
 				res = f_read(fp, rxbuf->buffer, rxbuf->len, &transferred);
 				debug_printf("%d/%d bytes read from #%d, res=%d\n", transferred, rxbuf->len, channelno, res);
 				rxbuf->wp = transferred;
-				if(transferred < rxbuf->len) rxbuf->type = FS_EOF;
-				else rxbuf->type = FS_WRITE;
+				if(fp->fptr == fp->fsize) {
+					rxbuf->type = FS_EOF;
+					tbl_close_file(channelno);
+				} else {
+					rxbuf->type = FS_WRITE;
+				}
+
 				if(res) rxbuf->type = FS_EOF;
 				// TODO: add FS_REPLY when allowed (not yet)
 			}
