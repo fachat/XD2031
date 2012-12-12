@@ -103,3 +103,82 @@ char *splitpath(char *path, char **dir) {
 		
 	return (p + 1);
 }
+
+/* concats path and filename
+ * returns ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
+ * otherwise returns ERROR_OK
+ */
+int8_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
+	if((strlen(dir) + 1 + strlen(name)) > pathmax) return ERROR_FILE_NAME_TOO_LONG;
+	strcpy(path, dir);
+	strcat(path, "/");
+	strcat(path, name);
+	return ERROR_OK;
+}
+
+// just a dummy action for debug purposes
+int8_t dummy_action(const char *path) {
+	debug_printf("--> '%s'\n", path);
+	return ERROR_OK;
+}
+
+int8_t traverse(
+	char		*path,			// path string (may contain wildcards and path separators)
+	uint16_t	max_matches,		// abort if this number of matches is reached
+	uint16_t	*matches,		// count number of total matches
+	uint8_t		required_flags,		// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
+	uint8_t		forbidden_flags,	// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
+	int8_t 	(*action)(const char *path)	// function called by each match
+) {
+	uint8_t res;
+	char *b, *d;
+	char *filename;
+        char action_path[_MAX_LFN+1];
+	DIR dir; 
+	FILINFO Finfo;
+#       ifdef _USE_LFN
+                Finfo.lfname = Lfname;
+                Finfo.lfsize = sizeof Lfname;
+#       endif
+ 
+	debug_printf("traverse called with '%s'\n", path);
+	b = splitpath(path, &d);
+	debug_printf("DIR: %s NAME: %s\n", d, b);
+
+	res = f_opendir(&dir, d);
+	if(res) {
+		debug_printf("traverse f_opendir=%d", res); debug_putcrlf();
+		return res;
+	}
+
+	for(;;)
+	{
+		res = f_readdir(&dir, &Finfo);
+		if(res || !Finfo.fname[0]) break;
+
+		filename = Finfo.fname;
+#		ifdef _USE_LFN
+			if(Lfname[0]) filename = Lfname;
+#		endif
+		debug_printf("candidate: '%s'\n", filename);
+
+		if((Finfo.fattrib & required_flags) != required_flags) {
+			debug_puts("required flags missing, ignored\n");
+			continue;
+		}
+
+		if(Finfo.fattrib & forbidden_flags) {
+			debug_puts("flagged with forbidden flags, ignored\n");
+			continue;
+		}
+
+		if(compare_pattern(filename, b)) {
+			res = concat_path_filename(action_path, sizeof(action_path), d, filename);
+			if(res) return res;
+			res = action(action_path);
+			(*matches)++;
+			if(res || (*matches == max_matches)) return res;
+		}
+	}
+	return ERROR_OK;
+}

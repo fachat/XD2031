@@ -26,8 +26,12 @@
 ****************************************************************************/
 
 /* TODO:
- * - FS_DELETE
  * - directory listing aborts sometimes. Why?
+ * - fix directory stuff for multiple assigns
+ * - skip or skip not hidden files
+ * - fix EOF handling
+ * - allow wildcards for OPEN ("LOAD *")
+ * - allow wildcards for CD/RM etc.
  */
 
 #include <stdio.h>
@@ -88,7 +92,6 @@ struct {
 #endif
 uint8_t no_of_assigns = 0;		/* Number of assigns/drives */
 
-// TODO: fix directory stuff for multiple assigns
 static DIR dir;
 static uint8_t dir_drive;
 static char dir_mask[_MAX_LFN+1];
@@ -100,6 +103,7 @@ static FILINFO Finfo;
 // helper functions
 static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
 static int8_t fs_rename(char *buf);
+static void fs_delete(char *path, packet_t *p);
 
 // debug functions
 static void dump_packet(packet_t *p);
@@ -219,9 +223,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 	FIL *fp;
 	int8_t ds;
 	char *path = (char *) (txbuf->buffer + 1);
-
-	debug_puts("fat_submit_call"); debug_putcrlf();
-	// dump_packet(txbuf);
 
 #	ifdef _USE_LFN
 		Finfo.lfname = Lfname;
@@ -367,8 +368,11 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 		case FS_RENAME:
 			/* rename / move a file */
-			dump_packet(txbuf);
 			packet_write_char(rxbuf, fs_rename(path));
+			break;
+
+		case FS_DELETE:
+			fs_delete(path, rxbuf);
 			break;
 
 		case (uint8_t) (FS_READ & 0xFF):
@@ -572,6 +576,46 @@ static int8_t fs_rename(char *buf) {
 	if(er != FR_NO_FILE) return er;
 
 	return f_rename(from, to);
+}
+
+
+/* ----- Delete files ------------------------------------------------------------------------ */
+
+int8_t _scratch(const char *path) {
+	debug_printf("Scratching '%s'\n", path);
+	int8_t res = f_unlink(path);
+	if(res) debug_printf("f_unlink: %d\n", res);
+	return res;
+}
+
+/* Deletes one or more file masks separated by commas
+ * Limits the reported number of scratched files to 99
+ * Returns ERROR_SCRATCHED plus number of scratched files 
+ * Returns only the error but not the number of scratched files in case of any errors
+ */
+static void fs_delete(char *path, packet_t *packet) {
+	int8_t res;
+	uint16_t files_scratched = 0;
+	char *pnext;
+
+	while(path) {
+		pnext = strchr(path, ',');
+		if(pnext) *pnext = 0;
+		debug_printf("Scratching '%s'...\n", path);
+
+		res = traverse(path, 
+			0, 			// don't limit number of files to scratch
+			&files_scratched, 	// counts matches
+			0, 			// no special file attributes required
+			AM_DIR | AM_RDO,	// ignore directories and read-only-files
+			_scratch);
+
+		path = pnext ? pnext + 1 : NULL;
+	}
+
+	packet_write_char(packet, ERROR_SCRATCHED);
+	packet_write_char(packet, (files_scratched > 99) ? 99 : files_scratched);
+
 }
 
 /* ----- Debug routines ---------------------------------------------------------------------- */
