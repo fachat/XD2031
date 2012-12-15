@@ -26,6 +26,7 @@
  * fs_provider (Linux / OS X), http and ftp require the slash.
  * Windows user would prefer the backslash, but Windows can cope with 
  * the forward slash too, the same is true for FatFs.
+ */
 
 char *patch_dir_separator(char *path) {
 	char *newpath = path;
@@ -37,4 +38,5 @@ char *patch_dir_separator(char *path) {
 
 	return newpath;
 }
+
 
