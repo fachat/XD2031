@@ -7,10 +7,10 @@ TOOLSDIR=xd2031/tools
 DROPDIR=xd2031
 
 CC=gcc
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -I../common
 
 COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c telnet_provider.c
-COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h mem.h types.h xcmd.h os.h
+COMMONH=fscmd.h privs.h name.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
