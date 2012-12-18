@@ -497,7 +497,7 @@ static void do_cmd(char *buf, int fd) {
 			}
 		}
 		break;
-	case FS_RENAME:
+	case FS_MOVE:
 		ep = provider_lookup(buf[FSP_DATA]);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;

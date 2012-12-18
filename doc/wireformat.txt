@@ -224,7 +224,7 @@ FS_READ
 	TODO: need to accept FS_REPLY as well, to set error channel appropriately.
 
 FS_WRITE
-	An write command is either sent from the firmware to the server, where it 
+	A write command is either sent from the firmware to the server, where it 
 	expects an FS_REPLY, or from the server to the firmware as reply to an FS_READ
 	command.
 
@@ -254,12 +254,12 @@ return error code. The FS_DELETE has two bytes in the FS_REPLY packet - one is t
 code, the second one is the number of deleted files.
 
 
-FS_RENAME
+FS_MOVE
 	The payload for this command is the CBM "rename" string, which is 
 
 		<new name> = <old name>
 
-	The file is renamed. No wildcards are allowed.
+	The file is renamed. No wildcards are allowed. Paths may be used.
 
 FS_DELETE
 	The payload is a delete pattern like the CBM file name pattern.
@@ -358,7 +358,16 @@ FS_SEEK
 
 	NOTE: not yet implemented. Will be at least for relative files, or maybe all files.
 
- 
+Misc
+----
+
+FS_GETDATIM
+	Request the current date and time information from the server. No payload.
+	Expect an FS_REPLY with a FS_DATE_* struct as payload containing the current
+	date and time on the server. Can be used to adjust the local RTC chip (where
+	applicable)
+
+
 Examples
 ========
 

@@ -162,7 +162,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		uint8_t type = 0;
 		switch(nameinfo.cmd) {
 		case CMD_RENAME:
-			type = FS_RENAME;
+			type = FS_MOVE;
 			break;
 		case CMD_SCRATCH:
 			type = FS_DELETE;
