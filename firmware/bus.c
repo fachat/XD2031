@@ -54,8 +54,8 @@
 
 #include "device.h"
 
-#undef	DEBUG_SERIAL
-#undef	DEBUG_SERIAL_DATA
+#undef	DEBUG_BUS
+#undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
 #define	SECADDR_MASK	0x0f
@@ -178,7 +178,7 @@ static int16_t cmd_handler (bus_t *bus)
     	} else {
       		/* Handle filenames */
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
@@ -199,7 +199,7 @@ static int16_t cmd_handler (bus_t *bus)
 			// TODO this should be reworked more backend (serial) independent
 			main_delay();
 		}
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
 #endif
 		// result of the open
@@ -209,7 +209,7 @@ static int16_t cmd_handler (bus_t *bus)
                 	set_error(&error, bus_for_irq->errnum);
 		}
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 		debug_printf("after open: secaddr=%d\n", secaddr);
 #endif
 
@@ -222,7 +222,7 @@ static int16_t cmd_handler (bus_t *bus)
         	if (bus_for_irq->errnum != 0) {
         	        channel_close(bus_secaddr_adjust(bus, secaddr));
         	} else {
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 			debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
 #endif
                 	// really only does something on read-only channels
@@ -244,7 +244,7 @@ static int16_t cmd_handler (bus_t *bus)
 int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 
     int16_t st = 0;
-#ifdef DEBUG_SERIAL_DATA
+#ifdef DEBUG_BUS_DATA
     debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
 
@@ -297,14 +297,14 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
 		// first fillup the buffers
 		if (channel_preloadp(channel) < 0) {
 			// no data available
 			st |= STAT_RDTIMEOUT;
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
 				channel->channel_no, st);
 #endif
@@ -312,7 +312,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 			*data = channel_current_byte(channel);
 			if (channel_current_is_eof(channel)) {
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 				debug_puts("EOF!\n");
 #endif
 				st |= STAT_EOF;
@@ -333,7 +333,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		}
 	    }
 	}
-#ifdef DEBUG_SERIAL_DATA
+#ifdef DEBUG_BUS_DATA
 	if (!(preload & BUS_PRELOAD)) {
 	        debug_printf("receivebyte: %02x (%c)\n", *data, (isprint(*data) ? *data : '-'));
 	}
@@ -351,7 +351,7 @@ static int16_t bus_prepare(bus_t *bus)
 
     uint8_t device = bus->device & DEVICE_MASK;
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
     debug_printf("***BusCommand %02x %02x\n",
          bus->device, bus->secondary);
 #endif
@@ -487,7 +487,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 	}
     }
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
     debug_printf("BusAttention(%02x)->TrapDevice=%02x, st=%04x\n",
                b, bus->device, st | (bus->device << 8));
     debug_flush();
