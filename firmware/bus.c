@@ -209,6 +209,10 @@ static int16_t cmd_handler (bus_t *bus)
                 	set_error(&error, bus_for_irq->errnum);
 		}
 
+#ifdef DEBUG_SERIAL
+		debug_printf("after open: secaddr=%d\n", secaddr);
+#endif
+
 		// command may (or may not) open channel 15 for callback to the server
 		// so close it here, as this is done separately
 		if (secaddr == CMD_SECADDR) {
@@ -218,6 +222,9 @@ static int16_t cmd_handler (bus_t *bus)
         	if (bus_for_irq->errnum != 0) {
         	        channel_close(bus_secaddr_adjust(bus, secaddr));
         	} else {
+#ifdef DEBUG_SERIAL
+			debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
+#endif
                 	// really only does something on read-only channels
                 	channel_preload(bus_secaddr_adjust(bus, secaddr));
 		}

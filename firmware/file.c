@@ -153,7 +153,10 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
 		nameinfo.drive = rtconf->last_used_drive;
 	}
-	rtconf->last_used_drive = nameinfo.drive;
+	if (nameinfo.drive != NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
+		// only save real drive numbers as last used default
+		rtconf->last_used_drive = nameinfo.drive;
+	}
 
 	// if second name does not have a drive, use drive from first,
 	// but only if it is defined
@@ -182,8 +185,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		}
 	}
 
-
-			
 	// check the validity of the drive (note that in general provider_lookup
 	// returns a default provider - serial-over-USB to the PC, which then 
 	// may do further checks
@@ -230,7 +231,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 	// open channel
 	uint8_t writetype = WTYPE_READONLY;
-	if (type == FS_OPEN_WR || type == FS_OPEN_AP || FS_OPEN_OW) {
+	if (type == FS_OPEN_WR || type == FS_OPEN_AP || type == FS_OPEN_OW) {
 		writetype = WTYPE_WRITEONLY;
 	} else
 	if (type == FS_OPEN_RW) {

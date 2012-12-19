@@ -252,8 +252,12 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 void channel_preload(int8_t chan) {
 	channel_t *channel = channel_find(chan);
 
+	//debug_printf("channel_preload: chan=%d (%p), wtype=%d, pull_state=%d\n", chan, channel, channel->writetype, channel->pull_state);
+
 	if (channel != NULL) {
 		channel_preload_int(channel, 1);	
+	} else {
+		term_printf("DID NOT FIND CHANNEL FOR CHAN=%d\n", chan);
 	}
 }
 
