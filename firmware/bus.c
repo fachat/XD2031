@@ -253,7 +253,9 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
         bus->command.command_buffer[bus->command.command_length++] = data;
       }
     } else {
-      bus->channel = channel_put(bus->channel, data, with_eoi);
+      if (bus->channel != NULL) {
+	bus->channel = channel_put(bus->channel, data, with_eoi);
+      }
       if (bus->channel == NULL) {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
@@ -362,15 +364,15 @@ static int16_t bus_prepare(bus_t *bus)
 
     secaddr = bus->secondary & SECADDR_MASK;
 
-	  if (secaddr != CMD_SECADDR) {
+    if (secaddr != CMD_SECADDR) {
           	/* Open Channel */
 	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 		if (bus->channel == NULL) {
-			debug_puts("Did not find channel!\n");
-			st |= STAT_EOF | STAT_RDTIMEOUT;	// correct code?
+			debug_puts("DID NOT FIND CHANNEL!\n"); debug_flush();
+			st |= STAT_EOF | STAT_RDTIMEOUT | STAT_WRTIMEOUT;	// correct code?
 		}
-	  }
-          if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
+    }
+    if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
 	      	// if we should TALK, prepare the first data byte
 	      	if (!st) {
               		st = bus_receivebyte(bus, &b, BUS_PRELOAD | BUS_SYNC) & 0xbf;   /* any error, except eof */
@@ -380,8 +382,8 @@ static int16_t bus_prepare(bus_t *bus)
 			debug_puts("FILE NOT FOUND\n");
 			bus->device = 0;
 		}
-          }
-	return st;
+    }
+    return st;
 }
 
 static void bus_close(bus_t *bus) {
