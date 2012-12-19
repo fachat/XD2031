@@ -26,10 +26,12 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "log.h"
 #include "provider.h"
 #include "errors.h"
+#include "wireformat.h"
 
 
 // TODO: this is ... awkward
@@ -85,7 +87,7 @@ int provider_assign(int drive, const char *name) {
 	if ((isdigit(name[0])) && (p == 1)) {
 		// we have a drive number
 		int drv = name[0] & 0x0f;
-		parent = provider_lookup(drv);
+		parent = provider_lookup(drv, NULL);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
@@ -184,8 +186,28 @@ void provider_init() {
         //eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
 }
 
-endpoint_t *provider_lookup(int drive) {
+endpoint_t *provider_lookup(int drive, const char *name) {
         int i;
+
+	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		// the drive is not specified by number, but by provider name
+		char *p = strchr(name, ':');
+		if (p == NULL) {
+			log_error("No provider name given for undef'd drive");
+			return NULL;
+		}
+		int l = p-name;
+		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
+			if ((strlen(providers[i].provider->name) == l)
+				&& (strncmp(providers[i].provider->name, name, l) == 0)) {
+				// we got a provider, but no endpoint yet
+
+				log_warn("Found provider '%s', but undef'd drive not yet implemented!", 
+					providers[i].provider->name);
+				return NULL;
+			}
+		}
+	}
 
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                 if (eptable[i].epno == drive) {

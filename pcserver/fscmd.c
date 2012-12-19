@@ -46,7 +46,7 @@
 #include "log.h"
 #include "xcmd.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -370,10 +370,11 @@ static void do_cmd(char *buf, int fd) {
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
-		ep = provider_lookup(buf[FSP_DATA]);
+	case FS_OPEN_OW:
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open_wr(ep, tfd, buf + FSP_DATA + 1);
+			rv = prov->open_wr(ep, tfd, buf + FSP_DATA + 1, cmd == FS_OPEN_OW);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				set_chan(tfd, ep);
@@ -383,7 +384,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_RW:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
@@ -399,7 +400,7 @@ static void do_cmd(char *buf, int fd) {
 		break;
 	case FS_OPEN_DR:
 		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
@@ -415,7 +416,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_RD:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->open_rd(ep, tfd, buf + FSP_DATA + 1);
@@ -428,7 +429,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_AP:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			rv = prov->open_ap(ep, tfd, buf + FSP_DATA + 1);
@@ -481,7 +482,7 @@ static void do_cmd(char *buf, int fd) {
 
 		// command operations
 	case FS_DELETE:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
@@ -498,20 +499,37 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_MOVE:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
-				rv = prov->rename(ep, buf+FSP_DATA+1);
-				if (rv != 0) {
-					log_rv(rv);
+				int driveto = buf[FSP_DATA] & 255;
+				char *nameto = buf+FSP_DATA+1;
+				char *namefrom = strchr(nameto, 0);	// points to null byte
+				int drivefrom = namefrom[1] & 255;	// from drive after null byte
+				namefrom += 2;				// points to name after drive
+
+				if (drivefrom != driveto
+					&& drivefrom != NAMEINFO_UNUSED_DRIVE) {
+					// currently not supported
+					// R <prov>:<name1>=<prov>:<name2>
+					// drivefrom is UNUSED, then same as driveto
+					log_warn("Drive spec combination not supported\n");
+
+					rv = ERROR_DRIVE_NOT_READY;
+				} else {
+					
+					rv = prov->rename(ep, nameto, namefrom);
+					if (rv != 0) {
+						log_rv(rv);
+					}
 				}
 				retbuf[FSP_DATA] = rv;
 			}
 		}
 		break;
 	case FS_CHDIR:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
@@ -524,7 +542,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_MKDIR:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
@@ -537,7 +555,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_RMDIR:
-		ep = provider_lookup(buf[FSP_DATA]);
+		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {

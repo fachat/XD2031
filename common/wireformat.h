@@ -41,6 +41,10 @@
 #define	FSFD_TERM	126	// terminal output from device to server
 #define	FSFD_SETOPT	125	// send options from server to device
 
+// the first byte of the payload is the (binary) drive number, or one of those two
+#define NAMEINFO_UNUSED_DRIVE   0xff    // unspecified like: LOAD"file",8
+#define NAMEINFO_UNDEF_DRIVE    0xfe    // non-numeric drive like: LOAD"ftp:file",8
+
 /** 
  * filesystem commands 
  */

@@ -96,7 +96,7 @@ const char *command_to_name(command_t cmd) {
                 return "?";
                 break;
         case CMD_INITIALIZE:
-                return "INITIALIZE";
+                return "INIT";
                 break;
         case CMD_RENAME:
                 return "RENAME";
@@ -125,7 +125,10 @@ const char *command_to_name(command_t cmd) {
 	case CMD_EXT:
 		return "EXT";
 		break;
-        }
+     	case CMD_OVERWRITE:
+		return "@";
+		break;
+   }
         return "";
 }
 
@@ -144,8 +147,16 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 #ifdef DEBUG_CMD
         debug_printf("CMD=%s\n", nameinfo.cmd == CMD_NONE ? "-" : command_to_name(nameinfo.cmd));
-        debug_printf("DRIVE=%c\n", nameinfo.drive == 0xff ? '-' : nameinfo.drive + 0x30);
-        debug_printf("NAME=%s\n", (char*)nameinfo.name);
+        debug_printf("DRIVE=%c\n", nameinfo.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+                                (nameinfo.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+                                nameinfo.drive + 0x30));
+        debug_printf("NAME='%s' (%d)\n", (nameinfo.name == NULL) ? "" : (char*)nameinfo.name, 
+				nameinfo.namelen);
+        debug_printf("DRIVE2=%c\n", nameinfo.drive2 == NAMEINFO_UNUSED_DRIVE ? '-' :
+                                (nameinfo.drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
+                                nameinfo.drive2 + 0x30));
+        debug_printf("NAME2='%s' (%d)\n", (nameinfo.name2 == NULL) ? "" : (char*)nameinfo.name2,
+				nameinfo.namelen2);
         debug_puts("ACCESS="); debug_putc(isprint(nameinfo.access) ? nameinfo.access : '-'); debug_putcrlf();
         debug_puts("TYPE="); debug_putc(isprint(nameinfo.type) ? nameinfo.type : '-'); debug_putcrlf();
 #endif
@@ -159,31 +170,9 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		|| nameinfo.cmd == CMD_MKDIR
 		|| nameinfo.cmd == CMD_RMDIR) {
 
-		uint8_t type = 0;
-		switch(nameinfo.cmd) {
-		case CMD_RENAME:
-			type = FS_MOVE;
-			break;
-		case CMD_SCRATCH:
-			type = FS_DELETE;
-			break;
-		case CMD_CD:
-			type = FS_CHDIR;
-			break;
-		case CMD_MKDIR:
-			type = FS_MKDIR;
-			break;
-		case CMD_RMDIR:
-			type =FS_RMDIR;
-			break;
-		default:
-			// should not happen, all if() conditions are accounted for
-        	        debug_puts("ILLEGAL COMMAND!\n");
-        	        set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
-			return ERROR_FAULT;
-		}
-
-		return file_submit_call(channel_no, type, errormsg, rtconf, callback);
+		// nameinfo cmd enum definition such that wireformat matches it
+		return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, 
+			errormsg, rtconf, callback);
 	} else
 	if (nameinfo.cmd == CMD_ASSIGN) {
 
@@ -196,7 +185,8 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		// the +1 on the name skips the endpoint number stored in position 0	
 		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
 		
-			return file_submit_call(channel_no, FS_ASSIGN, errormsg, rtconf, callback);
+			return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer,
+				errormsg, rtconf, callback);
 		} else {
 			// need to unlock the caller by calling the callback function
 			callback(ERROR_OK, NULL);

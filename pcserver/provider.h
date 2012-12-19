@@ -54,7 +54,7 @@ typedef struct {
 	// file-related	
 	void		(*close)(endpoint_t *ep, int chan);	// close a channel
         int             (*open_rd)(endpoint_t *ep, int chan, const char *name); // open a file
-        int             (*open_wr)(endpoint_t *ep, int chan, const char *name); // open a file
+        int             (*open_wr)(endpoint_t *ep, int chan, const char *name, const int is_overwrite); // open a file
         int             (*open_ap)(endpoint_t *ep, int chan, const char *name); // open a file
         int             (*open_rw)(endpoint_t *ep, int chan, const char *name); // open a file
 	int		(*opendir)(endpoint_t *ep, int chan, const char *name);	// open a directory for reading
@@ -63,7 +63,7 @@ typedef struct {
 
 	// command channel
 	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete
-	int		(*rename)(endpoint_t *ep, char *name);			// rename a file or dir
+	int		(*rename)(endpoint_t *ep, char *nameto, char *namefrom); // rename a file or dir
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
@@ -76,7 +76,7 @@ struct _endpoint {
 
 int provider_assign(int drive, const char *name);
 
-endpoint_t* provider_lookup(int drive);
+endpoint_t* provider_lookup(int drive, const char *name);
 
 int provider_register(provider_t *provider);
 

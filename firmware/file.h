@@ -44,7 +44,8 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save);
 
 // submit a call to the provider
-uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg, rtconfig_t *rtconf,
+uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *buffer, 
+					errormsg_t *errormsg, rtconfig_t *rtconf,
  			               void (*callback)(int8_t errnum, uint8_t *rxdata)) ;
 
 #endif

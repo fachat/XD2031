@@ -108,7 +108,7 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 			packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
 			packet_set_filled(&cmdpack, cmdinfo.channel, FS_BLOCK, 4);
 
-			endpoint_t *endpoint = provider_lookup(cmdinfo.drive);
+			endpoint_t *endpoint = provider_lookup(cmdinfo.drive, NULL);
 		
 			if (endpoint != NULL) {	
 				cbstat = 0;

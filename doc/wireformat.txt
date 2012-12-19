@@ -244,7 +244,7 @@ File operations
 
 All file operations have the CBM command file name parameter as payload parameter. 
 The command parameter not always just gives a file name, but a search pattern in FS_DELETE
-for example, or a "NEW FILE=OLD FILE" rename parameter. The parameter is zero-terminated.
+for example, or a "NEW FILE",0,"OLD FILE" rename (FS_MOVE) parameter. The parameter is zero-terminated.
 File operation parameters are converted to ASCII before being sent over the wire, so
 the parameters are in ASCII. The exception is the very first payload byte, as it is 
 the drive number (in binary).
@@ -255,11 +255,17 @@ code, the second one is the number of deleted files.
 
 
 FS_MOVE
-	The payload for this command is the CBM "rename" string, which is 
+	The payload for this command is the new name string, a zero byte, and the 
+	old name string. The latter can also have multiple files separated by ",".
+	So this is (including the first payload byte, the leading drive number):
 
-		<new name> = <old name>
+		<new drive> <new name> '\0' <old drive> <old name>
 
+	In general old drive must be the new drive. The old drive byte is left for
+	later expansions. 
 	The file is renamed. No wildcards are allowed. Paths may be used.
+	Files as well as directories are renmaed/moved. If the target exists, a 
+	63 FILE EXISTS error will be generated.
 
 FS_DELETE
 	The payload is a delete pattern like the CBM file name pattern.

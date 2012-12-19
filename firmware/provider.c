@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "provider.h"
 #include "debug.h"
@@ -32,6 +33,8 @@
 #define	MAX_PROV	4
 
 static endpoint_t 	default_provider;
+
+static endpoint_t	temp_provider;
 
 static struct {
 	const char	*name;
@@ -94,7 +97,7 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 	if ((isdigit(name[0])) && (p == 1)) {
 		// we have a drive digit
 		uint8_t drv = name[0] & 0x0f;
-		endpoint_t *ep = provider_lookup(drv);
+		endpoint_t *ep = provider_lookup(drv, NULL);
 		if (ep == NULL) {
 			debug_printf("Drive %d not used, cannot do relative assign!\n", drv);
 			return -1;
@@ -165,11 +168,42 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 	return rv;
 }
 
-endpoint_t* provider_lookup(uint8_t drive) {
+endpoint_t* provider_lookup(uint8_t drive, const char *name) {
 
 #ifdef DEBUG_PROVIDER
 	debug_printf("provider_lookup for drive %d\n", drive);
 #endif
+	if (drive == NAMEINFO_UNUSED_DRIVE) {
+		return &default_provider;
+	}
+
+	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		if (name == NULL) {
+			debug_puts("ERROR PROVIDER LOOKUP: NAME IS NULL\n");
+			return &default_provider;
+		}
+		char *p = strchr(name, ':');
+		if (p != NULL) {
+			uint8_t l = (p-name);
+			for (int8_t i = MAX_PROV-1; i >= 0; i--) {
+				if ((strlen(provs[i].name) == l) 
+					&& (strncmp(provs[i].name, name, l) == 0)) {
+					// ok, we got a provider, but not an endpoint yet
+					debug_printf("GOT A PROVIDER FOR NAME=%s\n", name);
+					// create a temporary provider with NULL endpoint-specific
+					// provdata. The provider must, in such cases, interpret
+					// a command or open filename as if containing the provdata
+					// like in an assign. For example:
+					// LOAD"ftp:ftp.foo.com/dir/file",8
+					temp_provider.provider = provs[i].provider;
+					temp_provider.provdata = NULL;
+					return &temp_provider;
+				}
+			}
+					
+		}
+	}
+
 	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
 		if ((drives[i].drive == drive) && (drives[i].endpoint.provider != NULL)) {
 #ifdef DEBUG_PROVIDER
@@ -179,6 +213,7 @@ endpoint_t* provider_lookup(uint8_t drive) {
 			return &(drives[i].endpoint);
 		}
 	}
+
 #ifdef DEBUG_PROVIDER
 	debug_puts("not found, returning default\n");
 #endif

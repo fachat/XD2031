@@ -397,7 +397,7 @@ static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
        return open_file(ep, tfd, buf, "rb");
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
        return open_file(ep, tfd, buf, "wb");
 }
 

@@ -55,6 +55,7 @@
 #include "log.h"
 
 #undef DEBUG_READ
+#define DEBUG_CMD
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -710,35 +711,24 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	return ERROR_SCRATCHED;	// FILES SCRATCHED message
 }
 
-static int fs_rename(endpoint_t *ep, char *buf) {
+static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 
 	int er = ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	// first find the two names separated by "="
-	int p = 0;
-	while (buf[p] != 0 && buf[p] != '=') {
-		p++;
-	}
-	if (buf[p] == 0) {
-		// not found
-		log_error("Did not find '=' in rename command %s\n", buf);
-		return ERROR_SYNTAX_NONAME;
-	}
+#ifdef DEBUG_CMD
+	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
+#endif
 
-	buf[p] = 0;
-	char *from = buf+p+1;
-	char *to = buf;
-
-	if ((index(to, '/') != NULL) || (index(to,'\\') != NULL)) {
+	if ((index(nameto, '/') != NULL) || (index(nameto,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return ERROR_SYNTAX_DIR_SEPARATOR;
 	}
 
-	char *frompath = malloc_path(fsep->curpath, from);
-	char *topath = malloc_path(fsep->curpath, to);
+	char *frompath = malloc_path(fsep->curpath, namefrom);
+	char *topath = malloc_path(fsep->curpath, nameto);
 
 	char *fromreal = os_realpath(frompath);
 	mem_free(frompath);
@@ -892,8 +882,12 @@ static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
        return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
-       return open_file(ep, tfd, buf, FS_OPEN_WR);
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+	if (is_overwrite) {
+       		return open_file(ep, tfd, buf, FS_OPEN_OW);
+	} else {
+       		return open_file(ep, tfd, buf, FS_OPEN_WR);
+	}
 }
 
 static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {

@@ -34,18 +34,21 @@
 #include "rtconfig.h"
 #include "config.h"
 
+// Note the value definitions are such that no mapping is necessary between internal
+// command codes and wireformat values
 typedef enum {
         // Default
         //
         CMD_NONE,
         CMD_SYNTAX,
-        CMD_DIR,
+	CMD_OVERWRITE = FS_OPEN_OW,
+        CMD_DIR = FS_OPEN_DR,
         //
         // CBM DOS commands
         //
         CMD_INITIALIZE,
-        CMD_RENAME,
-        CMD_SCRATCH,
+        CMD_RENAME = FS_MOVE,
+        CMD_SCRATCH = FS_DELETE,
 	//
         // unsupported
         //
@@ -53,7 +56,7 @@ typedef enum {
         // CMD_COPY,
         // CMD_DUPLICATE,
         // CMD_NEW,
-        CMD_BLOCK,
+        CMD_BLOCK = FS_BLOCK,
         CMD_UX,
         // CMD_MEM_READ,
         // CMD_MEM_WRITE,
@@ -61,10 +64,10 @@ typedef enum {
         //
         // new commands
         //
-        CMD_CD,
-        CMD_MKDIR,
-        CMD_RMDIR,
-        CMD_ASSIGN,
+        CMD_CD = FS_CHDIR,
+        CMD_MKDIR = FS_MKDIR,
+        CMD_RMDIR = FS_RMDIR,
+        CMD_ASSIGN = FS_ASSIGN,
 	// configuration extension
 	CMD_EXT
 } command_t;

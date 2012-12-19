@@ -65,7 +65,7 @@ typedef struct {
 
 int8_t provider_assign(uint8_t drive, const char *name);
 
-endpoint_t* provider_lookup(uint8_t drive);
+endpoint_t* provider_lookup(uint8_t drive, const char *name);
 
 uint8_t provider_register(const char *name, provider_t *provider);
 
