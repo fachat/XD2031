@@ -46,7 +46,7 @@
 #include "log.h"
 #include "xcmd.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -111,6 +111,45 @@ void set_chan(int channo, endpoint_t *ep) {
         }
        log_error("Did not find free ep slot for channel %d\n", channo);
 }
+
+//------------------------------------------------------------------------------------
+// debug log helper
+
+#if defined DEBUG_CMD || defined DEBUG_WRITE
+
+const char *nameofcmd(int cmdno) {
+	switch (cmdno) {
+	case FS_TERM:		return "TERM";
+	case FS_OPEN_RD:	return "OPEN_RD";
+	case FS_OPEN_WR:	return "OPEN_WR";
+	case FS_OPEN_RW:	return "OPEN_RW";
+	case FS_OPEN_AP:	return "OPEN_AP";
+	case FS_OPEN_OW:	return "OPEN_OW";
+	case FS_OPEN_DR:	return "OPEN_DR";
+	case FS_READ:		return "READ";
+	case FS_WRITE:		return "WRITE";
+	case FS_REPLY:		return "REPLY";
+	case FS_EOF:		return "EOF";
+	case FS_SEEK:		return "SEEK";
+	case FS_CLOSE:		return "CLOSE";
+	case FS_MOVE:		return "MOVE";
+	case FS_DELETE:		return "DELETE";
+	case FS_FORMAT:		return "FORMAT";
+	case FS_CHKDSK:		return "CHKDSK";
+	case FS_RMDIR:		return "RMDIR";
+	case FS_MKDIR:		return "MKDIR";
+	case FS_CHDIR:		return "CHDIR";
+	case FS_ASSIGN:		return "ASSIGN";
+	case FS_SETOPT:		return "SETOPT";
+	case FS_RESET:		return "RESET";
+	case FS_BLOCK:		return "BLOCK";
+	case FS_GETDATIM:	return "GETDATIM";
+	default:		return "???";
+	}
+}
+
+#endif
+
 
 //------------------------------------------------------------------------------------
 //
@@ -269,7 +308,6 @@ int cmd_loop(int readfd, int writefd) {
                 wrp -= rdp;
                 rdp = 0;
               }
-//printf("wrp=%d, rdp=%d, FSP_LEN=%d\n",wrp,rdp,FSP_LEN);
               // as long as we have more than FSP_LEN bytes in the buffer
               // i.e. 2 or more, we loop and process packets
               // FSP_LEN is the position of the packet length
@@ -277,7 +315,6 @@ int cmd_loop(int readfd, int writefd) {
                 // first byte in packet is command, second is length of packet
                 plen = 255 & buf[rdp+FSP_LEN];	//  AND with 255 to fix sign
                 cmd = 255 & buf[rdp+FSP_CMD];	//  AND with 255 to fix sign
-//printf("wrp-rdp=%d, plen=%d\n",wrp-rdp,plen);
                 // full packet received already?
                 if (cmd == FS_SYNC || plen < FSP_DATA) {
 		  // a packet is at least 3 bytes (when with zero data length)
@@ -286,10 +323,12 @@ int cmd_loop(int readfd, int writefd) {
 		  rdp++;
 		} else 
                 if(wrp-rdp >= plen) {
+		  // did we already receive the full packet?
                   // yes, then execute
                   do_cmd(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
+		  // no, then break out of the while, to read more data
 		  break;
                 }
               }
@@ -301,8 +340,13 @@ int cmd_loop(int readfd, int writefd) {
 // ----------------------------------------------------------------------------------
 
 /**
- * This function executes a packet from the device.
- * The return data is written into the file descriptor fd
+ * This function executes a single packet from the device.
+ * 
+ * It takes the values from the received buffer, and forwards the command
+ * to the appropriate provider for further processing, using C-style arguments
+ * (and not buffer + offsets).
+ *
+ * The return packet is written into the file descriptor fd
  */
 static void do_cmd(char *buf, int fd) {
 	int tfd, cmd;
@@ -335,7 +379,7 @@ static void do_cmd(char *buf, int fd) {
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		log_debug("cmd: %d bytes @%p: ",n, buf);
+		log_debug("cmd %s :%d bytes @%p : ", nameofcmd(255&buf[FSP_CMD]), n, buf);
 		for(int i=0;i<n;i++) printf("%02x ",255&buf[i]); printf("\n");
 	}
 #endif
@@ -366,29 +410,36 @@ static void do_cmd(char *buf, int fd) {
 	int eof = 0;
 	int outdeleted = 0;
 	int sendreply = 1;
+	char *name = buf+FSP_DATA+1;
+	int drive = buf[FSP_DATA]&255;
 
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open_wr(ep, tfd, buf + FSP_DATA + 1, cmd == FS_OPEN_OW);
-			retbuf[FSP_DATA] = rv;
-			if (rv == 0) {
-				set_chan(tfd, ep);
-			} else {
-				log_rv(rv);
+			if (prov->open_wr != NULL) {
+				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
+					prov->name, name);
+				rv = prov->open_wr(ep, tfd, name, cmd == FS_OPEN_OW);
+				retbuf[FSP_DATA] = rv;
+				if (rv == 0) {
+					set_chan(tfd, ep);
+				} else {
+					log_rv(rv);
+				}
 			}
 		}
 		break;
 	case FS_OPEN_RW:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
-				rv = prov->open_rw(ep, tfd, buf + FSP_DATA + 1);
+				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
+				rv = prov->open_rw(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
@@ -400,12 +451,13 @@ static void do_cmd(char *buf, int fd) {
 		break;
 	case FS_OPEN_DR:
 		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
 			if (prov->opendir != NULL) {
-				rv = prov->opendir(ep, tfd, buf + FSP_DATA + 1);
+				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
+				rv = prov->opendir(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
@@ -416,28 +468,34 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_OPEN_RD:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open_rd(ep, tfd, buf + FSP_DATA + 1);
-			retbuf[FSP_DATA] = rv;
-			if (rv == 0) {
-				set_chan(tfd, ep);
-			} else {
-				log_rv(rv);
+			if (prov->open_rd != NULL) {
+				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
+				rv = prov->open_rd(ep, tfd, name);
+				retbuf[FSP_DATA] = rv;
+				if (rv == 0) {
+					set_chan(tfd, ep);
+				} else {
+					log_rv(rv);
+				}
 			}
 		}
 		break;
 	case FS_OPEN_AP:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			rv = prov->open_ap(ep, tfd, buf + FSP_DATA + 1);
-			retbuf[FSP_DATA] = rv;
-			if (rv == 0) {
-				set_chan(tfd, ep);
-			} else {
-				log_rv(rv);
+			if (prov->open_ap != NULL) {
+				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
+				rv = prov->open_ap(ep, tfd, name);
+				retbuf[FSP_DATA] = rv;
+				if (rv == 0) {
+					set_chan(tfd, ep);
+				} else {
+					log_rv(rv);
+				}
 			}
 		}
 		break;
@@ -453,6 +511,7 @@ static void do_cmd(char *buf, int fd) {
 			}
 			retbuf[FSP_LEN] = FSP_DATA + rv;
 			if (eof) {
+				log_info("CLOSE_SEND_EOF(%d)\n", tfd);
 				retbuf[FSP_CMD] = FS_EOF;
 			}
 		}
@@ -463,6 +522,9 @@ static void do_cmd(char *buf, int fd) {
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
+			if (cmd == FS_EOF) {
+				log_info("CLOSE_BY_EOF(%d)\n", tfd);
+			}
 			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
 			if (rv != 0) {
 				log_rv(rv);
@@ -474,6 +536,7 @@ static void do_cmd(char *buf, int fd) {
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
+			log_info("CLOSE(%d)\n", tfd);
 			prov->close(ep, tfd);
 			free_chan(tfd);
 			retbuf[FSP_DATA] = ERROR_OK;
@@ -482,11 +545,13 @@ static void do_cmd(char *buf, int fd) {
 
 		// command operations
 	case FS_DELETE:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
-				rv = prov->scratch(ep, buf+FSP_DATA+1, &outdeleted);
+				log_info("DELETE(%s)\n", name);
+
+				rv = prov->scratch(ep, name, &outdeleted);
 				if (rv == ERROR_SCRATCHED) {
 					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
 					retbuf[FSP_LEN] = FSP_DATA + 2;
@@ -499,17 +564,15 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_MOVE:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
-				int driveto = buf[FSP_DATA] & 255;
-				char *nameto = buf+FSP_DATA+1;
-				char *namefrom = strchr(nameto, 0);	// points to null byte
+				char *namefrom = strchr(name, 0);	// points to null byte
 				int drivefrom = namefrom[1] & 255;	// from drive after null byte
 				namefrom += 2;				// points to name after drive
 
-				if (drivefrom != driveto
+				if (drivefrom != drive
 					&& drivefrom != NAMEINFO_UNUSED_DRIVE) {
 					// currently not supported
 					// R <prov>:<name1>=<prov>:<name2>
@@ -518,8 +581,10 @@ static void do_cmd(char *buf, int fd) {
 
 					rv = ERROR_DRIVE_NOT_READY;
 				} else {
-					
-					rv = prov->rename(ep, nameto, namefrom);
+				
+					log_info("RENAME(%s -> %s)\n", namefrom, name);
+	
+					rv = prov->rename(ep, name, namefrom);
 					if (rv != 0) {
 						log_rv(rv);
 					}
@@ -529,11 +594,12 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_CHDIR:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
-				rv = prov->cd(ep, buf+FSP_DATA+1);
+				log_info("CHDIR(%s)\n", name);
+				rv = prov->cd(ep, name);
 				if (rv != 0) {
 					log_rv(rv);
 				}
@@ -542,11 +608,12 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_MKDIR:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
-				rv = prov->mkdir(ep, buf+FSP_DATA+1);
+				log_info("MKDIR(%s)\n", name);
+				rv = prov->mkdir(ep, name);
 				if (rv != 0) {
 					log_rv(rv);
 				}
@@ -555,11 +622,12 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_RMDIR:
-		ep = provider_lookup(buf[FSP_DATA], buf+FSP_DATA+1);
+		ep = provider_lookup(drive, name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
-				rv = prov->rmdir(ep, buf+FSP_DATA+1);
+				log_info("RMDIR(%s)\n", name);
+				rv = prov->rmdir(ep, name);
 				if (rv != 0) {
 					log_rv(rv);
 				}
@@ -572,6 +640,7 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->block != NULL) {
+				log_info("BLOCK(%d,...)\n", tfd);
 				rv = prov->block(ep, tfd, buf+FSP_DATA);
 				if (rv != 0) {
 					log_rv(rv);
@@ -591,13 +660,15 @@ static void do_cmd(char *buf, int fd) {
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		rv = provider_assign(buf[FSP_DATA], buf+FSP_DATA+1);
+		log_info("ASSIGN(%d -> %s)\n", drive, name);
+		rv = provider_assign(drive, name);
 		if (rv != 0) {
 			log_rv(rv);
 		}
 		retbuf[FSP_DATA] = rv;
 		break;
 	case FS_RESET:
+		log_info("RESET\n");
 		// send the X command line options again
 		cmd_sendxcmd(fd, retbuf);
 		// we have already sent everything
@@ -617,8 +688,8 @@ static void write_packet(int fd, char *retbuf) {
 		printf("Error on write: %d\n", errno);
 	}
 #if defined DEBUG_WRITE || defined DEBUG_CMD
-	printf("write %02x %02x %02x:", 255&retbuf[0], 255&retbuf[1],
-			255&retbuf[2] );
+	printf("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
+			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
 	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", 255&retbuf[i]);
 	printf("\n");
 #endif

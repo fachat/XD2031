@@ -30,7 +30,7 @@
 
 #include "debug.h"
 
-#define	DEBUG_CMD
+#undef	DEBUG_CMD
 
 
 command_t command_find(uint8_t *input) {

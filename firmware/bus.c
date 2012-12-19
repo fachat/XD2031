@@ -225,10 +225,16 @@ static int16_t cmd_handler (bus_t *bus)
 #ifdef DEBUG_BUS
 			debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
 #endif
-                	// really only does something on read-only channels
-                	channel_preload(bus_secaddr_adjust(bus, secaddr));
+			// don't preload the command channel
+			if (secaddr != CMD_SECADDR) {
+                		// really only does something on read-only channels
+                		channel_preload(bus_secaddr_adjust(bus, secaddr));
+			}
 		}
       	}
+
+	// flush debug output
+	debug_flush();
 
     	bus_for_irq->command.command_length = 0;
 
@@ -368,7 +374,7 @@ static int16_t bus_prepare(bus_t *bus)
           	/* Open Channel */
 	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 		if (bus->channel == NULL) {
-			debug_puts("DID NOT FIND CHANNEL!\n"); debug_flush();
+			debug_printf("DID NOT FIND CHANNEL FOR CHAN=%d!\n", bus_secaddr_adjust(bus,secaddr)); 
 			st |= STAT_EOF | STAT_RDTIMEOUT | STAT_WRTIMEOUT;	// correct code?
 		}
     }
@@ -380,6 +386,7 @@ static int16_t bus_prepare(bus_t *bus)
 		} else {
 			// cause a FILE NOT FOUND
 			debug_puts("FILE NOT FOUND\n");
+			debug_flush();
 			bus->device = 0;
 		}
     }

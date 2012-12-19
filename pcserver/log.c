@@ -27,6 +27,12 @@
 #include <stdarg.h>
 #include <ctype.h>
 
+static verbose = 0;
+
+void set_verbose() {
+	verbose = 1;
+}
+
 void log_term(const char *msg) {
 	
 	int newline = 0;
@@ -93,11 +99,13 @@ void log_info(const char *msg, ...) {
 }
 
 void log_debug(const char *msg, ...) {
-       va_list args;
-       va_start(args, msg);
+	if (verbose) {
+       		va_list args;
+       		va_start(args, msg);
 
-       printf("DBG:");
-        vprintf(msg, args);
+       		printf("DBG:");
+        	vprintf(msg, args);
+	}
 }
 
 

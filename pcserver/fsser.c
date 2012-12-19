@@ -68,8 +68,13 @@ void usage(void) {
                 "               assign a provider to a drive\n"
                 "               e.g. use '-A0=fs:.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
+		"   -X<bus>:<cmd>\n"
+		"               send an 'X'-command to the specified bus, e.g. to set\n"
+		"               the IEC bus to device number 9 use:\n"
+		"               -Xiec:U=9\n"
 		"   -d <device>	define serial device to use\n"
 		"   -d auto     auto-detect serial device\n"
+		"   -v          enable debug log output\n"
 	);
 	exit(1);
 }
@@ -207,6 +212,7 @@ int main(int argc, char *argv[]) {
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
+	int verbose = 0;
 
 	mem_init();
 
@@ -238,6 +244,9 @@ int main(int argc, char *argv[]) {
 	    case 'X':
 		// ignore these, as those will be evaluated later by cmd_...
 		break;
+	    case 'v':
+		verbose = 1;
+		break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);
 		usage();
@@ -246,6 +255,10 @@ int main(int argc, char *argv[]) {
 	  i++;
 	}
 	if(!parameter_d_given) guess_device(&device);
+
+	if (verbose) {
+		set_verbose();
+	}
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given

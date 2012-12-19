@@ -34,7 +34,7 @@
 #include "led.h"
 #include "assert.h"
 
-#define DEBUG_FILE
+#undef DEBUG_FILE
 
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2

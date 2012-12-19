@@ -30,6 +30,9 @@
 #define	DEBUG 1
 //#define	DEBUG 0
 
+// do this always(?)
+#define	debug_flush()	term_flush()
+
 #if DEBUG 
 
 #include "term.h"
@@ -38,7 +41,6 @@
 static inline void debug_putc(char c) { term_putc(c); }
 static inline void debug_putcrlf() {  term_putcrlf(); term_flush(); }
 
-#define	debug_flush()	term_flush()
 #define	debug_puts(s)	term_rom_puts(IN_ROM_STR(s))
 //#define	debug_puts(s)	term_puts((s))
 
@@ -58,7 +60,7 @@ static inline void debug_puthex(char c) {
 }
 
 
-#else
+#else	// no DEBUG
 
 // those should be optimized away
 static inline void debug_puts(char *c) {}
@@ -70,6 +72,6 @@ static inline void debug_putputps(char *s) {}
 static inline void debug_puthex(char c) {}
 static inline void debug_printf(char *format, ...) {}
 
-#endif
+#endif	// DEBUG
 
-#endif
+#endif 	// def DEBUG_H

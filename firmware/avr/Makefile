@@ -46,7 +46,7 @@ load:
 	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # ISP programming 
-flash:
+flash: all
 	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # Fuse programming

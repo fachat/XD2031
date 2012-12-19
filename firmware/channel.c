@@ -38,6 +38,8 @@
 #include "led.h"
 #include "debug.h"
 
+#undef DEBUG_CHANNEL
+
 #define	MAX_CHANNELS	4		// number of maximum open channels
 
 channel_t channels[MAX_CHANNELS];
@@ -257,7 +259,7 @@ void channel_preload(int8_t chan) {
 	if (channel != NULL) {
 		channel_preload_int(channel, 1);	
 	} else {
-		term_printf("DID NOT FIND CHANNEL FOR CHAN=%d\n", chan);
+		term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", chan);
 	}
 }
 
@@ -334,7 +336,9 @@ static void channel_close_int(channel_t *chan, uint8_t force) {
 void channel_close(int8_t channel_no) {
 	channel_t *chan = channel_find(channel_no);
 
+#ifdef DEBUG_CHANNEL
 	debug_printf("channel_close(%p -> %d), push_state=%d\n", chan, channel_no, chan->push_state); debug_flush();
+#endif
 
 	if (chan != NULL) {
 		if (chan->push_state != PUSH_OPEN) {

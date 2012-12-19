@@ -517,7 +517,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 		er = errno_to_error(errno);
 	}
 
-	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
+	log_debug("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
 
 exit:
 	mem_free(name); mem_free(path); mem_free(filename);
@@ -537,7 +537,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		strcpy(file->dirpattern, buf);
 		DIR *dp = opendir(fsep->curpath /*buf+FSP_DATA*/);
 
-		log_info("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
+		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
 							tfd, (void*)file, (void*)dp);
 
 		if(dp) {

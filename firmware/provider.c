@@ -27,7 +27,7 @@
 #include "provider.h"
 #include "debug.h"
 
-#define	DEBUG_PROVIDER
+#undef	DEBUG_PROVIDER
 
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
