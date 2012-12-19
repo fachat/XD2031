@@ -116,6 +116,8 @@ static void tnp_free(endpoint_t *ep) {
 // the address on the open only.
 static endpoint_t *tnp_new(endpoint_t *parent, const char *path) {
 
+	(void) parent;	// silence unused parameter warning
+
 	// alloc and init a new endpoint struct
 	tn_endpoint_t *tnep = malloc(sizeof(tn_endpoint_t));
 
@@ -365,6 +367,8 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
+	(void) is_eof;	// silence unused param warning
+
 #ifdef DEBUG_WRITE
 	log_debug("Write_file (telnet): fd=%p\n", file);
 #endif
@@ -398,6 +402,7 @@ static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
 }
 
 static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+       (void) is_overwrite;	// silence unused param warning
        return open_file(ep, tfd, buf, "wb");
 }
 

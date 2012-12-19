@@ -27,7 +27,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-static verbose = 0;
+static int verbose = 0;
 
 void set_verbose() {
 	verbose = 1;

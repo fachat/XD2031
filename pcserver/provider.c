@@ -196,7 +196,7 @@ endpoint_t *provider_lookup(int drive, const char *name) {
 			log_error("No provider name given for undef'd drive");
 			return NULL;
 		}
-		int l = p-name;
+		unsigned int l = p-name;
 		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
 			if ((strlen(providers[i].provider->name) == l)
 				&& (strncmp(providers[i].provider->name, name, l) == 0)) {

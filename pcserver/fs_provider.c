@@ -898,8 +898,6 @@ static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 	if (*buf == '#') {
 		// ok, open a direct block channel
 
-		fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
 		File *file = reserve_file(ep, tfd);
 
 		int er = open_block_channel(file);

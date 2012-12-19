@@ -31,11 +31,10 @@
  * usage: 
  *   fsser [options] exported_directory
  *
- *   options:
- * 	-ro	export read-only
- * 	-d <device>  determine device (if none, use stdin/stdout)
- *	-d auto      try to auto-detect device	
+ *   options see the usage string below
  */
+
+#include "os.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -57,7 +56,6 @@
 void usage(void) {
 	printf("Usage: fsser [options] run_directory\n"
 		" options=\n"
-                //"   -ro               export read-only \n"    // does not currently work
                 "   -A<drv>=<provider-string>\n"
                 "               assign a provider to a drive\n"
                 "               e.g. use '-A0=fs:.' to assign the current directory\n"
@@ -74,23 +72,10 @@ void usage(void) {
 }
 
 
-char* get_home_dir (void) {
-	char* dir = getenv("HOME");
-	if(!dir) {
-		struct passwd* pwd = getpwuid(getuid());
-		if(pwd) dir = pwd->pw_dir;
-		else { 
-			fprintf(stderr, "Unable to determine home directory.\n");
-			exit(1);
-		}
-	}
-	return dir;
-}
-
 int main(int argc, char *argv[]) {
 	int writefd, readfd;
 	int fdesc;
-	int i, ro=0;
+	int i;
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
@@ -105,10 +90,6 @@ int main(int argc, char *argv[]) {
 	    case '?':
 		usage();	/* usage() exits already */
 		break;
-	    case 'r':
-		if(argv[i][2]=='o') {
-		  ro=1;
-		}
 	    case 'd':
 	    	parameter_d_given = TRUE;
 		if (i < argc-2) {
