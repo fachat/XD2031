@@ -75,7 +75,7 @@ typedef struct {
 void tnp_init() {
 }
 
-extern provider_t telnet_provider;
+extern provider_t tcp_provider;
 
 static void init_fp(File *fp) {
 
@@ -121,7 +121,7 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path) {
 	// alloc and init a new endpoint struct
 	tn_endpoint_t *tnep = malloc(sizeof(tn_endpoint_t));
 
-        tnep->ptype = (struct provider_t *) &telnet_provider;
+        tnep->ptype = (struct provider_t *) &tcp_provider;
 
 	tnep->hostname = NULL;
         for(int i=0;i<MAXFILES;i++) {
@@ -370,7 +370,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	(void) is_eof;	// silence unused param warning
 
 #ifdef DEBUG_WRITE
-	log_debug("Write_file (telnet): fd=%p\n", file);
+	log_debug("Write_file (tcp): fd=%p\n", file);
 #endif
 
 	if (file != NULL) {
@@ -415,8 +415,8 @@ static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 }
 
 
-provider_t telnet_provider = {
-	"telnet",
+provider_t tcp_provider = {
+	"tcp",
 	tnp_init,
 	tnp_new,
 	tnp_free,

@@ -2,7 +2,7 @@
 
 ;telnet8 ==0401==
     0 printchr$(14)
-    1 open1,8,15,"a2:telnet:localhost"
+    1 open1,8,15,"a2:tcp:localhost"
     2 input#1,a$,b$,c$,d$
     3 printa$","b$","c$","d$
     4 close1
