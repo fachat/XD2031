@@ -141,6 +141,8 @@ static void fsp_free(endpoint_t *ep) {
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
+	log_debug("Setting fs endpoint to '%s'\n", path);
+
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
 
 	// alloc and init a new endpoint struct
@@ -189,6 +191,31 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	log_info("FS provider set to real path '%s'\n", fsep->basepath);
 
 	return (endpoint_t*) fsep;
+}
+
+static endpoint_t *fsp_temp(char **name) {
+
+	// make path relative
+	while (**name == dir_separator_char()) {
+		(*name)++;
+	}
+
+	// cut off last filename part (either file name or dir mask)
+	char *end = strrchr(*name, dir_separator_char());
+
+	endpoint_t *ep = NULL;
+
+	if (end != NULL) {
+		// we have a '/'
+		*end = 0;
+		ep = fsp_new(NULL, *name);
+		*name = end+1;	// filename part
+	} else {
+		// no '/', so only mask, path is root
+		ep = fsp_new(NULL, ".");
+	}
+
+	return ep;
 }
 
 // ----------------------------------------------------------------------------------
@@ -946,7 +973,7 @@ provider_t fs_provider = {
 	"fs",
 	fsp_init,
 	fsp_new,
-	NULL,	// fsp_temp,
+	fsp_temp,
 	fsp_free,
 	close_fds,
 	open_file_rd,
