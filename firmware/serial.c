@@ -70,7 +70,7 @@ void serial_submit(void *epdata, packet_t *buf);
  * Note: submitter must check buf_is_empty() for true or buf_wait_free()
  * before reuse or freeing the memory!
  *
- * callback is called from interrupt context when the response has been
+ * callback is called from delay context when the response has been
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
@@ -497,7 +497,7 @@ void serial_flush() {
  * submit the contents of a buffer to the UART
  * If buffer slot is available, return immediately.
  * Otherwise wait until slot is available, then return
- * (while data is transferred in the background)
+ * (while data is transferred in the background (=delay() calls))
  *
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
@@ -510,8 +510,6 @@ void serial_submit(void *epdata, packet_t *buf) {
 	}
 
 
-	// protect slot* by disabling the interrupt
-	//cli();	 - as slots are not handled in irq anymore
 	// note: slots_used can only decrease until here, as this is the
 	// only place to increase it, so there is no race from the while()
 	// above to setting it here.	
@@ -523,8 +521,6 @@ void serial_submit(void *epdata, packet_t *buf) {
 		send();
 		//led_on();
 	}
-	// enable interrupts again
-	//sei();	 - as slots are not handled in irq anymore
 }
 
 /*****************************************************************************
@@ -536,7 +532,7 @@ void serial_submit(void *epdata, packet_t *buf) {
  * Note: submitter must check buf_is_empty() for true or buf_wait_free() 
  * before reuse or freeing the memory!
  *
- * callback is called from interrupt context when the response has been
+ * callback is called from delay() context when the response has been
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 

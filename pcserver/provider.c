@@ -202,21 +202,23 @@ endpoint_t *provider_lookup(int drive, char **name) {
 		// the drive is not specified by number, but by provider name
 		char *p = strchr(*name, ':');
 		if (p == NULL) {
-			log_error("No provider name given for undef'd drive\n");
+			log_error("No provider name given for undef'd drive '%s'\n", *name);
 			return NULL;
 		}
+		log_debug("Trying to find provider for: %s\n", *name);
+
 		unsigned int l = p-(*name);
+		p++; // first char after ':'
 		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
 			provider_t *prov = providers[i].provider;
 			if (prov != NULL && (strlen(prov->name) == l)
 				&& (strncmp(prov->name, *name, l) == 0)) {
 				// we got a provider, but no endpoint yet
 
-				log_debug("Found provider '%s', trying to create temporary endpoint\n", 
-					prov->name);
+				log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
+					prov->name, p);
 
 				if (prov->tempep != NULL) {
-					p++; // first char after ':'
 					endpoint_t *ep = prov->tempep(&p);
 					if (ep != NULL) {
 						*name = p;
@@ -231,6 +233,8 @@ endpoint_t *provider_lookup(int drive, char **name) {
 				return NULL;
 			}
 		}
+		log_error("Did not find provider for %s\n", *name);
+		return NULL;
 	}
 
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {

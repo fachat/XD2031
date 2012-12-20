@@ -134,7 +134,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 					result->namelen = len-1;
 				} else {
 					result->name = name;
-					result->namelen = p - name;
+					result->namelen = p - name + len;
 				}
 				state = NAME_NAME;
 			} else {

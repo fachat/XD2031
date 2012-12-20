@@ -252,7 +252,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		channel_close(channel_no);
 		return -1;
 	}
-
 	int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
 	if (e < 0) {
 		debug_puts("E="); debug_puthex(e); debug_putcrlf();

@@ -46,7 +46,7 @@
 #include "log.h"
 #include "xcmd.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -362,7 +362,7 @@ static void do_cmd(char *buf, int fd) {
 		{
 			int n = buf[FSP_LEN];
 			log_debug("term: %d bytes @%p: ",n, buf);
-			for(int i=0;i<n;i++) printf("%02x ",255&buf[i]); printf("\n");
+			for(int i=0;i<n;i++) log_debug("%02x ",255&buf[i]); log_debug("\n");
 		}
 #endif
 
@@ -380,7 +380,7 @@ static void do_cmd(char *buf, int fd) {
 	{
 		int n = buf[FSP_LEN];
 		log_debug("cmd %s :%d bytes @%p : ", nameofcmd(255&buf[FSP_CMD]), n, buf);
-		for(int i=0;i<n;i++) printf("%02x ",255&buf[i]); printf("\n");
+		for(int i=0;i<n;i++) log_debug("%02x ",255&buf[i]); log_debug("\n");
 	}
 #endif
 
@@ -707,6 +707,9 @@ static void do_cmd(char *buf, int fd) {
 		// we have already sent everything
 		sendreply = 0;
 		break;
+
+	default:
+		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
 	}
 
 	if (sendreply) {
@@ -721,10 +724,10 @@ static void write_packet(int fd, char *retbuf) {
 		printf("Error on write: %d\n", errno);
 	}
 #if defined DEBUG_WRITE || defined DEBUG_CMD
-	printf("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
+	log_debug("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
-	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", 255&retbuf[i]);
-	printf("\n");
+	for (int i = 3; i<retbuf[FSP_LEN];i++) log_debug(" %02x", 255&retbuf[i]);
+	log_debug("\n");
 #endif
 }
 
