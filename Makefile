@@ -22,9 +22,9 @@ install:
 uninstall:
 	make -C pcserver uninstall
 
-sample/telnet: sample/telnet.lst
-	petcat -l 0401 -w4 sample/telnet.lst > sample/telnet
-sample/u1test: sample/u1test.lst
-	petcat -l 0401 -w4 sample/u1test.lst > sample/u1test
+sample/telnet: doc/telnet.lst
+	petcat -l 0401 -w4 doc/telnet.lst > sample/telnet
+sample/u1test: doc/u1test.lst
+	petcat -l 0401 -w4 doc/u1test.lst > sample/u1test
 
 .PHONY:	pcserver/fsser install uninstall firmware doc

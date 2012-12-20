@@ -52,24 +52,29 @@ Fix bugs:
 ROADMAP
 --------
 
-Here are some ideas about what can be implemented.
+Here are some ideas about what can be implemented. For and more current
+information see also the github issues list on:
+https://github.com/fachat/XD2031/issues?state=open
 
 Planned features for Release 1.0
 --------------------------------
 
 - SD card provider on the atmega side
 	-> started
+- D64 support on the server side, to be able to use D64/D80/D82 etc files
+	-> open
 - IEC support so C64 et al can use the device 
 	-> done for C64, done for C128,
 	   and VIC20 still to test
 - Use other providers without ASSIGN before, e.g. LOAD"sd:filename",8
-	-> open
+	-> done (for http/ftp/tcp)
 - bidirectional file support, together with TELNET functionality
 	-> done
 - store configuration parameters in EEPROM
 	-> beta
 - set configuration parameters from the PC
 	-> done
+- and various other small improvements
 
 
 Further plans
@@ -84,7 +89,7 @@ help with one of these ideas, feel free to contact me!
 
 In the future these providers can be implemented:
 
-	- A D64 provider on the PC side, to use D64/D80/D82 etc files
+	- A D64 provider on the PC side, to use D64/D80/D82 etc files (planned for 1.0)
 	- A D64 provider on the atmega side, to use D64/D80/D82 etc files from the SD card
 	- An iec provider - so a PET can "call out" to a serial IEC floppy
 	- And vice versa, an ieee provider and a serial iec bus interface to

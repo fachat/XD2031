@@ -180,19 +180,43 @@ static endpoint_t *ftp_temp(char **name) {
 	}
 
 	curl_endpoint_t *fsep = _new(*name);
-	// clear path_buffer, which has been set already
-	//fsep->path_buffer[0] = 0;
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
 	} else {
-		*name = end+1;	// absolute path
+		*name = end+1;	// filename part
 	}
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_FTP;
 
 	fsep->base.ptype = &ftp_provider;
+	
+	return (endpoint_t*) fsep;
+}
+
+static endpoint_t *http_temp(char **name) {
+
+	log_debug("trying to create temporary drive for '%s'\n", *name);
+
+	// path ends with last '/'
+	char *end = strrchr(*name, '/');
+	if (end != NULL) {
+		*end = 0;
+	}
+
+	curl_endpoint_t *fsep = _new(*name);
+
+	if (end == NULL) {
+		*name = (*name)+strlen(*name);
+	} else {
+		*name = end+1;	// filename part
+	}
+
+	// not sure if this is needed...
+	fsep->protocol = PROTO_HTTP;
+
+	fsep->base.ptype = &http_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -870,7 +894,7 @@ provider_t http_provider = {
 	"http",
 	curl_init,
 	http_new,
-	NULL,	// http_temp
+	http_temp,
 	prov_free,
 
 	close_fds,
