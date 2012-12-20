@@ -22,7 +22,7 @@ install:
 uninstall:
 	make -C pcserver uninstall
 
-sample/telnet8: sample/telnet8.lst
+sample/telnet: sample/telnet.lst
 	petcat -l 0401 -w4 sample/telnet.lst > sample/telnet
 sample/u1test: sample/u1test.lst
 	petcat -l 0401 -w4 sample/u1test.lst > sample/u1test

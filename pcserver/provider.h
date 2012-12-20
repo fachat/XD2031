@@ -49,6 +49,7 @@ typedef struct {
 	const char	*name;			// provider name, used in ASSIGN as ID
 	void		(*init)(void);			// initialization routine
 	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	// create a new endpoint instance
+	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
 	// file-related	
@@ -72,11 +73,38 @@ typedef struct {
 
 struct _endpoint {
 	provider_t	*ptype;
+	int		is_temporary;
 };
 
 int provider_assign(int drive, const char *name);
 
-endpoint_t* provider_lookup(int drive, const char *name);
+/**
+ * looks up a provider like "tcp:" for "fs:" by drive number.
+ * Iff the drive number is NAMEINFO_UNDEF_DRIVE then the name is used
+ * to identify the provider and ad hoc create a new endpoint from the name.
+ * The name pointer is then changed to point after the endpoint information
+ * included in the name. For example:
+ *
+ * drive=NAMEINFO_UNDEF_DRIVE
+ * name=tcp:localhost:telnet
+ *
+ * ends up with the "tcp:" provider, creates a temporary endpoint with
+ * "localhost" as host name, and 
+ *
+ * name=telnet
+ * 
+ * as the rest of the filename.
+ * The endpoint will be closed once the operation is done or the opened file
+ * is closed.
+ */
+endpoint_t* provider_lookup(int drive, char **name);
+
+/**
+ * cleans up a temporary provider after it has been done with,
+ * i.e. after a command, or after an opened file has been closed.
+ * Also after error on open.
+ */
+void provider_cleanup(endpoint_t *ep);
 
 int provider_register(provider_t *provider);
 

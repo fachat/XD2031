@@ -89,7 +89,7 @@ typedef struct File {
 
 typedef struct {
 	// derived from endpoint_t
-	struct provider_t 	*ptype;
+	endpoint_t 		base;
 	// payload
 	proto_t			protocol;	// type of provider
 	char			error_buffer[CURL_ERROR_SIZE];
@@ -178,7 +178,7 @@ static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 	// not sure if this is needed...
 	fsep->protocol = PROTO_FTP;
 
-	fsep->ptype = (struct provider_t *) &ftp_provider;
+	fsep->base.ptype = &ftp_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -192,7 +192,7 @@ static endpoint_t *http_new(endpoint_t *parent, const char *path) {
 	// not sure if this is needed...
 	fsep->protocol = PROTO_HTTP;
 
-	fsep->ptype = (struct provider_t *) &http_provider;
+	fsep->base.ptype = &http_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -460,7 +460,7 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
 
 		// prepare name
-		strcpy(cep->name_buffer, ((provider_t*)(cep->ptype))->name);
+		strcpy(cep->name_buffer, ((provider_t*)(cep->base.ptype))->name);
 		strcat(cep->name_buffer, "://");
 		strcat(cep->name_buffer, cep->host_buffer);
 		strcat(cep->name_buffer, "/");
@@ -807,6 +807,7 @@ provider_t ftp_provider = {
 	"ftp",
 	curl_init,
 	ftp_new,
+	NULL,	// ftp_temp
 	prov_free,
 
 	close_fds,
@@ -829,6 +830,7 @@ provider_t http_provider = {
 	"http",
 	curl_init,
 	http_new,
+	NULL,	// http_temp
 	prov_free,
 
 	close_fds,

@@ -48,8 +48,28 @@ static void check_alloc_(void *ptr, char *file, int line) {
 	}
 }
 
+// allocate memory and copy given string up to n chars
+//#define mem_alloc_strn(s,n) mem_alloc_str_(s, n, __FILE__, __LINE__)
+char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
+
+	size_t len = strlen(orig);
+	if (len > n) {
+		len = n;
+	}
+
+	char *ptr = malloc(len+1);
+
+	check_alloc(ptr, file, line);		
+	
+	strncpy(ptr, orig, len);
+
+	ptr[len] = 0;
+
+	return ptr;
+}
+
 // allocate memory and copy given string
-#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
+//#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
 char *mem_alloc_str_(const char *orig, char *file, int line) {
 
 	int len = strlen(orig);
@@ -74,7 +94,7 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 	return ptr;
 }
 
-#define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__)
+//#define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__)
 void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 	// for now just malloc()
 

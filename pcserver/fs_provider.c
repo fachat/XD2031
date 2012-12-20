@@ -74,7 +74,7 @@ typedef struct {
 
 typedef struct {
 	// derived from endpoint_t
-	struct provider_t 	*ptype;
+	endpoint_t	 	base;
 	// payload
 	char			*basepath;			// malloc'd base path
 	char			*curpath;			// malloc'd current path
@@ -151,7 +151,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 		init_fp(&(fsep->files[i]));
         }
 
-	fsep->ptype = (struct provider_t *) &fs_provider;
+	fsep->base.ptype = &fs_provider;
 
 	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
 				path);
@@ -946,6 +946,7 @@ provider_t fs_provider = {
 	"fs",
 	fsp_init,
 	fsp_new,
+	NULL,	// fsp_temp,
 	fsp_free,
 	close_fds,
 	open_file_rd,

@@ -2,12 +2,8 @@
 
 ;telnet8 ==0401==
     0 printchr$(14)
-    1 open1,8,15,"a2:tcp:localhost"
-    2 input#1,a$,b$,c$,d$
-    3 printa$","b$","c$","d$
-    4 close1
     9 rem non-blocking, read-write open
-   10 open1,8,2,"2:telnet,n,x"
+   10 open1,8,2,"tcp:localhost:telnet,n,x"
    20 gosub 1000:as=st:if a<>0 then print chr$(a);
    21 a$="":geta$:gosub 3000
    25 rem printst

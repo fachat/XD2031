@@ -417,7 +417,7 @@ static void do_cmd(char *buf, int fd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_wr != NULL) {
@@ -427,14 +427,17 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
 				}
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_OPEN_RW:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
@@ -443,15 +446,18 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
 				}
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_OPEN_DR:
 		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
@@ -461,14 +467,17 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
 				}
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_OPEN_RD:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rd != NULL) {
@@ -477,14 +486,17 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
 				}
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_OPEN_AP:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_ap != NULL) {
@@ -493,10 +505,13 @@ static void do_cmd(char *buf, int fd) {
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					set_chan(tfd, ep);
+					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
 				}
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_READ:
@@ -513,6 +528,8 @@ static void do_cmd(char *buf, int fd) {
 			if (eof) {
 				log_info("CLOSE_SEND_EOF(%d)\n", tfd);
 				retbuf[FSP_CMD] = FS_EOF;
+				// cleanup when not needed anymore
+				provider_cleanup(ep);
 			}
 		}
 		break;
@@ -530,6 +547,10 @@ static void do_cmd(char *buf, int fd) {
 				log_rv(rv);
 			}
 			retbuf[FSP_DATA] = rv;
+			if (cmd == FS_EOF) {
+				// cleanup when not needed anymore
+				provider_cleanup(ep);
+			}
 		}
 		break;
 	case FS_CLOSE:
@@ -540,12 +561,14 @@ static void do_cmd(char *buf, int fd) {
 			prov->close(ep, tfd);
 			free_chan(tfd);
 			retbuf[FSP_DATA] = ERROR_OK;
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 
 		// command operations
 	case FS_DELETE:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
@@ -561,10 +584,12 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_MOVE:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
@@ -591,10 +616,12 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_CHDIR:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
@@ -605,10 +632,12 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_MKDIR:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
@@ -619,10 +648,12 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_RMDIR:
-		ep = provider_lookup(drive, name);
+		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
@@ -633,6 +664,8 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
 		}
 		break;
 	case FS_BLOCK:

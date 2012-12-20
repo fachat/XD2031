@@ -54,4 +54,8 @@ void *mem_alloc_c_(size_t n, const char *name, char *file, int line);
 char *mem_alloc_str_(const char *orig, char *file, int line);
 #define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
 
+// allocate memory and copy given string up to n chars
+char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line);
+#define mem_alloc_strn(s,n) mem_alloc_strn_(s, n, __FILE__, __LINE__)
+
 #endif

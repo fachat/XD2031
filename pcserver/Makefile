@@ -49,6 +49,10 @@ clean:
 run:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools .
 
+runv:
+	# I'm lazy...
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A0=fs:../sample -A1=fs:../tools .
+
 run9:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools -Xiec:U=9 -Xieee:U=9 .
 

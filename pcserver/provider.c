@@ -123,6 +123,7 @@ int provider_assign(int drive, const char *name) {
 	if (provider != NULL) {
 		// get new endpoint
 		newep = provider->newep(parent, (name[p] == 0) ? name + p : name + p + 1);
+		newep->is_temporary = 0;
 	}
 
 	if (newep != NULL) {
@@ -150,6 +151,14 @@ int provider_assign(int drive, const char *name) {
 		return ERROR_OK;
 	}
 	return ERROR_FAULT;
+}
+
+void provider_cleanup(endpoint_t *ep) {
+	if (ep->is_temporary) {
+		log_debug("Freeing temporary endpoint %p\n", ep);
+		provider_t *prevprov = ep->ptype;
+		prevprov->freeep(ep);
+	}
 }
 
 void provider_init() {
@@ -186,24 +195,39 @@ void provider_init() {
         //eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
 }
 
-endpoint_t *provider_lookup(int drive, const char *name) {
+endpoint_t *provider_lookup(int drive, char **name) {
         int i;
 
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
 		// the drive is not specified by number, but by provider name
-		char *p = strchr(name, ':');
+		char *p = strchr(*name, ':');
 		if (p == NULL) {
-			log_error("No provider name given for undef'd drive");
+			log_error("No provider name given for undef'd drive\n");
 			return NULL;
 		}
-		unsigned int l = p-name;
+		unsigned int l = p-(*name);
 		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
-			if ((strlen(providers[i].provider->name) == l)
-				&& (strncmp(providers[i].provider->name, name, l) == 0)) {
+			provider_t *prov = providers[i].provider;
+			if (prov != NULL && (strlen(prov->name) == l)
+				&& (strncmp(prov->name, *name, l) == 0)) {
 				// we got a provider, but no endpoint yet
 
-				log_warn("Found provider '%s', but undef'd drive not yet implemented!", 
-					providers[i].provider->name);
+				log_debug("Found provider '%s', trying to create temporary endpoint\n", 
+					prov->name);
+
+				if (prov->tempep != NULL) {
+					p++; // first char after ':'
+					endpoint_t *ep = prov->tempep(&p);
+					if (ep != NULL) {
+						*name = p;
+						log_debug("Created temporary endpoint %p\n", ep);
+						ep->is_temporary = 1;
+					}
+					return ep;
+				} else {
+					log_error("Provider '%s' does not support temporary drives\n",
+						prov->name);
+				}
 				return NULL;
 			}
 		}
