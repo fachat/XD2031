@@ -203,19 +203,24 @@ static endpoint_t *fsp_temp(char **name) {
 	// cut off last filename part (either file name or dir mask)
 	char *end = strrchr(*name, dir_separator_char());
 
-	endpoint_t *ep = NULL;
+	fs_endpoint_t *fsep = NULL;
 
 	if (end != NULL) {
 		// we have a '/'
 		*end = 0;
-		ep = fsp_new(NULL, *name);
+		fsep = (fs_endpoint_t*) fsp_new(NULL, *name);
 		*name = end+1;	// filename part
 	} else {
 		// no '/', so only mask, path is root
-		ep = fsp_new(NULL, ".");
+		fsep = (fs_endpoint_t*) fsp_new(NULL, ".");
 	}
 
-	return ep;
+	// replace computed base path with current working dir to ensure no breakout
+	free(fsep->basepath);
+	// might get into os.c (Linux (m)allocates the buffer automatically in the right size)
+	fsep->basepath = getcwd(NULL, 0);
+
+	return (endpoint_t*) fsep;
 }
 
 // ----------------------------------------------------------------------------------
@@ -341,11 +346,11 @@ static int path_under_base(const char *path, const char *base) {
 		goto exit;
 	}
 	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
-	strcpy(base_dirc, base_realpathc);
 	if(!base_dirc) {
 		res = -3;
 		goto exit;
 	}
+	strcpy(base_dirc, base_realpathc);
 	strcat(base_dirc, dir_separator_string());
 
 	path_realpathc = os_realpath(path);
@@ -358,7 +363,7 @@ static int path_under_base(const char *path, const char *base) {
 		res = -2;
 		goto exit;
 	}
-	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
+	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 2);	// don't forget the null
 	if(!path_realpathc) return -3;
 	strcat(path_realpathc, dir_separator_string());
 
@@ -556,7 +561,14 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-        File *file = reserve_file(ep, tfd);
+       	char *fullname = malloc_path(fsep->curpath, buf);
+	patch_dir_separator(fullname);
+	if(path_under_base(fullname, fsep->basepath)) {
+		mem_free(fullname);
+		return ERROR_NO_PERMISSION;
+	}
+ 
+	File *file = reserve_file(ep, tfd);
 
 	if (file != NULL) {
 
