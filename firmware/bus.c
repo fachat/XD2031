@@ -213,20 +213,16 @@ static int16_t cmd_handler (bus_t *bus)
 		debug_printf("after open: secaddr=%d\n", secaddr);
 #endif
 
-		// command may (or may not) open channel 15 for callback to the server
-		// so close it here, as this is done separately
-		if (secaddr == CMD_SECADDR) {
-			channel_close(bus_secaddr_adjust(bus, CMD_SECADDR));
-		}
+		if (secaddr != CMD_SECADDR) {
+			// only open, not for commands
 
-        	if (bus_for_irq->errnum != 0) {
-        	        channel_close(bus_secaddr_adjust(bus, secaddr));
-        	} else {
+	        	if (bus_for_irq->errnum != 0) {
+				// close channel on error. Is this ok?
+	        	        channel_close(bus_secaddr_adjust(bus, secaddr));
+	        	} else {
 #ifdef DEBUG_BUS
-			debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
+				debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
 #endif
-			// don't preload the command channel
-			if (secaddr != CMD_SECADDR) {
                 		// really only does something on read-only channels
                 		channel_preload(bus_secaddr_adjust(bus, secaddr));
 			}
@@ -331,11 +327,6 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				// make sure the next call does have a data byte
 				if (!channel_next(channel, preload & BUS_SYNC)) {
 					// no further data on channel available
-      					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
-        					// autoclose when load is done, or after reading status channel
-						channel_close(bus_secaddr_adjust(bus, secaddr));
-						bus->channel = NULL;
-					}
 				}
 			}
 		}
@@ -395,20 +386,29 @@ static int16_t bus_prepare(bus_t *bus)
 
 static void bus_close(bus_t *bus) {
     	uint8_t secaddr = bus->secondary & SECADDR_MASK;
-          /* Close File */
-          if(secaddr == CMD_SECADDR) {
+#ifdef DEBUG_BUS
+	debug_printf("bus_close secaddr=%d\n",secaddr);
+#endif
+        /* Close File */
+        if(secaddr == CMD_SECADDR) {
 	    // is this correct or only a convenience?
             channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
-          } else {
+        } else {
             /* Close a single buffer */
             channel_close(bus_secaddr_adjust(bus, secaddr));
-          }
+        }
 }
 
 int16_t bus_attention(bus_t *bus, uint8_t b) {
     int16_t st = 0;
 
     uint8_t is_config_device = ( (bus->device & DEVICE_MASK) == bus->rtconf.device_address );
+
+#ifdef DEBUG_BUS
+    debug_printf("BusAttention(%02x)\n", b);
+    debug_flush();
+#endif
+
 
     // UNLISTEN and it is either open or the command channel
     if (b == BUSCMD_UNLISTEN

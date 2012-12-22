@@ -321,9 +321,8 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	if (fp != NULL) {
 		if (fp->session == NULL) {
 			log_warn("curl sesion %d is NULL!", tfd);
-		} else {
-			close_fd(fp);
 		}
+		close_fd(fp);
 	}
 }
 

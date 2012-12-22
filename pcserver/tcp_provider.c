@@ -405,8 +405,6 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
-	(void) is_eof;	// silence unused param warning
-
 #ifdef DEBUG_WRITE
 	log_debug("Write_file (tcp): fd=%p\n", file);
 #endif
@@ -423,6 +421,10 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 				break;
 			}
 			len -= nw;
+		}
+
+		if (is_eof) {
+			close_fd(file);
 		}
 		return 0;
 	}

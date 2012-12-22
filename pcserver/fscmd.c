@@ -46,7 +46,7 @@
 #include "log.h"
 #include "xcmd.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -529,7 +529,7 @@ static void do_cmd(char *buf, int fd) {
 				log_info("CLOSE_SEND_EOF(%d)\n", tfd);
 				retbuf[FSP_CMD] = FS_EOF;
 				// cleanup when not needed anymore
-				provider_cleanup(ep);
+				//provider_cleanup(ep);
 			}
 		}
 		break;
@@ -549,7 +549,7 @@ static void do_cmd(char *buf, int fd) {
 			retbuf[FSP_DATA] = rv;
 			if (cmd == FS_EOF) {
 				// cleanup when not needed anymore
-				provider_cleanup(ep);
+				//provider_cleanup(ep);
 			}
 		}
 		break;

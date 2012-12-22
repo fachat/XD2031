@@ -104,6 +104,8 @@ static void init_fp(File *fp) {
 
 // close a file descriptor
 static int close_fd(File *file) {
+
+	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
 	if (file->fp != NULL) {
 		er = fclose(file->fp);
@@ -620,7 +622,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    return rv;
 		  }
 		  if(!file->de) {
-		    close_fds(ep, tfd);
+		    //close_fds(ep, tfd);
 		    *eof = 1;
 		    int l = dir_fill_disk(retbuf);
 		    rv = l;
@@ -652,8 +654,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  if(n<len) {
 		    // short read, so either error or eof
 		    *eof = 1;
-		    log_debug("Close fd=%d on short read\n", tfd);
-		    close_fds(ep, tfd);
+		    log_debug("short read on %d\n", tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
@@ -661,8 +662,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
-		      log_debug("Close fd=%d on EOF read\n", tfd);
-		      close_fds(ep, tfd);
+		      log_debug("EOF on read %d\n", tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
 		      ungetc(eofc, fp);

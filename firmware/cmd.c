@@ -172,7 +172,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 		// nameinfo cmd enum definition such that wireformat matches it
 		return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, 
-			errormsg, rtconf, callback);
+			errormsg, rtconf, callback, 1);
 	} else
 	if (nameinfo.cmd == CMD_ASSIGN) {
 
@@ -186,7 +186,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
 		
 			return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer,
-				errormsg, rtconf, callback);
+				errormsg, rtconf, callback, 1);
 		} else {
 			// need to unlock the caller by calling the callback function
 			callback(ERROR_OK, NULL);

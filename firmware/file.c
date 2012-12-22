@@ -138,13 +138,13 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	debug_flush();
 #endif
 
-	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, callback);
+	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, callback, 0);
 
 }
 
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
 		errormsg_t *errormsg, rtconfig_t *rtconf,
-		void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+		void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t iscmd) {
 
 	assert_not_null(errormsg, "file_submit_call: errormsg is null");
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
@@ -229,34 +229,41 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		return -1;
 	}
 
-	// open channel
-	uint8_t writetype = WTYPE_READONLY;
-	if (type == FS_OPEN_WR || type == FS_OPEN_AP || type == FS_OPEN_OW) {
-		writetype = WTYPE_WRITEONLY;
-	} else
-	if (type == FS_OPEN_RW) {
-		writetype = WTYPE_READWRITE;
-	}
-	if (nameinfo.options & NAMEOPT_NONBLOCKING) {
-		writetype |= WTYPE_NONBLOCKING;
-	}
+	if (!iscmd) {
+		// only for file opens
+		// note: we need the provider for the dir converter,
+		// so we can only do it in here.
 
-	int8_t (*converter)(packet_t*, uint8_t) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
+		// open channel
+		uint8_t writetype = WTYPE_READONLY;
+		if (type == FS_OPEN_WR || type == FS_OPEN_AP || type == FS_OPEN_OW) {
+			writetype = WTYPE_WRITEONLY;
+		} else
+		if (type == FS_OPEN_RW) {
+			writetype = WTYPE_READWRITE;
+		}
+		if (nameinfo.options & NAMEOPT_NONBLOCKING) {
+			writetype |= WTYPE_NONBLOCKING;
+		}
 
-	channel_t *channel = channel_find(channel_no);
-	if (channel != NULL) {
-		debug_puts("FILE OPEN ERROR");
-		debug_putcrlf();
-		set_error(errormsg, ERROR_NO_CHANNEL);
-		// clean up
-		channel_close(channel_no);
-		return -1;
-	}
-	int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
-	if (e < 0) {
-		debug_puts("E="); debug_puthex(e); debug_putcrlf();
-		set_error(errormsg, ERROR_NO_CHANNEL);
-		return -1;
+		int8_t (*converter)(packet_t*, uint8_t) = 
+				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
+
+		channel_t *channel = channel_find(channel_no);
+		if (channel != NULL) {
+			debug_puts("FILE OPEN ERROR");
+			debug_putcrlf();
+			set_error(errormsg, ERROR_NO_CHANNEL);
+			// clean up
+			channel_close(channel_no);
+			return -1;
+		}
+		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
+		if (e < 0) {
+			debug_puts("E="); debug_puthex(e); debug_putcrlf();
+			set_error(errormsg, ERROR_NO_CHANNEL);
+			return -1;
+		}
 	}
 
 	activeslot->callback = callback;

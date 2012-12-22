@@ -38,7 +38,7 @@
 #include "led.h"
 #include "debug.h"
 
-#undef DEBUG_CHANNEL
+#define DEBUG_CHANNEL
 
 #define	MAX_CHANNELS	4		// number of maximum open channels
 
@@ -47,6 +47,7 @@ channel_t channels[MAX_CHANNELS];
 static uint8_t _push_callback(int8_t channelno, int8_t errnum);
 static void channel_close_int(channel_t *chan, uint8_t force);
 static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush);
+static channel_t* channel_refill(channel_t *chan, uint8_t options);
 
 void channel_init(void) {
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
@@ -67,6 +68,15 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
 		if (p->pull_state == PULL_PULL2ND) {
 			p->pull_state = PULL_TWOCONV;
 		}
+	}
+	return 0;
+}
+
+static uint8_t _close_callback(int8_t channel_no, int8_t errorno) {
+	channel_t *p = channel_find(channel_no);
+	if (p != NULL) {
+                p->last_push_errorno = errorno;
+		p->push_state = PUSH_CLOSE;
 	}
 	return 0;
 }
@@ -161,7 +171,7 @@ static inline uint8_t push_slot(channel_t *chan) {
 	return (chan->writetype == WTYPE_READWRITE) ? RW_PUSHBUF : chan->current;
 }
 
-void channel_flush(int8_t channo) {
+channel_t* channel_flush(int8_t channo) {
 
 	channel_t *chan = channel_find(channo);
 	if (chan == NULL) {
@@ -180,6 +190,7 @@ void channel_flush(int8_t channo) {
 		delayms(1);
 		main_delay();
 	}
+	return chan;
 }
 
 // returns 0 when data is available, and -1 when no data is available
@@ -334,38 +345,30 @@ static void channel_close_int(channel_t *chan, uint8_t force) {
 }
 
 void channel_close(int8_t channel_no) {
-	channel_t *chan = channel_find(channel_no);
+
+	// flush out any remaining data (without EOF)
+	channel_t *chan = channel_flush(channel_no);
 
 #ifdef DEBUG_CHANNEL
-	debug_printf("channel_close(%p -> %d), push_state=%d\n", chan, channel_no, chan->push_state); debug_flush();
+	debug_printf("channel_close(%p -> %d), push=%d, pull=%d\n", chan, channel_no, 
+		chan == NULL ? -1 : chan->push_state, chan == NULL ? -1 : chan->pull_state); debug_flush();
 #endif
 
 	if (chan != NULL) {
-		if (chan->push_state != PUSH_OPEN) {
-			// if it's not PUSH_FILLONE, then it is in the process
-			// of being pushed
-			while (chan->push_state != PUSH_FILLONE) {
-				// wait until it has been received by the server
-				// and the push_callback being called from the server's
-				// FS_REPLY message, which changes the push_state
-				delayms(1);
-			}
 
-			packet_t *curpack = &chan->buf[pull_slot(chan)];
-			int l = packet_get_contentlen(curpack);
+		// send FS_CLOSE packet
+		packet_t *curpack = &chan->buf[pull_slot(chan)];
+	        packet_set_filled(curpack, channel_no, FS_CLOSE, 0);
 
-			// even if l==0, send an EOF packet to close the file
-		        packet_set_filled(curpack, channel_no, FS_EOF, l);
+		endpoint_t *endpoint = chan->endpoint;
+       	        endpoint->provider->submit_call(endpoint->provdata, 
+			channel_no, curpack, curpack, _close_callback);
 
-			endpoint_t *endpoint = chan->endpoint;
-        	        endpoint->provider->submit_call(endpoint->provdata, 
-				channel_no, curpack, curpack, _push_callback);
+       		// wait until the packet has been sent and been responded to
+       		while (chan->push_state != PUSH_CLOSE) {
+               	       	delayms(1);
+		}	
 
-               		// wait until the packet has been sent and been responded to
-      	 		while (chan->push_state == PUSH_FILLONE) {
-                	       	delayms(1);
-			}	
-		}
 		channel_close_int(chan, 0);
 	}
 }
@@ -375,7 +378,7 @@ void channel_close(int8_t channel_no) {
  * the current buffer is empty, but channel_has_more() true has indicated
  * that the current buffer is not the last one
  */
-channel_t* channel_refill(channel_t *chan, uint8_t options) {
+static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	// buf->refill();
 	// buf = find_buffer(...)
 	//
@@ -417,7 +420,7 @@ channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	}
 
 	// no more data - close it
-	channel_close_int(chan, 0);
+	//channel_close_int(chan, 0);
 	return NULL;
 }
 
