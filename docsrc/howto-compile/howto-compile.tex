@@ -1,0 +1,661 @@
+\include{docdefs}
+\begin{document}
+
+\newcommand{\screenshot}[2][scale=0.5]{ 
+	\begin{center} 
+	\includegraphics [ #1 ] {images/#2} 
+	\end{center}  
+}
+
+\newcommand{\clickhere}[1]{\textit{#1}}
+\newcommand{\typethis}[1]{\textbf{#1}}
+
+\title{How to compile XD-2031}
+\author{}
+\maketitle
+\clearpage
+
+\tableofcontents
+\clearpage
+
+\section{About}
+This document describes how to compile the XD-2031 software. 
+It should give you some hints if you haven't worked with 
+GNU make / GCC / Eclipse
+before. If you're lucky enough to have this practice, you won't find
+much if any news here.
+
+Instructions contained herein cover both compiling the firmware and the
+server software under Linux and OS X. Sorry, there isn't a Windows port 
+at the time.
+
+You can keep your favorite editor and compile at the command line with 
+GNU make, but the usage of the integrated development environment 
+\textit{Eclipse} will be explained also.
+
+Both, firmware and server, are written in plain C.
+
+For any hints, how this software works,
+please have a look at the \textit{/docsrc} 
+and \textit{/doc} directories and read \textit{firmware overview.odp} 
+(Libre Office document) and \textit{wireformat.txt}.
+
+You also won't find detailed explanations on how to contribute patches although
+they are welcome. Cloning the git repository and attempting a 
+\textit{pull request} would be the best way. Simply drop a mail in that case.
+
+Good luck and may the Force be with you...
+
+\section{Prerequisites}
+
+The following software packages are required to compile XD-2031:
+
+\begin{tabular}[c]{l l l}
+\toprule
+Package		& Description	& Version$^*$ \\
+\midrule
+GNU make 	& build tool			& 3.81 \\
+GCC		& GNU C compiler		& 4.2.1 \\
+cURL		& cmdline tool for transferring files & 7.26.0 \\
+AVR-GCC 	& GNU C compiler for AVR	& 4.5.1 \\
+AVR Libc	& C library for AVR		& 1.8.0 \\
+AVRDUDE		& AVR Downloader/UploaDEr	& 5.11.1 \\
+\bottomrule
+\end{tabular}
+
+\clearpage
+The following packages are optional:
+
+\begin{tabular}[c]{l l l}
+\toprule
+Package				& Description			& Version$^*$ \\
+\midrule
+git				& Version control system 	& 1.7.11.2 \\
+Doxygen				& Documentation generator 	& 1.8.1.1 \\
+Eclipse IDE for C/C++ 		& IDE				& Juno SR 1 \\
+\LaTeX{}			& Typesetting program 		& TeX Live 2012 \\
+\bottomrule
+\end{tabular}
+
+$^*$These version numbers reflect the versions used here at the time of writing.
+Other versions may also work, but that hasn't been tested.
+
+\subsection{Linux}
+Freedom causes variety, by consequence the names of the required packages 
+and the commands to install these packages vary from distribution 
+to distribution.
+The following instructions should be suitable for a Debian / Ubuntu style
+Linux. You are of course welcome to contribute commands for your preferred distribution. 
+
+Open a terminal and copy the following line into it:
+
+\begin{verbatim}
+sudo apt-get install build-essential gcc-avr avr-libc 
+avrdude avrdude-doc 
+\end{verbatim}
+
+Make sure to copy this into a single command line, then hit ENTER 
+and type in your password to install the packages. 
+This may take a while...  
+
+If you get a message, that you are not in the 
+sudoers list, you may gain root rights with \texttt{su <your-root-password>} 
+and copy the rest of the line after sudo.
+
+The usage of git is strongly recommended, but not necessary if you want to
+compile only a specific release version of XD-2031. If git isn't installed
+at your system by default, you may add it with:
+
+\begin{verbatim}
+sudo apt-get install git git-gui
+\end{verbatim}
+
+The installation of Eclipse for your specific system is out of the scope
+of this document. Please refer to the Eclipse website and have a look
+at the section "Installing Eclipse". Make sure to download "Eclipse for
+C/C++ Developers". 
+
+\url{http://www.eclipse.org/downloads/}
+
+\subsection{OS X}
+If you haven't already done before, start with installing XCode. 
+This huge software environment including a larger number of applications
+not needed for compiling XD-2031 is virtually the only 
+way to get a proper GCC for the Mac.
+
+If you still are on Snow Leopard (or even before that), XCode is
+included in your installation disks. You can not install XCode using
+the App Store since that version requires Lion at least.
+
+If you are on Lion, Mountain Lion or whatever cat to come next (are
+there still any cats left?), install XCode via the App Store:
+
+\url{https://itunes.apple.com/us/app/xcode/id497799835?mt=12&uo=4}
+
+Next, install the AVR toolchain "CrossPack for AVR". Grab and install it from: 
+
+\url{http://www.obdev.at/products/crosspack}
+
+Starting with Mountain Lion, you may have to (at least temporarily) disable
+Gatekeeper to be able to install software from beyond the App Store. Instructions can be found at \url{https://answers.uchicago.edu/page.php?id=25481} or
+on YouTube at \url{http://youtu.be/H5DZXA4uxeQ}.
+
+The usage of git is strongly recommended, but not necessary if you want to
+compile only a specific release version of XD-2031. Don't think further, 
+go for it: 
+
+\url{http://git-scm.com/download}
+
+If you'd like to use the Eclipse IDE, visit their website  
+and make sure to download the "Eclipse IDE for C/C++ Developers". 
+Install it as usual.
+
+\url{http://www.eclipse.org/downloads} 
+
+\section{Download Sources}
+
+XD-2031 is still under heavy construction, so you might want 
+to get the latest developer sources with git. However, each commit may
+introduce new bugs, so you may consider the use of a release version or
+a snapshot taken a few days ago as well.
+
+\subsection{Releases / Snapshots}
+Release versions and git snapshots are available from the URL given below. 
+Download and unzip your desired source in a directory of your choice.
+
+\url{http://xd2031.petsd.net}
+
+
+\subsection{Latest developer sources}
+
+To clone the repository, run the following command. It will create the directory 
+\textit{XD2031} inside the current directory, download the latest source and place it there.
+This step is required only once. If you later decide to move this directory, you can do so.
+It is not necessary to delete and clone it again somewhere else.
+
+\begin{verbatim}
+git clone https://github.com/fachat/XD2031
+\end{verbatim}
+
+This tutorial can not and doesn't want to be an introduction into git,
+and using git is not necessary for compiling and playing around if you
+do not intend sharing your results. On the other hand, a version control system is
+a great help and if you haven't worked with a VCS before or are new to git, it is definitely 
+worth doing further reading. 
+Start here: \url{http://git-scm.com/doc}
+
+\section{Command line tools}
+\subsection{Firmware}
+\subsubsection{Declare default device}
+Compilation is controlled by the build control tool 'GNU make'. If you haven't worked with Makefiles before,
+this section gives you some hints on usage.
+
+In most cases you'll want to compile for your specific device only. 
+You do so by declaring exactly one device as your default device inside
+the Makefile. Open the file \textit{Makefile} with your favorite editor.
+You will find:
+
+\clearpage
+\begin{verbatim}
+# Uncomment one of the following lines to select your device:
+DEVICE=xs1541
+#DEVICE=petSD
+\end{verbatim}
+
+Comments start with a '\#', so all device definitions starting with a '\#'
+are in fact only comments and thus disabled. If you want to change the
+default device, delete the '\#' before its line and don't forget to add
+another '\#' at the line, that has been the default device until then.
+If you'd like to compile for a petSD, your Makefile should therefore look
+like this (notice how the '\#' moved from petSD to xs1541):
+
+\begin{verbatim}
+# Uncomment one of the following lines to select your device:
+#DEVICE=xs1541
+DEVICE=petSD
+\end{verbatim}
+
+If you edit the Makefile and save your changes, make sure your editor does 
+not replace tabs with spaces or the Makefile won't work any longer.
+
+\subsubsection{Compile}
+
+Once you defined your default device, compilation is made by typing simply make without parameters. The binaries are placed in \textit{XD2031/firmware/bin}.
+
+\begin{verbatim}
+cd XD2031/firmware
+make
+\end{verbatim}
+
+\subsubsection{Compile for all devices}
+You can compile for all devices with a single command. 
+GNU Make will run all necessary steps and compile each target one by one. The binaries are then placed in XD2031/firmware/bin.
+
+\begin{verbatim}
+cd XD2031/firmware
+make zoo
+\end{verbatim}
+
+\subsubsection{Upload firmware}
+Edit \textit{firmware/Makefile} suitable for your device and programmer:
+
+\begin{verbatim}
+# This defines the serial-over-USB port to use when loading the
+# firmware into the device with "make load"
+# For AVR (AtMega) needs avrdude - see avr/Makefile for details
+SERIAL=/dev/ttyUSB0
+
+# If you do ISP programming with "make flash", select your programmer/port:
+DUDE_PROGRAMMER = avrispmkii
+# DUDE_PROGRAMMER = stk200
+
+DUDE_PORT = usb
+# DUDE_PORT = /dev/parport0
+# DUDE_PORT = lpt1
+
+# If you didn't find your programmer, have a took at the list given from:
+# avrdude -c ?
+\end{verbatim}
+
+To upload the firmware on a XS-1541 via bootloader / USB, enter at your
+console without pressing ENTER:
+
+\begin{verbatim}
+make load
+\end{verbatim}
+
+Reset the XS-1541 and hit ENTER within the next three seconds.
+
+When using an ISP programmer (like an AVR ISP mkII), simply type:
+
+\begin{verbatim}
+make flash
+\end{verbatim}
+
+\subsection{Server}
+\subsubsection{Compile}
+To compile the Server, change into the directory \textit{XD2031/pcserver}
+and run the Makefile just the way you did to compile the firmware:
+
+\begin{verbatim}
+cd XD2031/pcserver
+make
+\end{verbatim}
+
+Your binary, let's say your program \textit{fsser},  will be placed 
+in the current directory \textit{XD2031/pcserver}.
+
+\subsubsection{Install}
+If you'd like to run the Server with its default configuration
+(without parameters), installation is required to move
+some files to places where the Server expects them. To permanently install
+the Server, run:
+
+\begin{verbatim}
+sudo make install
+\end{verbatim}
+
+To check respectively edit what goes where, have a look at the head of \textit{Makefile}
+inside the pcserver directory. Watch out for:
+
+\begin{verbatim}
+PREFIX=/usr/local
+BINDIR=bin
+DOCDIR=xd2031/doc
+SAMPLEDIR=xd2031/sample
+TOOLSDIR=xd2031/tools
+\end{verbatim}
+
+The full path for binaries, documents, samples and tools is generated by
+appending the specific directory path to PREFIX. As an example:
+
+\texttt{PREFIX=/usr/local \\
+DOCDIR=xd2031/doc \\
+$\to$ /usr/local/xd2031/doc}
+
+Please be aware of the difference between the two document directories:
+
+\textit{XD2031/doc} should contain documents relevant while
+using XD-2031. These files are copied by the installer during installation.
+
+The opposite is true for \textit{XD2031/docsrc}: this directory should
+contain files that are of interest during development only but not
+for a regular user, so the installer ignores those files.
+
+\subsubsection{Uninstall}
+To uninstall the Server, run:
+
+\begin{verbatim}
+sudo make uninstall
+\end{verbatim}
+
+This will remove not only the Server but also all its directories that may
+contain user-generated files, such as \textit{/usr/local/xd2031/samples}.
+So please be careful and check first, if you want to save some of your
+files first, before uninstalling.
+
+On OS X, the auto-generated uninstall script from xd2031.dmg behaves
+slightly different: it will remove the Server and all the files it came with. 
+It will \textit{not} delete any files you created by yourself, e.g. by
+SAVEing to a sample directory.
+
+\subsubsection{Privileged Server Start (Linux)}
+\label{rights}
+On OS X, the device (XS-1541 / petSD) is always accessible with
+user rights. This is not the case for Linux.
+
+Some Linux systems are very restrictive and doesn't allow a program running
+with user rights to communicate with an attached device, e.g. a XS-1541
+showing up as /dev/ttyUSB0. Enabling this can be challenging, so by default
+the Server starts with root rights to ensure access to the device.
+Once opened, it drops his privileges and continues running with user rights
+to make sure not to harm anything.
+
+That's the reason, why you will be asked for your password when compiling.
+Sudo is required to enable the Server to start with root rights.
+
+If you want to configure the server to always use user rights only, make sure
+it can access the device. As a hint:
+
+\begin{verbatim}
+ls -l /dev/ttyUSB0
+\end{verbatim}
+
+to get the group the device was assigned too. This could be \textit{dialout}.
+Then add your user to this group. In most cases, you should be able to
+access the device now with user rights only.
+
+To compile for "user rights only", edit 
+\textit{pcserver/Makefile} and change PRIVILEGED from 'y' to 'n'.
+Your resulting section of the Makefile should look like this:
+
+\begin{verbatim}
+# Open the serial device with root or user rights
+PRIVILEGED=n
+\end{verbatim}
+
+Another possibility without editing the Makefile is passing this
+case-sensitive parameter when calling make:
+
+\begin{verbatim}
+make PRIVILEGED=n
+\end{verbatim}
+
+\subsubsection{Generate dmg for binary distribution (OS X)}
+If you want to use your self-compiled Server on more than a single Mac,
+you can generate a nice xd2031.dmg file:
+
+\begin{verbatim}
+make dmg
+\end{verbatim}
+
+\screenshot{xd2031_dmg}
+
+\clearpage
+\subsubsection{Doxygen}
+Doxygen is a documentation generator. Its a great help to get
+an overview over all functions, data types etc. And last but not least,
+it can even draw some nice figures:
+\screenshot[scale=0.4]{serial_graph}
+
+To generate the documentation for the firmware, change into the firmware
+directory and invoke make. 
+
+\begin{verbatim}
+cd XD2031/firmware
+make doc
+\end{verbatim}
+
+Open \texttt{XD2031/docsrc/doxygen/firmware/html/index.html}
+with a browser (Firefox, Safari...) to view the generated documentation.
+
+Generating the documentation for the Server is just the same.
+
+\begin{verbatim}
+cd XD2031/pcserver
+make doc
+\end{verbatim}
+
+Open \texttt{XD2031/docsrc/doxygen/pcserver/html/index.html}.
+
+
+\clearpage
+\section{Configure Eclipse}
+\subsection{Workspace}
+Click \clickhere{File $\to$ Switch workspace $\to$ Other...}
+
+Select the topmost XD2031 directory as your workspace and click OK.
+
+\screenshot{eclipse_workspace}
+
+\clearpage
+\subsection{Install AVR plugin}
+Click \clickhere{Help $\to$ Install New Software...}
+
+Fill the field \clickhere{Work with} with \typethis{http://avr-eclipse.sourceforge.net/updatesite}
+
+Click \clickhere{Add...}.
+
+\screenshot{eclipse_avr2}
+
+\clearpage
+Give a name, e.g. \typethis{AVR-Eclipse}, then click OK.
+\screenshot{eclipse_avr3}
+
+Select the newest version. Make sure to checkmark it. Then click \clickhere{Next}
+a couple of times to install the plugin.
+\screenshot[scale=.4]{eclipse_avr5}
+
+\clearpage
+\subsection{Editor preferences}
+If you're on OS X, click at \clickhere{Eclipse $\to$ Preferences...} 
+On Linux or Windows, this should be under
+\clickhere{File $\to$ Preferences...} 
+
+Expand \clickhere{General $\to$ Editors $\to$ Text Editors} at the left side of the window.
+
+Set tab size to \typethis{8}, then click \clickhere{Apply}.
+
+\screenshot{eclipse_tab}
+
+\clearpage
+Expand \clickhere{C/C++ $\to$ Editor $\to$ Save Actions} at the left side of the window.
+
+Make sure to have removing whitespaces \clickhere{In edited lines} selected, or completely disable
+this function. Do not select \clickhere{In all lines} or you'll end up with a lot of whitespace only commits when contributing with git.
+
+Click \clickhere{Apply}.  You may check other options now and make them suitable for your needs, then click OK.
+\screenshot{eclipse_whitespace}
+
+\subsection{Firmware Project}
+Click \clickhere{File $\to$ New $\to$ Makefile Project with Existing Code...}
+
+Click \clickhere{Browse...} and select the firmware directory of your previous downloaded \mbox{XD-2031} source
+tree. The \clickhere{Project Name} will automatically get filled with \clickhere{firmware}, what is
+just fine.
+
+Select the \clickhere{AVR-GCC Toolchain}, then click \clickhere{Finish}.
+
+\screenshot{eclipse_firmware_project}
+
+In order to be able to upload the firmware with a single mouse-click, we have to switch 
+our new project into an AVR project. There's still some magic required to do this...
+
+Click \clickhere{Window $\to$ Show View $\to$ Project Explorer}. Double click at \clickhere{firmware} to expand the files list. You should see a number of source files and directories now:
+\screenshot[scale=.3]{eclipse_project_explorer}
+
+
+Click at the triangle icon to expand the view menu. Click \clickhere{Customize View..}. 
+
+\screenshot{eclipse_view_menu}
+
+\clearpage
+Remove the checkmark at \clickhere{.* resources} to show hidden files. Click OK.
+\screenshot{eclipse_view_menu2}
+
+At the end of the file list, some hidden dot-files are visible now. You may have to scroll down to
+see them. Double-click at \clickhere{.project} to open the file.
+
+Add the following line to the <natures>-Block:
+
+\texttt{<nature>de.innot.avreclipse.core.avrnature</nature>}
+
+Save the file by clicking \clickhere{File $\to$ Save}.
+
+\screenshot[scale=.4]{eclipse_avr_nature}
+
+Click at the AVR Upload Icon. You should get a message \clickhere{No programmer has been set for the
+project} if you successfully switched your project into an AVR project.
+Click \clickhere{File $\to$ Restart} then to restart Eclipse. You should get the same view again.
+\screenshot{eclipse_no_programmer}
+
+\subsection{AVRDUDE}
+
+Click \clickhere{Project $\to$ Properties} at the menu, and expand \clickhere{AVR $\to$ AVRDude} at the left
+side of the \clickhere{Properties for firmware} window.
+
+Click \clickhere{New...} in the section \clickhere{Programmer configuration}.
+
+The following configuration fits for a AVR ISP mkII. If you're still in need of a programmer,
+don't waste time and money with toys, go and buy a tool like this. 
+
+Name the configuration, e.g. \typethis{AVR ISP mkII}. Select your appropriate programmer, 
+\typethis{Atmel AVR ISP mkII} here. Enter \typethis{usb} at the field \clickhere{Override default port (-P)}.
+
+\screenshot[scale=0.3]{eclipse_avrdude}
+
+Click OK to get back to the window \clickhere{Properties for firmware}. 
+
+Click \clickhere{AVR $\to$ Target Hardware} at the left side of the \clickhere{Properties for firmware} window.
+
+Select the MCU Clock Frequency appropriate for your device:
+
+\begin{tabular}[c]{l l l}
+\toprule
+Device		& MCU Clock Frequency \\
+\midrule
+XS-1541 & 14745600 \\
+petSD	& 18432000 \\
+\bottomrule
+\end{tabular}
+
+At \clickhere{MCU Type} above, click \clickhere{Load from MCU} to auto detect it. This is also a test
+to verify the communication with the programmer. You should get one of those ATmega644-types for 
+an XS-1541 and ATmega1284P for a petSD.
+\screenshot[scale=0.4]{eclipse_avrdude2}
+
+Click OK to close the properties window.
+
+At the \clickhere{Project Explorer}, double click at \clickhere{Makefile} to open the file.
+Uncomment one of the DEVICE definitions to select your device. Make sure to comment a previous
+uncommented device, since only a single device is allowed at once.
+
+Click \clickhere{File $\to$ Save} to save the edited Makefile.
+\screenshot[scale=.4]{eclipse_Makefile}
+
+Now its time to compile for the first time: click \clickhere{Project $\to$ Build All}. The compiler output is shown in the Console window. Now that we have
+binaries in the directory \textit{bin}, we can configure the 
+AVRDude Plugin to flash those.
+
+\clearpage
+
+Click \clickhere{Project $\to$ Properties} and expand 
+\clickhere{AVR $\to$ AVRDude} at the left side of the 
+\clickhere{Properties for firmware} window.
+
+Open the section \clickhere{Flash / EEPROM}. 
+At the section \clickhere{Upload Flash Memory Image}, select the radio-box
+\clickhere{from Flash memory image file}. Click at
+\clickhere{Workspace...}. A file selection window pops up then.
+Expand the directory firmware to see all files, go to the bin
+directory and choose the hex-file appropriate for your device.
+
+\screenshot[scale=0.4]{eclipse_avrdude3}
+
+Click OK to close the properties window.
+
+Congrats, you should be able to upload the firmware now simply by clicking
+the AVR Upload Icon. If you prefer using the menu bar, click
+\clickhere{AVR $\to$ Upload Project to Target Device}.
+
+\subsection{Server Project}
+Configuring the Server Project is much like the firmware project. 
+Click \clickhere{File $\to$ New $\to$ Makefile Project with Existing Code...}
+
+Click \clickhere{Browse...} and select the directory \clickhere{pcserver} of your previous 
+downloaded \mbox{XD-2031} source tree. The \clickhere{Project Name} will automatically get filled 
+with \clickhere{pcserver}, what is just fine.
+
+Select the toolchain appropriate for compiling for your computer, \clickhere{MacOSX GCC} here, 
+then click \clickhere{Finish}.
+
+\screenshot{eclipse_pcserver_project}
+
+\clearpage
+Now click \clickhere{Project $\to$ Clean...} 
+
+Select 
+\clickhere{Clean projects below}. Checkmark only \clickhere{pcserver}.
+Checkmark \clickhere{Start a build immediately} and select
+\clickhere{Build only the selected projects}. Then click OK to 
+compile the Server.
+
+\screenshot{eclipse_clean}
+
+Have a look at the Console Log and check, if the compilation was
+successful. If you read \textit{fsser opens the serial device...}
+everything went fine and you can skip the rest of this chapter.
+
+If you configured the Makefile to compile the Server starting
+with root rights, you may find:
+
+\begin{verbatim}
+sudo chown root fsser
+sudo: no tty present and no askpass program specified
+\end{verbatim}
+
+You should have read the chapter \nameref{rights} at page \pageref{rights}
+first to understand why your password is required at compile time.
+
+\clearpage
+There are two workarounds:
+
+First you may edit \textit{pcserver/Makefile} and replace sudo with 
+gksudo (GNOME, Xfce, LXDE) or
+kdesudo (KDE). On the downside, you may have to enter your
+password twice at each compilation.
+
+Another  possibility is allowing the execution of \texttt{chmod}
+and \texttt{chown} with root rights without the need of entering
+the password. 
+
+\textbf{If you disable the sudo password for your account, you 
+will seriously compromise the security of your computer. Anyone sitting 
+at your unattended, logged in account will have complete Root access, 
+and remote exploits become much easier for malicious crackers.}
+
+You have been warned...
+
+Start with getting the absolute paths of chown and chmod by entering
+the commands:
+
+\begin{verbatim}
+whereis chown
+whereis chmod
+\end{verbatim}
+
+This gives \texttt{/usr/sbin/chown} and \texttt{/bin/chmod} here.
+
+Add the following lines with \texttt{sudo visudo} at the end
+of your /etc/sudoers file:
+
+\begin{verbatim}
+<your-user-name> ALL = NOPASSWD: /usr/sbin/chown
+<your-user-name> ALL = NOPASSWD: /bin/chmod
+\end{verbatim}
+
+Replace <your-user-name> with (you guessed it) your user name and
+omit the <>. And don't forget to give the paths to chown and chmod
+suitable for your system, that's what you asked whereis for.
+
+\end{document}
