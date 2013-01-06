@@ -28,7 +28,7 @@
 #define SW_NAME			"XD2031"
 #define SW_NAME_LOWER		"xd2031"
 #define	VERSION			"0.9"
-#define	LONGVERSION		".1"
+#define	LONGVERSION		".2RC2"
 
 #define VER32(major,minor,patch) (major*65536 + minor*256 + patch)
 #define VERSION_U32 VER32(0,9,1)
