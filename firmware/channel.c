@@ -175,7 +175,7 @@ channel_t* channel_flush(int8_t channo) {
 
 	channel_t *chan = channel_find(channo);
 	if (chan == NULL) {
-		return;
+		return NULL;
 	}
 
 	packet_t *curpack = &chan->buf[push_slot(chan)];
