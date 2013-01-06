@@ -362,8 +362,11 @@ void iec_mainloop_iteration(void)
 
 	// only do something on ATN low
 	if (satnishi()) {
-		// ATN is high again, so back to using it
-		bus.active = 1;
+		if (bus.active == 0) {
+			// ATN is high again, so back to using it
+			term_rom_puts(IN_ROM_STR("Enabling IEC bus as ATN is inactive now\n"));
+			bus.active = 1;
+		}
 		return;
 	}
 
@@ -519,6 +522,8 @@ void iec_init(uint8_t deviceno) {
 	// ignore bus when it is blocked by ATN=0, e.g. when devices are switched off
 	if (satnishi()) {
 		bus.active = 1;
+	} else {
+		term_rom_puts(IN_ROM_STR("Ignoring IEC bus as ATN is constantly low\n"));
 	}
 }
 
