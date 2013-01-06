@@ -159,10 +159,10 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			if (devaddr >= 4 && devaddr <= 30) {
 				rtc->device_address = devaddr;
 				er = ERROR_OK;
-				debug_printf("SETTING UNIT# TO %d\n", devaddr);
+				debug_printf("SETTING UNIT# TO %d ON %s\n", devaddr, rtc->name);
 			} else {
 				er = ERROR_SYNTAX_INVAL;
-				debug_printf("ERROR SETTING UNIT# TO %d\n", devaddr);
+				debug_printf("ERROR SETTING UNIT# TO %d ON %s\n", devaddr, rtc->name);
 			}
 		}
 		break;
@@ -177,7 +177,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			if (drv < MAX_DRIVES) {
 				rtc->last_used_drive = drv;
 				er = ERROR_OK;
-				debug_printf("SETTING DRIVE# TO %d\n", drv);
+				debug_printf("SETTING DRIVE# TO %d ON %s\n", drv, rtc->name);
 			}
 		}
 		break;
