@@ -43,8 +43,8 @@
 
 // Prototypes
 
-static void talkloop(void);
-static void listenloop(void);
+//static void talkloop(void);
+//static void listenloop(void);
 
 // bus state
 static bus_t bus;

@@ -296,7 +296,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	} else {
 	    if (channel == NULL) {
 		// if still NULL, error
-		debug_printf("Setting file not open on secaddr %d\n", bus->secondary);
+		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
 		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
@@ -378,7 +378,12 @@ static int16_t bus_prepare(bus_t *bus)
 			// cause a FILE NOT FOUND
 			debug_puts("FILE NOT FOUND\n");
 			debug_flush();
-			bus->device = 0;
+			// Note: this would prevent IEC from actually doing the TALK
+			// and returning timeout with it - which indicates to the C64
+			// that a file was not found.
+			// Not setting this does not seem to disturb IEEE also, so 
+			// we do not reset the device.
+			//bus->device = 0;
 		}
     }
     return st;

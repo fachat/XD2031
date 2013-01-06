@@ -38,7 +38,7 @@
 #include "led.h"
 #include "debug.h"
 
-#define DEBUG_CHANNEL
+#undef DEBUG_CHANNEL
 
 #define	MAX_CHANNELS	4		// number of maximum open channels
 
