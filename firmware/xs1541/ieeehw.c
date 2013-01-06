@@ -96,6 +96,9 @@ void ieeehw_setup() {
 	nrfdhi();
 	ndachi();
 	eoihi();
+
+	// enable pull-up resistor
+	atnhi();
 }
 
 void ieeehw_init() {
