@@ -187,6 +187,8 @@ int main()
 		// handle IEC bus
 		iec_mainloop_iteration();
 #endif
+		// send out log messages
+		term_flush();
 	}
 }
 //---------------------------------------------------------------------------

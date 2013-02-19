@@ -78,6 +78,7 @@
 #define	PUSH_OPEN	0		// after open
 #define	PUSH_FILLONE	1		// filling the first buffer
 #define	PUSH_FILLTWO	2		// filling the second buffer
+#define	PUSH_CLOSE	3		// channel has been closed
 
 typedef struct {
 	// channel globals
@@ -119,9 +120,9 @@ channel_t* channel_find(int8_t chan);
 /**
  * flushes all messages, i.e. waits until writes are acknowledged
  * and in-progress reads are thrown away.
- * Used for block/user commands
+ * Used for block/user commands; returns channel_t* as convenience
  */
-void channel_flush(int8_t chan);
+channel_t *channel_flush(int8_t chan);
 
 static inline int8_t channel_is_writable(channel_t *chan) {
 	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;
@@ -147,8 +148,6 @@ static inline uint8_t channel_current_is_eof(channel_t *chan) {
 uint8_t channel_next(channel_t *chan, uint8_t options);
 
 uint8_t channel_has_more(channel_t *chan);
-
-channel_t* channel_refill(channel_t *chan, uint8_t options);
 
 void channel_preload(int8_t channelno);
 // returns 0 when data is available, or -1 when not (r/w channel)

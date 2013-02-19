@@ -55,6 +55,7 @@
 #include "log.h"
 
 #undef DEBUG_READ
+#define DEBUG_CMD
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -73,7 +74,7 @@ typedef struct {
 
 typedef struct {
 	// derived from endpoint_t
-	struct provider_t 	*ptype;
+	endpoint_t	 	base;
 	// payload
 	char			*basepath;			// malloc'd base path
 	char			*curpath;			// malloc'd current path
@@ -103,6 +104,8 @@ static void init_fp(File *fp) {
 
 // close a file descriptor
 static int close_fd(File *file) {
+
+	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
 	if (file->fp != NULL) {
 		er = fclose(file->fp);
@@ -140,6 +143,8 @@ static void fsp_free(endpoint_t *ep) {
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
+	log_debug("Setting fs endpoint to '%s'\n", path);
+
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
 
 	// alloc and init a new endpoint struct
@@ -150,7 +155,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 		init_fp(&(fsep->files[i]));
         }
 
-	fsep->ptype = (struct provider_t *) &fs_provider;
+	fsep->base.ptype = &fs_provider;
 
 	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
 				path);
@@ -186,6 +191,36 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	strcpy(fsep->curpath, fsep->basepath);
 
 	log_info("FS provider set to real path '%s'\n", fsep->basepath);
+
+	return (endpoint_t*) fsep;
+}
+
+static endpoint_t *fsp_temp(char **name) {
+
+	// make path relative
+	while (**name == dir_separator_char()) {
+		(*name)++;
+	}
+
+	// cut off last filename part (either file name or dir mask)
+	char *end = strrchr(*name, dir_separator_char());
+
+	fs_endpoint_t *fsep = NULL;
+
+	if (end != NULL) {
+		// we have a '/'
+		*end = 0;
+		fsep = (fs_endpoint_t*) fsp_new(NULL, *name);
+		*name = end+1;	// filename part
+	} else {
+		// no '/', so only mask, path is root
+		fsep = (fs_endpoint_t*) fsp_new(NULL, ".");
+	}
+
+	// replace computed base path with current working dir to ensure no breakout
+	free(fsep->basepath);
+	// might get into os.c (Linux (m)allocates the buffer automatically in the right size)
+	fsep->basepath = getcwd(NULL, 0);
 
 	return (endpoint_t*) fsep;
 }
@@ -313,12 +348,12 @@ static int path_under_base(const char *path, const char *base) {
 		goto exit;
 	}
 	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
-	strcpy(base_dirc, base_realpathc);
 	if(!base_dirc) {
 		res = -3;
 		goto exit;
 	}
-	strcat(base_dirc, "/");
+	strcpy(base_dirc, base_realpathc);
+	strcat(base_dirc, dir_separator_string());
 
 	path_realpathc = os_realpath(path);
 	if(!path_realpathc) {
@@ -330,9 +365,9 @@ static int path_under_base(const char *path, const char *base) {
 		res = -2;
 		goto exit;
 	}
-	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 1);
+	path_realpathc = realloc(path_realpathc, strlen(path_realpathc) + 2);	// don't forget the null
 	if(!path_realpathc) return -3;
-	strcat(path_realpathc, "/");
+	strcat(path_realpathc, dir_separator_string());
 
 	log_debug("Check that path '%s' is under '%s'\n", path_realpathc, base_dirc);
 	if(strstr(path_realpathc, base_dirc) == path_realpathc) {
@@ -516,7 +551,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 		er = errno_to_error(errno);
 	}
 
-	log_info("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
+	log_debug("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
 
 exit:
 	mem_free(name); mem_free(path); mem_free(filename);
@@ -528,7 +563,14 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-        File *file = reserve_file(ep, tfd);
+       	char *fullname = malloc_path(fsep->curpath, buf);
+	patch_dir_separator(fullname);
+	if(path_under_base(fullname, fsep->basepath)) {
+		mem_free(fullname);
+		return ERROR_NO_PERMISSION;
+	}
+ 
+	File *file = reserve_file(ep, tfd);
 
 	if (file != NULL) {
 
@@ -536,7 +578,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		strcpy(file->dirpattern, buf);
 		DIR *dp = opendir(fsep->curpath /*buf+FSP_DATA*/);
 
-		log_info("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
+		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
 							tfd, (void*)file, (void*)dp);
 
 		if(dp) {
@@ -580,7 +622,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    return rv;
 		  }
 		  if(!file->de) {
-		    close_fds(ep, tfd);
+		    //close_fds(ep, tfd);
 		    *eof = 1;
 		    int l = dir_fill_disk(retbuf);
 		    rv = l;
@@ -612,8 +654,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  if(n<len) {
 		    // short read, so either error or eof
 		    *eof = 1;
-		    log_debug("Close fd=%d on short read\n", tfd);
-		    close_fds(ep, tfd);
+		    log_debug("short read on %d\n", tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
@@ -621,8 +662,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = 1;
-		      log_debug("Close fd=%d on EOF read\n", tfd);
-		      close_fds(ep, tfd);
+		      log_debug("EOF on read %d\n", tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
 		      ungetc(eofc, fp);
@@ -710,35 +750,24 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	return ERROR_SCRATCHED;	// FILES SCRATCHED message
 }
 
-static int fs_rename(endpoint_t *ep, char *buf) {
+static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 
 	int er = ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	// first find the two names separated by "="
-	int p = 0;
-	while (buf[p] != 0 && buf[p] != '=') {
-		p++;
-	}
-	if (buf[p] == 0) {
-		// not found
-		log_error("Did not find '=' in rename command %s\n", buf);
-		return ERROR_SYNTAX_NONAME;
-	}
+#ifdef DEBUG_CMD
+	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
+#endif
 
-	buf[p] = 0;
-	char *from = buf+p+1;
-	char *to = buf;
-
-	if ((index(to, '/') != NULL) || (index(to,'\\') != NULL)) {
+	if ((index(nameto, '/') != NULL) || (index(nameto,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return ERROR_SYNTAX_DIR_SEPARATOR;
 	}
 
-	char *frompath = malloc_path(fsep->curpath, from);
-	char *topath = malloc_path(fsep->curpath, to);
+	char *frompath = malloc_path(fsep->curpath, namefrom);
+	char *topath = malloc_path(fsep->curpath, nameto);
 
 	char *fromreal = os_realpath(frompath);
 	mem_free(frompath);
@@ -892,8 +921,12 @@ static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
        return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
-       return open_file(ep, tfd, buf, FS_OPEN_WR);
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+	if (is_overwrite) {
+       		return open_file(ep, tfd, buf, FS_OPEN_OW);
+	} else {
+       		return open_file(ep, tfd, buf, FS_OPEN_WR);
+	}
 }
 
 static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
@@ -903,8 +936,6 @@ static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
 static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 	if (*buf == '#') {
 		// ok, open a direct block channel
-
-		fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 		File *file = reserve_file(ep, tfd);
 
@@ -954,6 +985,7 @@ provider_t fs_provider = {
 	"fs",
 	fsp_init,
 	fsp_new,
+	fsp_temp,
 	fsp_free,
 	close_fds,
 	open_file_rd,

@@ -27,6 +27,13 @@
 #include <stdarg.h>
 #include <ctype.h>
 
+static int verbose = 0;
+static int newline = 1;
+
+void set_verbose() {
+	verbose = 1;
+}
+
 void log_term(const char *msg) {
 	
 	int newline = 0;
@@ -72,7 +79,13 @@ void log_warn(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("WRN:");
+	if (newline != 1) {
+       		printf("WRN:");
+	}
+	newline = 0;
+	if (msg[strlen(msg)-1]!='\n') {
+		newline = 1;
+	}
         vprintf(msg, args);
 }
 
@@ -80,7 +93,13 @@ void log_error(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("ERR:");
+	if (newline != 2) {
+       		printf("ERR:");
+	}
+	newline = 0;
+	if (msg[strlen(msg)-1]!='\n') {
+		newline = 2;
+	}
         vprintf(msg, args);
 }
 
@@ -88,16 +107,30 @@ void log_info(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       printf("INF:");
+       	if (newline != 3) {
+		printf("INF:");
+	}
+	newline = 0;
+	if (msg[strlen(msg)-1]!='\n') {
+		newline = 3;
+	}
         vprintf(msg, args);
 }
 
 void log_debug(const char *msg, ...) {
-       va_list args;
-       va_start(args, msg);
+	if (verbose) {
+       		va_list args;
+       		va_start(args, msg);
 
-       printf("DBG:");
-        vprintf(msg, args);
+       		if (newline != 4) {
+			printf("DBG:");
+		}
+		newline = 0;
+		if (msg[strlen(msg)-1]!='\n') {
+			newline = 4;
+		}
+        	vprintf(msg, args);
+	}
 }
 
 

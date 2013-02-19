@@ -1,0 +1,57 @@
+\documentclass[10pt,a4paper]{scrartcl}		% Ersatz für Klasse "article" 
+\parskip 12pt
+\parindent 0pt
+\usepackage{makeidx}					% Stichwortverzeichnis
+\makeindex
+\makeglossary
+%\usepackage[ngerman]{babel}				% Umlaute "a "s etc.
+\usepackage[utf8]{inputenc}				% Umlaute in Quelldatei UTF8-kodiert
+\usepackage[T1]{fontenc}
+\usepackage{footnpag}					% Nummerierung auf jeder Seite neu beginnen
+\usepackage[hyphens]{url}
+\usepackage{listings}
+\lstloadlanguages{[Visual]Basic}
+\lstset{language=C, basicstyle=\ttfamily\small, commentstyle=\itshape }
+\usepackage{numprint}
+\usepackage{booktabs}
+\usepackage{amssymb}					% $\checkmark$
+\usepackage[colorlinks,
+pdfpagelabels,
+pdfstartview = FitH,
+bookmarksopen = true,
+bookmarksnumbered = true,
+linkcolor = black,
+plainpages = false,
+hypertexnames = false,
+citecolor = black] {hyperref}
+\usepackage{eurosym}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usepackage{ifthen}
+
+% **************   SERIF   **************
+%\usepackage{mathptmx} % Times Roman
+%usepackage{fouriernc} % New Century Schoolbook
+\usepackage{tgschola} % TEX Gyre Schola (based on New Century Schoolbook)
+%\usepackage[scaled]{DejaVuSerif}
+
+% **************   SANS SERIF   **************
+%\usepackage[scaled=.90] {helvet}
+\usepackage{tgadventor} % TEX Gyre Adventor (based on URW Gothic, an Avantgarde clone)
+%\usepackage{tgheros} % TEX Gyre Heros (based on URW Nimbus Sans)
+%\usepackage{arev} % Arev is a version of Bitstream Vera Sans, disigned for slide presentations
+
+% **************   MONO   **************
+%\usepackage{luximono}
+\usepackage{beramono}
+
+\newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
+\newcommand{\sfend}[1]{\end{addmargin}}
+
+% -------------------------------------------------------------------------
+% Variablen
+%
+\newcommand{\fwbinaries}{http://FIXME-fwbinaries.de}
+\newcommand{\osxbinaries}{http://FIXME-osxbinaries.de}
+% -------------------------------------------------------------------------

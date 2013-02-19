@@ -37,6 +37,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -66,7 +67,7 @@ typedef struct {
 
 typedef struct {
 	// derived from endpoint_t
-	struct provider_t 	*ptype;
+	endpoint_t 	base;
 	// payload
 	char			*hostname;	// from assign
 	File 			files[MAXFILES];
@@ -75,7 +76,7 @@ typedef struct {
 void tnp_init() {
 }
 
-extern provider_t telnet_provider;
+extern provider_t tcp_provider;
 
 static void init_fp(File *fp) {
 
@@ -110,24 +111,63 @@ static void tnp_free(endpoint_t *ep) {
         mem_free(ep);
 }
 
+// internal helper
+static tn_endpoint_t *create_ep() {
+	// alloc and init a new endpoint struct
+	tn_endpoint_t *tnep = malloc(sizeof(tn_endpoint_t));
+
+        tnep->base.ptype = &tcp_provider;
+
+	tnep->hostname = NULL;
+        for(int i=0;i<MAXFILES;i++) {
+		init_fp(&(tnep->files[i]));
+        }
+	return tnep;
+}
+
 // allocate a new endpoint, where the path is giving the 
 // hostname for the connections. Not much to do here, as the
 // port comes with the file name in the open, so we can get
 // the address on the open only.
 static endpoint_t *tnp_new(endpoint_t *parent, const char *path) {
 
-	// alloc and init a new endpoint struct
-	tn_endpoint_t *tnep = malloc(sizeof(tn_endpoint_t));
+	(void) parent;	// silence unused parameter warning
 
-        tnep->ptype = (struct provider_t *) &telnet_provider;
-
-	tnep->hostname = NULL;
-        for(int i=0;i<MAXFILES;i++) {
-		init_fp(&(tnep->files[i]));
-        }
+	tn_endpoint_t *tnep = create_ep();
 
 	char *hostname = mem_alloc_str(path);
 	tnep->hostname = hostname;
+	
+	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
+
+	return (endpoint_t*) tnep;
+}
+
+// allocate a new endpoint, where the name parameter is giving the 
+// hostname for the connections, plus the port name. The name parameter
+// is modified such that it points to the port name after this endpoint
+// is created.
+// Syntax is:
+//	<hostname>:<portname>
+//
+static endpoint_t *tnp_temp(char **name) {
+
+
+	char *end = strchr(*name, ':');
+	if (end == NULL) {
+		// no ':' separator between host and port found
+		log_error("Please provider 'hostname:port' as name!\n");
+		return NULL;
+	}
+	int n = end - *name;
+
+	tn_endpoint_t *tnep = create_ep();
+
+	// create new string and copy the first n bytes of *name into it
+	char *hostname = mem_alloc_strn(*name, n);
+	tnep->hostname = hostname;
+
+	*name = end+1;	// char after the ':'
 	
 	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
 
@@ -366,7 +406,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
 #ifdef DEBUG_WRITE
-	log_debug("Write_file (telnet): fd=%p\n", file);
+	log_debug("Write_file (tcp): fd=%p\n", file);
 #endif
 
 	if (file != NULL) {
@@ -381,6 +421,10 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 				break;
 			}
 			len -= nw;
+		}
+
+		if (is_eof) {
+			close_fd(file);
 		}
 		return 0;
 	}
@@ -397,7 +441,8 @@ static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
        return open_file(ep, tfd, buf, "rb");
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+       (void) is_overwrite;	// silence unused param warning
        return open_file(ep, tfd, buf, "wb");
 }
 
@@ -410,10 +455,11 @@ static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 }
 
 
-provider_t telnet_provider = {
-	"telnet",
+provider_t tcp_provider = {
+	"tcp",
 	tnp_init,
 	tnp_new,
+	tnp_temp,
 	tnp_free,
 	close_fds,
 	open_file_rd,

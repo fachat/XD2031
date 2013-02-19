@@ -28,7 +28,7 @@ ASMFLAGS=
 # Note that due to me using the "%02x" printf conversion, actually the
 # full(!) printf version is required, including the floating point stuff, to be linked.
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
-CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I.
+CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I. -I../common
 
 clean: archclean deviceclean
 
@@ -51,7 +51,7 @@ load:
 	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # ISP programming 
-flash:
+flash:	all
 	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # Fuse programming

@@ -26,14 +26,16 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "log.h"
 #include "provider.h"
 #include "errors.h"
+#include "wireformat.h"
 
 
 // TODO: this is ... awkward
-extern provider_t telnet_provider;
+extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
 extern provider_t fs_provider;
@@ -85,7 +87,7 @@ int provider_assign(int drive, const char *name) {
 	if ((isdigit(name[0])) && (p == 1)) {
 		// we have a drive number
 		int drv = name[0] & 0x0f;
-		parent = provider_lookup(drv);
+		parent = provider_lookup(drv, NULL);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
@@ -121,6 +123,7 @@ int provider_assign(int drive, const char *name) {
 	if (provider != NULL) {
 		// get new endpoint
 		newep = provider->newep(parent, (name[p] == 0) ? name + p : name + p + 1);
+		newep->is_temporary = 0;
 	}
 
 	if (newep != NULL) {
@@ -150,6 +153,14 @@ int provider_assign(int drive, const char *name) {
 	return ERROR_FAULT;
 }
 
+void provider_cleanup(endpoint_t *ep) {
+	if (ep->is_temporary) {
+		log_debug("Freeing temporary endpoint %p\n", ep);
+		provider_t *prevprov = ep->ptype;
+		prevprov->freeep(ep);
+	}
+}
+
 void provider_init() {
         int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
@@ -166,8 +177,8 @@ void provider_init() {
         http_provider.init();
 	provider_register(&http_provider);
 
-        telnet_provider.init();
-	provider_register(&telnet_provider);
+        tcp_provider.init();
+	provider_register(&tcp_provider);
 
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
@@ -184,8 +195,47 @@ void provider_init() {
         //eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
 }
 
-endpoint_t *provider_lookup(int drive) {
+endpoint_t *provider_lookup(int drive, char **name) {
         int i;
+
+	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		// the drive is not specified by number, but by provider name
+		char *p = strchr(*name, ':');
+		if (p == NULL) {
+			log_error("No provider name given for undef'd drive '%s'\n", *name);
+			return NULL;
+		}
+		log_debug("Trying to find provider for: %s\n", *name);
+
+		unsigned int l = p-(*name);
+		p++; // first char after ':'
+		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
+			provider_t *prov = providers[i].provider;
+			if (prov != NULL && (strlen(prov->name) == l)
+				&& (strncmp(prov->name, *name, l) == 0)) {
+				// we got a provider, but no endpoint yet
+
+				log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
+					prov->name, p);
+
+				if (prov->tempep != NULL) {
+					endpoint_t *ep = prov->tempep(&p);
+					if (ep != NULL) {
+						*name = p;
+						log_debug("Created temporary endpoint %p\n", ep);
+						ep->is_temporary = 1;
+					}
+					return ep;
+				} else {
+					log_error("Provider '%s' does not support temporary drives\n",
+						prov->name);
+				}
+				return NULL;
+			}
+		}
+		log_error("Did not find provider for %s\n", *name);
+		return NULL;
+	}
 
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                 if (eptable[i].epno == drive) {

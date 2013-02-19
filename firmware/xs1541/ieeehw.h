@@ -105,6 +105,11 @@ static inline void nrfdhi() {
 	is_nrfdout = 1;
 }
 
+static inline void atnhi() {
+      	IEEE_DDR_ATN &= (uint8_t)~_BV(IEEE_PIN_ATN);    // ATN as input
+      	IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);             // Enable pull-up
+}
+
 static inline uint8_t ndacislo() {
 	return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }

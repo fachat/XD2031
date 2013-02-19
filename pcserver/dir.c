@@ -52,7 +52,7 @@ int path_is_file(const char *name) {
 	struct stat sbuf;
 	int isfile = 1;
 
-	log_info("checking file with name %s\n",name);
+	log_debug("checking file with name %s\n",name);
 
 	if (lstat(name, &sbuf) < 0) {
 		log_errno("Error stat'ing file");
@@ -333,7 +333,7 @@ char *malloc_path(const char *base, const char *name) {
                 strcat(dirpath, name);
         }
 
-        log_info("Calculate new dir path: %s\n", dirpath);
+        log_debug("Calculated new dir path: %s\n", dirpath);
 
         return dirpath;
 }

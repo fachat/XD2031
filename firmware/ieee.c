@@ -234,10 +234,15 @@ void ieee_mainloop_iteration(void)
 {
         int cmd = 0;
 
+//if (1) return;
+
 	// only do something on ATN low
 	if (atnishi()) {
-		// if ATN is hi, devices have been switched on
-		bus.active = 1;
+		if (bus.active == 0) {
+			// if ATN is hi, devices have been switched on
+                	term_rom_puts(IN_ROM_STR("Enabling IEEE bus as ATN is inactive now\n"));
+			bus.active = 1;
+		}
 		return;
 	}
 
@@ -275,6 +280,9 @@ void ieee_mainloop_iteration(void)
 	    // ack with ndac hi
             ndachi();
 
+#ifdef DEBUG_BUS
+	    debug_putc('A'); debug_flush();
+#endif	
             par_status = bus_attention(&bus, cmd);
 
 	    // wait until DAV goes up
@@ -333,6 +341,9 @@ void ieee_init(uint8_t deviceno) {
 	// ignore bus when ATN is constantly pulled low, e.g. by switched off devices
 	if (atnishi()) {
 		bus.active = 1;
+        } else {
+                term_rom_puts(IN_ROM_STR("Ignoring IEEE bus as ATN is constantly low\n"));
+		debug_printf("active=%d\n", bus.active);
 	}
 }
 

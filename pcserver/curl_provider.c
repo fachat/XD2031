@@ -43,7 +43,7 @@
 #include "provider.h"
 #include "log.h"
 
-#define DEBUG_CURL
+#undef DEBUG_CURL
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -89,7 +89,7 @@ typedef struct File {
 
 typedef struct {
 	// derived from endpoint_t
-	struct provider_t 	*ptype;
+	endpoint_t 		base;
 	// payload
 	proto_t			protocol;	// type of provider
 	char			error_buffer[CURL_ERROR_SIZE];
@@ -169,6 +169,58 @@ static curl_endpoint_t *_new(const char *path) {
 	return fsep;
 }
 
+static endpoint_t *ftp_temp(char **name) {
+
+	log_debug("trying to create temporary drive for '%s'\n", *name);
+
+	// path ends with last '/'
+	char *end = strrchr(*name, '/');
+	if (end != NULL) {
+		*end = 0;
+	}
+
+	curl_endpoint_t *fsep = _new(*name);
+
+	if (end == NULL) {
+		*name = (*name)+strlen(*name);
+	} else {
+		*name = end+1;	// filename part
+	}
+
+	// not sure if this is needed...
+	fsep->protocol = PROTO_FTP;
+
+	fsep->base.ptype = &ftp_provider;
+	
+	return (endpoint_t*) fsep;
+}
+
+static endpoint_t *http_temp(char **name) {
+
+	log_debug("trying to create temporary drive for '%s'\n", *name);
+
+	// path ends with last '/'
+	char *end = strrchr(*name, '/');
+	if (end != NULL) {
+		*end = 0;
+	}
+
+	curl_endpoint_t *fsep = _new(*name);
+
+	if (end == NULL) {
+		*name = (*name)+strlen(*name);
+	} else {
+		*name = end+1;	// filename part
+	}
+
+	// not sure if this is needed...
+	fsep->protocol = PROTO_HTTP;
+
+	fsep->base.ptype = &http_provider;
+	
+	return (endpoint_t*) fsep;
+}
+
 static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 
 	(void) parent; // silence warning unused parameter
@@ -178,7 +230,7 @@ static endpoint_t *ftp_new(endpoint_t *parent, const char *path) {
 	// not sure if this is needed...
 	fsep->protocol = PROTO_FTP;
 
-	fsep->ptype = (struct provider_t *) &ftp_provider;
+	fsep->base.ptype = &ftp_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -192,7 +244,7 @@ static endpoint_t *http_new(endpoint_t *parent, const char *path) {
 	// not sure if this is needed...
 	fsep->protocol = PROTO_HTTP;
 
-	fsep->ptype = (struct provider_t *) &http_provider;
+	fsep->base.ptype = &http_provider;
 	
 	return (endpoint_t*) fsep;
 }
@@ -253,7 +305,7 @@ void prov_free(endpoint_t *ep) {
         for(i=0;i<MAX_SESSIONS;i++) {
 		File *fp = &(cep->files[i]);
 		if (fp->session != NULL) {
-			log_warn("curl session %d is not NULL on free!", fp->chan);
+			log_warn("curl session %d is not NULL on free!\n", fp->chan);
 		}
 		close_fd(&(cep->files[i]));
         }
@@ -269,9 +321,8 @@ static void close_fds(endpoint_t *ep, int tfd) {
 	if (fp != NULL) {
 		if (fp->session == NULL) {
 			log_warn("curl sesion %d is NULL!", tfd);
-		} else {
-			close_fd(fp);
 		}
+		close_fd(fp);
 	}
 }
 
@@ -321,9 +372,9 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	do {
 		rv = curl_multi_perform(fp->multi, &running_handles);
 #ifdef DEBUG_CURL
-//		if (rv != 0 || running_handles != 1) {
+		if (rv != 0 || running_handles != 1) {
 			printf("curl read file returns: %d, running=%d\n", rv, running_handles);
-//		}
+		}
 #endif
 	} while (rv == CURLM_CALL_MULTI_PERFORM);
 
@@ -359,6 +410,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 }
 
 static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+
 	// we already have some data to give back
 	int datalen = fp->rdbufdatalen - fp->bufrp;
 	if (datalen > len) {
@@ -417,6 +469,14 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 #endif
 			return reply_with_data(cep, fp, retbuf, len, eof);
 		}
+		// no data left
+			
+		if (fp->read_state != 0) {
+			log_warn("adding bogus zero byte, to make CBM noticing the EOF\n");
+			*eof = 1;
+			*retbuf = 0;
+			return 1;
+		}
 
 		if (rv == CURLM_OK) {
 			return 0;
@@ -460,7 +520,7 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
 
 		// prepare name
-		strcpy(cep->name_buffer, ((provider_t*)(cep->ptype))->name);
+		strcpy(cep->name_buffer, ((provider_t*)(cep->base.ptype))->name);
 		strcat(cep->name_buffer, "://");
 		strcat(cep->name_buffer, cep->host_buffer);
 		strcat(cep->name_buffer, "/");
@@ -537,11 +597,12 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_NAM;
 		l = strlen(fp->name_buffer);
 		if (len < FS_DIR_NAME + l + 1) {
-			log_error("read buffer too small for dir name (is %d, need at least %d)\n",
+			log_error("read buffer too small for dir name (is %d, need at least %d - concatenating)\n",
 				len, l+FS_DIR_NAME+1);
-			return -ERROR_FILE_NAME_TOO_LONG;
+			l = len - FS_DIR_NAME - 1;
 		}
-		strncpy(retbuf, fp->name_buffer, l+1);
+		strncpy(namep, fp->name_buffer, l);
+		retbuf[l + FS_DIR_NAME]=0;
 		l = l + FS_DIR_NAME + 1;
 		fp->read_state++;
 		break;
@@ -587,10 +648,12 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 #endif
 					break;
 				}
-				if (len < FS_DIR_NAME + l + 1) {
-					log_error("read buffer too small for dir name (is %d, need at least %d)\n",
-						len, l+FS_DIR_NAME+1);
-					return -ERROR_FILE_NAME_TOO_LONG;
+				if ((l + 2) >= len) {
+					log_error("read buffer too small for dir name (is %d, need at least %d, concatenating)\n",
+						len, l+2);
+					*namep = 0;
+					l++;
+					break;
 				}
 			}
 			if (*eof != 0) {
@@ -807,6 +870,7 @@ provider_t ftp_provider = {
 	"ftp",
 	curl_init,
 	ftp_new,
+	ftp_temp,
 	prov_free,
 
 	close_fds,
@@ -829,6 +893,7 @@ provider_t http_provider = {
 	"http",
 	curl_init,
 	http_new,
+	http_temp,
 	prov_free,
 
 	close_fds,

@@ -1,8 +1,8 @@
 
 
 # Uncomment one of the following lines to select your device:
-#DEVICE=xs1541
-DEVICE=petSD
+DEVICE=xs1541
+#DEVICE=petSD
 
 # This defines the serial-over-USB port to use when loading the
 # firmware into the device with "make load"
@@ -26,8 +26,8 @@ DUDE_PORT = usb
 TARGET=XD2031-$(DEVICE)
 BINDIR=bin
 
-FILES=ieee.c bus.c main.c errormsg.c cmd.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c petscii.c
-DEPS=assert.h ieee.h bus.h main.h errormsg.h errors.h channel.h status.h debug.h cmd.h cmd2.h term.h packet.h name.h provider.h petscii.h serial.h delay.h wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h
+FILES=ieee.c bus.c main.c errormsg.c cmd.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c
+DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h status.h debug.h cmd.h cmd2.h term.h packet.h name.h provider.h petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h
 
 all:	$(BINDIR)/$(TARGET).hex size
 

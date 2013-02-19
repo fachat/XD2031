@@ -224,7 +224,7 @@ FS_READ
 	TODO: need to accept FS_REPLY as well, to set error channel appropriately.
 
 FS_WRITE
-	An write command is either sent from the firmware to the server, where it 
+	A write command is either sent from the firmware to the server, where it 
 	expects an FS_REPLY, or from the server to the firmware as reply to an FS_READ
 	command.
 
@@ -244,7 +244,7 @@ File operations
 
 All file operations have the CBM command file name parameter as payload parameter. 
 The command parameter not always just gives a file name, but a search pattern in FS_DELETE
-for example, or a "NEW FILE=OLD FILE" rename parameter. The parameter is zero-terminated.
+for example, or a "NEW FILE",0,"OLD FILE" rename (FS_MOVE) parameter. The parameter is zero-terminated.
 File operation parameters are converted to ASCII before being sent over the wire, so
 the parameters are in ASCII. The exception is the very first payload byte, as it is 
 the drive number (in binary).
@@ -254,12 +254,18 @@ return error code. The FS_DELETE has two bytes in the FS_REPLY packet - one is t
 code, the second one is the number of deleted files.
 
 
-FS_RENAME
-	The payload for this command is the CBM "rename" string, which is 
+FS_MOVE
+	The payload for this command is the new name string, a zero byte, and the 
+	old name string. The latter can also have multiple files separated by ",".
+	So this is (including the first payload byte, the leading drive number):
 
-		<new name> = <old name>
+		<new drive> <new name> '\0' <old drive> <old name>
 
-	The file is renamed. No wildcards are allowed.
+	In general old drive must be the new drive. The old drive byte is left for
+	later expansions. 
+	The file is renamed. No wildcards are allowed. Paths may be used.
+	Files as well as directories are renmaed/moved. If the target exists, a 
+	63 FILE EXISTS error will be generated.
 
 FS_DELETE
 	The payload is a delete pattern like the CBM file name pattern.
@@ -358,7 +364,16 @@ FS_SEEK
 
 	NOTE: not yet implemented. Will be at least for relative files, or maybe all files.
 
- 
+Misc
+----
+
+FS_GETDATIM
+	Request the current date and time information from the server. No payload.
+	Expect an FS_REPLY with a FS_DATE_* struct as payload containing the current
+	date and time on the server. Can be used to adjust the local RTC chip (where
+	applicable)
+
+
 Examples
 ========
 

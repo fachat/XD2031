@@ -34,7 +34,7 @@
 #include "led.h"
 #include "assert.h"
 
-#define DEBUG_FILE
+#undef DEBUG_FILE
 
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2
@@ -89,7 +89,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	// post-parse
 
-	if (nameinfo.cmd != CMD_NONE && nameinfo.cmd != CMD_DIR) {
+	if (nameinfo.cmd != CMD_NONE && nameinfo.cmd != CMD_DIR && nameinfo.cmd != CMD_OVERWRITE) {
 		// command name during open
 		// this is in fact ignored by CBM DOS as checked with VICE's true drive emulation
 		debug_printf("NO CORRECT CMD: %s\n", command_to_name(nameinfo.cmd));
@@ -129,38 +129,61 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
 	if (nameinfo.access == 'A') type = FS_OPEN_AP;
 	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
+	if (nameinfo.cmd == CMD_OVERWRITE) type = FS_OPEN_OW;
 
 #ifdef DEBUG_FILE
-	debug_printf("NAME=%s\n", nameinfo.name+1);
+	debug_printf("NAME='%s' (%d)\n", nameinfo.name, nameinfo.namelen);
 	debug_printf("ACCESS=%c\n", nameinfo.access);
 	debug_printf("CMD=%d\n", nameinfo.cmd);
 	debug_flush();
 #endif
 
-	return file_submit_call(channel_no, type, errormsg, rtconf, callback);
+	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, callback, 0);
 
 }
 
-uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg, rtconfig_t *rtconf,
-		void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
+		errormsg_t *errormsg, rtconfig_t *rtconf,
+		void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t iscmd) {
 
 	assert_not_null(errormsg, "file_submit_call: errormsg is null");
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
 	// check for default drive (here is the place to set the last used one)
-	if (nameinfo.drive == 0xff) {
+	if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
 		nameinfo.drive = rtconf->last_used_drive;
-		// TODO: fix this hack!
-		nameinfo.name[0] = rtconf->last_used_drive;
 	}
-	rtconf->last_used_drive = nameinfo.drive;
+	if (nameinfo.drive != NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
+		// only save real drive numbers as last used default
+		rtconf->last_used_drive = nameinfo.drive;
+	}
+
+	// if second name does not have a drive, use drive from first,
+	// but only if it is defined
+	if (nameinfo.drive2 == NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
+		nameinfo.drive2 = nameinfo.drive;
+	}
 
 	// here is the place to plug in other file system providers,
 	// like SD-Card, or even an outgoing IEC or IEEE, to convert between
 	// the two bus systems. This is done depending on the drive number
 	// and managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
-	endpoint_t *endpoint = provider_lookup(nameinfo.drive);
+	endpoint_t *endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+
+	if (type == FS_MOVE 
+		&& nameinfo.drive2 != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
+		&& nameinfo.drive2 != nameinfo.drive) {		// no need to check if the same
+
+		// two-name command(s) with possibly different drive numbers
+		endpoint_t *endpoint2 = provider_lookup(nameinfo.drive2, (char*) nameinfo.name2);
+
+		if (endpoint2 != endpoint) {
+			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.drive2+0x30);
+			set_error(errormsg, ERROR_DRIVE_NOT_READY);
+			return -1;
+		}
+	}
 
 	// check the validity of the drive (note that in general provider_lookup
 	// returns a default provider - serial-over-USB to the PC, which then 
@@ -190,8 +213,12 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		return -1;
 	}
 
-	packet_init(&activeslot->txbuf, nameinfo.namelen, nameinfo.name);
-	packet_set_filled(&activeslot->txbuf, channel_no, type, nameinfo.namelen);
+        uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
+#ifdef DEBUG_FILE
+	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
+#endif
+	packet_init(&activeslot->txbuf, len, cmd_buffer);
+	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
 
 	// convert character set, e.g. from petscii to ascii
 	if (provider->to_provider != NULL && provider->to_provider(&activeslot->txbuf) < 0) {
@@ -202,35 +229,41 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, errormsg_t *errormsg,
 		return -1;
 	}
 
-	// open channel
-	uint8_t writetype = WTYPE_READONLY;
-	if (type == FS_OPEN_WR || type == FS_OPEN_AP) {
-		writetype = WTYPE_WRITEONLY;
-	} else
-	if (type == FS_OPEN_RW) {
-		writetype = WTYPE_READWRITE;
-	}
-	if (nameinfo.options & NAMEOPT_NONBLOCKING) {
-		writetype |= WTYPE_NONBLOCKING;
-	}
+	if (!iscmd) {
+		// only for file opens
+		// note: we need the provider for the dir converter,
+		// so we can only do it in here.
 
-	int8_t (*converter)(packet_t*, uint8_t) = (type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
+		// open channel
+		uint8_t writetype = WTYPE_READONLY;
+		if (type == FS_OPEN_WR || type == FS_OPEN_AP || type == FS_OPEN_OW) {
+			writetype = WTYPE_WRITEONLY;
+		} else
+		if (type == FS_OPEN_RW) {
+			writetype = WTYPE_READWRITE;
+		}
+		if (nameinfo.options & NAMEOPT_NONBLOCKING) {
+			writetype |= WTYPE_NONBLOCKING;
+		}
 
-	channel_t *channel = channel_find(channel_no);
-	if (channel != NULL) {
-		debug_puts("FILE OPEN ERROR");
-		debug_putcrlf();
-		set_error(errormsg, ERROR_NO_CHANNEL);
-		// clean up
-		channel_close(channel_no);
-		return -1;
-	}
+		int8_t (*converter)(packet_t*, uint8_t) = 
+				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
-	int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
-	if (e < 0) {
-		debug_puts("E="); debug_puthex(e); debug_putcrlf();
-		set_error(errormsg, ERROR_NO_CHANNEL);
-		return -1;
+		channel_t *channel = channel_find(channel_no);
+		if (channel != NULL) {
+			debug_puts("FILE OPEN ERROR");
+			debug_putcrlf();
+			set_error(errormsg, ERROR_NO_CHANNEL);
+			// clean up
+			channel_close(channel_no);
+			return -1;
+		}
+		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
+		if (e < 0) {
+			debug_puts("E="); debug_puthex(e); debug_putcrlf();
+			set_error(errormsg, ERROR_NO_CHANNEL);
+			return -1;
+		}
 	}
 
 	activeslot->callback = callback;

@@ -54,8 +54,8 @@
 
 #include "device.h"
 
-#undef	DEBUG_SERIAL
-#undef	DEBUG_SERIAL_DATA
+#undef	DEBUG_BUS
+#undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
 #define	SECADDR_MASK	0x0f
@@ -178,7 +178,7 @@ static int16_t cmd_handler (bus_t *bus)
     	} else {
       		/* Handle filenames */
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
@@ -199,7 +199,7 @@ static int16_t cmd_handler (bus_t *bus)
 			// TODO this should be reworked more backend (serial) independent
 			main_delay();
 		}
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
 #endif
 		// result of the open
@@ -209,19 +209,28 @@ static int16_t cmd_handler (bus_t *bus)
                 	set_error(&error, bus_for_irq->errnum);
 		}
 
-		// command may (or may not) open channel 15 for callback to the server
-		// so close it here, as this is done separately
-		if (secaddr == CMD_SECADDR) {
-			channel_close(bus_secaddr_adjust(bus, CMD_SECADDR));
-		}
+#ifdef DEBUG_BUS
+		debug_printf("after open: secaddr=%d\n", secaddr);
+#endif
 
-        	if (bus_for_irq->errnum != 0) {
-        	        channel_close(bus_secaddr_adjust(bus, secaddr));
-        	} else {
-                	// really only does something on read-only channels
-                	channel_preload(bus_secaddr_adjust(bus, secaddr));
+		if (secaddr != CMD_SECADDR) {
+			// only open, not for commands
+
+	        	if (bus_for_irq->errnum != 0) {
+				// close channel on error. Is this ok?
+	        	        channel_close(bus_secaddr_adjust(bus, secaddr));
+	        	} else {
+#ifdef DEBUG_BUS
+				debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
+#endif
+                		// really only does something on read-only channels
+                		channel_preload(bus_secaddr_adjust(bus, secaddr));
+			}
 		}
       	}
+
+	// flush debug output
+	debug_flush();
 
     	bus_for_irq->command.command_length = 0;
 
@@ -237,7 +246,7 @@ static int16_t cmd_handler (bus_t *bus)
 int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 
     int16_t st = 0;
-#ifdef DEBUG_SERIAL_DATA
+#ifdef DEBUG_BUS_DATA
     debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
 
@@ -246,7 +255,9 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
         bus->command.command_buffer[bus->command.command_length++] = data;
       }
     } else {
-      bus->channel = channel_put(bus->channel, data, with_eoi);
+      if (bus->channel != NULL) {
+	bus->channel = channel_put(bus->channel, data, with_eoi);
+      }
       if (bus->channel == NULL) {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
@@ -285,19 +296,19 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	} else {
 	    if (channel == NULL) {
 		// if still NULL, error
-		debug_printf("Setting file not open on secaddr %d\n", bus->secondary);
+		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
 		set_error(&error, ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
 		// first fillup the buffers
 		if (channel_preloadp(channel) < 0) {
 			// no data available
 			st |= STAT_RDTIMEOUT;
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
 				channel->channel_no, st);
 #endif
@@ -305,7 +316,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 			*data = channel_current_byte(channel);
 			if (channel_current_is_eof(channel)) {
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
 				debug_puts("EOF!\n");
 #endif
 				st |= STAT_EOF;
@@ -316,17 +327,12 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				// make sure the next call does have a data byte
 				if (!channel_next(channel, preload & BUS_SYNC)) {
 					// no further data on channel available
-      					if (secaddr == CMD_SECADDR || secaddr == LOAD_SECADDR) {
-        					// autoclose when load is done, or after reading status channel
-						channel_close(bus_secaddr_adjust(bus, secaddr));
-						bus->channel = NULL;
-					}
 				}
 			}
 		}
 	    }
 	}
-#ifdef DEBUG_SERIAL_DATA
+#ifdef DEBUG_BUS_DATA
 	if (!(preload & BUS_PRELOAD)) {
 	        debug_printf("receivebyte: %02x (%c)\n", *data, (isprint(*data) ? *data : '-'));
 	}
@@ -344,7 +350,7 @@ static int16_t bus_prepare(bus_t *bus)
 
     uint8_t device = bus->device & DEVICE_MASK;
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
     debug_printf("***BusCommand %02x %02x\n",
          bus->device, bus->secondary);
 #endif
@@ -355,15 +361,15 @@ static int16_t bus_prepare(bus_t *bus)
 
     secaddr = bus->secondary & SECADDR_MASK;
 
-	  if (secaddr != CMD_SECADDR) {
+    if (secaddr != CMD_SECADDR) {
           	/* Open Channel */
 	  	bus->channel = channel_find(bus_secaddr_adjust(bus, secaddr));
 		if (bus->channel == NULL) {
-			debug_puts("Did not find channel!\n");
-			st |= STAT_EOF | STAT_RDTIMEOUT;	// correct code?
+			debug_printf("DID NOT FIND CHANNEL FOR CHAN=%d!\n", bus_secaddr_adjust(bus,secaddr)); 
+			st |= STAT_EOF | STAT_RDTIMEOUT | STAT_WRTIMEOUT;	// correct code?
 		}
-	  }
-          if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
+    }
+    if ((bus->device & BUSCMD_MASK) == BUSCMD_TALK) {
 	      	// if we should TALK, prepare the first data byte
 	      	if (!st) {
               		st = bus_receivebyte(bus, &b, BUS_PRELOAD | BUS_SYNC) & 0xbf;   /* any error, except eof */
@@ -371,28 +377,43 @@ static int16_t bus_prepare(bus_t *bus)
 		} else {
 			// cause a FILE NOT FOUND
 			debug_puts("FILE NOT FOUND\n");
-			bus->device = 0;
+			debug_flush();
+			// Note: this would prevent IEC from actually doing the TALK
+			// and returning timeout with it - which indicates to the C64
+			// that a file was not found.
+			// Not setting this does not seem to disturb IEEE also, so 
+			// we do not reset the device.
+			//bus->device = 0;
 		}
-          }
-	return st;
+    }
+    return st;
 }
 
 static void bus_close(bus_t *bus) {
     	uint8_t secaddr = bus->secondary & SECADDR_MASK;
-          /* Close File */
-          if(secaddr == CMD_SECADDR) {
+#ifdef DEBUG_BUS
+	debug_printf("bus_close secaddr=%d\n",secaddr);
+#endif
+        /* Close File */
+        if(secaddr == CMD_SECADDR) {
 	    // is this correct or only a convenience?
             channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
-          } else {
+        } else {
             /* Close a single buffer */
             channel_close(bus_secaddr_adjust(bus, secaddr));
-          }
+        }
 }
 
 int16_t bus_attention(bus_t *bus, uint8_t b) {
     int16_t st = 0;
 
     uint8_t is_config_device = ( (bus->device & DEVICE_MASK) == bus->rtconf.device_address );
+
+#ifdef DEBUG_BUS
+    debug_printf("BusAttention(%02x)\n", b);
+    debug_flush();
+#endif
+
 
     // UNLISTEN and it is either open or the command channel
     if (b == BUSCMD_UNLISTEN
@@ -480,7 +501,7 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 	}
     }
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_BUS
     debug_printf("BusAttention(%02x)->TrapDevice=%02x, st=%04x\n",
                b, bus->device, st | (bus->device << 8));
     debug_flush();

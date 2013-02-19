@@ -1,0 +1,16 @@
+
+
+;webcat ==0401==
+   10 print chr$(14)
+   20 open1,8,0,"ftp:ftp.zimmers.net/pub/cbm/index.html"
+   30 rem print "press return";:input a$
+   40 get#1,a$:s=st
+   50 if a$="" then a=0: goto 70
+   60 a=asc(a$)
+   70 if a < 65 then 90
+   75 if a < 91 then a=a+128: goto 90
+   80 if a < 97 then 90
+   85 if a < 123then a=a-32
+   90 printchr$(a);:if s=0 then 40
+   95 close1
+

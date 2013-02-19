@@ -25,6 +25,9 @@
 
 char *patch_dir_separator (char *path);
 
+static inline char dir_separator_char(void) { return '/'; }
+static inline char* dir_separator_string(void) { return "/"; }
+
 #include "mem.h"
 
 // Linux (3.4.11)
@@ -44,10 +47,13 @@ static inline char *os_realpath (const char *path)
 #else
 static inline char *os_realpath (const char *path) 
 {
-	return (realpath(path, NULL));
+	return realpath(path, NULL);
 }
 #endif
 
-
+/*
+ * return a const char pointer to the home directory of the user 
+ */
+const char *get_home_dir(void);
 
 #endif
