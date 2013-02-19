@@ -101,7 +101,7 @@ static FILINFO Finfo;
 
 // helper functions
 static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
-static int8_t fs_rename(char *buf);
+static int8_t fs_move(char *buf);
 static void fs_delete(char *path, packet_t *p);
 
 // debug functions
@@ -378,9 +378,9 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			packet_write_char(rxbuf, res);
 			break;
 
-		case FS_RENAME:
+		case FS_MOVE:
 			/* rename / move a file */
-			packet_write_char(rxbuf, fs_rename(path));
+			packet_write_char(rxbuf, fs_move(path));
 			break;
 
 		case FS_DELETE:
@@ -569,7 +569,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 
 /* ----- Rename a file or directory ---------------------------------------------------------- */
 
-static int8_t fs_rename(char *buf) {
+static int8_t fs_move(char *buf) {
 	/* Rename/move a file or directory
 	 * DO NOT RENAME/MOVE OPEN OBJECTS!
 	 */
@@ -586,7 +586,7 @@ static int8_t fs_rename(char *buf) {
 	from = buf + p + 1;
 	to = buf;
 
-	debug_printf("FS_RENAME '%s' to '%s'", from, to); debug_putcrlf();
+	debug_printf("FS_MOVE '%s' to '%s'", from, to); debug_putcrlf();
 
 	if((er = f_stat(to, &fileinfo)) == ERROR_OK) return ERROR_FILE_EXISTS;
 	if(er != FR_NO_FILE) return er;

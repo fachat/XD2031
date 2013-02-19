@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include "../errors.h"	/* XD-2031 error codes */
+#include "errors.h"	/* XD-2031 error codes */
 #include "integer.h"    /* Basic integer types */
 #include "ffconf.h"     /* FatFs configuration options */
 
