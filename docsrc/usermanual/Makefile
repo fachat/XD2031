@@ -26,4 +26,10 @@ all:	XD2031-Benutzerhandbuch.tex gpl-2.0.tex
 	pdflatex XD2031-Benutzerhandbuch.tex
 	$(MAKEINDEX) XD2031-Benutzerhandbuch.idx
 	pdflatex XD2031-Benutzerhandbuch.tex
-	$(OPEN) XD2031-Benutzerhandbuch.pdf
+	# Move generated PDF to doc/
+	mv XD2031-Benutzerhandbuch.pdf ../../doc/XD2031-Benutzerhandbuch.pdf
+	# Display PDF
+	$(OPEN) ../../doc/XD2031-Benutzerhandbuch.pdf
+
+clean:
+	rm -f *.aux *.fot *.glo *.idx *.ilg *.ind *.log *.out *.pdf *.toc
