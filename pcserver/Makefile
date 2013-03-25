@@ -1,3 +1,5 @@
+VERSION=0.9.2-RC2
+
 PREFIX=/usr/local
 BINDIR=bin
 DOCDIR=xd2031/doc
@@ -8,6 +10,10 @@ DROPDIR=xd2031
 
 CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -I../common
+
+# Uncomment the following line for a 32 bit version that will run on 
+# both 32 and 64 bit OS X
+# CFLAGS+= -arch i386
 
 COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c
 COMMONH=fscmd.h privs.h name.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h
@@ -93,19 +99,19 @@ uninstall:
 	  rmdir $(PREFIX)/$$i 2>/dev/null | exit 0; \
 	done;
 
-# make dmg generates xd2031.dmg for binary distribution with uninstaller
-# ---> edit --version "0.9.1" a few lines below
+# make dmg generates xd2031-$(VERSION).dmg for binary distribution 
+# with uninstaller
 # ---> compile with -arch i386 in CFLAGS first!
 # works on OS X only
 dmg:
 	# Clean first, then make a temporary fauxroot install
-	rm -rf fauxroot dmg xd2031.dmg
+	rm -rf fauxroot dmg XD-2031-$(VERSION).dmg
 	make install PREFIX=fauxroot/usr/local
 	# Create .pkg from fauxroot
 	mkdir dmg
 	/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker \
 	--verbose --root-volume-only --root fauxroot/  --id com.xd2031 \
-	--version "0.9.1" --target 10.5 --discard-forks --out dmg/XD-2031.pkg \
+	--version "$(VERSION)" --target 10.5 --discard-forks --out dmg/XD-2031-$(VERSION).pkg \
 	--title "XD-2031" --domain system
 	# you may want to add some README etc. to dmg/
 	cp COPYING dmg/
@@ -124,8 +130,9 @@ dmg:
 	echo "read -p \"Press ENTER to continue...\"" >> dmg/XD-2031-uninstall
 	chmod +x dmg/XD-2031-uninstall
 	# Create dmg image from dmg/ directory
-	hdiutil create -srcfolder dmg -volname "XD-2031" xd2031.dmg
+	hdiutil create -srcfolder dmg -volname "XD-2031" XD-2031-$(VERSION).dmg
 	# Clean again
 	rm -rf fauxroot dmg
+	@echo Did you remember compiling first with CFLAGS+= -arch i386?
 
 .PHONY: all install uninstall run dmg
