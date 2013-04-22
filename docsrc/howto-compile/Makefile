@@ -45,5 +45,8 @@ ifneq ($(strip $(TEX_DE)),)
 	hunspell -t -d de_DE $(TEX_DE)
 endif
 
+versions:
+	 dpkg -l make gcc libcurl4-gnutls-dev gcc-avr avr-libc avrdude hunspell texlive doxygen graphviz git
+
 clean:
 	rm -f *.aux *.fot *.glo *.idx *.ilg *.ind *.log *.out *.toc
