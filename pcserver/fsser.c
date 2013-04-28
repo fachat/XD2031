@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
-	int verbose = 0;
+	int verbose = 1;
 
 	mem_init();
 
@@ -166,13 +166,25 @@ int main(int argc, char *argv[]) {
 	if(argc == 1) {
 		// Default assigns
 		char *fs_home;
+      char *di_dev0; // di test assign to $HOME/dev0.d64
+      char *di_dev1; // di test assign to $HOME/dev1.d64
 		fs_home = (char*) malloc(strlen(get_home_dir()) + 4);
 		strcpy(fs_home, "fs:");
 		strcat(fs_home, get_home_dir());
-		provider_assign(0, fs_home);
-		provider_assign(1, "fs:/usr/local/xd2031/sample");
-		provider_assign(2, "fs:/usr/local/xd2031/tools");
-		provider_assign(3, "ftp:ftp.zimmers.net/pub/cbm");
+		di_dev0 = (char*) malloc(strlen(fs_home) + 9);
+		di_dev1 = (char*) malloc(strlen(fs_home) + 9);
+      strcpy(di_dev0,fs_home);
+      strcpy(di_dev1,fs_home);
+      strcat(di_dev0,"/dev0.d64");
+      strcat(di_dev1,"/dev1.d64");
+      strncpy(di_dev0,"di",2); // "di:$HOME/dev0.d64"
+      strncpy(di_dev1,"di",2); // "di:$HOME/dev1.d64"
+		provider_assign(0, di_dev0);
+		provider_assign(1, di_dev1);
+		provider_assign(2, fs_home);
+		provider_assign(3, "fs:/usr/local/xd2031/sample");
+		provider_assign(4, "fs:/usr/local/xd2031/tools");
+		provider_assign(5, "ftp:ftp.zimmers.net/pub/cbm");
 		provider_assign(7, "http:www.zimmers.net/anonftp/pub/cbm/");
 	} else cmd_assign_from_cmdline(argc, argv);
 

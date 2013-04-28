@@ -117,7 +117,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	uint8_t type = FS_OPEN_RD;
 
-	if (nameinfo.name[1] == '#' || nameinfo.access == 'X') {
+	if (nameinfo.name[0] == '#' || nameinfo.access == 'X') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
 		// Note: '#' is still blocking on read!

@@ -1,4 +1,4 @@
-PREFIX=/usr/local
+PREFIX=/opt/local
 BINDIR=bin
 DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
@@ -7,13 +7,13 @@ TOOLSDIR=xd2031/tools
 DROPDIR=xd2031
 
 CC=gcc
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -I../common
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99
 
-COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c
-COMMONH=fscmd.h privs.h name.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h
+COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c di_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c
+COMMONH=fscmd.h privs.h name.h dir.h wireformat.h log.h provider.h mem.h types.h xcmd.h os.h errors.h serial.h
 
 #output of `curl-config --libs`
-#LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
+#LIBS=-L/opt/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
 LIBS=-lcurl
 
 # Open the serial device with root or user rights
@@ -100,7 +100,7 @@ uninstall:
 dmg:
 	# Clean first, then make a temporary fauxroot install
 	rm -rf fauxroot dmg xd2031.dmg
-	make install PREFIX=fauxroot/usr/local
+	make install PREFIX=fauxroot/opt/local
 	# Create .pkg from fauxroot
 	mkdir dmg
 	/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker \
