@@ -196,8 +196,8 @@ channel_t* channel_flush(int8_t channo) {
 // returns 0 when data is available, and -1 when no data is available
 static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 
-	// TODO:fix for read/write
 	if (chan->writetype == WTYPE_WRITEONLY) return -1;
+	// if (chan->writetype == WTYPE_READWRITE) return -1;
 
 	do {
 	    if (chan->pull_state == PULL_OPEN) {

@@ -535,6 +535,7 @@ static void do_cmd(char *buf, int fd) {
 		break;
 	case FS_WRITE:
 	case FS_EOF:
+		printf("WRITE: chan=%d, ep=%p\n %10.10s", tfd, (void *)ep,buf+FSP_DATA);
 		ep = chan_to_endpoint(tfd);
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (ep != NULL) {
@@ -669,6 +670,7 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_BLOCK:
+		log_info("BLOCK(%d,...)\n", tfd);
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;

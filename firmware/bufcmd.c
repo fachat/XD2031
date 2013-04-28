@@ -30,34 +30,22 @@
 #include "debug.h"
 
 
-#define	DEBUG_USER
-#define	DEBUG_BLOCK
-
-
-static struct {
-	int8_t 		channel;
-	int8_t		drive;
-	int8_t		track;
-	int8_t		sector;
-} cmdinfo;
-
-// place for command, drive, track sector; channel is part of packet header
-#define	CMD_BUFFER_LENGTH	4
+#define   DEBUG_USER
+#define   DEBUG_BLOCK
+#define   CMD_BUFFER_LENGTH   4
 
 static char buf[CMD_BUFFER_LENGTH];
 static packet_t cmdpack;
 static uint8_t cbstat;
 static int8_t cberr;
 
-static uint8_t parse_cmdinfo(char *buf);
-
 /**
  * command callback
  */
 static uint8_t callback(int8_t channelno, int8_t errnum) {
-	cberr = errnum;
-	cbstat = 1;
-	return 0;
+   cberr = errnum;
+   cbstat = 1;
+   return 0;
 }
 
 /**
@@ -69,74 +57,52 @@ static uint8_t callback(int8_t channelno, int8_t errnum) {
  * 
  * returns ERROR_OK/ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
-uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) { 
-	char *pars;	
-	uint8_t er = ERROR_OK;
-	uint8_t cmd = cmdbuf[1];
+
+uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error)
+{ 
+   uint8_t cmd = cmdbuf[1] & 15;  // U1 == UA,  U2 == UB
+   uint8_t rv;
+   int     channel,drive,track,sector;
 
 #ifdef DEBUG_USER
-	debug_printf("cmd_user (%02x): %s\n", cmd, cmdbuf);
+   debug_printf("cmd_user (%02x): %s\n", cmd, cmdbuf);
 #endif
 
-	// find start of parameter string into pars
-	pars = cmdbuf+2;
-	while (*pars && (*pars != ':')) {
-		pars++;
-	}
-	if (!*pars) {
-		return ERROR_SYNTAX_INVAL;
-	}
-	pars++;
-	
-	switch(cmd & 0x0f) {
-	case 1:		// U1
-		er = parse_cmdinfo(pars);
-		if (er == ERROR_OK) {
-			// read sector
-#ifdef DEBUG_USER
-			debug_printf("U1: read sector ch=%d, dr=%d, tr=%d, se=%d\n", 
-				cmdinfo.channel, cmdinfo.drive, cmdinfo.track, cmdinfo.sector);
-#endif
-			cmdinfo.channel = bus_secaddr_adjust(bus, cmdinfo.channel);
-			
-			channel_flush(cmdinfo.channel);
+   rv = sscanf(cmdbuf+2,"%*[^0-9]%d%*[^0-9]%d%*[^0-9]%d%*[^0-9]%d",
+        &channel,&drive,&track,&sector);
+   if (rv != 4) return ERROR_SYNTAX_INVAL;
 
-			buf[0] = FS_BLOCK_U1;
-			buf[1] = cmdinfo.drive;
-			buf[2] = cmdinfo.track;
-			buf[3] = cmdinfo.sector;
-			packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
-			packet_set_filled(&cmdpack, cmdinfo.channel, FS_BLOCK, 4);
+        if (cmd == 1) buf[0] = FS_BLOCK_U1;
+   else if (cmd == 2) buf[0] = FS_BLOCK_U2;
+   else return ERROR_SYNTAX_UNKNOWN;
 
-			endpoint_t *endpoint = provider_lookup(cmdinfo.drive, NULL);
-		
-			if (endpoint != NULL) {	
-				cbstat = 0;
-				endpoint->provider->submit_call(NULL, cmdinfo.channel, 
-								&cmdpack, &cmdpack, callback);
+   channel = bus_secaddr_adjust(bus, channel);
+   channel_flush(channel);
 
-				while (cbstat == 0) {
-					delayms(1);
-					main_delay();
-				}
+   buf[1] = drive;
+   buf[2] = track;
+   buf[3] = sector;
+   packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+   packet_set_filled(&cmdpack, channel, FS_BLOCK, 4);
 
-				return cberr;
-			} else {
-				return ERROR_DRIVE_NOT_READY;
-			}
-		}
-		
-		
-		break;
-	case 2:		// U2
-		break;
-	default:
-		break;
-	}
-
-	return ERROR_SYNTAX_UNKNOWN;
+   endpoint_t *endpoint = provider_lookup(drive, NULL);
+   if (endpoint)
+   {   
+      cbstat = 0;
+      endpoint->provider->submit_call(NULL, channel,&cmdpack,
+                                         &cmdpack, callback);
+      while (cbstat == 0)
+      {
+         delayms(1);
+         main_delay();
+      }
+      return cberr;
+   }
+   else
+   {
+      return ERROR_DRIVE_NOT_READY;
+   }
 }
-
 
 /**
  * block commands
@@ -149,53 +115,6 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
  */
 uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 
-	return ERROR_SYNTAX_UNKNOWN;
-}
-
-/**
- * parse the B-R/W/E, U1/2 "channel drive track sector" parameters
- *
- * return ERROR_* on error (short string, format, ...)
- * or 0 on success.
- */
-static uint8_t parse_cmdinfo(char *buf) {
-	char *next;
-	unsigned long int val;
-
-#ifdef DEBUG_USER
-	debug_printf("parse_cmdinfo: %s\n", buf);
-#endif
-
-	cmdinfo.channel = -1;
-
-	errno = 0;	
-	val = strtoul(buf, &next, 10);
-	cmdinfo.channel = val;
-
-	if (next != NULL) {
-		val = strtoul(next, &next, 10);
-		cmdinfo.drive = val;
-
-		if (next != NULL) {
-			val = strtoul(next, &next, 10);
-			cmdinfo.track = val;
-
-			if (next != NULL) {
-				val = strtoul(next, &next, 10);
-				cmdinfo.sector = val;
-			} else {
-				return ERROR_SYNTAX_INVAL;
-			}
-		} else {
-			return ERROR_SYNTAX_INVAL;
-		}
-	} else {
-		return ERROR_SYNTAX_INVAL;
-	}
-
-	if (errno != 0) {
-		return ERROR_SYNTAX_INVAL;
-	}
-	return ERROR_OK;
+   return ERROR_SYNTAX_UNKNOWN;
 }
 
