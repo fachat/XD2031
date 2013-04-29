@@ -120,9 +120,12 @@ int config_ser(int fd) {
 }
 
 void guess_device(char** device) {
-/* search /dev for a virtual serial port 
+/* search /dev for a (virtual) serial port 
    Change "device" to it, if exactly one found
-   If none found or more than one, exit(1) with error msg */
+   If none found or more than one, exit(1) with error msg.
+   FT232 (XS-1541, petSD) connects as ttyUSB0 (ttyUSB1 ...) on Linux,
+   and as cu.usbserial-<SERIAL NUMBER> on OS X.
+   ttyAMA0 is Raspberry Pi's serial port (3.1541) */
 
   DIR *dirptr;
   struct direct *entry;
@@ -132,7 +135,8 @@ void guess_device(char** device) {
   dirptr = opendir(devicename);
   while((entry=readdir(dirptr))!=NULL) {
     if ((!fnmatch("cu.usbserial-*",entry->d_name,FNM_NOESCAPE)) ||
-        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE))) 
+        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE)) ||
+        (!strcmp("ttyAMA0",entry->d_name)))
     {
       strncpy(devicename + 5, entry->d_name, 80-5); 
       devicename[80] = 0; // paranoid... wish I had strncpy_s...
