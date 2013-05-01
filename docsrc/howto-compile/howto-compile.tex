@@ -1,4 +1,6 @@
-\include{docdefs}
+\input{docdefs}
+\input{../globals}
+
 \begin{document}
 
 \newcommand{\screenshot}[2][scale=0.5]{ 
@@ -48,50 +50,24 @@ Good luck and may the Force be with you...
 
 \section{Prerequisites}
 
-The following software packages are required to compile XD-2031:
-
-\begin{tabular}[c]{l l l}
-\toprule
-Package		& Description	& Version$^*$ \\
-\midrule
-GNU make 	& build tool			& 3.81 \\
-GCC		& GNU C compiler		& 4.2.1 \\
-cURL		& cmdline tool for transferring files & 7.26.0 \\
-AVR-GCC 	& GNU C compiler for AVR	& 4.5.1 \\
-AVR Libc	& C library for AVR		& 1.8.0 \\
-AVRDUDE		& AVR Downloader/UploaDEr	& 5.11.1 \\
-\bottomrule
-\end{tabular}
-
-\clearpage
-The following packages are optional:
-
-\begin{tabular}[c]{l l l}
-\toprule
-Package				& Description			& Version$^*$ \\
-\midrule
-git				& Version control system 	& 1.7.11.2 \\
-Doxygen				& Documentation generator 	& 1.8.1.1 \\
-Eclipse IDE for C/C++ 		& IDE				& Juno SR 1 \\
-\LaTeX{}			& Typesetting program 		& TeX Live 2012 \\
-\bottomrule
-\end{tabular}
-
-$^*$These version numbers reflect the versions used here at the time of writing.
-Other versions may also work, but that hasn't been tested.
-
 \subsection{Linux}
 Freedom causes variety, by consequence the names of the required packages 
 and the commands to install these packages vary from distribution 
 to distribution.
-The following instructions should be suitable for a Debian / Ubuntu style
-Linux. You are of course welcome to contribute commands for your preferred distribution. 
+You are of course welcome to contribute commands for your preferred distribution. 
 
-Open a terminal and copy the following line into it:
+\subsubsection{Debian / Ubuntu style Linux (including Mint)}
+For an easy, complete installation (besides Eclipse) 
+\href{apt://build-essential,gcc-avr,avr-libc,avrdude,avrdude-doc,libcurl4-gnutls-dev,git,git-gui,doxygen,graphviz,texlive,texlive-latex-extra,texlive-fonts-extra,hunspell,hunspell-en-us,hunspell-de-de}{click this apturl-link}.
+While the installation process is still running, you can immediately 
+continue with the 
+\nameref{eclipseinst} on page \pageref{eclipseinst}.
+
+If you prefer a manual installation, open a terminal and copy the following line into it:
 
 \begin{verbatim}
 sudo apt-get install build-essential gcc-avr avr-libc 
-avrdude avrdude-doc 
+avrdude avrdude-doc libcurl4-gnutls-dev
 \end{verbatim}
 
 Make sure to copy this into a single command line, then hit ENTER 
@@ -110,12 +86,44 @@ at your system by default, you may add it with:
 sudo apt-get install git git-gui
 \end{verbatim}
 
-The installation of Eclipse for your specific system is out of the scope
-of this document. Please refer to the Eclipse website and have a look
-at the section "Installing Eclipse". Make sure to download "Eclipse for
-C/C++ Developers". 
+The following packages are optional, but may be useful: 
+
+Doxygen is a
+documentation generator. It is a great help to get an overview over all
+functions, data types etc. 
+
+\begin{verbatim}
+sudo apt-get install doxygen graphviz
+\end{verbatim}
+
+This manual was made with \LaTeX{}. Be warned: this is a rather huge
+download and may take a while to install, so go and grab a coffee...
+
+\begin{verbatim}
+sudo apt-get install texlive texlive-latex-extra 
+texlive-fonts-extra hunspell hunspell-en-us hunspell-de-de
+\end{verbatim}
+
+\subsubsection{Installation of the Eclipse IDE}
+\label{eclipseinst}
+Open the Eclipse download page and download
+either the 32 or 64 bits version of
+"Eclipse IDE for C/C++ Developers":
 
 \url{http://www.eclipse.org/downloads/}
+
+Extract and move the files with the following commands:
+
+\begin{verbatim}
+tar zxvf eclipse-cpp-juno-SR2-linux-gtk-x86_64.tar.gz 
+sudo mv eclipse /opt
+sudo ln -s /opt/eclipse/eclipse /usr/bin/eclipse
+\end{verbatim}
+
+It is possible now to start Eclipse by typing \texttt{eclipse} at
+the command line, but you may want to add an appropriate entry
+in your main menu. If you're not sure how to do this,
+\href{apt://alacarte}{alacarte} is a program that might help you.
 
 \subsection{OS X}
 If you haven't already done before, start with installing XCode. 
@@ -132,7 +140,7 @@ there still any cats left?), install XCode via the App Store:
 
 \url{https://itunes.apple.com/us/app/xcode/id497799835?mt=12&uo=4}
 
-Next, install the AVR toolchain "CrossPack for AVR". Grab and install it from: 
+Next, install the AVR tool-chain "CrossPack for AVR". Grab and install it from: 
 
 \url{http://www.obdev.at/products/crosspack}
 
@@ -151,6 +159,28 @@ and make sure to download the "Eclipse IDE for C/C++ Developers".
 Install it as usual.
 
 \url{http://www.eclipse.org/downloads} 
+
+\subsection{List of software versions}
+Everything changes. This manual was made for the software versions
+listed below. Other versions may also work but have not necessarily been 
+tested.
+
+\begin{tabular}[c]{l l l}
+\toprule
+Package		& Description	& Version \\
+\midrule
+GNU make 	& build tool			& 3.81 \\
+GCC		& GNU C compiler		& 4.7.2 \\
+cURL		& cmdline tool for transferring files & 7.27.0 \\
+AVR-GCC 	& GNU C compiler for AVR	& 4.7.0 \\
+AVR Libc	& C library for AVR		& 1.8.0 \\
+AVRDUDE		& AVR Downloader/UploaDEr	& 5.11.1 \\
+git				& Version control system 	& 1.7.11.2 \\
+Doxygen				& Documentation generator 	& 1.8.1.2 \\
+Eclipse IDE for C/C++ 		& IDE				& Juno SR 2 \\
+\LaTeX{}			& Typesetting program 		& TeX Live 2012 \\
+\bottomrule
+\end{tabular}
 
 \section{Download Sources}
 

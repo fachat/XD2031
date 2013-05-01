@@ -2,5 +2,6 @@
 docsrc/doxygen/*
 *.DS_Store
 *.dSYM/
+.AppleDouble
 .metadata
 .settings

@@ -48,14 +48,11 @@ citecolor = black] {hyperref}
 \newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
 \newcommand{\sfend}[1]{\end{addmargin}}
 
-% -------------------------------------------------------------------------
-% Variablen
-%
-\newcommand{\fwbinaries}{http://FIXME-fwbinaries.de}
-\newcommand{\osxbinaries}{http://FIXME-osxbinaries.de}
-% -------------------------------------------------------------------------
+\input{../globals}
 
 \begin{document}
+
+
 
 \tableofcontents
 \clearpage
@@ -142,6 +139,8 @@ Zugriff auf das Dateisystem
 des Hosts		& $\checkmark$	& $\checkmark$		\\
 ftp:// über Host	& $\checkmark$	& $\checkmark$		\\
 http:// über Host	& $\checkmark$	& $\checkmark$		\\
+Telnet über Host	& $\checkmark$	& $\checkmark$		\\
+SD-Karte (FAT)		& --		& $\checkmark$		\\
 \bottomrule
 \end{tabular}
 
@@ -176,7 +175,7 @@ Wenn Sie ein petSD besitzen, lesen Sie bitte jetzt bei
 \pageref{petsdfwinst} weiter.
 
 \subsubsection{Aktualisierung der Firmware für XS-1541}
-Laden Sie zunächst von \url{\fwbinaries} die Firmware für das XS-1541
+Laden Sie zunächst von \fwbinaries{} die Firmware für das XS-1541
 herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
 Halten Sie die entpackten Dateien in Ihrem Heimatverzeichnis bereit.
 \subsubsection*{Linux}
@@ -280,7 +279,7 @@ AVR-ISP-Programmiergerätes aufgespielt werden.
 Haben Sie Ihr petSD nach Juli 2012 erworben, können Sie die Firmware
 sehr einfach aktualisieren:
 \begin{enumerate}
-\item Laden Sie von \url{\fwbinaries} die Firmware für das \mbox{petSD}
+\item Laden Sie von \fwbinaries{} die Firmware für das \mbox{petSD}
 herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
 \item Kopieren Sie die auf \glqq .bin\grqq\ endende Firmware-Datei
 in das Hauptverzeichnis der am petSD verwendeten SD-Karte
@@ -310,10 +309,8 @@ sudo make install
 \end{lstlisting}
 
 Wenn Sie lieber eine bestimmte Release-Version installieren möchten, 
-laden Sie von 
-\url{https://github.com/fachat/XD2031/downloads}
-den Quelltext herunter, und führen im Unterverzeichnis des
-entpackten Quelltextes die folgenden Befehle aus:
+laden Sie von \srcdownloads{} den Quelltext herunter und führen im 
+Unterverzeichnis des entpackten Quelltextes die folgenden Befehle aus:
 
 \begin{lstlisting}
 make pcserver/fsser
@@ -321,7 +318,7 @@ sudo make install
 \end{lstlisting}
 
 \subsubsection{Installation der Server-Software unter OS X}
-Laden Sie von \url{\osxbinaries} den Server herunter und installieren ihn 
+Laden Sie von \osxbinaries{} den Server herunter und installieren ihn 
 wie üblich.
 
 \section{Erste Schritte}
@@ -602,6 +599,7 @@ Laufwerk & Provider & Ort \\
 \bottomrule
 \end{tabular}
 
+\clearpage
 \section{Dateien und Verzeichnisse}
 \subsection{Regeln für Datei- und Verzeichnisnamen}
 Als maximale Länge eines Datei- oder Verzeichnisnamens sollten
@@ -724,6 +722,7 @@ Mit \texttt{@CD:..} gelangen Sie immer eine Verzeichnisebene höher.
 
 \texttt{@CD:/} bringt Sie in das Hauptverzeichnis.
 
+\clearpage
 \section{DOS-Befehle}
 \subsection{Verwendete Notation}
 \subsection*{Ersetzung durch tatsächlich passende Werte}
