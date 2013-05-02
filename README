@@ -1,5 +1,6 @@
 XD-2031 - Serial line filesystem server for CBMs
 ------------------------------------------------
+V0.9.2, 2. May 2013
 
 This software enables to program an AVR AtMega device to play
 the role of a disk drive to a Commodore PET computer with IEEE488 
@@ -59,10 +60,12 @@ https://github.com/fachat/XD2031/issues?state=open
 Planned features for Release 1.0
 --------------------------------
 
+- direct channel support (U1/U2 commands)
+	-> TODO
 - SD card provider on the atmega side
 	-> started
 - D64 support on the server side, to be able to use D64/D80/D82 etc files
-	-> open
+	-> started (but not yet included in the release)
 - IEC support so C64 et al can use the device 
 	-> done for C64, done for C128,
 	   and VIC20 still to test
@@ -80,7 +83,7 @@ Planned features for Release 1.0
 Further plans
 -------------
 
-With the ASSIGN command it is (will be) possible to assign drive numbers (like the "0" in "$0") 
+With the ASSIGN command it is possible to assign drive numbers (like the "0" in "$0") 
 to different service providers. Some of those will be in the atmega, some will be on the PC side.
 Currently there is only one in the atmega, the one that connects via RS232-over-USB. On the PC
 side there currently are three, filesystem, FTP and HTTP. All those providers basically implement
