@@ -165,6 +165,14 @@ static int16_t cmd_handler (bus_t *bus)
 	bus_for_irq = bus;
 	bus_for_irq->cmd_done = 0;
 
+	// empty command (JiffyDOS sends a lot of them)
+	if (bus->command.command_length == 0) {
+		bus->cmd_done = 1;
+		bus_for_irq = bus;
+		bus_for_irq->cmd_done = 1;
+		return 0;
+	}
+
 	// zero termination
 	bus->command.command_buffer[bus->command.command_length++] = 0;
 
