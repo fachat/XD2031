@@ -52,15 +52,18 @@ typedef enum {
 	// REL file errors
 //	ERROR_RECORD_NOT_PRESENT	= 50,
 //	ERROR_OVERFLOW_IN_RECORD	= 51,
+
+	ERROR_DIR_NOT_EMPTY		= 57,	// new for ENOTEMPTY
+	ERROR_NO_PERMISSION		= 58,	// new for EACCESS
+	ERROR_FAULT			= 59,	// new for EFAULT and others (fallback)
+
 	// DOS file level problems
 //	ERROR_WRITE_FILE_OPEN		= 60,
 	ERROR_FILE_NOT_OPEN		= 61,	
 	ERROR_FILE_EXISTS		= 63,	// also used for EEXIST
 	ERROR_FILE_TYPE_MISMATCH	= 64,
-//	ERROR_NO_BLOCK			= 65,
-	ERROR_DIR_NOT_EMPTY		= 66,	// new for ENOTEMPTY
-	ERROR_NO_PERMISSION		= 67,	// new for EACCESS
-	ERROR_FAULT			= 68,	// new for EFAULT and others (fallback)
+	ERROR_NO_BLOCK			= 65,	// error for FS_BLOCK_ALLOCATE
+	ERROR_ILLEGAL_T_OR_S		= 66,	// error for FS_BLOCK_ALLOCATE
 	// DOS/disk problems and status
 	ERROR_NO_CHANNEL		= 70,
 	ERROR_DIR_ERROR			= 71,

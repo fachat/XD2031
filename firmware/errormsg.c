@@ -72,6 +72,9 @@ static const uint8_t IN_ROM messages[] = {
 	H(ERROR_DIR_ERROR),		8,1,
 	H(ERROR_DISK_FULL),		'D','I','S','K',' ','F','U','L','L',
 	H(ERROR_DRIVE_NOT_READY),	'D','R','I','V','E',' ',  5,'R','E','A','D','Y',
+	H(ERROR_NO_BLOCK),		9,'B','L','O','C','K',
+	H(ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
+					'O','R',' ','S','E','C','T','O','R',
 	0
 };
 

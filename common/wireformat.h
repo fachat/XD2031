@@ -78,8 +78,14 @@
 #define   FS_SETOPT      21	/* set an option using an X-command string as payload */
 #define   FS_RESET       22	/* device sends this to notify it has reset */
 
-#define   FS_BLOCK       23	/* summary for U1,U2,B-P,B-R,B-W */
+#define   FS_BLOCK       23	/* summary for U1,U2,B-R,B-W */
 #define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
+
+#define	  FS_BLOCK_ALLOC 25	/* allocate a block on a storage medium; may be provider specific
+				   data is string with "track sector" for CBM DOS with zero-termination;
+				   On error, FS_REPLY packet contains two bytes, T and S for the
+				   error message */ 
+#define	  FS_BLOCK_FREE	 26	/* Free a block on a storage medium; see FS_BLOCK_ALLOC */
 
 /*
  * BLOCK commands
