@@ -113,14 +113,15 @@
 /* structure of a directory entry when reading a directory */
 
 #define   FS_DIR_LEN     0    	/* file length in bytes, four bytes, low byte first */
-#define   FS_DIR_YEAR    FS_DATE_YEAR + 4    	/* =4;    last modification date, year-1900 */
-#define   FS_DIR_MONTH   FS_DATE_MONTH + 4    	/* =5;    -"- month */
-#define   FS_DIR_DAY     FS_DATE_DAY + 4    	/* =6;    -"- day */
-#define   FS_DIR_HOUR    FS_DATE_HOUR + 4    	/* =7;    -"- hour */
-#define   FS_DIR_MIN     FS_DATE_MIN + 4    	/* =8;    -"- minute */
-#define   FS_DIR_SEC     FS_DATE_SEC + 4    	/* =9;    -"- second */
-#define   FS_DIR_MODE    FS_DATE_LEN + 4   	/* =10;   type of directory entry, see FS_DIR_MOD_* below */
-#define   FS_DIR_NAME    FS_DATE_LEN + 5   	/* =11;   zero-terminated file name */
+#define	  FS_DIR_ATTR	 4	/* file entry attribute bits, see below */
+#define   FS_DIR_YEAR    FS_DATE_YEAR + 5    	/* =4;    last modification date, year-1900 */
+#define   FS_DIR_MONTH   FS_DATE_MONTH + 5    	/* =5;    -"- month */
+#define   FS_DIR_DAY     FS_DATE_DAY + 5    	/* =6;    -"- day */
+#define   FS_DIR_HOUR    FS_DATE_HOUR + 5    	/* =7;    -"- hour */
+#define   FS_DIR_MIN     FS_DATE_MIN + 5    	/* =8;    -"- minute */
+#define   FS_DIR_SEC     FS_DATE_SEC + 5    	/* =9;    -"- second */
+#define   FS_DIR_MODE    FS_DATE_LEN + 5   	/* =10;   type of directory entry, see FS_DIR_MOD_* below */
+#define   FS_DIR_NAME    FS_DIR_MODE + 1   	/* =11;   zero-terminated file name */
 
 /* type of directory entries */
 
@@ -128,6 +129,26 @@
 #define   FS_DIR_MOD_NAM 1    	/* disk name */
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
+
+/* file attribute bits - note they are like the CBM directory entry type bits,
+   except for $80, which indicates a splat file, which is inverted.
+   For details see also: http://www.baltissen.org/newhtm/1541c.htm
+*/
+#define	  FS_DIR_ATTR_SPLAT	0x80	/* when set file is splat - i.e. open, display "*" */
+#define	  FS_DIR_ATTR_LOCKED	0x40	/* write-protected, show "<" */
+#define	  FS_DIR_ATTR_TRANS	0x20	/* transient - will (be?) @-replace(d by) other file */
+#define	  FS_DIR_ATTR_TYPEMASK	0x07	/* file type mask - see below */
+
+/* represents a (logical) CBM file type - providers may use them or ignore them
+   All are simple sequential files, with REL types (in CBM DOS) being a record-oriented
+   format (see "side sector" containing the list of blocks for direct access. A provider 
+   may choose to allow record-oriented access on all types (with 
+   appropriate open with record length) */
+#define	  FS_DIR_TYPE_DEL	0
+#define	  FS_DIR_TYPE_SEQ	1
+#define	  FS_DIR_TYPE_PRG	2
+#define	  FS_DIR_TYPE_USR	3
+#define	  FS_DIR_TYPE_REL	4
 
 #endif
 

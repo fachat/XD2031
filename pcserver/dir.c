@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <errno.h>
 
 #include "dir.h"
 #include "name.h"
@@ -265,10 +266,18 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 	char *realname = malloc_path(curpath, de->d_name);
 
         /* TODO: check return value */
+	int writecheck = -EACCES;
 	int rv = stat(realname, &sbuf);
 	if (rv < 0) {
 		log_error("Failed stat'ing entry %s\n", de->d_name);
 		log_errno("Problem stat'ing dir entry");
+	} else {
+		writecheck = access(realname, W_OK);
+		if ((writecheck < 0) && (errno != EACCES)) {
+			writecheck = -errno;
+			log_error("Could not get write access to %s\n", de->d_name);
+			log_errno("Reason");
+		}
 	}
 	free(realname);
 
@@ -284,6 +293,15 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
         dest[FS_DIR_HOUR]  = tp->tm_hour;
         dest[FS_DIR_MIN]   = tp->tm_min;
         dest[FS_DIR_SEC]   = tp->tm_sec;
+
+	dest[FS_DIR_ATTR]  = FS_DIR_TYPE_PRG;
+	if (writecheck < 0) {
+		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
+	}
+	// test
+	//if (sbuf.st_size & 1) {
+	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
+	//}
 
         dest[FS_DIR_MODE]  = S_ISDIR(sbuf.st_mode) ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
         // de->d_name is 0-terminated (see readdir man page)

@@ -149,7 +149,6 @@ static uint8_t *append(uint8_t *outp, const char *to_append) {
 		to_append++;
 	}
 	*outp = 0;
-	outp++;
 	return outp;
 }
 
@@ -176,6 +175,7 @@ static int8_t directory_converter(packet_t *p, uint8_t drive) {
 
 	inp = packet_get_buffer(p);
 	uint8_t type = inp[FS_DIR_MODE];
+	uint8_t attribs = inp[FS_DIR_ATTR];
 
 	//packet_update_wp(p, 2);
 
@@ -254,26 +254,39 @@ static int8_t directory_converter(packet_t *p, uint8_t drive) {
 		//outp += 4;	// includes ending 0-byte
 	} else
 	if (type == FS_DIR_MOD_FIL) {
-		outp = append(outp, "prg");
-		//strcpy(outp, "prg");
-		//outp += 4;	// includes ending 0-byte
+		if (attribs & FS_DIR_ATTR_SPLAT) {
+			*(outp-1) = '*';
+		}
+		const char *ftypes[] = { "del", "seq", "prg", "usr", "rel" };
+		uint8_t ftype = attribs & FS_DIR_ATTR_TYPEMASK;
+		if (ftype >= 0 && ftype < 5) {
+			outp = append(outp, ftypes[ftype]);
+		} else {
+			outp = append(outp, "---");
+		}
+		if (attribs & FS_DIR_ATTR_LOCKED) {
+			*outp = '<';
+			outp++;
+			*outp = 0;
+		}
 	} else
 	if (type == FS_DIR_MOD_FRE) {
 		outp = append(outp, "blocks free");
 		//strcpy(outp, "bytes free");
 		//outp += 11;	// includes ending 0-byte
 
-		*outp = 0; outp++;	// BASIC end marker (zero link address)
-		*outp = 0; outp++;	// BASIC end marker (zero link address)
+		outp++; *outp = 0; 	// BASIC end marker (zero link address)
+		outp++; *outp = 0; 	// BASIC end marker (zero link address)
 	}
 
-	uint8_t len = outp - out;
+	// outp points to last (null) byte to be transmitted, thus +1
+	uint8_t len = outp - out + 1;
 	if (len > packet_get_capacity(p)) {
 		debug_puts("CONVERSION NOT POSSIBLE!"); debug_puthex(len); debug_putcrlf();
 		return -1;	// conversion not possible
 	}
 
-#if DEBUG_SERIAL
+#ifdef DEBUG_SERIAL
 	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
 	for (uint8_t j = 0; j < len; j++) {
 		debug_putc(' '); debug_puthex(out[j]);
