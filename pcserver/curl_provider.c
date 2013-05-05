@@ -595,6 +595,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 	switch(fp->read_state) {
 	case 0:		// disk name
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_NAM;
+		retbuf[FS_DIR_ATTR] = FS_DIR_TYPE_PRG;
 		l = strlen(fp->name_buffer);
 		if (len < FS_DIR_NAME + l + 1) {
 			log_error("read buffer too small for dir name (is %d, need at least %d - concatenating)\n",
