@@ -79,10 +79,12 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize);
 
 /**
  * fill in the buffer with the final disk info entry
+ * Needs current path to statvfs() the correct file system to 
+ * get the free byte count
  *
  * returns the length of the written buffer
  */
-int dir_fill_disk(char *dest);
+int dir_fill_disk(char *dest, char *curpath);
 
 /**
  * malloc a new path, and copy the given base path and name to it,

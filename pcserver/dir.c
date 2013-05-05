@@ -32,6 +32,7 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
@@ -318,13 +319,30 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 /**
  * fill in the buffer with the final disk info entry
  */
-int dir_fill_disk(char *dest) {
-        dest[FS_DIR_LEN] = 1;
-        dest[FS_DIR_LEN+1] = 0;
-        dest[FS_DIR_LEN+2] = 0;
-        dest[FS_DIR_LEN+3] = 0;
-        dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
-        dest[FS_DIR_NAME] = 0;
+int dir_fill_disk(char *dest, char *curpath) {
+	struct statvfs buf;
+	int er = statvfs(curpath, &buf);
+	if (er == 0) {
+		unsigned long blksize = buf.f_frsize;
+		fsblkcnt_t free_blocks = buf.f_bavail;	// unprivileged users
+		unsigned long long total = (unsigned long long) blksize * (unsigned long long) free_blocks;
+		if (total > 0xffffffff) {
+			// max in FS_DIR stuff
+			total = 0xffffffff;
+		}
+	        dest[FS_DIR_LEN] = total & 255;
+	        dest[FS_DIR_LEN+1] = (total >> 8) & 255;
+	        dest[FS_DIR_LEN+2] = (total >> 16) & 255;
+	        dest[FS_DIR_LEN+3] = (total >> 24) & 255;
+	} else {
+		log_errno("Error in statvfs()");
+	        dest[FS_DIR_LEN] = 1;
+	        dest[FS_DIR_LEN+1] = 0;
+	        dest[FS_DIR_LEN+2] = 0;
+	        dest[FS_DIR_LEN+3] = 0;
+	}
+       	dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
+       	dest[FS_DIR_NAME] = 0;
 	return FS_DIR_NAME + 1;
 }
 

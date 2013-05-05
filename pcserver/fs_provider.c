@@ -624,7 +624,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  if(!file->de) {
 		    //close_fds(ep, tfd);
 		    *eof = 1;
-		    int l = dir_fill_disk(retbuf);
+		    int l = dir_fill_disk(retbuf, fsep->curpath);
 		    rv = l;
 		    return rv;
 		  }
