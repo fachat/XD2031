@@ -429,6 +429,23 @@ static int fs_block(endpoint_t *ep, int chan, char *buf) {
 	return ERROR_OK;
 }
 
+// B-A/B-F
+static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
+
+	// note: that is not true for all commands - B-P for example
+	unsigned char cmd = buf[0];
+	unsigned char track = buf[1];
+	unsigned char sector = buf[2];
+
+	log_debug("DIRECT cmd: %d, tr=%d, se=%d\n", cmd, track, sector);
+
+	retbuf[0] = track;
+	retbuf[1] = sector;
+	*retlen = 2;
+
+	return ERROR_ILLEGAL_T_OR_S;
+}
+
 static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	File *file = find_file(ep, tfd);
 
@@ -1000,7 +1017,8 @@ provider_t fs_provider = {
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	fs_block
+	fs_block,
+	fs_direct
 };
 
 

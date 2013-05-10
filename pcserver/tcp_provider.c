@@ -474,7 +474,8 @@ provider_t tcp_provider = {
 	NULL,	//fs_cd,
 	NULL,	//fs_mkdir,
 	NULL,	//fs_rmdir
-	NULL	// block
+	NULL,	// block
+	NULL	// direct
 };
 
 

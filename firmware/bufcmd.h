@@ -33,7 +33,7 @@
 
 
 uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error);
-uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error);
+uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error); 
 
 
 #endif

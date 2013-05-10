@@ -206,7 +206,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			callback(rv, NULL);
 			return 0;
 		}
-		return 0;	// waiting for callback
+		return rv;	// waiting for callback
 	} else
 	if (nameinfo.cmd == CMD_BLOCK) {
 		debug_puts("BLOCK COMMAND\n");
@@ -215,7 +215,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			callback(rv, NULL);
 			return 0;
 		}
-		return 0;	// waiting for callback
+		return rv;	// waiting for callback
 	} else
 	if (nameinfo.cmd == CMD_EXT) {
 		debug_puts("CONFIGURATION EXTENSION\n");

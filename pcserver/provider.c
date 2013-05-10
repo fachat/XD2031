@@ -199,6 +199,10 @@ endpoint_t *provider_lookup(int drive, char **name) {
         int i;
 
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		if (name == NULL) {
+			// no name specified, so return NULL (no provider found)
+			return NULL;
+		}
 		// the drive is not specified by number, but by provider name
 		char *p = strchr(*name, ':');
 		if (p == NULL) {

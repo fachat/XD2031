@@ -53,7 +53,7 @@
 
 #define	MAX_BUFFER_SIZE			64
 
-static void do_cmd(char *buf, int fs);
+static void cmd_dispatch(char *buf, int fs);
 static void write_packet(int fd, char *retbuf);
 
 
@@ -143,6 +143,7 @@ const char *nameofcmd(int cmdno) {
 	case FS_SETOPT:		return "SETOPT";
 	case FS_RESET:		return "RESET";
 	case FS_BLOCK:		return "BLOCK";
+	case FS_DIRECT:		return "DIRECT";
 	case FS_GETDATIM:	return "GETDATIM";
 	default:		return "???";
 	}
@@ -267,7 +268,7 @@ static void cmd_sendxcmd(int writefd, char buf[]) {
  * this is the main loop of the program
  *
  * Here the data is read from the given readfd, put into a packet buffer,
- * then given to do_cmd() for the actual execution, and the reply is 
+ * then given to cmd_dispatch() for the actual execution, and the reply is 
  * again packeted and written to the writefd
  *
  * returns
@@ -325,7 +326,7 @@ int cmd_loop(int readfd, int writefd) {
                 if(wrp-rdp >= plen) {
 		  // did we already receive the full packet?
                   // yes, then execute
-                  do_cmd(buf+rdp, writefd);
+                  cmd_dispatch(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
 		  // no, then break out of the while, to read more data
@@ -348,7 +349,7 @@ int cmd_loop(int readfd, int writefd) {
  *
  * The return packet is written into the file descriptor fd
  */
-static void do_cmd(char *buf, int fd) {
+static void cmd_dispatch(char *buf, int fd) {
 	int tfd, cmd;
 	unsigned int len;
 	char retbuf[200];
@@ -409,6 +410,7 @@ static void do_cmd(char *buf, int fd) {
 
 	int eof = 0;
 	int outdeleted = 0;
+	int retlen = 0;
 	int sendreply = 1;
 	char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
@@ -668,7 +670,27 @@ static void do_cmd(char *buf, int fd) {
 			provider_cleanup(ep);
 		}
 		break;
+	case FS_DIRECT:
+		// not file-related, so no file descriptor (tfd)
+		// we only support mapped drives (thus name is NULL)
+		ep = provider_lookup(drive, NULL);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->direct != NULL) {
+				log_info("DIRECT(%d,...)\n", tfd);
+				rv = prov->direct(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
+				if (rv != 0) {
+					log_rv(rv);
+				}
+				retbuf[FSP_LEN] = FSP_DATA + 1 + retlen;
+				retbuf[FSP_DATA] = rv;
+			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
+		}
+		break;
 	case FS_BLOCK:
+		// file-related Block commands (e.g. U1/U2)
 		ep = chan_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
@@ -723,7 +745,7 @@ static void write_packet(int fd, char *retbuf) {
 	if (e < 0) {
 		printf("Error on write: %d\n", errno);
 	}
-#if defined DEBUG_WRITE || defined DEBUG_CMD
+#if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
 	log_debug("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
 	for (int i = 3; i<retbuf[FSP_LEN];i++) log_debug(" %02x", 255&retbuf[i]);

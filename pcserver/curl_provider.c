@@ -887,7 +887,8 @@ provider_t ftp_provider = {
 	do_chdir,
 	NULL, // do_mkdir,
 	NULL,  // do_rmdir
-	NULL 	// block
+	NULL, 	// block
+	NULL 	// direct
 };
 
 provider_t http_provider = {
@@ -910,7 +911,8 @@ provider_t http_provider = {
 	do_chdir,
 	NULL, // do_mkdir,
 	NULL,  // do_rmdir
-	NULL 	// block
+	NULL, 	// block
+	NULL 	// direct
 };
 
 

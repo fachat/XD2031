@@ -55,9 +55,20 @@ static uint8_t parse_cmdinfo(char *buf);
  * command callback
  */
 static uint8_t callback(int8_t channelno, int8_t errnum) {
-	cberr = errnum;
+	cberr = buf[0];
 	cbstat = 1;
 	return 0;
+}
+
+static uint8_t cmd_wait_cb() {
+	// TODO: check if not just returning -1 would suffice
+	while (cbstat == 0) {
+		delayms(1);
+		main_delay();
+	}
+
+debug_printf("cb result: %d\n", cberr);
+	return cberr;
 }
 
 /**
@@ -69,7 +80,8 @@ static uint8_t callback(int8_t channelno, int8_t errnum) {
  * 
  * returns ERROR_OK/ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
-uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) { 
+uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+
 	char *pars;	
 	uint8_t er = ERROR_OK;
 	uint8_t cmd = cmdbuf[1];
@@ -115,12 +127,7 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 				endpoint->provider->submit_call(NULL, cmdinfo.channel, 
 								&cmdpack, &cmdpack, callback);
 
-				while (cbstat == 0) {
-					delayms(1);
-					main_delay();
-				}
-
-				return cberr;
+				return cmd_wait_cb();
 			} else {
 				return ERROR_DRIVE_NOT_READY;
 			}
@@ -140,14 +147,93 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 
 /**
  * block commands
+ */
+uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t *error) {
+	
+	int drive;
+	int track;
+	int sector;
+
+	uint8_t channel = bus_secaddr_adjust(bus, 15);
+	
+	uint8_t rv;
+
+	rv = sscanf(cmdbuf, "%d %d %d", &drive, &track, &sector);
+	if (rv != 3) {
+		return ERROR_SYNTAX_INVAL;
+	}
+
+        buf[0] = drive;		// comes first similar to other FS_* cmds
+        buf[1] = fscmd;
+        buf[2] = track;
+        buf[3] = sector;
+
+	packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+	packet_set_filled(&cmdpack, channel, FS_DIRECT, 4);
+
+        endpoint_t *endpoint = provider_lookup(drive, NULL);
+
+        if (endpoint != NULL) {
+        	cbstat = 0;
+                endpoint->provider->submit_call(NULL, channel,
+                                            &cmdpack, &cmdpack, callback);
+
+		rv = cmd_wait_cb();
+
+		// TODO: buf[1]/buf[2] contain the T&S - need to get that into the error
+		debug_printf("block_allocfree: t&s=%d, %d\n", buf[1], buf[2]);
+
+		set_error_ts(error, rv, buf[1], buf[2]);
+
+		// means: don't wait, error is already set
+		return -1;
+	}
+        return ERROR_DRIVE_NOT_READY;
+}
+
+/*
  *
- * B-R, B-W, B-P
+ * B-R, B-W, B-P, B-A, B-F
  *
  * cmdbuf pointer includes the full command, i.e. with the "U" in front.
  * 
  * returns ERROR_OK/ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
 uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+
+#ifdef DEBUG_BLOCK
+	debug_printf("cbm_block: %s\n", cmdbuf);
+#endif
+	// identify command - just look for the '-' and take the following char
+	while (*cmdbuf != 0 && *cmdbuf != '-') {
+		cmdbuf++;
+	}
+	if (*cmdbuf == 0) {
+		return ERROR_SYNTAX_UNKNOWN;
+	}
+	cmdbuf++;
+
+	char cchar = *cmdbuf;
+	
+	while (*cmdbuf != 0 && *cmdbuf != ':') {
+		cmdbuf++;
+	}
+	if (*cmdbuf == 0) {
+		return ERROR_SYNTAX_UNKNOWN;
+	}
+	// char after the ':'
+	cmdbuf++;	
+		
+	switch(cchar) {
+	case 'A':
+		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BA, error);
+		break;
+	case 'F':
+		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BF, error);
+		break;
+	default:
+		break;
+	}
 
 	return ERROR_SYNTAX_UNKNOWN;
 }

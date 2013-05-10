@@ -69,6 +69,7 @@ typedef struct {
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 	int		(*block)(endpoint_t *ep, int chan, char *buf);		// U1/U2/B-P/B-R/B-W
+	int		(*direct)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
 } provider_t;
 
 struct _endpoint {

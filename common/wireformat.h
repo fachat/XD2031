@@ -81,16 +81,12 @@
 #define   FS_BLOCK       23	/* summary for U1,U2,B-R,B-W */
 #define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
 
-#define	  FS_BLOCK_ALLOC 25	/* allocate a block on a storage medium; may be provider specific
-				   data is string with "track sector" for CBM DOS with zero-termination;
-				   On error, FS_REPLY packet contains two bytes, T and S for the
-				   error message */ 
-#define	  FS_BLOCK_FREE	 26	/* Free a block on a storage medium; see FS_BLOCK_ALLOC */
+#define	  FS_DIRECT	 25	/* Non-channel-specific commands similar to FS_BLOCK */ 
 
 /*
- * BLOCK commands
+ * BLOCK and DIRECT commands
  *
- * Those are used as sub-commands in the FS_BLOCK filesystem command
+ * Those are used as sub-commands in the FS_BLOCK or FS_DIRECT filesystem command
  */
 
 #define	FS_BLOCK_U1	0
@@ -98,6 +94,8 @@
 #define	FS_BLOCK_BR	2
 #define	FS_BLOCK_BW	3
 #define	FS_BLOCK_BP	4
+#define	FS_BLOCK_BA	5	/* Block allocate */
+#define	FS_BLOCK_BF	6	/* Block free */
 
 /* 
  * time and date struct, each entry is a byte
