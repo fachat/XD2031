@@ -145,7 +145,7 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 		if (tmp[3] > 0) {
 			lineno = 63999;
 		} else {
-			lineno = tmp[1] & 0xff | ((tmp[2] & 0xff) << 8);
+			lineno = (tmp[1] & 0xff) | ((tmp[2] & 0xff) << 8);
 			if (lineno > 63999) {
 				lineno = 63999;
 			}

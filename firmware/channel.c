@@ -81,6 +81,11 @@ static uint8_t _close_callback(int8_t channel_no, int8_t errorno) {
 	return 0;
 }
 
+static inline uint8_t channel_is_eof(channel_t *chan) {
+        // return buf->sendeoi && (buf->position == buf->lastused);
+        return packet_is_eof(&chan->buf[chan->current]);
+}       
+
 /**
  * pull in a buffer from the server
  *
@@ -262,24 +267,13 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 /**
  * pre-load data for a read-only channel
  */
-void channel_preload(int8_t chan) {
-	channel_t *channel = channel_find(chan);
-
-	//debug_printf("channel_preload: chan=%d (%p), wtype=%d, pull_state=%d\n", chan, channel, channel->writetype, channel->pull_state);
-
-	if (channel != NULL) {
-		channel_preload_int(channel, 1);	
-	} else {
-		term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", chan);
-	}
-}
-
 int8_t channel_preloadp(channel_t *chan) {
 	return channel_preload_int(chan, 1);
 }
 
-char channel_current_byte(channel_t *chan) {
+char channel_current_byte(channel_t *chan, uint8_t *iseof) {
 	channel_preload_int(chan, 1);
+	*iseof = packet_current_is_eof(&chan->buf[chan->current]);
         return packet_peek_data(&chan->buf[pull_slot(chan)]);
 }
 
@@ -320,16 +314,6 @@ uint8_t channel_next(channel_t *chan, uint8_t options) {
 		}
 	}
 	return 0;
-}
-
-/*
- * return whether the current packet is the last one
- * called when the packet is empty
- */
-uint8_t channel_has_more(channel_t *chan) {
-	// make sure at least one packet is there
-	channel_preload_int(chan, 1);
-	return !packet_is_eof(&chan->buf[pull_slot(chan)]);
 }
 
 static void channel_close_int(channel_t *chan, uint8_t force) {

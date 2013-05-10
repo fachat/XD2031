@@ -222,17 +222,24 @@ static int16_t cmd_handler (bus_t *bus)
 #endif
 
 		if (secaddr != CMD_SECADDR) {
+			uint8_t channel_no = bus_secaddr_adjust(bus, secaddr);
 			// only open, not for commands
 
 	        	if (bus_for_irq->errnum != 0) {
 				// close channel on error. Is this ok?
-	        	        channel_close(bus_secaddr_adjust(bus, secaddr));
+	        	        channel_close(channel_no);
 	        	} else {
 #ifdef DEBUG_BUS
-				debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
+				debug_printf("preload channel %d\n", channel_no);
 #endif
+                		channel_t *chan = channel_find(channel_no);
                 		// really only does something on read-only channels
-                		channel_preload(bus_secaddr_adjust(bus, secaddr));
+				if (chan == NULL) {
+			                term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", 
+						channel_no);
+				} else {
+                			channel_preloadp(chan);
+				}
 			}
 		}
       	}
@@ -280,6 +287,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 	int16_t st = 0;
+	uint8_t iseof = 0;
 
 	uint8_t secaddr = bus->secondary & SECADDR_MASK;
 	channel_t *channel = bus->channel;
@@ -322,8 +330,8 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 #endif
 		} else {
 
-			*data = channel_current_byte(channel);
-			if (channel_current_is_eof(channel)) {
+			*data = channel_current_byte(channel, &iseof);
+			if (iseof) {
 #ifdef DEBUG_BUS
 				debug_puts("EOF!\n");
 #endif
