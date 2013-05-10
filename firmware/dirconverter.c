@@ -32,15 +32,8 @@
 #include "version.h"
 
 #include "debug.h"
-/*
 
-#include "provider.h"
-#include "wireformat.h"
-#include "serial.h"
-#include "uarthw.h"
-
-#include "led.h"
-*/
+#define	DEBUG_DIR
 
 
 /*
@@ -84,19 +77,77 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	*outp = 1; outp++;		// link address high
 
 	uint16_t lineno = 0;
+
 	if (type == FS_DIR_MOD_NAM) {
 		lineno = drive;
 	} else {
-		// line number, derived from file length
-		if (inp[FS_DIR_LEN+3] != 0 
-			|| inp[FS_DIR_LEN+2] > 0xf9
-			|| (inp[FS_DIR_LEN+2] == 0xf9 && inp[FS_DIR_LEN+1] == 0xff && inp[FS_DIR_LEN] != 0)) {
-			// more than limit of 63999 blocks
+		uint16_t in[4];
+		uint16_t tmp[4];
+	
+		in[0] = inp[FS_DIR_LEN] + (inp[FS_DIR_LEN + 1] << 8);
+		in[1] = inp[FS_DIR_LEN + 1] + (inp[FS_DIR_LEN + 2] << 8);
+		in[2] = inp[FS_DIR_LEN + 2] + (inp[FS_DIR_LEN + 3] << 8);
+		in[3] = inp[FS_DIR_LEN + 3];
+
+		// first add 253, so that the "leftover" bytes in the remainder
+		// are counted as an own block
+		in[0] += 253;
+		if (((in[0] >> 8) & 0xff) != inp[FS_DIR_LEN + 1]) {
+			// there was a carry
+			in[1] += 1;
+			if (((in[1] >> 8) & 0xff) != inp[FS_DIR_LEN + 2]) {
+				// there was a carry
+				in[2] += 1;
+				if (((in[2] >> 8) & 0xff) != inp[FS_DIR_LEN + 3]) {
+					// there was a carry
+					in[3] += 1;
+				}
+			}
+		}
+
+		// to get from 256 byte blocks to 254 byte blocks, we multiply
+		// by 256/254, which is the same as (1+1/127). So we now add 1/127th
+		// which is 1/127 = 1/128 + 1/(128^2) + 1/(128^3) + 1/(128^4) + ...
+
+		// first term "1"
+		tmp[0] = in[0] & 0xff;
+		tmp[1] = in[1] & 0xff;
+		tmp[2] = in[2] & 0xff;
+		tmp[3] = in[3] & 0xff;
+
+		// second term "1/128" = "1/(1<<7); note in[] contains the "high byte" as well
+		tmp[0] += (in[0] >> 7) & 0xff;
+		tmp[1] += (in[1] >> 7) & 0xff;
+		tmp[2] += (in[2] >> 7) & 0xff;
+		tmp[3] += (in[3] >> 7) & 0xff;
+	
+		// third term "1/(128^2)" = "1/16384" = "1/(1<<14)"	
+		tmp[0] += ((in[1] >> 6) & 0x03) + ((in[2] << 2) & 0xfc);
+		tmp[1] += ((in[2] >> 6) & 0x03) + ((in[3] << 2) & 0xfc);
+		tmp[2] += ((in[3] >> 6) & 0x03);
+
+		// fourth term "1/(128^3)" = "1/(1<<21)"	
+		tmp[0] += ((in[2] >> 5) & 0x07) + ((in[3] << 3) & 0xf8);
+		tmp[1] += ((in[3] >> 5) & 0x07);
+
+		// fifth term "1/(128^4)" = "1/(1<<28)"	
+		tmp[0] += ((in[3] >> 4) & 0x0f);
+
+		// add one "rest" for the missing terms
+		tmp[0] += 1;
+
+		// adjust carry bits
+		tmp[1] += (tmp[0] >> 8) & 0xff;
+		tmp[2] += (tmp[1] >> 8) & 0xff;
+		tmp[3] += (tmp[2] >> 8) & 0xff;
+
+		// now compute the line number, restricting to 63999 in the process
+		if (tmp[3] > 0) {
 			lineno = 63999;
 		} else {
-			lineno = inp[FS_DIR_LEN+1] | (inp[FS_DIR_LEN+2] << 8);
-			if (inp[FS_DIR_LEN] != 0) {
-				lineno++;
+			lineno = tmp[1] & 0xff | ((tmp[2] & 0xff) << 8);
+			if (lineno > 63999) {
+				lineno = 63999;
 			}
 		}
 	}
@@ -182,7 +233,7 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 		return -1;	// conversion not possible
 	}
 
-#ifdef DEBUG_SERIAL
+#ifdef DEBUG_DIR
 	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
 	for (uint8_t j = 0; j < len; j++) {
 		debug_putc(' '); debug_puthex(out[j]);

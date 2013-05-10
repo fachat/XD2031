@@ -49,7 +49,7 @@
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
-#undef DEBUG_WRITE
+#define DEBUG_WRITE
 
 #define	MAX_BUFFER_SIZE			64
 
