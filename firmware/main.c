@@ -58,6 +58,7 @@
 #include "channel.h"
 #include "bus.h"
 #include "mem.h"
+#include "bufcmd.h"
 
 #include "timer.h"
 #include "led.h"
@@ -131,6 +132,8 @@ int main()
 
 	// init file handling (active open calls)
 	file_init();
+	// buffer structures
+	bufcmd_init();
 	// init main channel handling
 	channel_init();
 

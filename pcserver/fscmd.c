@@ -404,7 +404,7 @@ static void cmd_dispatch(char *buf, int fd) {
 	printf("\n");
 #endif
 	retbuf[FSP_CMD] = FS_REPLY;
-	retbuf[FSP_LEN] = 4;
+	retbuf[FSP_LEN] = FSP_DATA + 1;		// 4 byte default packet
 	retbuf[FSP_FD] = tfd;
 	retbuf[FSP_DATA] = ERROR_FAULT;
 
@@ -524,14 +524,19 @@ static void cmd_dispatch(char *buf, int fd) {
 			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
 			// TODO: handle error (rv<0)
 			if (rv < 0) {
+				// an error is sent as REPLY with error code
+				retbuf[FSP_DATA] = rv;
 				log_rv(-rv);
-			}
-			retbuf[FSP_LEN] = FSP_DATA + rv;
-			if (eof) {
-				log_info("CLOSE_SEND_EOF(%d)\n", tfd);
-				retbuf[FSP_CMD] = FS_EOF;
-				// cleanup when not needed anymore
-				//provider_cleanup(ep);
+			} else {
+				// a WRITE mirrors the READ request when ok 
+				retbuf[FSP_CMD] = FS_WRITE;
+				retbuf[FSP_LEN] = FSP_DATA + rv;
+				if (eof) {
+					log_info("CLOSE_SEND_EOF(%d)\n", tfd);
+					retbuf[FSP_CMD] = FS_EOF;
+					// cleanup when not needed anymore
+					//provider_cleanup(ep);
+				}
 			}
 		}
 		break;

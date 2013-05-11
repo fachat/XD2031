@@ -26,6 +26,7 @@
 #include "errormsg.h"
 #include "channel.h"
 #include "provider.h"
+#include "packet.h"
 
 #include "debug.h"
 
@@ -34,22 +35,81 @@
 #define	DEBUG_BLOCK
 
 
-static struct {
-	int8_t 		channel;
-	int8_t		drive;
-	int8_t		track;
-	int8_t		sector;
-} cmdinfo;
-
-// place for command, drive, track sector; channel is part of packet header
-#define	CMD_BUFFER_LENGTH	4
+// place for command, channel, drive, track sector 
+#define	CMD_BUFFER_LENGTH	5
 
 static char buf[CMD_BUFFER_LENGTH];
 static packet_t cmdpack;
+static packet_t datapack;
 static uint8_t cbstat;
 static int8_t cberr;
 
-static uint8_t parse_cmdinfo(char *buf);
+// ----------------------------------------------------------------------------------
+// buffer handling (#-file, U1/U2/B-W/B-R/B-P
+// we only have a single buffer
+
+static uint8_t current_chan = -1;
+static uint8_t direct_buffer[256];
+static uint8_t buffer_rptr = 0;
+static uint8_t buffer_wptr = 0;
+
+// ----------------------------------------------------------------------------------
+// provider for direct files
+
+static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
+
+	debug_printf("submit call for direct file, chan=%d, drv=%d, cmd=%d, len=%d\n", 
+		channelno, txbuf->buffer[0], txbuf->type, txbuf->len);
+
+	uint8_t rtype = FS_REPLY;
+
+	switch(txbuf->type) {
+	case FS_OPEN_DIRECT:
+		buffer_rptr = 0;
+		buffer_wptr = 0;
+		rxbuf->wp = 1;
+		rxbuf->buffer[0] = ERROR_OK;
+		rtype = FS_REPLY;
+		break;
+	case FS_READ:
+		rxbuf->buffer[0] = direct_buffer[buffer_rptr];
+		rxbuf->wp = 1;
+		buffer_wptr = buffer_rptr;
+		if (buffer_rptr == 255) {
+			rtype = FS_EOF;
+		} else {
+			rtype = FS_WRITE;
+			buffer_rptr ++;
+		}
+		break;
+	case FS_WRITE:
+	case FS_EOF:
+		// TODO
+		break;
+	}
+	rxbuf->type = rtype;
+	callback(channelno, 0);	
+}
+
+
+static provider_t provider = {
+	NULL,			// prov_assign
+	NULL,			// prov_free
+	NULL,			// submit
+	submit_call,		// submit_call
+	NULL,			// directory_converter
+	NULL			// to_provider
+};
+
+static endpoint_t endpoint = {
+	&provider,
+	NULL
+};
+
+endpoint_t *bufcmd_provider(void) {
+	return &endpoint;
+}
 
 /**
  * command callback
@@ -71,6 +131,71 @@ debug_printf("cb result: %d\n", cberr);
 	return cberr;
 }
 
+// ----------------------------------------------------------------------------------
+// buffer handling (#-file, U1/U2/B-W/B-R/B-P
+
+void bufcmd_init() {
+	current_chan = -1;
+}
+
+uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t receive_nbytes) {
+
+	uint16_t restlength = receive_nbytes;
+
+	uint8_t ptype = FS_REPLY;
+
+	while (ptype != FS_EOF && restlength != 0) {
+
+                packet_init(&datapack, 128, direct_buffer + receive_nbytes - restlength);
+                packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+                packet_set_filled(&cmdpack, channel_no, FS_READ, 0);
+	
+		cbstat = 0;
+                endpoint->provider->submit_call(NULL, channel_no, 
+			&cmdpack, &datapack, callback);
+
+		cmd_wait_cb();
+
+		ptype = packet_get_type(&datapack);
+
+debug_printf("Received block data packet of %d bytes (eof=%d)\n", 
+					datapack.wp, datapack.type);
+
+		if (ptype == FS_REPLY) {
+			// error (should not happen though)
+			return packet_get_buffer(&datapack)[0];
+		} else
+		if (ptype == FS_WRITE || ptype == FS_EOF) {
+
+			restlength -= packet_get_contentlen(&datapack);
+		}
+	}
+
+	if (restlength > 0) {
+		// received short package
+		term_printf("RECEIVED SHORT BUFFER, EXPECTED %d, GOT %d\n", 256, 256-restlength);
+	}
+
+	buffer_rptr = 0;
+	buffer_wptr =(receive_nbytes - restlength) & 0xff;
+
+	return ERROR_OK;
+}
+
+int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
+                        void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t *name) {
+
+	if (current_chan >= 0 && current_chan != channel_no) {
+		set_error(errormsg, ERROR_NO_CHANNEL);
+		return -1;
+	}
+
+	// reserve buffer
+	current_chan = channel_no;
+	return -1;
+}
+
+
 /**
  * user commands
  *
@@ -83,7 +208,6 @@ debug_printf("cb result: %d\n", cberr);
 uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 
 	char *pars;	
-	uint8_t er = ERROR_OK;
 	uint8_t cmd = cmdbuf[1];
 
 #ifdef DEBUG_USER
@@ -100,48 +224,72 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	}
 	pars++;
 	
+        int ichan;
+        int drive;
+        int track;
+        int sector;
+
+	uint8_t rv = ERROR_SYNTAX_UNKNOWN;
+        uint8_t channel;
+
 	switch(cmd & 0x0f) {
 	case 1:		// U1
-		er = parse_cmdinfo(pars);
-		if (er == ERROR_OK) {
-			// read sector
-#ifdef DEBUG_USER
-			debug_printf("U1: read sector ch=%d, dr=%d, tr=%d, se=%d\n", 
-				cmdinfo.channel, cmdinfo.drive, cmdinfo.track, cmdinfo.sector);
-#endif
-			cmdinfo.channel = bus_secaddr_adjust(bus, cmdinfo.channel);
-			
-			channel_flush(cmdinfo.channel);
+	case 2:		// U2
 
-			buf[0] = FS_BLOCK_U1;
-			buf[1] = cmdinfo.drive;
-			buf[2] = cmdinfo.track;
-			buf[3] = cmdinfo.sector;
-			packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
-			packet_set_filled(&cmdpack, cmdinfo.channel, FS_BLOCK, 4);
-
-			endpoint_t *endpoint = provider_lookup(cmdinfo.drive, NULL);
+        	rv = sscanf(pars, "%d %d %d %d", &ichan, &drive, &track, &sector);
+        	if (rv != 4) {
+                	return ERROR_SYNTAX_INVAL;
+        	}
 		
-			if (endpoint != NULL) {	
-				cbstat = 0;
-				endpoint->provider->submit_call(NULL, cmdinfo.channel, 
-								&cmdpack, &cmdpack, callback);
+		channel = bus_secaddr_adjust(bus, ichan);
 
-				return cmd_wait_cb();
-			} else {
-				return ERROR_DRIVE_NOT_READY;
+			// read/write sector
+#ifdef DEBUG_USER
+		debug_printf("U1/2: sector ch=%d, dr=%d, tr=%d, se=%d\n", 
+				channel, drive, track, sector);
+#endif
+			
+		channel_flush(channel);
+
+		buf[0] = drive;			// first for provider dispatch on server
+		buf[1] = (cmd & 0x01) ? FS_BLOCK_U1 : FS_BLOCK_U2;
+		buf[2] = track;
+		buf[3] = sector;
+		buf[4] = channel;		// extra compared to B-A/B-F
+
+		packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+		// FS_DIRECT packet with 5 data bytes, sent on cmd channel
+		packet_set_filled(&cmdpack, bus_secaddr_adjust(bus, CMD_SECADDR), FS_DIRECT, 5);
+
+		endpoint_t *endpoint = provider_lookup(drive, NULL);
+		
+		if (endpoint != NULL) {	
+			cbstat = 0;
+			endpoint->provider->submit_call(NULL, bus_secaddr_adjust(bus, CMD_SECADDR), 
+							&cmdpack, &cmdpack, callback);
+
+			rv = cmd_wait_cb();
+debug_printf("Sent command - got: %d\n", rv);
+
+			if (rv == ERROR_OK) {
+				if (cmd & 0x01) {
+					// U1
+					rv = bufcmd_read_buffer(channel, endpoint, 256);
+				} else {
+					// U2
+					// TODO
+				}
 			}
+		} else {
+			return ERROR_DRIVE_NOT_READY;
 		}
 		
-		
-		break;
-	case 2:		// U2
 		break;
 	default:
 		break;
 	}
 
-	return ERROR_SYNTAX_UNKNOWN;
+	return rv;
 }
 
 
@@ -238,50 +386,4 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	return ERROR_SYNTAX_UNKNOWN;
 }
 
-/**
- * parse the B-R/W/E, U1/2 "channel drive track sector" parameters
- *
- * return ERROR_* on error (short string, format, ...)
- * or 0 on success.
- */
-static uint8_t parse_cmdinfo(char *buf) {
-	char *next;
-	unsigned long int val;
-
-#ifdef DEBUG_USER
-	debug_printf("parse_cmdinfo: %s\n", buf);
-#endif
-
-	cmdinfo.channel = -1;
-
-	errno = 0;	
-	val = strtoul(buf, &next, 10);
-	cmdinfo.channel = val;
-
-	if (next != NULL) {
-		val = strtoul(next, &next, 10);
-		cmdinfo.drive = val;
-
-		if (next != NULL) {
-			val = strtoul(next, &next, 10);
-			cmdinfo.track = val;
-
-			if (next != NULL) {
-				val = strtoul(next, &next, 10);
-				cmdinfo.sector = val;
-			} else {
-				return ERROR_SYNTAX_INVAL;
-			}
-		} else {
-			return ERROR_SYNTAX_INVAL;
-		}
-	} else {
-		return ERROR_SYNTAX_INVAL;
-	}
-
-	if (errno != 0) {
-		return ERROR_SYNTAX_INVAL;
-	}
-	return ERROR_OK;
-}
 

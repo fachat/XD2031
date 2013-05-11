@@ -69,7 +69,6 @@
 #define	BUSCMD_UNLISTEN	0x3f
 #define	BUSCMD_DATA	0x60
 
-#define	CMD_SECADDR	15	// command channel
 #define	LOAD_SECADDR	0	// load channel
 
 #define	BUSSEC_OPEN	0xf0	// secaddr for open

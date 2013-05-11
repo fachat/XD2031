@@ -436,8 +436,25 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 	unsigned char cmd = buf[0];
 	unsigned char track = buf[1];
 	unsigned char sector = buf[2];
+	unsigned char channel = buf[3];
 
 	log_debug("DIRECT cmd: %d, tr=%d, se=%d\n", cmd, track, sector);
+
+	File *file = NULL;
+
+	switch (cmd) {
+	case FS_BLOCK_U1:
+		// U1 basically opens a short-lived channel to read the contents of a
+		// buffer into the device
+		file = reserve_file(ep, channel);
+		open_block_channel(file);
+		// copy the file contents into the buffer
+		// test
+		memset(file->block, 0x55, 256);
+		set_chan(channel, ep);
+		
+		return ERROR_OK;
+	}
 
 	retbuf[0] = track;
 	retbuf[1] = sector;
@@ -571,7 +588,9 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	log_debug("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
 
 exit:
-	mem_free(name); mem_free(path); mem_free(filename);
+	mem_free(name); 
+	mem_free(path); 
+	mem_free(filename);
 	return er;
 }
 

@@ -83,6 +83,8 @@
 
 #define	  FS_DIRECT	 25	/* Non-channel-specific commands similar to FS_BLOCK */ 
 
+#define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
+
 /*
  * BLOCK and DIRECT commands
  *

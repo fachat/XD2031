@@ -28,12 +28,17 @@
 #ifndef BUFCMD_H
 #define BUFCMD_H
 
-#include "channel.h"
-#include "bus.h"
 
 
 uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error);
 uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error); 
+
+void bufcmd_init();
+
+endpoint_t* bufcmd_provider(void);
+
+int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
+                        void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t *name);
 
 
 #endif

@@ -29,6 +29,7 @@
 #include "name.h"
 #include "serial.h"
 #include "wireformat.h"
+#include "bufcmd.h"
 
 #include "debug.h"
 #include "led.h"
@@ -117,12 +118,19 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	uint8_t type = FS_OPEN_RD;
 
-	if (nameinfo.name[1] == '#' || nameinfo.access == 'X') {
+	if (nameinfo.access == 'X') {
+		// trying to open up a R/W channel
+		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
+		type = FS_OPEN_RW;
+	}
+
+	if (nameinfo.name[0] == '#') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
 		// Note: '#' is still blocking on read!
-		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
-		type = FS_OPEN_RW;
+		debug_puts("OPENING UP A DIRECT CHANNEL!"); debug_putcrlf();
+
+		type = FS_OPEN_DIRECT;
 	}
 
 	// either ",W" or secondary address is one, i.e. save
@@ -169,7 +177,13 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// the two bus systems. This is done depending on the drive number
 	// and managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
-	endpoint_t *endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+	endpoint_t *endpoint = NULL;
+	if (type == FS_OPEN_DIRECT) {
+		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
+		endpoint = bufcmd_provider();
+	} else {
+		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+	}
 
 	if (type == FS_MOVE 
 		&& nameinfo.drive2 != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
