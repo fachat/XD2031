@@ -59,8 +59,8 @@ static uint8_t buffer_wptr = 0;
 static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
 
-	debug_printf("submit call for direct file, chan=%d, drv=%d, cmd=%d, len=%d\n", 
-		channelno, txbuf->buffer[0], txbuf->type, txbuf->len);
+	debug_printf("submit call for direct file, chan=%d, cmd=%d, len=%d\n", 
+		channelno, txbuf->type, txbuf->len);
 
 	uint8_t rtype = FS_REPLY;
 
@@ -73,6 +73,8 @@ static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t
 		rtype = FS_REPLY;
 		break;
 	case FS_READ:
+		debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
+				direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
 		rxbuf->buffer[0] = direct_buffer[buffer_rptr];
 		rxbuf->wp = 1;
 		buffer_wptr = buffer_rptr;

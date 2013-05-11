@@ -450,7 +450,10 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 		open_block_channel(file);
 		// copy the file contents into the buffer
 		// test
-		memset(file->block, 0x55, 256);
+		for (int i = 0; i < 256; i++) {
+			file->block[i] = i;
+		}
+
 		set_chan(channel, ep);
 		
 		return ERROR_OK;

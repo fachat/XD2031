@@ -180,6 +180,7 @@ channel_t* channel_flush(int8_t channo) {
 
 	channel_t *chan = channel_find(channo);
 	if (chan == NULL) {
+		term_printf("DID NOT FIND CHANNEL TO FLUSH FOR %d\n", channo);
 		return NULL;
 	}
 
@@ -195,6 +196,10 @@ channel_t* channel_flush(int8_t channo) {
 		delayms(1);
 		main_delay();
 	}
+
+	//debug_printf("pull_state on flush: %d\n", chan->pull_state);
+	chan->pull_state = PULL_OPEN;
+
 	return chan;
 }
 
