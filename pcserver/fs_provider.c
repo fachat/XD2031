@@ -51,6 +51,7 @@
 #include "errors.h"
 #include "mem.h"
 #include "wireformat.h"
+#include "channel.h"
 
 #include "log.h"
 
@@ -70,6 +71,7 @@ typedef struct {
 	unsigned int	is_first :1;	// is first directory entry?
 	char		*block;		// direct channel block buffer, 256 byte when allocated
 	unsigned char	block_ptr;
+	unsigned char	close_on_eof;	// for block commands - close after EOF?
 } File;
 
 typedef struct {
@@ -407,6 +409,7 @@ static int open_block_channel(File *fp) {
 }
 
 // U1/U2/B-P/B-R/B-W
+// Currently unused?
 static int fs_block(endpoint_t *ep, int chan, char *buf) {
 
 	// note: that is not true for all commands - B-P for example
@@ -429,7 +432,8 @@ static int fs_block(endpoint_t *ep, int chan, char *buf) {
 	return ERROR_OK;
 }
 
-// B-A/B-F
+// in Firmware currently used for:
+// B-A/B-F/U1
 static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 
 	// note: that is not true for all commands - B-P for example
@@ -447,6 +451,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 		// U1 basically opens a short-lived channel to read the contents of a
 		// buffer into the device
 		file = reserve_file(ep, channel);
+		file->close_on_eof = 1;
 		open_block_channel(file);
 		// copy the file contents into the buffer
 		// test
@@ -454,7 +459,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			file->block[i] = i;
 		}
 
-		set_chan(channel, ep);
+		channel_set(channel, ep);
 		
 		return ERROR_OK;
 	}
@@ -476,7 +481,11 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		int n = len;
 		if (len >= avail) {
 			n = avail;
-			*eof = 1;
+			if (file->close_on_eof) {
+				*eof = -1;
+			} else {
+				*eof = 1;
+			}
 		}
 
 		log_debug("read_block: avail=%d, n=%d\n", avail, n);

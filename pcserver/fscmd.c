@@ -45,6 +45,7 @@
 #include "provider.h"
 #include "log.h"
 #include "xcmd.h"
+#include "channel.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -56,61 +57,6 @@
 static void cmd_dispatch(char *buf, int fs);
 static void write_packet(int fd, char *retbuf);
 
-
-//------------------------------------------------------------------------------------
-// Mapping from channel number for open files to endpoint providers
-// These are set when the channel is opened
-
-typedef struct {
-       int             channo;
-       endpoint_t      *ep;
-} chan_t;
-
-chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
-
-
-void chan_init() {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          chantable[i].channo = -1;
-        }
-}
-
-endpoint_t *chan_to_endpoint(int chan) {
-
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               if (chantable[i].channo == chan) {
-                       return chantable[i].ep;
-               }
-        }
-       log_info("Did not find ep for channel %d\n", chan);
-       return NULL;
-}
-
-void free_chan(int channo) {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               if (chantable[i].channo == channo) {
-                       chantable[i].channo = -1;
-                       chantable[i].ep = NULL;
-               }
-        }
-}
-
-void set_chan(int channo, endpoint_t *ep) {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               // we overwrite existing entries, to "heal" leftover cruft
-               // just in case...
-               if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
-                       chantable[i].channo = channo;
-                       chantable[i].ep = ep;
-                       return;
-               }
-        }
-       log_error("Did not find free ep slot for channel %d\n", channo);
-}
 
 //------------------------------------------------------------------------------------
 // debug log helper
@@ -158,7 +104,7 @@ const char *nameofcmd(int cmdno) {
 
 void cmd_init() {
 	provider_init();
-	chan_init();
+	channel_init();
 	xcmd_init();
 }
 
@@ -428,7 +374,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				rv = prov->open_wr(ep, tfd, name, cmd == FS_OPEN_OW);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -447,7 +393,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				rv = prov->open_rw(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -468,7 +414,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				rv = prov->opendir(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -487,7 +433,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				rv = prov->open_rd(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -506,7 +452,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				rv = prov->open_ap(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -517,7 +463,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		}
 		break;
 	case FS_READ:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
 			eof = 0;	// default just in case
 			prov = (provider_t*) ep->ptype;
@@ -534,15 +480,19 @@ static void cmd_dispatch(char *buf, int fd) {
 				if (eof) {
 					log_info("CLOSE_SEND_EOF(%d)\n", tfd);
 					retbuf[FSP_CMD] = FS_EOF;
-					// cleanup when not needed anymore
-					//provider_cleanup(ep);
+					if (eof < 0) {
+						// close channel (e.g. for U1)
+						channel_free(tfd);
+						// cleanup when not needed anymore
+						provider_cleanup(ep);
+					}
 				}
 			}
 		}
 		break;
 	case FS_WRITE:
 	case FS_EOF:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
@@ -554,19 +504,15 @@ static void cmd_dispatch(char *buf, int fd) {
 				log_rv(rv);
 			}
 			retbuf[FSP_DATA] = rv;
-			if (cmd == FS_EOF) {
-				// cleanup when not needed anymore
-				//provider_cleanup(ep);
-			}
 		}
 		break;
 	case FS_CLOSE:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			log_info("CLOSE(%d)\n", tfd);
 			prov->close(ep, tfd);
-			free_chan(tfd);
+			channel_free(tfd);
 			retbuf[FSP_DATA] = ERROR_OK;
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
@@ -591,7 +537,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
-			// cleanup when not needed anymore
+			// cleanup temp ep when not needed anymore
 			provider_cleanup(ep);
 		}
 		break;
@@ -696,7 +642,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		break;
 	case FS_BLOCK:
 		// file-related Block commands (e.g. U1/U2)
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->block != NULL) {
