@@ -58,7 +58,13 @@ void channel_init(void) {
 static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
-		p->last_pull_errorno = errorno;
+		if (errorno < 0 || rxpacket == NULL) {
+                	p->last_pull_errorno = ERROR_FAULT;
+		} else if (packet_get_type(rxpacket) == FS_REPLY) {
+			p->last_pull_errorno = packet_get_buffer(rxpacket)[0];
+		} else {
+			p->last_pull_errorno = ERROR_OK;
+		}
 
 		// TODO: only if errorno == 0?
 		// Probably need some PULL_ERROR as well	
@@ -416,7 +422,13 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
-                p->last_push_errorno = errnum;
+		if (errnum < 0 || rxpacket == NULL) {
+                	p->last_push_errorno = ERROR_FAULT;
+		} else if (packet_get_type(rxpacket) == FS_REPLY) {
+			p->last_push_errorno = packet_get_buffer(rxpacket)[0];
+		} else {
+			p->last_push_errorno = ERROR_OK;
+		}
 
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
@@ -445,13 +457,16 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 		packet_reset(curpack, channo);
 	}
 
-
 	packet_write_char(curpack, (uint8_t) c);
 
 	if (packet_is_full(curpack) || (forceflush & PUT_FLUSH)) {
 
 		channel_write_flush(chan, curpack, forceflush);
 
+	}
+
+	if (channel_last_push_error(chan) != ERROR_OK) {
+		return NULL;
 	}
 	return chan;
 }

@@ -133,6 +133,8 @@ uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
 void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector) {
   	uint8_t *msg = err->error_buffer;
 
+	err->errorno = errornum;
+
   	err->readp = 0;
 
   	msg = appendnumber(msg,errornum);

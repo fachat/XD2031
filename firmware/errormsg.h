@@ -40,6 +40,7 @@
 
 
 typedef struct {
+	uint8_t		errorno;
 	// callback that is called when the buffer is to be reset
 	//void 		(*set_ok_message)();	// (struct errormsg_t *err);
 	// error buffer
@@ -50,8 +51,10 @@ typedef struct {
 void set_error_ts(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector);
 
 static inline void set_error(errormsg_t *error, uint8_t errornum) {
-	set_error_ts(error, errornum, 0, 0);
+	// note: ignores possible changes in T&S
+	if (error->errorno != errornum || error->readp != 0) {
+		set_error_ts(error, errornum, 0, 0);
+	}
 }
-
 
 #endif

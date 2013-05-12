@@ -145,4 +145,12 @@ void channel_close(int8_t secondary_address);
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl);
 
+static inline int8_t channel_last_pull_error(channel_t *chan) {
+	return chan->last_pull_errorno;
+}
+
+static inline int8_t channel_last_push_error(channel_t *chan) {
+	return chan->last_push_errorno;
+}
+
 #endif

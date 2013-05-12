@@ -271,6 +271,11 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     } else {
       if (bus->channel != NULL) {
 	bus->channel = channel_put(bus->channel, data, with_eoi);
+	int8_t err = channel_last_push_error(bus->channel);
+	if (err != ERROR_OK) {
+	  set_error(&error, err);
+	  st |= STAT_WRTIMEOUT;
+	}
       } else {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
@@ -326,6 +331,10 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
 				channel->channel_no, st);
 #endif
+			int8_t err = channel_last_pull_error(channel);
+			if (err != ERROR_OK) {
+				set_error(&error, err);
+			}
 		} else {
 
 			*data = channel_current_byte(channel, &iseof);
@@ -341,6 +350,10 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				// make sure the next call does have a data byte
 				if (!channel_next(channel, preload & BUS_SYNC)) {
 					// no further data on channel available
+					int8_t err = channel_last_pull_error(channel);
+					if (err != ERROR_OK) {
+						set_error(&error, err);
+					}
 				}
 			}
 		}
