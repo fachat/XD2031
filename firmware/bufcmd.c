@@ -48,70 +48,15 @@ static int8_t cberr;
 // buffer handling (#-file, U1/U2/B-W/B-R/B-P
 // we only have a single buffer
 
-static uint8_t current_chan = -1;
+// what channel has the buffer
+static int8_t current_chan = -1;
+// the actual buffer
 static uint8_t direct_buffer[256];
+// read and write pointers in the buffer
+// wptr is one "behind" the rptr (which is incremented below), to
+// accomodate for the preload byte
 static uint8_t buffer_rptr = 0;
 static uint8_t buffer_wptr = 0;
-
-// ----------------------------------------------------------------------------------
-// provider for direct files
-
-static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
-
-	debug_printf("submit call for direct file, chan=%d, cmd=%d, len=%d\n", 
-		channelno, txbuf->type, txbuf->len);
-
-	uint8_t rtype = FS_REPLY;
-
-	switch(txbuf->type) {
-	case FS_OPEN_DIRECT:
-		buffer_rptr = 0;
-		buffer_wptr = 0;
-		rxbuf->wp = 1;
-		rxbuf->buffer[0] = ERROR_OK;
-		rtype = FS_REPLY;
-		break;
-	case FS_READ:
-		debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
-				direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
-		rxbuf->buffer[0] = direct_buffer[buffer_rptr];
-		rxbuf->wp = 1;
-		buffer_wptr = buffer_rptr;
-		if (buffer_rptr == 255) {
-			rtype = FS_EOF;
-		} else {
-			rtype = FS_WRITE;
-			buffer_rptr ++;
-		}
-		break;
-	case FS_WRITE:
-	case FS_EOF:
-		// TODO
-		break;
-	}
-	rxbuf->type = rtype;
-	callback(channelno, 0);	
-}
-
-
-static provider_t provider = {
-	NULL,			// prov_assign
-	NULL,			// prov_free
-	NULL,			// submit
-	submit_call,		// submit_call
-	NULL,			// directory_converter
-	NULL			// to_provider
-};
-
-static endpoint_t endpoint = {
-	&provider,
-	NULL
-};
-
-endpoint_t *bufcmd_provider(void) {
-	return &endpoint;
-}
 
 /**
  * command callback
@@ -140,11 +85,72 @@ void bufcmd_init() {
 	current_chan = -1;
 }
 
+uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t send_nbytes) {
+
+	uint16_t restlength = send_nbytes;
+
+	uint8_t ptype = FS_WRITE;
+	uint8_t plen;
+	uint8_t rv = ERROR_OK;
+
+	debug_printf("bufcmd_write_buffer: current_chan=%d, my chan=%d\n", current_chan, channel_no);
+
+	if (current_chan == -1 || current_chan != channel_no) {
+		return ERROR_NO_CHANNEL;
+	}
+
+	while (ptype != FS_EOF && restlength != 0 && rv == ERROR_OK) {
+
+                packet_init(&datapack, DATA_BUFLEN, direct_buffer + send_nbytes - restlength);
+                packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+
+		plen = (restlength > DATA_BUFLEN) ? DATA_BUFLEN : restlength;
+		if (plen >= restlength) {
+			ptype = FS_EOF;
+		} else {
+			ptype = FS_WRITE;
+		}
+                packet_set_filled(&datapack, channel_no, ptype, plen);
+
+		cbstat = 0;
+                endpoint->provider->submit_call(NULL, channel_no, 
+			&datapack, &cmdpack, callback);
+
+		cmd_wait_cb();
+
+		if (FS_REPLY == packet_get_type(&cmdpack)) {
+			// error (should not happen though)
+			rv = packet_get_buffer(&cmdpack)[0];
+
+			if (rv == ERROR_OK) {
+				restlength -= plen;
+			}
+		}
+		debug_printf("write buffer: sent %d bytes, %d bytes left, rv=%d, ptype=%d, rxd cmd=%d\n", 
+				plen, restlength, rv, ptype, packet_get_type(&cmdpack));
+	}
+
+	if (restlength > 0) {
+		// received error on write
+		term_printf("ONLY SHORT BUFFER, WAS ACCEPTED, SENDING %d, ACCEPTED %d\n", 256, 256-restlength);
+	}
+
+	// TODO: do we need to reset the read or write pointer?
+
+	return ERROR_OK;
+}
+
 uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t receive_nbytes) {
 
 	uint16_t restlength = receive_nbytes;
 
 	uint8_t ptype = FS_REPLY;
+
+	debug_printf("bufcmd_read_buffer: current_chan=%d, my chan=%d\n", current_chan, channel_no);
+
+	if (current_chan == -1 || current_chan != channel_no) {
+		return ERROR_NO_CHANNEL;
+	}
 
 	while (ptype != FS_EOF && restlength != 0) {
 
@@ -159,9 +165,6 @@ uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
 		cmd_wait_cb();
 
 		ptype = packet_get_type(&datapack);
-
-debug_printf("Received block data packet of %d bytes (eof=%d)\n", 
-					datapack.wp, datapack.type);
 
 		if (ptype == FS_REPLY) {
 			// error (should not happen though)
@@ -184,6 +187,7 @@ debug_printf("Received block data packet of %d bytes (eof=%d)\n",
 	return ERROR_OK;
 }
 
+/*
 int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
                         void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t *name) {
 
@@ -194,9 +198,46 @@ int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	// reserve buffer
 	current_chan = channel_no;
+
+debug_printf("bufcmd after open: chan=%d, my chan=%d\n", current_chan, channel_no);
+
 	return -1;
 }
+*/
 
+uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+	
+	int ichan;
+	int ptr;
+
+	uint8_t rv;
+
+	rv = sscanf(cmdbuf, "%d %d", &ichan, &ptr);
+	if (rv != 2) {
+		return ERROR_SYNTAX_INVAL;
+	}
+
+	rv = ERROR_OK;
+
+	uint8_t channel = bus_secaddr_adjust(bus, ichan);
+
+debug_printf("current chan=%d, my chan=%d\n", current_chan, channel);
+
+	if (current_chan != channel) {
+		return ERROR_NO_CHANNEL;
+	}
+
+	if (ptr < 0 || ptr > 255) {
+		return ERROR_OVERFLOW_IN_RECORD;
+	}
+
+	channel_flush(channel);
+
+	buffer_rptr = ptr;
+	buffer_wptr = ptr;
+
+	return rv;
+}
 
 /**
  * user commands
@@ -279,7 +320,7 @@ debug_printf("Sent command - got: %d\n", rv);
 					rv = bufcmd_read_buffer(channel, endpoint, 256);
 				} else {
 					// U2
-					// TODO
+					rv = bufcmd_write_buffer(channel, endpoint, 256);
 				}
 			}
 		} else {
@@ -377,15 +418,107 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	switch(cchar) {
 	case 'A':
 		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BA, error);
-		break;
 	case 'F':
 		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BF, error);
-		break;
-	default:
-		break;
+	case 'P':
+		return bufcmd_set_ptr(bus, cmdbuf, error);
 	}
 
 	return ERROR_SYNTAX_UNKNOWN;
+}
+
+// ----------------------------------------------------------------------------------
+// provider for direct files
+
+static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
+
+	debug_printf("submit call for direct file, current_chan=%d, chan=%d, cmd=%d, len=%d\n", 
+		current_chan, channelno, txbuf->type, txbuf->wp);
+
+	uint8_t rtype = FS_REPLY;
+	uint8_t plen, p;
+	uint8_t *ptr;
+
+	switch(txbuf->type) {
+	case FS_OPEN_DIRECT:
+		buffer_rptr = 0;
+		buffer_wptr = 0;
+		if (current_chan >= 0 && current_chan != channelno) {
+			packet_get_buffer(rxbuf)[0] = ERROR_NO_CHANNEL;
+		} else {
+			packet_get_buffer(rxbuf)[0] = ERROR_OK;
+		}
+		// reserve buffer
+		current_chan = channelno;
+		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		break;
+	case FS_READ:
+		//debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
+		//		direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
+		packet_get_buffer(rxbuf)[0] = direct_buffer[buffer_rptr];
+		// wptr is one "behind" the rptr (which is incremented below), to
+		// accomodate for the preload byte. 
+		// as long as we track it here, this needs to be single-byte packets
+		buffer_wptr = buffer_rptr;
+		if (buffer_rptr == 255) {
+			rtype = FS_EOF;
+		} else {
+			rtype = FS_WRITE;
+			buffer_rptr ++;
+		}
+		packet_set_filled(rxbuf, channelno, rtype, 1);
+		break;
+	case FS_WRITE:
+	case FS_EOF:
+		plen = packet_get_contentlen(txbuf);
+		ptr = packet_get_buffer(txbuf);
+
+		debug_printf("wptr=%d, len=%d, 1st data=%d,%d (%02x, %02x)\n", buffer_wptr, 
+				plen, ptr[0], ptr[1], ptr[0], ptr[1]);
+
+		for (p = 0; p < plen; p++) {
+			direct_buffer[buffer_wptr] = *ptr;
+			ptr++;
+			// rolls over on 256
+			buffer_wptr++;
+		}
+
+		buffer_rptr = buffer_wptr;
+
+		packet_get_buffer(rxbuf)[0] = ERROR_OK;
+		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		break;
+	case FS_CLOSE:
+		if (current_chan >= 0 && current_chan != channelno) {
+			packet_get_buffer(rxbuf)[0] = ERROR_NO_CHANNEL;
+		} else {
+			packet_get_buffer(rxbuf)[0] = ERROR_OK;
+		}
+		current_chan = -1;
+		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		break;
+	}
+	callback(channelno, 0);	
+}
+
+
+static provider_t provider = {
+	NULL,			// prov_assign
+	NULL,			// prov_free
+	NULL,			// submit
+	submit_call,		// submit_call
+	NULL,			// directory_converter
+	NULL			// to_provider
+};
+
+static endpoint_t endpoint = {
+	&provider,
+	NULL
+};
+
+endpoint_t *bufcmd_provider(void) {
+	return &endpoint;
 }
 
 

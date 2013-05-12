@@ -51,7 +51,7 @@ typedef enum {
 	ERROR_SYNTAX_DIR_SEPARATOR	= 41,	// name contains directory separator
 	// REL file errors
 //	ERROR_RECORD_NOT_PRESENT	= 50,
-//	ERROR_OVERFLOW_IN_RECORD	= 51,
+	ERROR_OVERFLOW_IN_RECORD	= 51,
 
 	ERROR_DIR_NOT_EMPTY		= 57,	// new for ENOTEMPTY
 	ERROR_NO_PERMISSION		= 58,	// new for EACCESS

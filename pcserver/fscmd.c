@@ -50,7 +50,7 @@
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
-#define DEBUG_WRITE
+#undef DEBUG_WRITE
 
 #define	MAX_BUFFER_SIZE			64
 
@@ -697,10 +697,10 @@ static void write_packet(int fd, char *retbuf) {
 		printf("Error on write: %d\n", errno);
 	}
 #if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
-	log_debug("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
+	printf("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
-	for (int i = 3; i<retbuf[FSP_LEN];i++) log_debug(" %02x", 255&retbuf[i]);
-	log_debug("\n");
+	for (int i = 3; i<retbuf[FSP_LEN];i++) printf(" %02x", 255&retbuf[i]);
+	printf("\n");
 #endif
 }
 

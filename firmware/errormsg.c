@@ -48,6 +48,7 @@ static const uint8_t IN_ROM tokens[] = {
 	"\207FOUND"	// 7
 	"\210DIR "	// 8
 	"\211NO "	// 9
+	"\212RECORD"	// 10
 	// zero-terminated
 };
 
@@ -75,6 +76,7 @@ static const uint8_t IN_ROM messages[] = {
 	H(ERROR_NO_BLOCK),		9,'B','L','O','C','K',
 	H(ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
 					'O','R',' ','S','E','C','T','O','R',
+	H(ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
 	0
 };
 

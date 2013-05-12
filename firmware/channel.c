@@ -438,6 +438,8 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 	uint8_t channo = chan->channel_no;
 	packet_t *curpack = &chan->buf[push_slot(chan)];
 
+debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
+
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;
 		packet_reset(curpack, channo);
@@ -467,14 +469,25 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 			delayms(1);
 		}
 
-		// note that we are pushing one and are now filling the second
-		// change that before pushing, as callback might already be done during push
-		chan->push_state = PUSH_FILLTWO;
+		if (packet_get_contentlen(curpack) != 0) {
+			// note that we are pushing one and are now filling the second
+			// change that before pushing, as callback might already be done during push
+			chan->push_state = PUSH_FILLTWO;
 
-		// use same packet as rx/tx buffer
-		endpoint_t *endpoint = chan->endpoint;
-		endpoint->provider->submit_call(endpoint->provdata, 
-			channo, curpack, curpack, _push_callback);
+			// use same packet as rx/tx buffer
+			endpoint_t *endpoint = chan->endpoint;
+			endpoint->provider->submit_call(endpoint->provdata, 
+				channo, curpack, curpack, _push_callback);
+
+			// callback is already done?
+			if (chan->push_state == PUSH_FILLONE) {
+				// TODO the need for this may indicate a race condition
+				// buffer PRINT# with single chars trigger a two-byte
+				// instead of one-byte packet on direct blocks, but not on
+				// files
+				chan->push_state = PUSH_OPEN;
+			}
+		}
 
 		if (chan->writetype == WTYPE_WRITEONLY) {
 			// switch packet buffers for double buffering

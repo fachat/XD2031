@@ -57,6 +57,7 @@
 
 #undef DEBUG_READ
 #define DEBUG_CMD
+#define DEBUG_BLOCK
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -402,6 +403,8 @@ static int open_block_channel(File *fp) {
 		log_warn("Buffer memory alloc failed!");
 
 		return ERROR_NO_CHANNEL;
+	} else {
+		memset(fp->block, 0, 256);
 	}
 	fp->block_ptr = 0;
 
@@ -433,7 +436,7 @@ static int fs_block(endpoint_t *ep, int chan, char *buf) {
 }
 
 // in Firmware currently used for:
-// B-A/B-F/U1
+// B-A/B-F/U1/U2
 static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 
 	// note: that is not true for all commands - B-P for example
@@ -462,6 +465,16 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 		channel_set(channel, ep);
 		
 		return ERROR_OK;
+	case FS_BLOCK_U2:
+		// U2 basically opens a short-lived channel to write the contents of a
+		// buffer from the device
+		file = reserve_file(ep, channel);
+		file->close_on_eof = 1;
+		open_block_channel(file);
+
+		channel_set(channel, ep);
+		
+		return ERROR_OK;
 	}
 
 	retbuf[0] = track;
@@ -474,7 +487,9 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	File *file = find_file(ep, tfd);
 
+#ifdef DEBUG_BLOCK
 	log_debug("read_block: file=%p, len=%d\n", file, len);
+#endif
 
 	if (file != NULL) {
 		int avail = 256 - file->block_ptr;
@@ -488,13 +503,46 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 			}
 		}
 
+#ifdef DEBUG_BLOCK
 		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+#endif
 
 		if (n > 0) {
 			memcpy(retbuf, file->block+file->block_ptr, n);
 			file->block_ptr += n;
 		}
 		return n;
+	}
+	return -ERROR_FAULT;
+}
+
+static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
+	File *file = find_file(ep, tfd);
+
+	log_debug("write_block: file=%p, len=%d\n", file, len);
+
+	if (file != NULL) {
+		int avail = 256 - file->block_ptr;
+		int n = len;
+		if (len >= avail) {
+			// TODO: close channel?
+			n = avail;
+		}
+
+		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+
+		if (n > 0) {
+			memcpy(file->block+file->block_ptr, buf, n);
+			file->block_ptr += n;
+		}
+
+#ifdef DEBUG_BLOCK
+		log_debug("Block:");
+		for (int i = 0; i < 256; i++) {
+			log_debug(" %02x", file->block[i] & 0xff);
+		}
+#endif
+		return ERROR_OK;
 	}
 	return -ERROR_FAULT;
 }
@@ -1027,6 +1075,25 @@ static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 	return rv;
 }
 
+// write file data
+static int writefile(endpoint_t *ep, int chan, char *buf, int len, int is_eof) {
+	File *file = find_file(ep, chan);
+
+	int rv = -ERROR_FAULT;
+
+	//log_debug("write_file: file=%p\n", file);
+
+	if (file != NULL) {
+
+		if (file->block != NULL) {
+			rv = write_block(ep, chan, buf, len, is_eof);
+		} else {
+			rv = write_file(ep, chan, buf, len, is_eof);
+		}	
+	}
+	return rv;
+}
+
 // ----------------------------------------------------------------------------------
 
 provider_t fs_provider = {
@@ -1042,7 +1109,7 @@ provider_t fs_provider = {
 	open_file_rw,
 	open_dr,
 	readfile,
-	write_file,
+	writefile,
 	fs_delete,
 	fs_rename,
 	fs_cd,

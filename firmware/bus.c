@@ -271,8 +271,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     } else {
       if (bus->channel != NULL) {
 	bus->channel = channel_put(bus->channel, data, with_eoi);
-      }
-      if (bus->channel == NULL) {
+      } else {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
     }
