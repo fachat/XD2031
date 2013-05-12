@@ -438,7 +438,7 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 	uint8_t channo = chan->channel_no;
 	packet_t *curpack = &chan->buf[push_slot(chan)];
 
-debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
+//debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
 
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;
