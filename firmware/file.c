@@ -40,7 +40,7 @@
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2
 
-static uint8_t _file_open_callback(int8_t channelno, int8_t errnum);
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 
 typedef struct {
 	int8_t 		channel_no;
@@ -299,7 +299,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	return 0;
 }
 
-static uint8_t _file_open_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
 
 	// callback to opener
 	// free data structure for next open	

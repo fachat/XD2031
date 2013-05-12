@@ -44,7 +44,7 @@
 
 channel_t channels[MAX_CHANNELS];
 
-static uint8_t _push_callback(int8_t channelno, int8_t errnum);
+static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 static void channel_close_int(channel_t *chan, uint8_t force);
 static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush);
 static channel_t* channel_refill(channel_t *chan, uint8_t options);
@@ -55,7 +55,7 @@ void channel_init(void) {
 	}
 }
 
-static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
 		p->last_pull_errorno = errorno;
@@ -72,7 +72,7 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
 	return 0;
 }
 
-static uint8_t _close_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _close_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
                 p->last_push_errorno = errorno;
@@ -413,7 +413,7 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	return NULL;
 }
 
-static uint8_t _push_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
                 p->last_push_errorno = errnum;

@@ -61,7 +61,7 @@ static uint8_t buffer_wptr = 0;
 /**
  * command callback
  */
-static uint8_t callback(int8_t channelno, int8_t errnum) {
+static uint8_t callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
 	cberr = buf[0];
 	cbstat = 1;
 	return 0;
@@ -431,7 +431,7 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 // provider for direct files
 
 static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 	debug_printf("submit call for direct file, current_chan=%d, chan=%d, cmd=%d, len=%d\n", 
 		current_chan, channelno, txbuf->type, txbuf->wp);
@@ -499,7 +499,7 @@ static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t
 		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
 		break;
 	}
-	callback(channelno, 0);	
+	callback(channelno, 0, rxbuf);	
 }
 
 

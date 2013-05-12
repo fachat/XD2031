@@ -80,7 +80,7 @@ static packet_t buspack;
 // there shouldn't be much debug output, as sending it may invariably 
 // receive the next option, triggering the option again. But it isn't
 // re-entrant!
-static uint8_t setopt_callback(int8_t channelno, int8_t errno) {
+static uint8_t setopt_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) {
 
         //debug_printf("setopt cb err=%d\n", errno);
         if (errno == ERROR_OK) {

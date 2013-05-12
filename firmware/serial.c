@@ -73,7 +73,7 @@ void serial_submit(void *epdata, packet_t *buf);
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum));
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 // dummy
 static void *prov_assign(const char *name) {
@@ -114,7 +114,7 @@ static int8_t		txstate;
 static struct {
 	int8_t		channelno;	// -1 is unused
 	packet_t	*rxpacket;
-	uint8_t		(*callback)(int8_t channelno, int8_t errnum);
+	uint8_t		(*callback)(int8_t channelno, int8_t errnum, packet_t *packet);
 } rx_channels[NUMBER_OF_SLOTS];
 
 #define	RX_IDLE		0
@@ -258,7 +258,8 @@ static void push_data_to_packet(int8_t rxdata)
 			// we are actually already done. do callback and set status to idle
 			if ((rxstate == RX_DATA) 
 				&& (rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0) == 0)) {
+					(rxstate == RX_IGNORE) ? -1 : 0, 
+					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0)) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
 			rxstate = RX_IDLE;
@@ -273,7 +274,8 @@ static void push_data_to_packet(int8_t rxdata)
 			// in X option)
 			serial_lock = 1;
 			if (rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+					(rxstate == RX_IGNORE) ? -1 : 0, 
+					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
 			serial_lock = 0;
@@ -361,7 +363,7 @@ void serial_submit(void *epdata, packet_t *buf) {
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
-		uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
+		uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet)) {
 
 	if (channelno < 0) {
 		debug_printf("!!!! submit with channelno=%d\n", channelno);
