@@ -39,6 +39,7 @@ extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
 extern provider_t fs_provider;
+extern provider_t di_provider;
 
 //------------------------------------------------------------------------------------
 // Mapping from drive number, which is given on open and commands, to endpoint
@@ -179,6 +180,9 @@ void provider_init() {
 
         tcp_provider.init();
 	provider_register(&tcp_provider);
+
+        di_provider.init();
+	provider_register(&di_provider);
 
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
