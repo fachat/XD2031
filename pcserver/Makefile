@@ -128,4 +128,7 @@ dmg:
 	# Clean again
 	rm -rf fauxroot dmg
 
+daemon: install
+	./daemon.sh
+
 .PHONY: all install uninstall run dmg

@@ -60,6 +60,7 @@ void log_term(const char *msg) {
 		msg++;
 	}
 	printf("\n");
+	fflush(stdout);
 }
 
 void log_errno(const char *msg, ...) {
@@ -73,6 +74,7 @@ void log_errno(const char *msg, ...) {
 		msg = buffer;
 	}
         printf("ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
+	fflush(stdout);
 }
 
 void log_warn(const char *msg, ...) {
@@ -87,6 +89,7 @@ void log_warn(const char *msg, ...) {
 		newline = 1;
 	}
         vprintf(msg, args);
+	fflush(stdout);
 }
 
 void log_error(const char *msg, ...) {
@@ -101,6 +104,7 @@ void log_error(const char *msg, ...) {
 		newline = 2;
 	}
         vprintf(msg, args);
+	fflush(stdout);
 }
 
 void log_info(const char *msg, ...) {
@@ -115,6 +119,7 @@ void log_info(const char *msg, ...) {
 		newline = 3;
 	}
         vprintf(msg, args);
+	fflush(stdout);
 }
 
 void log_debug(const char *msg, ...) {
@@ -131,6 +136,7 @@ void log_debug(const char *msg, ...) {
 		}
         	vprintf(msg, args);
 	}
+	fflush(stdout);
 }
 
 
