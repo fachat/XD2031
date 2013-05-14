@@ -354,7 +354,7 @@ void WriteSlot(di_endpoint_t *diep, slot_t *slot)
    BYTE p[32];
 
    log_debug("WriteSlot %d\n",slot->number);
-   PrintSlot(slot);
+   // PrintSlot(slot);
    memset(p,0,32);      // clear slot
    memset(p+5,0xa0,16); // fill name with $A0
    memcpy(p+5,slot->filename,strlen((char *)slot->filename));
@@ -367,7 +367,7 @@ void WriteSlot(di_endpoint_t *diep, slot_t *slot)
    log_debug("WriteSlot pos %x\n",slot->pos);
    di_fseek_pos(diep,slot->pos+2);
    fwrite(p+2,1,30,diep->Ip);
-   PrintBlock(diep,slot->pos & 0xffffff00);
+   // PrintBlock(diep,slot->pos & 0xffffff00);
 }
 
 // *******
@@ -1372,26 +1372,27 @@ void di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector)
    }
 }
 
-// **********
-// DeleteSlot
-// **********
+// **************
+// di_delete_file
+// **************
 
-void DeleteSlot(di_endpoint_t *diep, slot_t *slot)
+void di_delete_file(di_endpoint_t *diep, slot_t *slot)
 {
    BYTE t,s;
-   log_debug("DeleteSlot #%d <%s>\n",slot->number,slot->filename);
+   log_debug("di_delete_file #%d <%s>\n",slot->number,slot->filename);
    
-   slot->type = 0;          // delete
+   slot->type = 0;          // mark as deleted
    WriteSlot(diep,slot);
    t = slot->start_track ;
    s = slot->start_sector;
-   while (t)
+   while (t)               // follow chain for freeing blocks
    {
       di_block_free(diep,t,s);
       di_fseek_tsp(diep,t,s,0);
       fread(&t,1,1,diep->Ip);
       fread(&s,1,1,diep->Ip);
    }
+   // PrintBlock(diep,slot->pos & 0xffff00);
 }
 
 // **********
@@ -1414,7 +1415,7 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
    {
       if ((found = MatchSlot(diep,&slot,(BYTE *)buf)))
       {
-         DeleteSlot(diep,&slot);
+         di_delete_file(diep,&slot);
          ++(*outdeleted);
       }
    }  while (found && NextSlot(diep,&slot));
@@ -1435,6 +1436,9 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    int l = strlen(namefrom);
    if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
    log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
+
+   ASCII2CBM((BYTE *)namefrom,(BYTE *)namefrom);
+   ASCII2CBM((BYTE *)nameto  ,(BYTE *)nameto  );
 
    // check if target exists
 
