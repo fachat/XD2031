@@ -1,8 +1,8 @@
 
 
 # Uncomment one of the following lines to select your device:
-DEVICE=xs1541
-#DEVICE=petSD
+#DEVICE=xs1541
+DEVICE=petSD
 
 # This defines the serial-over-USB port to use when loading the
 # firmware into the device with "make load"
@@ -54,6 +54,7 @@ zoo:			   # Compile everything
 	# Copy firmware updater scripts
 	cp xs1541/xs1541up.sh $(BINDIR)
 	cp xs1541/3.1541up.sh $(BINDIR)
+	cp petSD/petSDisp.sh $(BINDIR)
 
 zip:	zoo
 	@echo "\n$(BAR)   Zip\n$(BAR)"
