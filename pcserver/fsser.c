@@ -67,6 +67,7 @@ void usage(void) {
 		"   -d <device>	define serial device to use\n"
 		"   -d auto     auto-detect serial device\n"
 		"   -v          enable debug log output\n"
+		"   -?          gives you this help text\n"
 	);
 	exit(1);
 }
@@ -130,6 +131,7 @@ int main(int argc, char *argv[]) {
 	} else
 	{
 		if(i!=argc-1) {
+		  log_error("Missing run_directory\n");
 		  usage();
 		}
 
