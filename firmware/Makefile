@@ -57,6 +57,8 @@ zoo:			   # Compile everything
 	cp petSD/petSDisp.sh $(BINDIR)
 	# Copy petSD fix fuses script
 	cp petSD/petSD_fix_fuses.sh $(BINDIR)
+	# Copy ISP programmer configuration
+	cp petSD/programmer.cfg $(BINDIR)
 
 zip:	zoo
 	@echo "\n$(BAR)   Zip\n$(BAR)"

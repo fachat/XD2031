@@ -3,20 +3,21 @@
 # 
 # ONLY FOR USE WITH PETSD!
 #
-
-PROGRAMMER=avrispmkii
-CONNECTED_TO=usb
-
-# ------------------------------------------------------------------------
-# Do not edit below this line
-#
+ISPCFG=programmer.cfg
+if test ! -s $ISPCFG
+then
+	echo Could not find $ISPCFG, aborting
+	exit 1
+fi
+. ./$ISPCFG
 echo ""
 echo ""
 echo ""
 echo "petSD bad fuses fixer"
 echo "====================="
 echo ""
-echo "This tool changes the AVR fuses for compatibility with sd2iec and XD-2031."
+echo "This tool changes the AVR fuses"
+echo "for compatibility with sd2iec and XD-2031."
 echo ""
 echo "FOR USE ONLY WITH PETSD!"
 echo "APPLYING TO OTHER DEVICES MAY BRICK THEM!"
@@ -30,7 +31,7 @@ if [ "$sure" == "yes" ]
       exit 1
 fi
 echo ""
-echo "***********************************************************************************"
+echo "*******************************************************************"
 echo ""
 echo "If the last output was..."
 echo ""

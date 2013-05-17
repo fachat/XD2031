@@ -1,12 +1,16 @@
 #!/bin/sh
 # Flash petSD firmware with AVR ISP programmer
 
-PROGRAMMER=avrispmkii
-CONNECTED_TO=usb
+# Reading configuration file
+ISPCFG=programmer.cfg
+if test ! -s $ISPCFG
+then
+	echo Could not find $ISPCFG, aborting
+	exit 1
+fi
+. ./$ISPCFG
 
-# ------------------------------------------------------------------------
-# Do not edit below this line
-#
+# Use default filename if no commandline parameter given
 default=XD2031-petSD.hex
 if [ $# -ne 1 ]
 then
