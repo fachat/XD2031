@@ -47,5 +47,9 @@
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46
 
+// number of direct buffers (for U1/U2/B-* commands)
+#define CONFIG_NUM_DIRECT_BUFFERS       4
+
+
 #endif
 
