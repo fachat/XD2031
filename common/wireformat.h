@@ -99,6 +99,16 @@
 #define	FS_BLOCK_BA	5	/* Block allocate */
 #define	FS_BLOCK_BF	6	/* Block free */
 
+/*
+ * Structure sent for U1/U2
+ */
+#define	FS_BLOCK_PAR_DRIVE	0	/* drive (to get endpoint, as for open */
+#define	FS_BLOCK_PAR_CMD	1	/* actual command, FS_BLOCK_* */
+#define FS_BLOCK_PAR_TRACK	2	/* two byte track number */
+#define	FS_BLOCK_PAR_SECTOR	4	/* two byte sector number */
+#define FS_BLOCK_PAR_CHANNEL	6	/* channel number to use for transfer */
+#define	FS_BLOCK_PAR_LEN	7	/* number of bytes in block cmd parameters */
+
 /* 
  * time and date struct, each entry is a byte
  * Used in reading directories as well as FS_GETDATIM

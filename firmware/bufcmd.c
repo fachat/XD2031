@@ -36,7 +36,7 @@
 
 
 // place for command, channel, drive, track sector 
-#define	CMD_BUFFER_LENGTH	5
+#define	CMD_BUFFER_LENGTH	FS_BLOCK_PAR_LEN
 
 static char buf[CMD_BUFFER_LENGTH];
 static packet_t cmdpack;
@@ -62,20 +62,18 @@ static uint8_t buffer_wptr = 0;
  * command callback
  */
 static uint8_t callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
-	cberr = buf[0];
+	cberr = packet_get_buffer(rxpacket)[0];
 	cbstat = 1;
 	return 0;
 }
 
 static uint8_t cmd_wait_cb() {
-	// TODO: check if not just returning -1 would suffice
 	while (cbstat == 0) {
 		delayms(1);
 		main_delay();
 	}
 
-debug_printf("cb result: %d\n", cberr);
-	return cberr;
+	return cberr;	// cberr is set to an FS_REPLY error in the actual callback
 }
 
 // ----------------------------------------------------------------------------------
@@ -84,6 +82,17 @@ debug_printf("cb result: %d\n", cberr);
 void bufcmd_init() {
 	current_chan = -1;
 }
+
+static void bufcmd_close(uint8_t channel_no, endpoint_t *endpoint) {
+	// close file
+	packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+	packet_set_filled(&cmdpack, channel_no, FS_CLOSE, 0);
+	cbstat = 0;
+        endpoint->provider->submit_call(NULL, channel_no, 
+		&cmdpack, &cmdpack, callback);
+	cmd_wait_cb();
+}
+
 
 uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t send_nbytes) {
 
@@ -115,16 +124,10 @@ uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t s
 		cbstat = 0;
                 endpoint->provider->submit_call(NULL, channel_no, 
 			&datapack, &cmdpack, callback);
+		rv = cmd_wait_cb();
 
-		cmd_wait_cb();
-
-		if (FS_REPLY == packet_get_type(&cmdpack)) {
-			// error (should not happen though)
-			rv = packet_get_buffer(&cmdpack)[0];
-
-			if (rv == ERROR_OK) {
-				restlength -= plen;
-			}
+		if (rv == ERROR_OK) {
+			restlength -= plen;
 		}
 		debug_printf("write buffer: sent %d bytes, %d bytes left, rv=%d, ptype=%d, rxd cmd=%d\n", 
 				plen, restlength, rv, ptype, packet_get_type(&cmdpack));
@@ -135,9 +138,7 @@ uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t s
 		term_printf("ONLY SHORT BUFFER, WAS ACCEPTED, SENDING %d, ACCEPTED %d\n", 256, 256-restlength);
 	}
 
-	// TODO: do we need to reset the read or write pointer?
-
-	return ERROR_OK;
+	return rv;
 }
 
 uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t receive_nbytes) {
@@ -145,6 +146,8 @@ uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
 	uint16_t restlength = receive_nbytes;
 
 	uint8_t ptype = FS_REPLY;
+
+	uint8_t rv = ERROR_OK;
 
 	debug_printf("bufcmd_read_buffer: current_chan=%d, my chan=%d\n", current_chan, channel_no);
 
@@ -161,14 +164,14 @@ uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
 		cbstat = 0;
                 endpoint->provider->submit_call(NULL, channel_no, 
 			&cmdpack, &datapack, callback);
-
 		cmd_wait_cb();
 
 		ptype = packet_get_type(&datapack);
 
 		if (ptype == FS_REPLY) {
 			// error (should not happen though)
-			return packet_get_buffer(&datapack)[0];
+			rv = packet_get_buffer(&datapack)[0];
+			break; // out of loop
 		} else
 		if (ptype == FS_WRITE || ptype == FS_EOF) {
 
@@ -184,26 +187,8 @@ uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
 	buffer_rptr = 0;
 	buffer_wptr =(receive_nbytes - restlength) & 0xff;
 
-	return ERROR_OK;
+	return rv;
 }
-
-/*
-int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
-                        void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t *name) {
-
-	if (current_chan >= 0 && current_chan != channel_no) {
-		set_error(errormsg, ERROR_NO_CHANNEL);
-		return -1;
-	}
-
-	// reserve buffer
-	current_chan = channel_no;
-
-debug_printf("bufcmd after open: chan=%d, my chan=%d\n", current_chan, channel_no);
-
-	return -1;
-}
-*/
 
 uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	
@@ -257,15 +242,8 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	debug_printf("cmd_user (%02x): %s\n", cmd, cmdbuf);
 #endif
 
-	// find start of parameter string into pars
+	// start of parameter string into pars
 	pars = cmdbuf+2;
-	while (*pars && (*pars != ':')) {
-		pars++;
-	}
-	if (!*pars) {
-		return ERROR_SYNTAX_INVAL;
-	}
-	pars++;
 	
         int ichan;
         int drive;
@@ -279,7 +257,7 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	case 1:		// U1
 	case 2:		// U2
 
-        	rv = sscanf(pars, "%d %d %d %d", &ichan, &drive, &track, &sector);
+        	rv = sscanf(pars, "%*[: ]%d%*[, ]%d%*[, ]%d%*[, ]%d", &ichan, &drive, &track, &sector);
         	if (rv != 4) {
                 	return ERROR_SYNTAX_INVAL;
         	}
@@ -294,23 +272,23 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 			
 		channel_flush(channel);
 
-		buf[0] = drive;			// first for provider dispatch on server
-		buf[1] = (cmd & 0x01) ? FS_BLOCK_U1 : FS_BLOCK_U2;
-		buf[2] = track;
-		buf[3] = sector;
-		buf[4] = channel;		// extra compared to B-A/B-F
+		buf[FS_BLOCK_PAR_DRIVE] = drive;		// first for provider dispatch on server
+		buf[FS_BLOCK_PAR_CMD] = (cmd & 0x01) ? FS_BLOCK_U1 : FS_BLOCK_U2;
+		buf[FS_BLOCK_PAR_TRACK] = (track & 0xff);
+		buf[FS_BLOCK_PAR_TRACK+1] = ((track >> 8) & 0xff);
+		buf[FS_BLOCK_PAR_SECTOR] = (sector & 0xff);
+		buf[FS_BLOCK_PAR_SECTOR+1] = ((sector >> 8) & 0xff);
+		buf[FS_BLOCK_PAR_CHANNEL] = channel;		// extra compared to B-A/B-F
 
 		packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
 		// FS_DIRECT packet with 5 data bytes, sent on cmd channel
-		packet_set_filled(&cmdpack, bus_secaddr_adjust(bus, CMD_SECADDR), FS_DIRECT, 5);
-
+		packet_set_filled(&cmdpack, bus_secaddr_adjust(bus, CMD_SECADDR), FS_DIRECT, FS_BLOCK_PAR_LEN);
 		endpoint_t *endpoint = provider_lookup(drive, NULL);
 		
 		if (endpoint != NULL) {	
 			cbstat = 0;
 			endpoint->provider->submit_call(NULL, bus_secaddr_adjust(bus, CMD_SECADDR), 
 							&cmdpack, &cmdpack, callback);
-
 			rv = cmd_wait_cb();
 debug_printf("Sent command - got: %d\n", rv);
 
@@ -322,7 +300,19 @@ debug_printf("Sent command - got: %d\n", rv);
 					// U2
 					rv = bufcmd_write_buffer(channel, endpoint, 256);
 				}
+				bufcmd_close(channel, endpoint);
+				if (rv == ERROR_OK) {
+					// no error so far, catch CLOSE error if any
+					rv = packet_get_buffer(&cmdpack)[0];
+				}
 			}
+			if (rv != ERROR_OK) {
+			
+				set_error_ts(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector);
+				// means: don't wait, error is already set
+				return -1;
+			}
+
 		} else {
 			return ERROR_DRIVE_NOT_READY;
 		}
@@ -347,20 +337,22 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 
 	uint8_t channel = bus_secaddr_adjust(bus, 15);
 	
-	uint8_t rv;
+	uint8_t rv = ERROR_DRIVE_NOT_READY;
 
-	rv = sscanf(cmdbuf, "%d %d %d", &drive, &track, &sector);
+	rv = sscanf(cmdbuf, "%d%*[, ]%d%*[, ]%d", &drive, &track, &sector);
 	if (rv != 3) {
 		return ERROR_SYNTAX_INVAL;
 	}
 
-        buf[0] = drive;		// comes first similar to other FS_* cmds
-        buf[1] = fscmd;
-        buf[2] = track;
-        buf[3] = sector;
+        buf[FS_BLOCK_PAR_DRIVE] = drive;		// comes first similar to other FS_* cmds
+        buf[FS_BLOCK_PAR_CMD] = fscmd;
+        buf[FS_BLOCK_PAR_TRACK] = track & 0xff;
+        buf[FS_BLOCK_PAR_TRACK+1] = (track >> 8) & 0xff;
+        buf[FS_BLOCK_PAR_SECTOR] = sector & 0xff;
+        buf[FS_BLOCK_PAR_SECTOR+1] = (sector >> 8) & 0xff;
 
 	packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
-	packet_set_filled(&cmdpack, channel, FS_DIRECT, 4);
+	packet_set_filled(&cmdpack, channel, FS_DIRECT, FS_BLOCK_PAR_SECTOR+2);
 
         endpoint_t *endpoint = provider_lookup(drive, NULL);
 
@@ -372,14 +364,18 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 		rv = cmd_wait_cb();
 
 		// TODO: buf[1]/buf[2] contain the T&S - need to get that into the error
-		debug_printf("block_allocfree: t&s=%d, %d\n", buf[1], buf[2]);
+		track = (buf[1] & 0xff) | ((buf[2] << 8) & 0xff00);
+		sector = (buf[3] & 0xff) | ((buf[4] << 8) & 0xff00);
+		debug_printf("block_allocfree: drive=%d, t&s=%d, %d\n", drive, track, sector);
 
-		set_error_ts(error, rv, buf[1], buf[2]);
+		if (rv != ERROR_OK) {
+			set_error_ts(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector);
 
-		// means: don't wait, error is already set
-		return -1;
+			// means: don't wait, error is already set
+			return -1;
+		}
 	}
-        return ERROR_DRIVE_NOT_READY;
+        return rv;
 }
 
 /*

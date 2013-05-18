@@ -72,7 +72,6 @@ typedef struct {
 	unsigned int	is_first :1;	// is first directory entry?
 	char		*block;		// direct channel block buffer, 256 byte when allocated
 	unsigned char	block_ptr;
-	unsigned char	close_on_eof;	// for block commands - close after EOF?
 } File;
 
 typedef struct {
@@ -411,75 +410,59 @@ static int open_block_channel(File *fp) {
 	return ERROR_OK;
 }
 
-// U1/U2/B-P/B-R/B-W
-// Currently unused?
-static int fs_block(endpoint_t *ep, int chan, char *buf) {
-
-	// note: that is not true for all commands - B-P for example
-	unsigned char cmd = buf[0];
-	unsigned char drive = buf[1];
-	unsigned char track = buf[2];
-	unsigned char sector = buf[3];
-
-	log_debug("BLOCK cmd: %d, dr=%d, tr=%d, se=%d\n", cmd, drive, track, sector);
-
-	File *file = find_file(ep, chan);
-
-	if (file != NULL) {
-
-		// note: not for B-P
-		// also B-R / B-W use block[0] as length value!
-		file->block_ptr = 0;
-	}
-
-	return ERROR_OK;
-}
 
 // in Firmware currently used for:
 // B-A/B-F/U1/U2
 static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 
-	// note: that is not true for all commands - B-P for example
-	unsigned char cmd = buf[0];
-	unsigned char track = buf[1];
-	unsigned char sector = buf[2];
-	unsigned char channel = buf[3];
+	// Note that buf has already consumed the drive (first byte), so all indexes are -1
+	unsigned char cmd = buf[FS_BLOCK_PAR_CMD-1];
+	unsigned int track = (buf[FS_BLOCK_PAR_TRACK-1]&0xff) | ((buf[FS_BLOCK_PAR_TRACK]<<8)&0xff00);
+	unsigned int sector = (buf[FS_BLOCK_PAR_SECTOR-1]&0xff) | ((buf[FS_BLOCK_PAR_SECTOR]<<8)&0xff00);
+	unsigned char channel = buf[FS_BLOCK_PAR_CHANNEL-1];
 
-	log_debug("DIRECT cmd: %d, tr=%d, se=%d\n", cmd, track, sector);
+	log_debug("DIRECT cmd: %d, tr=%d, se=%d, chan=%d\n", cmd, track, sector, channel);
 
 	File *file = NULL;
 
-	switch (cmd) {
-	case FS_BLOCK_U1:
-		// U1 basically opens a short-lived channel to read the contents of a
-		// buffer into the device
-		file = reserve_file(ep, channel);
-		file->close_on_eof = 1;
-		open_block_channel(file);
-		// copy the file contents into the buffer
-		// test
-		for (int i = 0; i < 256; i++) {
-			file->block[i] = i;
+	// (bogus) check validity of parameters, otherwise fall through to error
+	// need to be validated for other commands besides U1/U2
+	if (sector > 0 && sector < 100 && track < 100) {
+		switch (cmd) {
+		case FS_BLOCK_U1:
+			// U1 basically opens a short-lived channel to read the contents of a
+			// buffer into the device
+			// channel is closed by device with separate FS_CLOSE
+
+			file = reserve_file(ep, channel);
+			open_block_channel(file);
+			// copy the file contents into the buffer
+			// test
+			for (int i = 0; i < 256; i++) {
+				file->block[i] = i;
+			}
+
+			channel_set(channel, ep);
+		
+			return ERROR_OK;
+		case FS_BLOCK_U2:
+			// U2 basically opens a short-lived channel to write the contents of a
+			// buffer from the device
+			// channel is closed by device with separate FS_CLOSE
+			file = reserve_file(ep, channel);
+			open_block_channel(file);
+
+			channel_set(channel, ep);
+		
+			return ERROR_OK;
 		}
-
-		channel_set(channel, ep);
-		
-		return ERROR_OK;
-	case FS_BLOCK_U2:
-		// U2 basically opens a short-lived channel to write the contents of a
-		// buffer from the device
-		file = reserve_file(ep, channel);
-		file->close_on_eof = 1;
-		open_block_channel(file);
-
-		channel_set(channel, ep);
-		
-		return ERROR_OK;
 	}
 
-	retbuf[0] = track;
-	retbuf[1] = sector;
-	*retlen = 2;
+	retbuf[0] = track & 0xff;
+	retbuf[1] = (track >> 8) & 0xff;
+	retbuf[2] = sector & 0xff;
+	retbuf[3] = (sector >> 8) & 0xff;
+	*retlen = 4;
 
 	return ERROR_ILLEGAL_T_OR_S;
 }
@@ -496,11 +479,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		int n = len;
 		if (len >= avail) {
 			n = avail;
-			if (file->close_on_eof) {
-				*eof = -1;
-			} else {
-				*eof = 1;
-			}
+			*eof = 1;
 		}
 
 #ifdef DEBUG_BLOCK
@@ -525,7 +504,6 @@ static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) 
 		int avail = 256 - file->block_ptr;
 		int n = len;
 		if (len >= avail) {
-			// TODO: close channel?
 			n = avail;
 		}
 
@@ -1115,7 +1093,7 @@ provider_t fs_provider = {
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	fs_block,
+	NULL,
 	fs_direct
 };
 

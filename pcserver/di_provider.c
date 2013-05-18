@@ -1,12 +1,7 @@
 /****************************************************************************
 
     Commodore disk image Serial line server
-    Copyright (C) 2012 Andre Fachat
-
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
+    Copyright (C) 2013 Andre Fachat et. al.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,9 +20,6 @@
 ****************************************************************************/
 
 /*
- * This file is a filesystem provider implementation, to be
- * used with the FSTCP program on an OS/A65 computer.
- *
  * In this file the actual command work is done for
  * Commodore disk images of type d64, d71, d80, d81, d82
  */
@@ -618,15 +610,16 @@ void GetBuffer(di_endpoint_t *diep, BYTE t, BYTE s)
 // di_block
 // ********
 
-int di_block(endpoint_t *ep, int chan, char *buf)
+int di_direct(endpoint_t *ep, int chan, char *buf)
 {
-   BYTE cmd    = buf[0];
-   BYTE drive  = buf[1];
-   BYTE track  = buf[2];
-   BYTE sector = buf[3];
+   // Note that buf has already consumed the drive (first byte), so all indexes are -1
+   unsigned char cmd = buf[FS_BLOCK_PAR_CMD-1];
+   unsigned int track = (buf[FS_BLOCK_PAR_TRACK-1]&0xff) | ((buf[FS_BLOCK_PAR_TRACK]<<8)&0xff00);
+   unsigned int sector = (buf[FS_BLOCK_PAR_SECTOR-1]&0xff) | ((buf[FS_BLOCK_PAR_SECTOR]<<8)&0xff00);
+   unsigned char channel = buf[FS_BLOCK_PAR_CHANNEL-1];
 
-   log_debug("BLOCK cmd: %d, ch=%d ,dr=%d, tr=%d, se=%d\n",
-             cmd, chan, drive, track, sector);
+   log_debug("BLOCK cmd: %d, ch=%d, tr=%d, se=%d\n",
+             cmd, chan, track, sector);
 
    switch (cmd)
    {
@@ -1572,7 +1565,7 @@ provider_t di_provider =
    di_cd,           // int         (*cd       )(endpoint_t *ep, char *name); 
    NULL,            // int         (*mkdir    )(endpoint_t *ep, char *name); 
    NULL,            // int         (*rmdir    )(endpoint_t *ep, char *name);
-   di_block,        // int         (*block    )(endpoint_t *ep, int chan, char *buf);
-   NULL             // int         (*direct   )(endpoint_t *ep, char *buf, ...
+   NULL,            // int         (*block    )(endpoint_t *ep, int chan, char *buf);
+   di_direct        // int         (*direct   )(endpoint_t *ep, char *buf, ...
 };
 
