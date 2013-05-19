@@ -107,6 +107,9 @@ static void init_fp(File *fp) {
 // close a file descriptor
 static int close_fd(File *file) {
 
+	if (file->chan < 0) {
+		return;
+	}
 	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
 	if (file->fp != NULL) {
@@ -136,7 +139,7 @@ static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
         int i;
         for(i=0;i<MAXFILES;i++) {
-                close_fd(&(cep->files[i]));
+	        close_fd(&(cep->files[i]));
         }
 	mem_free(cep->basepath);
 	mem_free(cep->curpath);
