@@ -1123,7 +1123,11 @@ int FillEntry(BYTE *dest, slot_t *slot)
    strcpy(p,(const char *)slot->filename);
    CBM2ASCII((BYTE *)p,(BYTE *)p);
 
-   dest[FS_DIR_ATTR]  = slot->type & 0x7f; // Until splat bit is correct
+   dest[FS_DIR_ATTR]  = ((slot->type & 
+				(FS_DIR_ATTR_SPLAT | FS_DIR_ATTR_LOCKED 
+				  | FS_DIR_ATTR_TRANS | FS_DIR_ATTR_TYPEMASK))
+			| FS_DIR_ATTR_ESTIMATE)
+			^ FS_DIR_ATTR_SPLAT;	// the other way round
    return FS_DIR_NAME + strlen(p) + 1;
 }
 
@@ -1196,6 +1200,7 @@ int di_blocks_free(char *dest, di_endpoint_t *diep)
       ++BAM_Number;
    }
 
+   dest[FS_DIR_ATTR] = FS_DIR_ATTR_ESTIMATE;
    dest[FS_DIR_LEN+0] = 0;
    dest[FS_DIR_LEN+1] = FreeBlocks & 0xff;
    dest[FS_DIR_LEN+2] = FreeBlocks >> 8;

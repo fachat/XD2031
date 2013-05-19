@@ -153,6 +153,7 @@
 #define	  FS_DIR_ATTR_SPLAT	0x80	/* when set file is splat - i.e. open, display "*" */
 #define	  FS_DIR_ATTR_LOCKED	0x40	/* write-protected, show "<" */
 #define	  FS_DIR_ATTR_TRANS	0x20	/* transient - will (be?) @-replace(d by) other file */
+#define	  FS_DIR_ATTR_ESTIMATE	0x10	/* file size is an estimate only (may require lengthy computation) */
 #define	  FS_DIR_ATTR_TYPEMASK	0x07	/* file type mask - see below */
 
 /* represents a (logical) CBM file type - providers may use them or ignore them
