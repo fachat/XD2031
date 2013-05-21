@@ -33,7 +33,7 @@ endif
 
 all:    $(TEX_EN) $(MAINDOC).tex
 	pdflatex $(MAINDOC).tex
-	$(MAKEINDEX) $(MAINDOC).tex
+	$(MAKEINDEX) $(MAINDOC).idx
 	pdflatex $(MAINDOC).tex
 	# Move generated PDF to doc/
 	mv $(MAINDOC).pdf ../../doc/$(MAINDOC).pdf
