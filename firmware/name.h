@@ -55,10 +55,8 @@ typedef struct {
 	uint8_t	drive2;		// starts from 0 (real zero, not $30 = ASCII "0")
 	uint8_t *name2;		// pointer to the actual name after the '='
 	uint8_t	namelen2;	// length of remaining file name
+	uint16_t recordlen;	// length of record from opening 'L' file (REL)
 } nameinfo_t;
-
-//#define	NAMEINFO_UNUSED_DRIVE	0xff	// unspecified like: LOAD"file",8
-//#define	NAMEINFO_UNDEF_DRIVE	0xfe	// non-numeric drive like: LOAD"ftp:file",8
 
 // nameinfo option bits
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access

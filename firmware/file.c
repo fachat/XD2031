@@ -96,7 +96,8 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		debug_printf("NO CORRECT CMD: %s\n", command_to_name(nameinfo.cmd));
 		nameinfo.cmd = 0;
 	}
-	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P') {
+	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P' 
+		&& nameinfo.type != 'U' && nameinfo.type != 'L') {
 		// not set, or set as not sequential and not program
 		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
 		set_error(errormsg, ERROR_FILE_TYPE_MISMATCH);
