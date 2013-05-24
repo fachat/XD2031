@@ -105,12 +105,23 @@ FS_OPEN_*
 
 	FSP_FD		contains the channel; starts with 0, may legally be up to 120
 			(which is an arbitrary number below FSFD_SETOPT, which is 125)
-	FSP_DATA	contains the two things:
+	FSP_DATA	contains these two things:
 			- first byte contains the drive number as binary number
 				This enables the server to determine the actual 
 				provider to use
 			- further bytes contain the file name, with a trailing zero
 				included
+			- optionally, behind the zero byte, there is an option string.
+			  	The option string consists of <name>'='<value> pairs, like
+				"T=S". The name 'T' is defined for the file type, which is:
+				'S' - sequential access file
+				'P' - executable file
+				'U' - user defined file (R/W access)
+				'L' - record-oriented format, with the record size in 
+					textual number trailing, like "T=L14"
+				Multiple options are separated by comma ','.
+				The option string is ended with an included terminating zero byte
+
 	If the first byte in FSP_DATA is 255, then the drive given in the 
 	original file name is not valid but contains a provider name. This is thus
 	included in the file name payload data.

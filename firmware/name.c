@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#undef	DEBUG_NAME 
+#define	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
@@ -43,6 +43,7 @@
 #define	NAME_FILE	6
 #define	NAME_DRIVE2	7
 #define	NAME_NAME2	8
+#define	NAME_RELPAR	9
 
 // shared global variable to be used in parse_filename, as long as it's threadsafe
 nameinfo_t nameinfo;
@@ -61,7 +62,7 @@ nameinfo_t nameinfo;
  */
 void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 
-	uint8_t len = in->command_length;	//  includes the zero-byte
+	int8_t len = in->command_length;	//  includes the zero-byte
 
 	// copy over command to the end of the buffer, so we can 
 	// construct it from the parts at the beginning after parsing it
@@ -90,6 +91,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	uint8_t *name = p;		// initial name ptr
 	result->name2 = NULL;
 	result->namelen2 = 0;
+	result->recordlen = 0;
 	if (is_command) {
 		state = NAME_COMMAND;
 		result->name = NULL;
@@ -227,7 +229,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			break;
 		case NAME_OPTS:
 			// options can be used in any order, but each type only once
-			if ((ch == 'P' || ch == 'S' || ch == 'R') && result->type == 0) {
+			if ((ch == 'P' || ch == 'S' || ch == 'U') && result->type == 0) {
 				result->type = ch;
 			} else
 			if ((ch == 'R' || ch == 'W' || ch == 'A' || ch == 'X') && result->access == 0) {
@@ -235,8 +237,28 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			} else
 			if (ch == 'N') {
 				result->options |= NAMEOPT_NONBLOCKING;
+			} else
+			if (ch == 'L') {
+				result->type = ch;
+				state = NAME_RELPAR;
 			}
+			// note the ',' are just stepped over
 			break;
+		case NAME_RELPAR:
+			// separator after the "L" in the filename open
+			if (ch == ',') {
+				// CBM is single byte format, but we "integrate" the closing null-byte
+				// to allow two byte record lengths
+				len--;
+				p++;
+				result->recordlen = *p;
+				if (*p != 0) {
+					len--;
+					p++;
+					result->recordlen |= (*p << 8);
+				}
+				break;
+			}
 		default:
 			break;
 		}
@@ -260,6 +282,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	debug_printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' : 
 				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive2 + 0x30));
+	debug_printf("RECLEN=%d\n", result->recordlen); 
 #endif
 }
 
@@ -272,6 +295,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
  * beginning of the command_buffer.
  * 
  * it returns the number of bytes in the buffer
+ *
+ * TODO: check for buffer overflow
  */
 uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
@@ -287,17 +312,30 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	}
 
 	strcpy((char*)p, (char*)nameinfo->name);
+	// let p point to the byte after the null byte
 	p += nameinfo->namelen + 1;
 
-	if (nameinfo->namelen2 == 0) {
-		return p-trg;
+	// it's either two file names (like MOVE), or one file name with parameters (for OPEN_*)
+	if (nameinfo->namelen2 != 0) {
+		// two file names
+		*p = nameinfo->drive2;
+		p++;
+
+		strcpy((char*)p, (char*)nameinfo->name2);
+		p += nameinfo->namelen2 + 1;
+	} else 
+	if (nameinfo->type != 0) {
+		// parameters are comma-separated lists of "<name>'='<values>", e.g. "T=S"
+		*(p++) = 'T';
+		*(p++) = '=';
+		*(p++) = nameinfo->type;
+		if (nameinfo->recordlen > 0) {
+			sprintf((char*)p, "%d", nameinfo->recordlen);
+			p = p + strlen((char*)p);
+		}
+		*(p++) = 0;
 	}
 
-	*p = nameinfo->drive2;
-	p++;
-
-	strcpy((char*)p, (char*)nameinfo->name2);
-	p += nameinfo->namelen2 + 1;
 
 	return p-trg;
 }
