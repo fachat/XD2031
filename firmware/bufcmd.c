@@ -288,6 +288,7 @@ uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 
 	channel_flush(channel);
 
+	// DOS 2.7 $d5cb (blkptr)
 	buffer->rptr = ptr;
 	buffer->wptr = ptr;
 
@@ -341,7 +342,7 @@ uint8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, errormsg_t *error, uin
 	channel_flush(channel);
 
 	buf[FS_BLOCK_PAR_DRIVE] = drive;		// first for provider dispatch on server
-	buf[FS_BLOCK_PAR_CMD] = (cmd & 0x01) ? FS_BLOCK_U1 : FS_BLOCK_U2;
+	buf[FS_BLOCK_PAR_CMD] = cmd;
 	buf[FS_BLOCK_PAR_TRACK] = (track & 0xff);
 	buf[FS_BLOCK_PAR_TRACK+1] = ((track >> 8) & 0xff);
 	buf[FS_BLOCK_PAR_SECTOR] = (sector & 0xff);
@@ -358,24 +359,38 @@ uint8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, errormsg_t *error, uin
 		endpoint->provider->submit_call(NULL, bus_secaddr_adjust(bus, CMD_SECADDR), 
 						&cmdpack, &cmdpack, callback);
 		rv = cmd_wait_cb();
-debug_printf("Sent command - got: %d\n", rv);
+debug_printf("Sent command - got: %d, rptr=%d, wptr=%d\n", rv, buffer->rptr, buffer->wptr);
 
 		if (rv == ERROR_OK) {
-			if (cmd & 0x01) {
+			if (cmd == FS_BLOCK_U1) {
 				// U1
 				rv = bufcmd_read_buffer(channel, endpoint, 256);
 				if (rv == ERROR_OK) {
 					if (blockflag) {
 						// B-R is pretty stupid here
+						// DOS 2.7 ~$d562 (blkrd)
 						buffer->lastvalid = buffer->buffer[0];
 					} else {
+						// DOS 2.7 $d56b (ublkrd)
 						buffer->lastvalid = 255;
 					}
+				}
+				if (blockflag) {
+					buffer->rptr = 1;
+					buffer->wptr = 1;
+				} else {
+					buffer->rptr = 0;
+					buffer->wptr = 0;
 				}
 			} else {
 				if (blockflag) {
 					// B-W
-					buffer->buffer[0] = buffer->lastvalid;
+					// DOS 2.7 $d57f (blkwt)
+					if (buffer->wptr < 2) {
+						buffer->buffer[0] = 1;
+					} else {
+						buffer->buffer[0] = buffer->wptr - 1;
+					}
 				}
 				// U2
 				rv = bufcmd_write_buffer(channel, endpoint, 256);
@@ -384,13 +399,6 @@ debug_printf("Sent command - got: %d\n", rv);
 			if (rv == ERROR_OK) {
 				// no error so far, catch CLOSE error if any
 				rv = packet_get_buffer(&cmdpack)[0];
-			}
-			if (blockflag) {
-				buffer->rptr = 1;
-				buffer->wptr = 1;
-			} else {
-				buffer->rptr = 0;
-				buffer->wptr = 0;
 			}
 		}
 		if (rv != ERROR_OK) {
@@ -432,8 +440,10 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 
 	switch(cmd & 0x0f) {
 	case 1:		// U1
+		rv = cmd_user_u12(bus, FS_BLOCK_U1, pars, error, 0);
+		break;
 	case 2:		// U2
-		rv = cmd_user_u12(bus, cmd, pars, error, 0);
+		rv = cmd_user_u12(bus, FS_BLOCK_U2, pars, error, 0);
 		break;
 	default:
 		break;
@@ -601,10 +611,17 @@ static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t
 				// accomodate for the preload byte. 
 				// as long as we track it here, this needs to be single-byte packets
 				buffer->wptr = buffer->rptr;
-				if (buffer->rptr < buffer->lastvalid) {
+				// see DOS 2.7 @ $d885 (getbyt)
+				if (buffer->lastvalid == 0 || buffer->rptr != buffer->lastvalid) {
 					rtype = FS_WRITE;
 					buffer->rptr ++;
+				} else {
+					buffer->rptr = 0;
+					// not sure if this is entirely true.
+					// if IEEE preloads the EOF, but never fetches it?
+					buffer->wptr = 1;
 				}
+debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
 			}
 		}
 		packet_set_filled(rxbuf, channelno, rtype, 1);
