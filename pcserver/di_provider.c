@@ -1,12 +1,7 @@
 /****************************************************************************
 
     Commodore disk image Serial line server
-    Copyright (C) 2012 Andre Fachat
-
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
+    Copyright (C) 2013 Edilbert Kirk, Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,8 +20,7 @@
 ****************************************************************************/
 
 /*
- * This file is a disk image provider implementation, to be
- * used with the FSTCP program on an OS/A65 computer.
+ * This file is a disk image provider implementation
  *
  * In this file the actual command work is done for
  * Commodore disk images of type d64, d71, d80, d81, d82
@@ -273,7 +267,9 @@ int di_assert_ts(di_endpoint_t *diep, BYTE track, BYTE sector)
 
 void di_fseek_tsp(di_endpoint_t *diep, BYTE track, BYTE sector, BYTE ptr)
 {
-   fseek(diep->Ip,ptr+256*diep->DI.LBA(track,sector),SEEK_SET);
+   long seekpos = ptr+256*diep->DI.LBA(track,sector);
+   log_debug("seeking to position %ld for t/s/p=%d/%d/%d\n", seekpos, track, sector, ptr);
+   fseek(diep->Ip, seekpos,SEEK_SET);
 }
 
 // ************
@@ -634,9 +630,10 @@ int di_load_buffer(di_endpoint_t *diep, BYTE track, BYTE sector)
 
 int di_save_buffer(di_endpoint_t *diep)
 {
-   log_debug("di_save_buffer %p->%p U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
+   log_debug("di_save_buffer U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
    di_fseek_tsp(diep,diep->U2_track,diep->U2_sector,0);
    fwrite(diep->buf[0],1,256,diep->Ip);
+   fflush(diep->Ip);
    diep->U2_track = 0;
    // DumpBlock(diep->buf[0]);
    return 1; // OK
@@ -685,7 +682,7 @@ int read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
 
 int di_write_block(di_endpoint_t *diep, char *buf, int len)
 {
-   log_debug("di_write_block: len=%d\n", len);
+   log_debug("di_write_block: len=%d at ptr %d\n", len, diep->bp[0]);
 
    int avail = 256 - diep->bp[0];
    int n = len;
@@ -709,9 +706,13 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    di_endpoint_t *diep = (di_endpoint_t *)ep;
 
    BYTE cmd    = (BYTE)buf[FS_BLOCK_PAR_CMD    -1];
-   BYTE track  = (BYTE)buf[FS_BLOCK_PAR_TRACK  -1];
-   BYTE sector = (BYTE)buf[FS_BLOCK_PAR_SECTOR -1];
+   BYTE track  = (BYTE)buf[FS_BLOCK_PAR_TRACK  -1];	// ignoring high byte
+   BYTE sector = (BYTE)buf[FS_BLOCK_PAR_SECTOR -1];	// ignoring high byte
    BYTE chan   = (BYTE)buf[FS_BLOCK_PAR_CHANNEL-1];
+
+   retbuf[0] = track;
+   retbuf[1] = sector;
+   *retlen = 2;
 
    log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d\n",cmd,track,sector,chan);
    rv = di_assert_ts(diep,track,sector);
@@ -720,19 +721,21 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    switch (cmd)
    {
       case FS_BLOCK_BR:
-      case FS_BLOCK_U1: di_load_buffer(diep,track,sector); break;
+      case FS_BLOCK_U1: 
+	di_load_buffer(diep,track,sector); 
+	break;
       case FS_BLOCK_BW:
-      case FS_BLOCK_U2: di_flag_buffer(diep,track,sector); break;
+      case FS_BLOCK_U2: 
+      	if (!di_alloc_buffer(diep)) {
+		return ERROR_NO_CHANNEL; // OOM
+	}
+	di_flag_buffer(diep,track,sector); 
+	break;
    }
 
    diep->chan[0] = chan; // assign channel # to buffer
 
    channel_set(chan,ep);
-   
-
-   retbuf[0] = track;
-   retbuf[1] = sector;
-   *retlen = 2;
 
    return ERROR_OK;
 }

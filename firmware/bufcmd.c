@@ -579,8 +579,9 @@ static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t
 			packet_get_buffer(rxbuf)[0] = ERROR_NO_CHANNEL;
 		} else {
 			packet_get_buffer(rxbuf)[0] = ERROR_OK;
-			buffer->rptr = 0;
-			buffer->wptr = 0;
+			// directly after OPEN, the pointer is at position 1
+			buffer->rptr = 1;
+			buffer->wptr = 1;
 			buffer->pflag = 0;
 		}
 		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
