@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#define	DEBUG_NAME 
+#undef	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
