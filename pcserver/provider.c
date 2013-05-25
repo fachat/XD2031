@@ -77,7 +77,7 @@ int provider_assign(int drive, const char *name) {
 
 	// find end of name
 	int p = 0;
-	while (name[p] != 0 && name[p] != ':') {
+	while (name[p] != 0 && name[p] != '=') {
 		p++;
 	}
 

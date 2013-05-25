@@ -27,7 +27,7 @@
 #include "provider.h"
 #include "debug.h"
 
-#undef	DEBUG_PROVIDER
+#define	DEBUG_PROVIDER
 
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
@@ -85,9 +85,9 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 		return -1;
 	}
 
-	// first find the colon
+	// first find the equal sign
 	uint8_t p = 0;
-	while (name[p] != 0 && name[p] != ':') {
+	while (name[p] != 0 && name[p] != '=') {
 		p++;
 	}
 

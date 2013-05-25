@@ -130,7 +130,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 				result->drive = ch - 0x30;
 			} else
 			// command parameters following?
-			if (ch == ':') {
+			if ((ch == ':') || (ch == '=')) {
 				if (result->drive != NAMEINFO_UNDEF_DRIVE) {
 					result->name = (p+1);
 					result->namelen = len-1;

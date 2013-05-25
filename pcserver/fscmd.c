@@ -139,7 +139,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 				continue;
 			}
 
-			if (argv[i][3] != '=') {
+			if (argv[i][3] != ':') {
 				log_error("Could not identify %s as ASSIGN parameter\n", argv[i]);
 				continue;
 			}
