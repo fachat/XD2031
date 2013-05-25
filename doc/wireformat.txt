@@ -220,7 +220,7 @@ FS_OPEN_DR
 	
 FS_CLOSE
 	This closes a channel - TODO: currently not used, but probably should
-	Note that channels are also closed on receiving an FS_EOF packet.
+	Note that channels are NOT closed on receiving an FS_EOF packet.
 
 
 Read and Write
@@ -247,7 +247,9 @@ FS_EOF
 	further data available on this channel.
 	It tries to obeys the Commodore semantics, in that it always should have a valid data
 	byte with it.
-	Receiving an FS_EOF automatically closes the channel.
+	Receiving an FS_EOF does not automatically close the channel, an FS_CLOSE has to follow.
+	A channel may be "reopened" for example by sending a P (position), or Block read or write
+	command.
 
 
 File operations
