@@ -73,7 +73,7 @@ int provider_register(provider_t *provider) {
  */
 int provider_assign(int drive, const char *name, const char *assign_to) {
 
-	log_info("assign '%s' = '%s' to drive %d\n", name, assign_to, drive);
+	log_info("Assign provider '%s' with '%s' to drive %d\n", name, assign_to, drive);
 
 	endpoint_t *parent = NULL;
 	provider_t *provider = NULL;
@@ -100,7 +100,7 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 				if (!strcmp(pname, name)) {
 					// got one
 					provider = providers[i].provider;
-					log_info("Found provider named '%s'\n", provider->name);
+					log_debug("Found provider named '%s'\n", provider->name);
 					break;
 				}
 			}
@@ -111,7 +111,11 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 	if (provider != NULL) {
 		// get new endpoint
 		newep = provider->newep(parent, assign_to);
-		newep->is_temporary = 0;
+		if (newep) {
+			newep->is_temporary = 0;
+		} else {
+			return ERROR_FAULT;
+		}
 	}
 
 	if (newep != NULL) {

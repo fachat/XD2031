@@ -161,7 +161,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 				rv = provider_assign(drive, provider_name, provider_parameter);
 			} else {
 				log_debug("No parameter for cmdline_assign\n");
-				rv = provider_assign(drive, argv[i], NULL);
+				rv = provider_assign(drive, argv[i] + 4, NULL);
 			} 
 			if (rv < 0) {
 				log_error("Could not assign, error number is %d\n", rv);

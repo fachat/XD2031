@@ -27,7 +27,7 @@
 #include "provider.h"
 #include "debug.h"
 
-#define	DEBUG_PROVIDER
+#undef	DEBUG_PROVIDER
 
 // currently planned serial, sdcard, iec, ieee
 #define	MAX_PROV	4
@@ -89,7 +89,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 	provider_t *newprov = NULL;
 	void *provdata = NULL;
 
-	if (isdigit(name[0])) {
+	if ((isdigit(name[0])) && (name[1] == 0)) {
 		// we have a drive digit
 		uint8_t drv = assign_to[0] & 0x0f;
 		endpoint_t *ep = provider_lookup(drv, NULL);
