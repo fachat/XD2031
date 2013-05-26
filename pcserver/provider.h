@@ -43,6 +43,8 @@
 
 #define MAX_NUMBER_OF_PROVIDERS         10              // max 10 different providers
 
+#define MAX_LEN_OF_PROVIDER_NAME	16
+
 typedef struct _endpoint endpoint_t;
 
 typedef struct {
@@ -77,7 +79,7 @@ struct _endpoint {
 	int		is_temporary;
 };
 
-int provider_assign(int drive, const char *name);
+int provider_assign(int drive, const char *name, const char *assign_to);
 
 /**
  * looks up a provider like "tcp:" for "fs:" by drive number.

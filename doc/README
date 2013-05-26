@@ -18,16 +18,16 @@ the device on. Start the server component on the PC
 with the appropriate options:
 
 	-d <device>	USB device name, e.g. "/dev/ttyUSB0"
-	-A<drv>=<provider-string>
+	-A<drv>:<provider-string>
                		assign a provider to a drive
-               		e.g. use '-A0=fs:.' to assign the current directory
+               		e.g. use '-A0:fs=.' to assign the current directory
                		to drive 0. Dirs are relative to the run_directory param
 
 The run-directory is the directory in which the server will change into first,
 all paths are relative to it. So for example if you use this command line in the
 distributions "firmware" directory:
 
-	fsser -d /dev/ttyUSB0 -A0=fs:../sample -A1=fs:../tools .
+	fsser -d /dev/ttyUSB0 -A0:fs=../sample -A1:fs=../tools .
 
 you will get a drive 0 that points to the sample directory, and a drive 1 that points
 to the tools directory. Note that you can use drives 0 - 9, not just 0 or 1.
@@ -153,16 +153,16 @@ ftp and http providers the path contains a server name as well.
 You can then assign a provider and path to a drive number, accessible from the 
 Commodore equipment with:
 
-	ASSIGN<drive>:<provider>:<path>
+	ASSIGN<drive>:<provider>=<path>
 
 for example: 
 
-	A2:ftp:ftp.zimmers.net/pub/cbm
+	A2:ftp=ftp.zimmers.net/pub/cbm
 
 assigns FTP access to the server "ftp.zimmers.net" under the path "/pub/cbm" to
 drive 2. The following allows HTTP access to that server on drive 3
 
-	ASSIGN3:http:www.zimmers.net/anonftp/pub/cbm
+	ASSIGN3:http=www.zimmers.net/anonftp/pub/cbm
 
 You can short-cut the provider definition by re-using the definition of an already
 configured drive:

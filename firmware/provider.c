@@ -72,12 +72,13 @@ static struct {
  * the assign command. Also this enables the use of a server-based
  * provider that is not hidden by an old definition on this device.
  */
-int8_t provider_assign(uint8_t drive, const char *name) {
+int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 
 	int8_t rv = -1;
 
 #ifdef DEBUG_PROVIDER
-	debug_printf("ASSIGN: drive %d to '%s'\n", drive, name);
+	debug_printf("ASSIGN: drive %d to provider '%s' = '%s'\n", drive, name, assign_to); 
+	debug_flush();
 #endif
 
 	// check drive
@@ -85,18 +86,12 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 		return -1;
 	}
 
-	// first find the colon
-	uint8_t p = 0;
-	while (name[p] != 0 && name[p] != ':') {
-		p++;
-	}
-
 	provider_t *newprov = NULL;
 	void *provdata = NULL;
 
-	if ((isdigit(name[0])) && (p == 1)) {
+	if ((isdigit(name[0])) && (name[1] == 0)) {
 		// we have a drive digit
-		uint8_t drv = name[0] & 0x0f;
+		uint8_t drv = assign_to[0] & 0x0f;
 		endpoint_t *ep = provider_lookup(drv, NULL);
 		if (ep == NULL) {
 			debug_printf("Drive %d not used, cannot do relative assign!\n", drv);
@@ -114,24 +109,14 @@ int8_t provider_assign(uint8_t drive, const char *name) {
 	if (newprov == NULL) {
 	    // now check each provider in turn, if the name fits
 	    for (int8_t i = MAX_PROV-1; i >= 0; i--) {
-		uint8_t j;
 		if (provs[i].name != NULL) {
-			//debug_printf("Compare with %s\n",provs[i].name);	
-			for (j = 0; j < p; j++) {
-				if (provs[i].name[j] != name[j]) {
-					// name does not match
-					//debug_printf("name does not match at i=%d, j=%d (%02x vs. %02x\n", 
-					//		i, j, provs[i].name[j], name[j]);
-					break;
-				}
-			}
-			//debug_printf("j=%d, p=%d, %02x\n", j, p, provs[i].name[p]);
-			if ((j == p) && (provs[i].name[p] == 0)) {
+			debug_printf("Compare with %s\n",provs[i].name);	
+			if (!strcmp(provs[i].name, name)) {
 				// found it
-				//debug_printf("Found new provider: %p in slot %d\n", p, i);
+				debug_printf("Found new provider: %s in slot %d\n", name, i);
 				newprov = provs[i].provider;
 				// new get the runtime data
-				provdata = newprov->prov_assign(name);
+				provdata = newprov->prov_assign(assign_to);
 				break;
 			}
 		}

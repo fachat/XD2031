@@ -191,7 +191,11 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 					result->drive2 = NAMEINFO_UNUSED_DRIVE;
 					result->name2 = (p+1);
 					result->namelen2 = len-1;
-					state = NAME_DRIVE2;
+					if (result->cmd == CMD_ASSIGN) {
+						state = NAME_NAME2;
+					} else {
+						state = NAME_DRIVE2;
+					}
 				}
 				break;
 			}
@@ -212,12 +216,6 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			if (ch == ':') {
 				// found drive separator
 				result->drive2 = drv;
-				if (drv != NAMEINFO_UNDEF_DRIVE) {
-					// if we had a real drive, hide it from name,
-					// otherwise the "provider:" part is included in the name
-					result->name2 = (p+1);
-					result->namelen2 = len-1;
-				}
 				state = NAME_NAME2;
 				break;
 			} else {
@@ -225,7 +223,9 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			}
 			// fallthrough
 		case NAME_NAME2:
-			// nothing to do, only commands here
+			result->name2 = p;
+			result->namelen2 = len;
+			len = 0; // we're done
 			break;
 		case NAME_OPTS:
 			// options can be used in any order, but each type only once
@@ -283,6 +283,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive2 + 0x30));
 	debug_printf("RECLEN=%d\n", result->recordlen); 
+	debug_flush();
 #endif
 }
 

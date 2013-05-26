@@ -71,21 +71,15 @@ int provider_register(provider_t *provider) {
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  */
-int provider_assign(int drive, const char *name) {
+int provider_assign(int drive, const char *name, const char *assign_to) {
 
-	log_info("assign '%s' to drive %d\n", name, drive);
-
-	// find end of name
-	int p = 0;
-	while (name[p] != 0 && name[p] != ':') {
-		p++;
-	}
+	log_info("Assign provider '%s' with '%s' to drive %d\n", name, assign_to, drive);
 
 	endpoint_t *parent = NULL;
 	provider_t *provider = NULL;
 
 	// check if it is a drive
-	if ((isdigit(name[0])) && (p == 1)) {
+	if ((isdigit(name[0])) && (strlen(name) == 1)) {
 		// we have a drive number
 		int drv = name[0] & 0x0f;
 		parent = provider_lookup(drv, NULL);
@@ -103,17 +97,10 @@ int provider_assign(int drive, const char *name) {
 			if (providers[i].provider != NULL) {
 				log_debug("Compare to provider %s\n", providers[i].provider->name);
 				const char *pname = providers[i].provider->name;
-				int j = 0;
-				for (j = 0; j < p; j++) {
-					if (name[j] != pname[j]) {
-						// provider and assign name do not match
-						break;
-					}
-				}
-				if ((j == p) && (pname[p] == 0)) {
+				if (!strcmp(pname, name)) {
 					// got one
 					provider = providers[i].provider;
-					log_info("Found provider named '%s'\n", provider->name);
+					log_debug("Found provider named '%s'\n", provider->name);
 					break;
 				}
 			}
@@ -123,8 +110,12 @@ int provider_assign(int drive, const char *name) {
 	endpoint_t *newep = NULL;
 	if (provider != NULL) {
 		// get new endpoint
-		newep = provider->newep(parent, (name[p] == 0) ? name + p : name + p + 1);
-		newep->is_temporary = 0;
+		newep = provider->newep(parent, assign_to);
+		if (newep) {
+			newep->is_temporary = 0;
+		} else {
+			return ERROR_FAULT;
+		}
 	}
 
 	if (newep != NULL) {

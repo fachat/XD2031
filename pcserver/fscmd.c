@@ -139,12 +139,35 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 				continue;
 			}
 
-			if (argv[i][3] != '=') {
+			if (argv[i][3] != ':') {
 				log_error("Could not identify %s as ASSIGN parameter\n", argv[i]);
 				continue;
 			}
 	
-			int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			int rv;
+			int drive = argv[i][2] & 0x0f;
+			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
+			char *provider_parameter;
+
+			// provider name followed by parameter?
+			char *p = strchr(argv[i], '=');
+			if (p) {
+				if ((p - argv[i] - 4) > MAX_LEN_OF_PROVIDER_NAME) {
+					log_error("Provider name '%.8s'.. exceeds %d characters\n", argv[i] + 4,
+						  MAX_LEN_OF_PROVIDER_NAME);
+				} else {
+					strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
+					provider_name[p - argv[i] - 4] = 0;
+					provider_parameter = p + 1;
+					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
+							provider_parameter);
+					rv = provider_assign(drive, provider_name, provider_parameter);
+				}
+			} else {
+				log_debug("No parameter for cmdline_assign\n");
+				rv = provider_assign(drive, argv[i] + 4, NULL);
+			} 
 			if (rv < 0) {
 				log_error("Could not assign, error number is %d\n", rv);
 			}
@@ -300,6 +323,7 @@ static void cmd_dispatch(char *buf, int fd) {
 	unsigned int len;
 	char retbuf[200];
 	int rv;
+	char *name2;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -659,15 +683,17 @@ static void cmd_dispatch(char *buf, int fd) {
 		// assign an endpoint number (i.e. a drive number for the PET)
 		// to a filesystem provider and path
 		// The drive number in buf[FSP_DATA] is the one to assign,
-		// while the rest of the name determines which provider to use
+		// name = buf[FSP_DATA+1] contains the zero-terminated provider name,
+		// followed by a zero-terminated provider parameter.
 		//
 		// A provider can be determined relative to an existing one. In 
 		// this case the provider name is the endpoint (drive) number,
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		log_info("ASSIGN(%d -> %s)\n", drive, name);
-		rv = provider_assign(drive, name);
+		name2 = strchr(name, 0) + 2;
+		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
+		rv = provider_assign(drive, name, name2);
 		if (rv != 0) {
 			log_rv(rv);
 		}

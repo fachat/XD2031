@@ -148,6 +148,11 @@ static void fsp_free(endpoint_t *ep) {
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
+	if((path == NULL) || (*path == 0)) {
+		log_error("Empty path for assign");
+		return NULL;
+	}
+
 	log_debug("Setting fs endpoint to '%s'\n", path);
 
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;

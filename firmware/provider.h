@@ -63,7 +63,7 @@ typedef struct {
 	void		*provdata;
 } endpoint_t;
 
-int8_t provider_assign(uint8_t drive, const char *name);
+int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to);
 
 endpoint_t* provider_lookup(uint8_t drive, const char *name);
 

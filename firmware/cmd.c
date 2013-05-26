@@ -183,7 +183,8 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		}
 
 		// the +1 on the name skips the endpoint number stored in position 0	
-		if (provider_assign(nameinfo.drive, (char*) nameinfo.name+1) < 0) {
+		if (provider_assign( nameinfo.drive, (char*) nameinfo.name+1, 
+				     (char*) nameinfo.name2 ) < 0) {
 		
 			return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer,
 				errormsg, rtconf, callback, 1);
