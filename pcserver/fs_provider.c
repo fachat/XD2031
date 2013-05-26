@@ -108,7 +108,7 @@ static void init_fp(File *fp) {
 static int close_fd(File *file) {
 
 	if (file->chan < 0) {
-		return;
+		return ERROR_NO_CHANNEL;
 	}
 	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
