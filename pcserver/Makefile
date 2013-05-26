@@ -1,4 +1,4 @@
-PREFIX=/usr/local
+PREFIX=/bin/local
 BINDIR=bin
 DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
@@ -129,6 +129,8 @@ dmg:
 	rm -rf fauxroot dmg
 
 daemon: install
+	sed -e 's|PREFIX|'$(PREFIX)'|g' fsser.init.d > fsser.init.d.localized
+	sed -i -e 's|BINDIR|'$(BINDIR)'|g' fsser.init.d.localized
 	./daemon.sh
 
 .PHONY: all install uninstall run dmg
