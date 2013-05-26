@@ -43,6 +43,8 @@
 
 #define MAX_NUMBER_OF_PROVIDERS         10              // max 10 different providers
 
+#define MAX_LEN_OF_PROVIDER_NAME	16
+
 typedef struct _endpoint endpoint_t;
 
 typedef struct {

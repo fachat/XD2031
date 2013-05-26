@@ -147,18 +147,23 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
 			int rv;
 			int drive = argv[i][2] & 0x0f;
-			char provider_name[8];
+			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
 			char *provider_parameter;
 
 			// provider name followed by parameter?
 			char *p = strchr(argv[i], '=');
 			if (p) {
-				strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
-				provider_name[p - argv[i] - 4] = 0;
-				provider_parameter = p + 1;
-				log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
-						provider_parameter);
-				rv = provider_assign(drive, provider_name, provider_parameter);
+				if ((p - argv[i] - 4) > MAX_LEN_OF_PROVIDER_NAME) {
+					log_error("Provider name '%.8s'.. exceeds %d characters\n", argv[i] + 4,
+						  MAX_LEN_OF_PROVIDER_NAME);
+				} else {
+					strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
+					provider_name[p - argv[i] - 4] = 0;
+					provider_parameter = p + 1;
+					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
+							provider_parameter);
+					rv = provider_assign(drive, provider_name, provider_parameter);
+				}
 			} else {
 				log_debug("No parameter for cmdline_assign\n");
 				rv = provider_assign(drive, argv[i] + 4, NULL);
