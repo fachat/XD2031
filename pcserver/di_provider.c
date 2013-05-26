@@ -250,6 +250,11 @@ typedef struct
 
 extern provider_t di_provider;
 
+// prototypes
+BYTE NextTrack(di_endpoint_t *diep);
+static int di_block_alloc(di_endpoint_t *diep, BYTE *track, BYTE *sector);
+static int di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector);
+
 // ************
 // di_assert_ts
 // ************
@@ -701,7 +706,7 @@ int di_write_block(di_endpoint_t *diep, char *buf, int len)
 
 int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 {
-   int rv;
+   int rv = ERROR_OK;
 
    di_endpoint_t *diep = (di_endpoint_t *)ep;
 
@@ -709,10 +714,6 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    BYTE track  = (BYTE)buf[FS_BLOCK_PAR_TRACK  -1];	// ignoring high byte
    BYTE sector = (BYTE)buf[FS_BLOCK_PAR_SECTOR -1];	// ignoring high byte
    BYTE chan   = (BYTE)buf[FS_BLOCK_PAR_CHANNEL-1];
-
-   retbuf[0] = track;
-   retbuf[1] = sector;
-   *retlen = 2;
 
    log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d\n",cmd,track,sector,chan);
    rv = di_assert_ts(diep,track,sector);
@@ -723,6 +724,8 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
       case FS_BLOCK_BR:
       case FS_BLOCK_U1: 
 	di_load_buffer(diep,track,sector); 
+   	diep->chan[0] = chan; // assign channel # to buffer
+   	channel_set(chan,ep);
 	break;
       case FS_BLOCK_BW:
       case FS_BLOCK_U2: 
@@ -730,14 +733,23 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 		return ERROR_NO_CHANNEL; // OOM
 	}
 	di_flag_buffer(diep,track,sector); 
+   	diep->chan[0] = chan; // assign channel # to buffer
+   	channel_set(chan,ep);
+      case FS_BLOCK_BA:
+	rv = di_block_alloc(diep, &track, &sector);
+	break;
+      case FS_BLOCK_BF:
+	rv = di_block_free(diep, track, sector);
 	break;
    }
 
-   diep->chan[0] = chan; // assign channel # to buffer
+   retbuf[0] = track;	// low byte
+   retbuf[1] = 0;	// high byte
+   retbuf[2] = sector;	// low byte
+   retbuf[3] = 0;	// high byte
+   *retlen = 4;
 
-   channel_set(chan,ep);
-
-   return ERROR_OK;
+   return rv;
 }
 
 
@@ -886,40 +898,59 @@ void UpdateDirChain(di_endpoint_t *diep, slot_t *slot, BYTE sector)
 // ScanBAM
 // *******
 
-int ScanBAM(Disk_Image_t *di, BYTE *bam, BYTE interleave)
+// scan to find a new sector for a file, using the interleave
+// allocate the sector found
+static int ScanBAMInterleave(Disk_Image_t *di, BYTE *bam, BYTE interleave)
 {
    BYTE i; // interleave index
    BYTE s; // sector index
 
-   for (i=0 ; i < interleave ; ++i)
-   for (s=i ; s < di->Sectors ; s += interleave)
-   if (bam[s>>3] & (1 << (s & 7)))
-   { 
-      bam[s>>3] &= ~(1 << (s & 7));
-      return s;
+   for (i=0 ; i < interleave ; ++i) {
+   	for (s=i ; s < di->Sectors ; s += interleave) {
+   		if (bam[s>>3] & (1 << (s & 7)))
+   		{ 
+   		   bam[s>>3] &= ~(1 << (s & 7));
+   		   return s;
+   		}
+	}
    }
    return -1; // no free sector
 }
 
-// *************
-// di_scan_track
-// *************
-
-int di_scan_track(di_endpoint_t *diep, BYTE Track)
+// linearly scan to find a new sector for a file, for B-A
+// do NOT allocate the block
+static int ScanBAMLinear(Disk_Image_t *di, BYTE *bam, BYTE firstSector)
 {
+   BYTE s = firstSector; // sector index
+
+   do {
+   	if (bam[s>>3] & (1 << (s & 7)))
+   	{ 
+   	   return s;
+   	}
+	s = s + 1;
+	if (s >= di->Sectors) {
+		s = 0;
+	}
+   } while (s != firstSector);
+
+   return -1; // no free sector
+}
+
+// do allocate a block
+static void AllocBAM(BYTE *bam, BYTE sector)
+{
+	bam[sector>>3] &= ~(1 << (sector & 7));
+}
+
+// calculate the position of the BAM entry for a given track
+static void calculateBAM(di_endpoint_t *diep, BYTE Track, BYTE **outBAM, BYTE **outFbl) {
    int   BAM_Number;     // BAM block for current track
    int   BAM_Offset;  
    int   BAM_Increment;
-   int   Sector;
-   int   Interleave;
-   BYTE *fbl;            // pointer to track free blocks
-   BYTE *bam;            // pointer to track BAM
    Disk_Image_t *di = &diep->DI;
-
-   // log_debug("di_scan_track(%d)\n",Track);
-
-   if (Track == di->DirTrack) Interleave = di->DirInterleave;
-   else                       Interleave = di->DatInterleave;
+   BYTE *fbl;            // pointer to track free blocks
+   BYTE *bam;            // pointer to track free blocks
 
    BAM_Number    = (Track - 1) / di->TracksPerBAM;
    BAM_Offset    = di->BAMOffset; // d64=4  d80=6  d81=16
@@ -932,7 +963,90 @@ int di_scan_track(di_endpoint_t *diep, BYTE Track)
       fbl = diep->BAM[0] + 221 + (Track-36);
       bam = diep->BAM[1] +   3 * (Track-36);
    }
-   if (fbl[0]) Sector = ScanBAM(di,bam,Interleave);
+   *outFbl = fbl;
+   *outBAM = bam;
+}
+
+// **************
+// di_block_alloc
+// **************
+// try to allocate a given block (T/S). If this block is
+// already allocated, return a 65 error with the first free
+// t/s following the requested t/s
+// Basically this is B-A
+//
+// find a free block, starting from the given t/s
+// searching linearly in each track. Reserve only if the given t/s is
+// free, otherwise return the found ones with error 65
+//
+static int di_block_alloc(di_endpoint_t *diep, BYTE *track, BYTE *sector) {
+   int  Sector;         // sector of next free block
+   Disk_Image_t *di = &diep->DI;
+   BYTE *fbl;	// pointer to free blocks byte
+   BYTE *bam;	// pointer to BAM bit field
+
+   diep->CurrentTrack = *track;
+   if (diep->CurrentTrack < 1 || diep->CurrentTrack > di->Tracks * di->Sides) {
+      diep->CurrentTrack = di->DirTrack - 1; // start track
+   }
+
+   // initialize with the starting sector
+   Sector = *sector;
+   do
+   {
+	// calculate block free and BAM pointers for track
+	calculateBAM(diep, diep->CurrentTrack, &bam, &fbl);
+
+	// find a free block in track
+	// returns free sector found or -1 for none found
+	Sector = ScanBAMLinear(di, bam, Sector);
+
+	if (Sector < 0) {
+		// no free block found
+		// start sector for next track
+		Sector = 0;
+	} else {
+		// found a free block
+		if (diep->CurrentTrack == *track && Sector == *sector) {
+			// the block found is the one requested
+			// so allocate it before we return
+			AllocBAM(bam, Sector);
+			// sync BAM to disk (image)
+			SyncBAM(diep);
+			// ok
+			return ERROR_OK;
+		}
+		// we found another block
+		*track = diep->CurrentTrack;
+		*sector = Sector;
+		return ERROR_NO_BLOCK;
+	}
+   } while (NextTrack(diep) != *track);
+
+   return ERROR_DISK_FULL;
+}
+
+
+// *************
+// di_scan_track
+// *************
+
+int di_scan_track(di_endpoint_t *diep, BYTE Track)
+{
+   int   Sector;
+   int   Interleave;
+   BYTE *fbl;            // pointer to track free blocks
+   BYTE *bam;            // pointer to track BAM
+   Disk_Image_t *di = &diep->DI;
+
+   // log_debug("di_scan_track(%d)\n",Track);
+
+   if (Track == di->DirTrack) Interleave = di->DirInterleave;
+   else                       Interleave = di->DatInterleave;
+
+   calculateBAM(diep, Track, &bam, &fbl);
+
+   if (fbl[0]) Sector = ScanBAMInterleave(di,bam,Interleave);
    else        Sector = -1;
    if (Sector >= 0) --fbl[0]; // decrease free blocks counter
    return Sector;
@@ -1423,32 +1537,26 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
 // di_block_free
 // *************
 
-void di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector)
+static int di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector)
 {
-   int   BAM_Number;     // BAM block for current track
-   int   BAM_Offset;  
-   int   BAM_Increment;
    BYTE *fbl;            // pointer to track free blocks
    BYTE *bam;            // pointer to track BAM
-   Disk_Image_t *di = &diep->DI;
 
    log_debug("di_block_free(%d,%d)\n",Track,Sector);
-   BAM_Number    = (Track - 1) / di->TracksPerBAM;
-   BAM_Offset    = di->BAMOffset; // d64=4  d80=6  d81=16
-   BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
-   fbl = diep->BAM[BAM_Number] + BAM_Offset
-       + ((Track-1) % di->TracksPerBAM) * BAM_Increment;
-   bam = fbl + 1; // except 1571 2nd. side
-   if (di->ID == 71 && Track > di->Tracks)
-   {
-      fbl = diep->BAM[0] + 221 + (Track-36);
-      bam = diep->BAM[1] +   3 * (Track-36);
-   }
+
+   calculateBAM(diep, Track, &bam, &fbl);
+
    if (!(bam[Sector>>3] & (1 << (Sector & 7))))   // allocated ?
    {
       ++fbl[0];      // increase # of free blocks on track
       bam[Sector>>3] |= (1 << (Sector & 7)); // mark as free (1)
+
+      SyncBAM(diep);
+
+      return ERROR_OK;
    }
+
+   return ERROR_OK;
 }
 
 // **************
