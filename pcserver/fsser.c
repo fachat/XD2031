@@ -167,15 +167,11 @@ int main(int argc, char *argv[]) {
 
 	if(argc == 1) {
 		// Default assigns
-		char *fs_home;
-		fs_home = (char*) malloc(strlen(get_home_dir()) + 4);
-		strcpy(fs_home, "fs=");
-		strcat(fs_home, get_home_dir());
-		provider_assign(0, fs_home);
-		provider_assign(1, "fs=/usr/local/xd2031/sample");
-		provider_assign(2, "fs=/usr/local/xd2031/tools");
-		provider_assign(3, "ftp=ftp.zimmers.net/pub/cbm");
-		provider_assign(7, "http=www.zimmers.net/anonftp/pub/cbm/");
+		provider_assign(0, "fs",   get_home_dir());
+		provider_assign(1, "fs",   "/usr/local/xd2031/sample");
+		provider_assign(2, "fs",   "/usr/local/xd2031/tools");
+		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm");
+		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/");
 	} else cmd_assign_from_cmdline(argc, argv);
 
 	int res = cmd_loop(readfd, writefd);
