@@ -21,7 +21,7 @@
 case "$1" in
 start)
 echo "Starting XD-2031 Server..."
-/usr/local/bin/fsser $DAEMON_ARGS >> /var/log/fsser &
+PREFIX/BINDIR/fsser $DAEMON_ARGS >> /var/log/fsser &
 ;;
 stop)
 echo "Killing XD-2031 Server..."
