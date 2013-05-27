@@ -48,6 +48,7 @@
 #include "mem.h"
 #include "wireformat.h"
 #include "channel.h"
+#include "petscii.h"
 
 #include "log.h"
 
@@ -524,6 +525,8 @@ int LoadImage(di_endpoint_t *diep, const char *filename)
 
 static endpoint_t *di_newep(endpoint_t *parent, const char *path)
 {
+   (void) parent; // silence -Wunused-parameter
+
    int i;
    di_endpoint_t *diep = malloc(sizeof(di_endpoint_t));
    diep->curpath = malloc(strlen(path)+1);
@@ -1183,40 +1186,6 @@ void PosAppend(di_endpoint_t *diep, File *f)
    log_debug("PosAppend (%d/%d) %d\n",t,s,ns);
 }
 
-// *********
-// ASCII2CBM
-// *********
-
-void ASCII2CBM(BYTE *a, BYTE *b)
-{
-   while (*a)
-   {
-      if (*a >= 'A' && *a <= 'Z') *b = *a | 0x80;
-      else if (*a >= 'a' && *a <= 'z') *b = *a - 0x20;
-      else *b = *a;
-      ++a;
-      ++b;
-   }
-   *b = 0;
-}
-
-// *********
-// CBM2ASCII
-// *********
-
-void CBM2ASCII(BYTE *a, BYTE *b)
-{
-   while (*a)
-   {
-      if (*a >= 'A' && *a <= 'Z') *b = *a + 0x20;
-      else if (*a >= 'A'+0x80 && *a <= 'Z'+0x80) *b = *a & 0x7f;
-      else *b = *a;
-      ++a;
-      ++b;
-   }
-   *b = 0;
-}
-
 // ********
 // OpenFile
 // ********
@@ -1234,7 +1203,7 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
    int file_required       = FALSE;
    int file_must_not_exist = FALSE;
 
-   ASCII2CBM(filename,file->CBM_file);
+   str_ascii_to_petscii((char *)filename, (char *)file->CBM_file);
 
    file->access_mode = di_cmd;
  
@@ -1313,7 +1282,7 @@ int FillEntry(BYTE *dest, slot_t *slot)
    dest[FS_DIR_MODE]  = FS_DIR_MOD_FIL;
    
    strcpy(p,(const char *)slot->filename);
-   CBM2ASCII((BYTE *)p,(BYTE *)p);
+   str_petscii_to_ascii((char *)p, (char *)p);
 
    dest[FS_DIR_ATTR]  = slot->type & 0x7f; // Until splat bit is correct
    return FS_DIR_NAME + strlen(p) + 1;
@@ -1346,7 +1315,7 @@ int di_directory_header(char *dest, di_endpoint_t *diep)
       memcpy(dest+FS_DIR_NAME   ,diep->BAM[0]+0x90,16);
       memcpy(dest+FS_DIR_NAME+16,diep->BAM[0]+0xA2, 5);
    }
-   CBM2ASCII((BYTE *)dest+FS_DIR_NAME,(BYTE *)dest+FS_DIR_NAME);
+   str_petscii_to_ascii((char *)dest+FS_DIR_NAME,(char *)dest+FS_DIR_NAME);
    dest[FS_DIR_NAME + 22] = 0;
    log_debug("di_directory_header (%s)\n",dest+FS_DIR_NAME);
    return FS_DIR_NAME + 23; 
@@ -1593,7 +1562,7 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
    int found;
    int l = strlen(buf);
    if (l && buf[l-1] == 13) buf[l-1] = 0; // remove CR
-   ASCII2CBM((BYTE *)buf,(BYTE *)buf);
+   str_ascii_to_petscii((char *)buf,(char *)buf);
    log_debug("di_scratch(%s)\n",buf);
 
    *outdeleted = 0;
@@ -1624,8 +1593,8 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
    log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
 
-   ASCII2CBM((BYTE *)namefrom,(BYTE *)namefrom);
-   ASCII2CBM((BYTE *)nameto  ,(BYTE *)nameto  );
+   str_ascii_to_petscii(namefrom, namefrom);
+   str_ascii_to_petscii(nameto  , nameto  );
 
    // check if target exists
 
@@ -1694,6 +1663,8 @@ static int di_open_ap(endpoint_t *ep, int tfd, const char *buf)
 
 static int di_open_rw(endpoint_t *ep, int tfd, const char *buf)
 {
+   (void) ep; // silence -Wunused-parameter
+
    log_debug("di_open_rw(ep,%d,%s)\n",tfd,buf);
    if (*buf == '#') // ok, open a direct block channel
    {
