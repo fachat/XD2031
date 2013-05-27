@@ -134,9 +134,8 @@ int main(int argc, char *argv[]) {
 	} else if (argc > i+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
 		usage();
-	}
+	} else dir = argv[i];
 
-	dir = argv[i];
 	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
@@ -167,6 +166,7 @@ int main(int argc, char *argv[]) {
 
 	if(argc == 1) {
 		// Default assigns
+		log_info("Using built-in default assigns\n");
 		provider_assign(0, "fs",   get_home_dir());
 		provider_assign(1, "fs",   "/usr/local/xd2031/sample");
 		provider_assign(2, "fs",   "/usr/local/xd2031/tools");
