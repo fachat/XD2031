@@ -24,15 +24,15 @@
 
 ****************************************************************************/
 
-#ifndef NAME_H
-#define	NAME_H
+#ifndef WILDCARD_H
+#define	WILDCARD_H
 
 /**
  * compares the given name to the given pattern
  * and returns true if it matches.
  * Both names are null-terminated
  */
-int compare_pattern(const char *name, const char *pattern);
+int8_t compare_pattern(const char *name, const char *pattern);
 
 
 #endif

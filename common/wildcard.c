@@ -1,8 +1,7 @@
 /****************************************************************************
 
     Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
-    Copyright (C) 2012 Nils Eilers
+    Copyright (C) 2013 Andre Fachat, Edilbert Kirk, Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -26,44 +25,42 @@
 ****************************************************************************/
 
 #include <string.h>
+#include <inttypes.h>
 
-#include "name.h"
+#include "wildcard.h"
+
+
+/**
+ * classic Commodore pattern matching:
+ * 	"*" - only works as the last pattern char and matches everything
+ * 	      further chars in the pattern are ignored
+ * 	"?" - single character is ignored
+ */
+
+static int8_t classic_match(const uint8_t *x, const uint8_t *y) {
+	int i = 0;	// current position
+	uint8_t a,b;
+
+	while(1) {
+		a = x[i];
+		b = y[i++];
+		if (a ==  0  && b ==  0 ) return 1; // match
+		if (a == '*' || b == '*') return 1; // match
+		if (a == '?' || b == '?') continue; // wild letter
+		if (a != b) break;
+	}
+	return 0;
+}
+
 
 /**
  * compares the given name to the given pattern
  * and returns true if it matches.
  * Both names are null-terminated
- *
- * This implementation is roughly based on the Commodore semantics
- * of "*" and "?":
- * Commodore:
- * 	"*" - only works as the last pattern char and matches everything
- * 	      further chars in the pattern are ignored
- * 	"?" - single character is ignored
  */
-int compare_pattern(const char *name, const char *pattern) {
 
-	int p = 0;		// current position
-
-	do {
-		if (pattern[p] == '*') {
-			// For Commodore, we are basically done here - anything else does not count
-			return 1;
-		} else
-		if (pattern[p] != '?') {
-			if (pattern[p] != name[p]) {
-				// not equal
-				return 0;
-			}
-		}
-	} while (name[p] && pattern[p++]);
-
-	if(name[p] == 0 && pattern[p] == 0) {
-		// both, name and pattern are finished, and
-		// not exited so far, so both match
-		return 1;
-	}
-
-	// no match
-	return 0;
+int8_t compare_pattern(const char *name, const char *pattern) {
+	// 1581 matching style not yet implemented
+	// so do always a "classic" matching:
+	return classic_match((uint8_t *)name, (uint8_t *)pattern);
 }

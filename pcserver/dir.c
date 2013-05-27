@@ -39,7 +39,7 @@
 #include <errno.h>
 
 #include "dir.h"
-#include "name.h"
+#include "wildcard.h"
 #include "fscmd.h"
 #include "wireformat.h"
 #include "log.h"

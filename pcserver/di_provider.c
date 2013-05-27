@@ -49,6 +49,7 @@
 #include "wireformat.h"
 #include "channel.h"
 #include "petscii.h"
+#include "wildcard.h"
 
 #include "log.h"
 
@@ -768,30 +769,6 @@ static void di_close(endpoint_t *ep, int tfd)
    sync();
 }
 
-// *********
-// CBM_match
-// *********
-
-int CBM_match(BYTE *x, BYTE *y)
-{
-   int i;
-   BYTE a,b;
-
-   log_debug("CBM_match(%s,%s)\n",x,y);
-
-   for (i=0 ; i < 16; ++i)
-   {
-      a = x[i];
-      b = y[i];
-      if (a ==  0  && b ==  0 ) return 0; // match
-      if (a == '*' || b == '*') return 0; // match
-      if (a == '?' || b == '?') continue; // wild letter
-      if (a < b) return -1;
-      if (a > b) return  1;
-   }
-   return 0; // match
-}
-
 // ********
 // ReadSlot
 // ********
@@ -867,7 +844,7 @@ int MatchSlot(di_endpoint_t *diep,slot_t *slot, BYTE *name)
    do
    {
       ReadSlot(diep,slot);
-      if (slot->type && !CBM_match(slot->filename,name)) return 1; // found
+      if (slot->type && compare_pattern((char*)slot->filename,(char*)name)) return 1; // found
    }  while (NextSlot(diep,slot));
    return 0; // not found
 }
