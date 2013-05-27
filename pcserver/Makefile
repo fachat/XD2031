@@ -1,4 +1,4 @@
-PREFIX=/bin/local
+PREFIX=/usr/local
 BINDIR=bin
 DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
