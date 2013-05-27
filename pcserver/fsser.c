@@ -128,16 +128,16 @@ int main(int argc, char *argv[]) {
 		// Use default configuration if no parameters were given
 		// Default assigns are made later
 		dir = ".";
-	} else
-	{
-		if(i!=argc-1) {
-		  log_error("Missing run_directory\n");
-		  usage();
-		}
-
-		dir = argv[i++];
+	} else if (i == argc) {
+		log_error("Missing run_directory\n");
+		usage();
+	} else if (argc > i+1) {
+		log_error("Multiple run_directories or missing option sign '-'\n");
+		usage();
 	}
-	printf("dir=%s\n",dir);
+
+	dir = argv[i];
+	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
 	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
