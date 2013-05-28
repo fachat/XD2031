@@ -161,17 +161,15 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	*outp = lineno & 255; outp++;
 	*outp = (lineno>>8) & 255; outp++;
 
-	//snprintf(outp, 5, "%hd", (unsigned short)lineno);
-	//outp++;
-	if (lineno < 10) { *outp = ' '; outp++; }
 	if (type == FS_DIR_MOD_NAM) {
 		*outp = 0x12;	// reverse for disk name
 		outp++;
 	} else {
 		if (type != FS_DIR_MOD_FRE) {
+			if (lineno < 10) { *outp = ' '; outp++; }
 			if (lineno < 100) { *outp = ' '; outp++; }
 			if (lineno < 1000) { *outp = ' '; outp++; }
-			if (lineno < 10000) { *outp = ' '; outp++; }
+			//if (lineno < 10000) { *outp = ' '; outp++; }
 		}
 	}
 
@@ -199,13 +197,10 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	if (type == FS_DIR_MOD_NAM) {
 		// file name entry
 		outp = append(outp, SW_NAME_LOWER);
-		//strcpy(outp, SW_NAME_LOWER);
-		//outp += strlen(SW_NAME_LOWER)+1;	// includes ending 0-byte
+		// outp = append(outp, "xd 2a");
 	} else
 	if (type == FS_DIR_MOD_DIR) {
-		outp = append(outp, "dir");
-		//strcpy(outp, "dir");
-		//outp += 4;	// includes ending 0-byte
+		outp = append(outp, "dir  ");
 	} else
 	if (type == FS_DIR_MOD_FIL) {
 		if (attribs & FS_DIR_ATTR_SPLAT) {
@@ -218,20 +213,18 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 		} else {
 			outp = append(outp, "---");
 		}
-		if (attribs & FS_DIR_ATTR_LOCKED) {
-			*outp = '<';
-			outp++;
-			*outp = 0;
-		}
+		*outp++ = (attribs & FS_DIR_ATTR_LOCKED) ? '<' : ' ';
+		*outp++ = ' ';
 	} else
 	if (type == FS_DIR_MOD_FRE) {
-		outp = append(outp, "blocks free");
-		//strcpy(outp, "bytes free");
-		//outp += 11;	// includes ending 0-byte
+		outp = append(outp, "blocks free."); 
+		memset(outp, ' ', 13); outp += 13;
 
-		outp++; *outp = 0; 	// BASIC end marker (zero link address)
-		outp++; *outp = 0; 	// BASIC end marker (zero link address)
+		*outp = 0; outp++; 	// BASIC end marker (zero link address)
+		*outp = 0; outp++; 	// BASIC end marker (zero link address)
 	}
+
+	*outp = 0;
 
 	// outp points to last (null) byte to be transmitted, thus +1
 	uint8_t len = outp - out + 1;
@@ -241,12 +234,10 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	}
 
 #ifdef DEBUG_DIR
-	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
-	for (uint8_t j = 0; j < len; j++) {
-		debug_putc(' '); debug_puthex(out[j]);
-	} 
-	debug_putcrlf();
+	debug_printf("CONVERTED, LEN = %d = 0x%02X\n", len, len);
+	debug_hexdump(out, len, 1);
 #endif
+
 	// this should probably be combined
 	memcpy(packet_get_buffer(p), &out, len);
 	packet_update_wp(p, len);
