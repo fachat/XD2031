@@ -10,7 +10,7 @@ CC=gcc
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I../common -DSERVER
 
 COMMONC=fscmd.c privs.c ../common/wildcard.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c
-COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h
+COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/byte.h
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
@@ -51,7 +51,12 @@ run:
 
 runv:
 	# I'm lazy...
+	#MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 .
 	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools .
+
+rungdb:
+	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser
+	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample -A1:fs=../tools ." ./fsser
 
 run9:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .

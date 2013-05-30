@@ -27,12 +27,6 @@
 #ifndef PETSCII_H
 #define PETSCII_H
 
-#ifdef FIRMWARE
-typedef uint8_t BYTE;
-#endif
-#ifdef SERVER
-typedef char BYTE;
-#endif
 
 /**
  * simple conversion

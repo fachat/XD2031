@@ -1,7 +1,7 @@
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2013 Andre Fachat, Nils Eilers
+    Copyright (C) 2012 Andre Fachat
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -21,48 +21,19 @@
 ****************************************************************************/
 
 /**
- * Debug helpers
+ * server/firmware shared definition of data types
  */
 
-#include <inttypes.h>
-#include <ctype.h>
+#ifndef BYTE_H
+#define BYTE_H
 
-#include "debug.h"
-#include "byte.h"
-#include "petscii.h"
+#ifdef FIRMWARE
+typedef uint8_t BYTE;
+#endif
+#ifdef SERVER
+typedef char BYTE;
+#endif
 
-#if DEBUG
-
-void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
-	uint16_t tot = 0;
-	uint8_t line = 0;
-	uint8_t x = 0;
-
-	if(len) {
-		while(tot < len) {
-			debug_printf("%04X  ", tot);
-			for(x=0; x<16; x++) {
-				if(line+x < len) {
-					tot++;
-					debug_printf("%02X ", p[line+x]);
-				}
-				else debug_puts("   ");
-				if(x == 7) debug_putc(' ');
-			}
-			debug_puts(" |");
-			for(x=0; x<16; x++) {
-				if(line+x < len) {
-					uint8_t c = p[line+x];
-					if (petscii) c = petscii_to_ascii(c);
-					if(isprint(c)) debug_putc(c); else debug_putc(' ');
-				} else debug_putc(' ');
-			}
-			debug_putc('|');
-			debug_putcrlf();
-			line = tot;
-		}
-
-	}
-}
 
 #endif
+
