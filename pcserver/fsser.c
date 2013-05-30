@@ -46,6 +46,8 @@
 #include "fscmd.h"
 #include "privs.h"
 #include "log.h"
+#include "byte.h"
+#include "charconvert.h"
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"

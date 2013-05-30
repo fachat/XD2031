@@ -33,6 +33,9 @@
 #include "errors.h"
 #include "wireformat.h"
 
+#include "byte.h"
+#include "charconvert.h"
+
 
 // TODO: this is ... awkward
 extern provider_t tcp_provider;
@@ -47,6 +50,9 @@ extern provider_t di_provider;
 
 struct {
         provider_t      *provider;
+	charset_t	native_cset_idx;
+	charconv_t	to_provider;
+	charconv_t	from_provider;
 } providers[MAX_NUMBER_OF_PROVIDERS];
 
 struct {
@@ -60,6 +66,13 @@ int provider_register(provider_t *provider) {
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
           	if (providers[i].provider == NULL) {
 			providers[i].provider = provider;
+			if (provider->native_charset != NULL) {
+				providers[i].native_cset_idx = cconv_getcharset(provider->native_charset);
+			} else {
+				providers[i].native_cset_idx = -1;
+			}
+			providers[i].to_provider = cconv_identity;
+			providers[i].from_provider = cconv_identity;
 			return 0;
 		}
         }
@@ -67,6 +80,55 @@ int provider_register(provider_t *provider) {
 	return -22;
 }
 
+// return the index of the given provider in the providers[] table
+static int provider_index(provider_t *prov) {
+	int i;
+	for (i = 0; i < MAX_NUMBER_OF_ENDPOINTS;i++) {
+		if (providers[i].provider == prov) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+//------------------------------------------------------------------------------------
+// character set handling
+
+// set the character set for the external communication (i.e. the wireformat)
+// caches the to_provider and from_provider values in the providers[] table
+void provider_set_ext_charset(char *charsetname) {
+
+	charset_t ext_cset_idx = cconv_getcharset(charsetname);
+
+	int i;
+	for (i = 0; i < MAX_NUMBER_OF_ENDPOINTS; i++) {
+		if (providers[i].provider != NULL) {
+			providers[i].to_provider = cconv_converter(ext_cset_idx, providers[i].native_cset_idx);
+			providers[i].from_provider = cconv_converter(providers[i].native_cset_idx, ext_cset_idx);
+		}
+	}
+}
+
+charconv_t provider_convto(provider_t *prov) {
+	int idx = provider_index(prov);
+	if (idx > 0) {
+		return providers[idx].to_provider;
+	}
+	// fallback
+	return cconv_identity;
+}
+
+charconv_t provider_convfrom(provider_t *prov) {
+	int idx = provider_index(prov);
+	if (idx > 0) {
+		return providers[idx].from_provider;
+	}
+	// fallback
+	return cconv_identity;
+}
+
+
+//------------------------------------------------------------------------------------
 /**
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint

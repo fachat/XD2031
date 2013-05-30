@@ -1084,6 +1084,7 @@ static int writefile(endpoint_t *ep, int chan, char *buf, int len, int is_eof) {
 
 provider_t fs_provider = {
 	"fs",
+	"ASCII",
 	fsp_init,
 	fsp_new,
 	fsp_temp,

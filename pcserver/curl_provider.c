@@ -43,6 +43,7 @@
 #include "provider.h"
 #include "log.h"
 
+
 #undef DEBUG_CURL
 
 #define	MAX_BUFFER_SIZE	64
@@ -869,6 +870,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 provider_t ftp_provider = {
 	"ftp",
+	"ASCII",
 	curl_init,
 	ftp_new,
 	ftp_temp,
@@ -893,6 +895,7 @@ provider_t ftp_provider = {
 
 provider_t http_provider = {
 	"http",
+	"ASCII",
 	curl_init,
 	http_new,
 	http_temp,

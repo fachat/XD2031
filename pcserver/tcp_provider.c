@@ -49,6 +49,9 @@
 #include "errors.h"
 #include "mem.h"
 
+#include "byte.h"
+#include "charconvert.h"
+
 #include "log.h"
 
 #undef DEBUG_READ
@@ -457,6 +460,7 @@ static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 
 provider_t tcp_provider = {
 	"tcp",
+	"ASCII",		// not used as we don't do directories, but still
 	tnp_init,
 	tnp_new,
 	tnp_temp,

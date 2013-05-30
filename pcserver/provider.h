@@ -28,6 +28,8 @@
 #ifndef PROVIDER_H
 #define PROVIDER_H
 
+#include "charconvert.h"
+
 //
 // Endpoint providers communicate with the outside world with their 
 // own protocol. Examples are local filesystem, or TCP/IP, or HTTP
@@ -48,7 +50,8 @@
 typedef struct _endpoint endpoint_t;
 
 typedef struct {
-	const char	*name;			// provider name, used in ASSIGN as ID
+	const char	*name;				// provider name, used in ASSIGN as ID
+	const char	*native_charset;		// name of the native charset for that provider
 	void		(*init)(void);			// initialization routine
 	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	// create a new endpoint instance
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
@@ -109,9 +112,25 @@ endpoint_t* provider_lookup(int drive, char **name);
  */
 void provider_cleanup(endpoint_t *ep);
 
+/*
+ * register a new provider, usually called at startup
+ */
 int provider_register(provider_t *provider);
 
+/*
+ * initialize the provider registry
+ */
 void provider_init(void);
+
+// set the character set for the external communication (i.e. the wireformat)
+// modifies the conversion routines for all the providers
+void provider_set_ext_charset(char *charsetname);
+
+// get the converter TO the provider
+charconv_t provider_convto(provider_t *prov);
+
+// get the converter FROM the provider
+charconv_t provider_convfrom(provider_t *prov);
 
 #endif
 

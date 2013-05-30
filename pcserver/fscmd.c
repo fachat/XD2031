@@ -42,6 +42,7 @@
 #include "wireformat.h"
 #include "fscmd.h"
 #include "dir.h"
+#include "charconvert.h"
 #include "provider.h"
 #include "log.h"
 #include "xcmd.h"

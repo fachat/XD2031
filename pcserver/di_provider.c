@@ -1702,6 +1702,7 @@ void di_init(void)
 provider_t di_provider =
 {
   "di",
+  "PETSCII",
    di_init,         // void        (*init     )(void);
    di_newep,        // endpoint_t* (*newep    )(endpoint_t *parent, ...
    di_tempep,       // endpoint_t* (*tempep   )(char **par); 
