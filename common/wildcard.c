@@ -3,11 +3,6 @@
     Serial line filesystem server
     Copyright (C) 2013 Andre Fachat, Edilbert Kirk, Nils Eilers
 
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
-
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
