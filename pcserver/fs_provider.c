@@ -487,7 +487,7 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		int n = len;
 		if (len >= avail) {
 			n = avail;
-			*eof = 1;
+			*eof = READFLAG_EOF;
 		}
 
 #ifdef DEBUG_BLOCK
@@ -696,6 +696,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 	if (file != NULL) {
 		int rv = 0;
+		*eof = READFLAG_DENTRY;
 		  if (file->is_first) {
 		    file->is_first = 0;
 		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
@@ -704,8 +705,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    return rv;
 		  }
 		  if(!file->de) {
-		    //close_fds(ep, tfd);
-		    *eof = 1;
+		    *eof |= READFLAG_EOF;
 		    int l = dir_fill_disk(retbuf, fsep->curpath);
 		    rv = l;
 		    return rv;
@@ -735,7 +735,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  rv = n;
 		  if(n<len) {
 		    // short read, so either error or eof
-		    *eof = 1;
+		    *eof = READFLAG_EOF;
 		    log_debug("short read on %d\n", tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
@@ -743,7 +743,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    int eofc = fgetc(fp);
 		    if (eofc < 0) {
 		      // EOF
-		      *eof = 1;
+		      *eof = READFLAG_EOF;
 		      log_debug("EOF on read %d\n", tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request

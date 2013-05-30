@@ -49,7 +49,6 @@
 #include "wireformat.h"
 #include "channel.h"
 #include "byte.h"
-#include "petscii.h"
 #include "wildcard.h"
 
 #include "log.h"
@@ -674,7 +673,7 @@ int read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
    if (len > avail)
    {
       n = avail;
-      *eof = 1;
+      *eof = READFLAG_EOF;
    }
    log_debug("read_block: avail=%d, n=%d\n", avail, n);
    if (n > 0)
@@ -1181,8 +1180,6 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
    int file_required       = FALSE;
    int file_must_not_exist = FALSE;
 
-   str_ascii_to_petscii((char *)filename, (char *)file->CBM_file);
-
    file->access_mode = di_cmd;
  
    switch(di_cmd)
@@ -1260,7 +1257,6 @@ int FillEntry(BYTE *dest, slot_t *slot)
    dest[FS_DIR_MODE]  = FS_DIR_MOD_FIL;
    
    strcpy(p,(const char *)slot->filename);
-   str_petscii_to_ascii((char *)p, (char *)p);
 
    dest[FS_DIR_ATTR]  = slot->type & 0x7f; // Until splat bit is correct
    return FS_DIR_NAME + strlen(p) + 1;
@@ -1293,7 +1289,6 @@ int di_directory_header(char *dest, di_endpoint_t *diep)
       memcpy(dest+FS_DIR_NAME   ,diep->BAM[0]+0x90,16);
       memcpy(dest+FS_DIR_NAME+16,diep->BAM[0]+0xA2, 5);
    }
-   str_petscii_to_ascii((char *)dest+FS_DIR_NAME,(char *)dest+FS_DIR_NAME);
    dest[FS_DIR_NAME + 22] = 0;
    log_debug("di_directory_header (%s)\n",dest+FS_DIR_NAME);
    return FS_DIR_NAME + 23; 
@@ -1358,6 +1353,8 @@ int read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
 
    if (!file) return -ERROR_FAULT;
 
+   *eof = READFLAG_DENTRY;
+
    if (file->is_first == 1)
    {
       file->is_first++;
@@ -1373,7 +1370,7 @@ int read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
       return rv;
    }
 
-   *eof = 1;
+   *eof |= READFLAG_EOF;
    return di_blocks_free(retbuf,diep);
 }
 
@@ -1386,7 +1383,7 @@ int ReadByte(di_endpoint_t *diep, File *f, char *retbuf)
    if (f->chp > 253)
    {
       f->chp = 0;
-      if (f->next_track == 0) return 1; // EOF
+      if (f->next_track == 0) return READFLAG_EOF; // EOF
       di_fseek_tsp(diep,f->next_track,f->next_sector,0);
       f->cht = f->next_track;
       f->chs = f->next_sector;
@@ -1398,7 +1395,7 @@ int ReadByte(di_endpoint_t *diep, File *f, char *retbuf)
    fread(retbuf,1,1,diep->Ip);
    ++f->chp;
    // log_debug("ReadByte %2.2x\n",(BYTE)*retbuf);
-   if (f->next_track == 0 && f->chp+1 >= f->next_sector) return 1;
+   if (f->next_track == 0 && f->chp+1 >= f->next_sector) return READFLAG_EOF;
    return 0;
 }
 
@@ -1540,7 +1537,6 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
    int found;
    int l = strlen(buf);
    if (l && buf[l-1] == 13) buf[l-1] = 0; // remove CR
-   str_ascii_to_petscii((char *)buf,(char *)buf);
    log_debug("di_scratch(%s)\n",buf);
 
    *outdeleted = 0;
@@ -1570,9 +1566,6 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    int l = strlen(namefrom);
    if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
    log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
-
-   str_ascii_to_petscii(namefrom, namefrom);
-   str_ascii_to_petscii(nameto  , nameto  );
 
    // check if target exists
 

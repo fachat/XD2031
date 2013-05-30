@@ -51,7 +51,7 @@ run:
 
 runv:
 	# I'm lazy...
-	#MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 .
+	#MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet .
 	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools .
 
 rungdb:

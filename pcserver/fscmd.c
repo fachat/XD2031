@@ -107,6 +107,9 @@ void cmd_init() {
 	provider_init();
 	channel_init();
 	xcmd_init();
+
+	// default
+	provider_set_ext_charset("ASCII");
 }
 
 /**
@@ -379,12 +382,13 @@ static void cmd_dispatch(char *buf, int fd) {
 	retbuf[FSP_FD] = tfd;
 	retbuf[FSP_DATA] = ERROR_FAULT;
 
-	int eof = 0;
+	int readflag = 0;
 	int outdeleted = 0;
 	int retlen = 0;
 	int sendreply = 1;
 	char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
+	int convlen = len - FSP_DATA-1;
 
 	switch(cmd) {
 		// file-oriented commands
@@ -394,6 +398,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_wr != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
 					prov->name, name);
 				rv = prov->open_wr(ep, tfd, name, cmd == FS_OPEN_OW);
@@ -414,6 +419,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
 				rv = prov->open_rw(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
@@ -435,6 +441,7 @@ static void cmd_dispatch(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
 			if (prov->opendir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
 				rv = prov->opendir(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
@@ -454,6 +461,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rd != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
 				rv = prov->open_rd(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
@@ -473,6 +481,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_ap != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
 				rv = prov->open_ap(ep, tfd, name);
 				retbuf[FSP_DATA] = rv;
@@ -490,9 +499,9 @@ static void cmd_dispatch(char *buf, int fd) {
 	case FS_READ:
 		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
-			eof = 0;	// default just in case
+			readflag = 0;	// default just in case
 			prov = (provider_t*) ep->ptype;
-			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
+			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
 			// TODO: handle error (rv<0)
 			if (rv < 0) {
 				// an error is sent as REPLY with error code
@@ -502,15 +511,16 @@ static void cmd_dispatch(char *buf, int fd) {
 				// a WRITE mirrors the READ request when ok 
 				retbuf[FSP_CMD] = FS_WRITE;
 				retbuf[FSP_LEN] = FSP_DATA + rv;
-				if (eof) {
-					log_info("CLOSE_SEND_EOF(%d)\n", tfd);
+				if (readflag & READFLAG_EOF) {
+					log_info("SEND_EOF(%d)\n", tfd);
 					retbuf[FSP_CMD] = FS_EOF;
-					if (eof < 0) {
-						// close channel (e.g. for U1)
-						channel_free(tfd);
-						// cleanup when not needed anymore
-						provider_cleanup(ep);
-					}
+				}
+				if (readflag & READFLAG_DENTRY) {
+					log_info("SEND DIRENTRY(%d)\n", tfd);
+					provider_convfrom(prov)(retbuf+FSP_DATA+FS_DIR_NAME, 
+								strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
+								retbuf+FSP_DATA+FS_DIR_NAME, 
+								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
 				}
 			}
 		}
@@ -550,6 +560,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("DELETE(%s)\n", name);
 
 				rv = prov->scratch(ep, name, &outdeleted);
@@ -574,6 +585,9 @@ static void cmd_dispatch(char *buf, int fd) {
 				char *namefrom = strchr(name, 0);	// points to null byte
 				int drivefrom = namefrom[1] & 255;	// from drive after null byte
 				namefrom += 2;				// points to name after drive
+
+				provider_convto(prov)(name, strlen(name), name, strlen(name));
+				provider_convto(prov)(namefrom, strlen(namefrom), namefrom, strlen(namefrom));
 
 				if (drivefrom != drive
 					&& drivefrom != NAMEINFO_UNUSED_DRIVE) {
@@ -603,6 +617,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("CHDIR(%s)\n", name);
 				rv = prov->cd(ep, name);
 				if (rv != 0) {
@@ -619,6 +634,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("MKDIR(%s)\n", name);
 				rv = prov->mkdir(ep, name);
 				if (rv != 0) {
@@ -635,6 +651,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("RMDIR(%s)\n", name);
 				rv = prov->rmdir(ep, name);
 				if (rv != 0) {
@@ -653,6 +670,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->direct != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("DIRECT(%d,...)\n", tfd);
 				rv = prov->direct(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
 				if (rv != 0) {
@@ -693,6 +711,10 @@ static void cmd_dispatch(char *buf, int fd) {
 		// If the provider name is a real name, the path is absolute.
 		//
 		name2 = strchr(name, 0) + 2;
+
+		provider_convto(prov)(name, strlen(name), name, strlen(name));
+		provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
 		rv = provider_assign(drive, name, name2);
 		if (rv != 0) {

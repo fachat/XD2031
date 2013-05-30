@@ -395,7 +395,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		} else
 		if (n == 0) {
 			// got an EOF
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			len = file->has_lastbyte ? 1 : 0;
 			retbuf[0] = file->lastbyte;
 		}

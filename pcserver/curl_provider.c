@@ -385,7 +385,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	if (running_handles == 0) {
 		// no more data will be available
 		log_debug("pull_data sets EOF (running=0), rv=%d, datalen=%d\n", rv, fp->rdbufdatalen);
-		*eof = 1;
+		*eof = READFLAG_EOF;
 	}
 
 	int msgs_in_queue = 0;
@@ -403,7 +403,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 				log_error("errorbuffer = %s\n", cep->error_buffer);
 			}
 			log_debug("pull_data sets EOF (err msg)\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			break;
 		}
 	}
@@ -429,13 +429,13 @@ static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len
 			rv = pull_data(cep, fp, &(fp->read_state));
 			if (rv != CURLM_OK) {
 				log_debug("reply_with_data sets EOF rv=%d, datalen=%d\n", rv, fp->rdbufdatalen);
-				*eof = 1;
+				*eof = READFLAG_EOF;
 			}
 		}
 
 		if (fp->read_state && fp->rdbufdatalen <= fp->bufrp) {
 			log_debug("reply with data sets EOF (2)\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 		}
 	}
 	return datalen;
@@ -474,7 +474,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 			
 		if (fp->read_state != 0) {
 			log_warn("adding bogus zero byte, to make CBM noticing the EOF\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			*retbuf = 0;
 			return 1;
 		}
@@ -580,7 +580,7 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
  * Because of the FS_DIR_* macros used here, the wireformat.h include
  * is required, which I would like to have avoided...
  */
-int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *readflag) {
 
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
@@ -590,7 +590,10 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 	// prepare dir entry
 	memset(retbuf, 0, FS_DIR_NAME+1);	
-	
+
+	*readflag = READFLAG_DENTRY;
+
+	int eof = 0;	
 	int l = 0;
 	char *namep = retbuf + FS_DIR_NAME;
 	switch(fp->read_state) {
@@ -612,17 +615,17 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		// file names
 #ifdef DEBUG_CURL
 		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
-			fp->rdbufdatalen, fp->bufrp, *eof);
+			fp->rdbufdatalen, fp->bufrp, *readflag);
 #endif
 
 		l = FS_DIR_NAME;
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FIL;
 		do {
-			while ((fp->rdbufdatalen <= fp->bufrp) && (*eof == 0)) {
+			while ((fp->rdbufdatalen <= fp->bufrp) && (eof == 0)) {
 
 				//log_debug("Trying to pull...\n");
 
-				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, eof);
+				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, &eof);
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
@@ -658,14 +661,14 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 					break;
 				}
 			}
-			if (*eof != 0) {
+			if (eof != 0) {
 				log_debug("end of dir read\n");
 				fp->read_state++;
 				*namep = 0;
 			}
 		}
-		while (*namep != 0 && *eof == 0);	// not null byte, then not done
-		*eof = 0;
+		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
+		eof = 0;
 		if (l > FS_DIR_NAME) {
 			break;
 		}
@@ -675,7 +678,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FRE;
 		retbuf[FS_DIR_NAME] = 0;
 		l = FS_DIR_NAME + 1;
-		*eof = 1;
+		*readflag |= READFLAG_EOF;
 		fp->read_state++;
 		break;
 	}
