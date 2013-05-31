@@ -31,6 +31,7 @@
 #include "byte.h"
 #include "petscii.h"
 #include "version.h"
+#include "provider.h"
 
 #include "debug.h"
 
@@ -41,20 +42,27 @@
  * helper for conversion of ASCII to PETSCII
  */
 
-static uint8_t *append(uint8_t *outp, const char *to_append) {
-        while(*to_append != 0) {
-                *outp = ascii_to_petscii(*to_append);
-                outp++;
-                to_append++;
-        }
-        *outp = 0;
-        return outp;
+static uint8_t *append(charconv_t converter, uint8_t *outp, const char *to_append) {
+	int l = strlen(to_append);
+	converter(to_append, l+1, (char*) outp, l+1);
+//        while(*to_append != 0) {
+//                *outp = *to_append; //ascii_to_petscii(*to_append);
+//                outp++;
+//                to_append++;
+//        }
+//        *outp = 0;
+        return outp + l;
 }
 
 
 static uint8_t out[64];
 
-int8_t directory_converter(packet_t *p, uint8_t drive) {
+int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
+
+	// convert from provider to PETSCII
+	charconv_t converter = cconv_converter(ep->provider->charset(ep->provdata), CHARSET_PETSCII);
+	charconv_t asciiconv = cconv_converter(CHARSET_ASCII, CHARSET_PETSCII);
+
 	uint8_t *inp = NULL;
 	uint8_t *outp = &(out[0]);
 
@@ -67,7 +75,6 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	uint8_t type = inp[FS_DIR_MODE];
 	uint8_t attribs = inp[FS_DIR_ATTR];
 
-	//packet_update_wp(p, 2);
 
 	if (type == FS_DIR_MOD_NAM) {
 		*outp = 1; outp++;	// load address low
@@ -183,29 +190,48 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 		uint8_t i = FS_DIR_NAME;
 		// note the check i<16 - this is buffer overflow protection
 		// file names longer than 16 chars are not displayed
-		while ((inp[i] != 0) && (i < (FS_DIR_NAME + 16))) {
-			*outp = ascii_to_petscii(inp[i]);
-			outp++;
-			i++;
+		int n = strlen((char*)inp+i);	// includes null-byte (terminator)
+		int l = n;
+		if (l > 16) {
+			l = 16;
 		}
+		converter((char*)(inp+i), l+1, (char*)outp, l+1);
+		outp += l;
+		i += l;
+//		while ((inp[i] != 0) && (i < (FS_DIR_NAME + 16))) {
+//			*outp = ascii_to_petscii(inp[i]);
+//			outp++;
+//			i++;
+//		}
 		// note: not counted in i
 		*outp = '"'; outp++;
-	
-		// fill up with spaces, at least one space behind filename
-		while (i < FS_DIR_NAME + 16 + 1) {
+
+		if (type == FS_DIR_MOD_NAM && n > l) {
 			*outp = ' '; outp++;
-			i++;
+			l = n - 16;
+			if (l > 5) {
+				l = 5;
+			}
+			converter((char*)(inp+i), l+1, (char*)outp, l+1);
+			outp += l;
+			i += l;
+		} else
+		if (type == FS_DIR_MOD_NAM) {
+			// file name entry
+			outp = append(asciiconv, outp, SW_NAME_LOWER);
+		} else {
+
+			// fill up with spaces, at least one space behind filename
+			while (i < FS_DIR_NAME + 16 + 1) {
+				*outp = ' '; outp++;
+				i++;
+			}
 		}
 	}
 
 	// add file type
-	if (type == FS_DIR_MOD_NAM) {
-		// file name entry
-		outp = append(outp, SW_NAME_LOWER);
-		// outp = append(outp, "xd 2a");
-	} else
 	if (type == FS_DIR_MOD_DIR) {
-		outp = append(outp, "dir  ");
+		outp = append(asciiconv, outp, "dir  ");
 	} else
 	if (type == FS_DIR_MOD_FIL) {
 		if (attribs & FS_DIR_ATTR_SPLAT) {
@@ -214,15 +240,15 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 		const char *ftypes[] = { "del", "seq", "prg", "usr", "rel" };
 		uint8_t ftype = attribs & FS_DIR_ATTR_TYPEMASK;
 		if (ftype >= 0 && ftype < 5) {
-			outp = append(outp, ftypes[ftype]);
+			outp = append(asciiconv, outp, ftypes[ftype]);
 		} else {
-			outp = append(outp, "---");
+			outp = append(asciiconv, outp, "---");
 		}
 		*outp++ = (attribs & FS_DIR_ATTR_LOCKED) ? '<' : ' ';
 		*outp++ = ' ';
 	} else
 	if (type == FS_DIR_MOD_FRE) {
-		outp = append(outp, "blocks free."); 
+		outp = append(asciiconv, outp, "blocks free."); 
 		memset(outp, ' ', 13); outp += 13;
 
 		*outp = 0; outp++; 	// BASIC end marker (zero link address)
@@ -247,24 +273,6 @@ int8_t directory_converter(packet_t *p, uint8_t drive) {
 	memcpy(packet_get_buffer(p), &out, len);
 	packet_update_wp(p, len);
 
-	return 0;
-}
-
-/**
- * convert PETSCII names to ASCII names
- */
-int8_t to_provider(packet_t *p) {
-	uint8_t *buf = packet_get_buffer(p);
-	uint8_t len = packet_get_contentlen(p);
-//debug_printf("CONVERT: len=%d, b=%s\n", len, buf);
-	while (len > 0) {
-//debug_puts("CONVERT: "); 
-//debug_putc(*buf); //debug_puthex(*buf);debug_puts("->");
-		*buf = petscii_to_ascii(*buf);
-//debug_putc(*buf);debug_puthex(*buf);debug_putcrlf();
-		buf++;
-		len--;
-	}
 	return 0;
 }
 

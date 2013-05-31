@@ -95,7 +95,7 @@ typedef struct {
 	endpoint_t	*endpoint;
 	// directory handling
 	uint8_t		drive;
-	int8_t		(*directory_converter)(packet_t *packet, uint8_t drive);
+	int8_t		(*directory_converter)(void *ep, packet_t *packet, uint8_t drive);
 	// channel pull state - only one can be pulled at a time
 	int8_t		pull_state;
 	int8_t		last_pull_errorno;
@@ -119,7 +119,7 @@ void channel_init(void);
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
 int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, 
-		int8_t (*dirconverter)(packet_t *, uint8_t drive),
+		int8_t (*dirconverter)(void *ep, packet_t *, uint8_t drive),
 		uint8_t drive);
 
 channel_t* channel_find(int8_t chan);

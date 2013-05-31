@@ -106,8 +106,7 @@ provider_t serial_provider  = {
 	set_charset,
         serial_submit,
         serial_submit_call,
-	directory_converter,
-	to_provider
+	directory_converter
 };
 
 #define	NUMBER_OF_SLOTS		4

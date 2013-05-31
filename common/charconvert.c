@@ -26,6 +26,7 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "byte.h"
 #include "charconvert.h"
@@ -58,6 +59,7 @@ charset_t cconv_getcharset(const char *charsetname) {
 
 // conversion functions
 void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+	//printf("cconv_identity(%s)\n", in);
 	if (in != out) {
 		// not an in-place conversion
 		// assumption: callers behave in terms of buffer lengths
@@ -66,6 +68,7 @@ void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outl
 }
 
 static void cconv_ascii2petscii(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+	//printf("cconv_ascii2petscii(%s)\n", in);
 	BYTE i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = ascii_to_petscii(*(in++));
@@ -74,6 +77,7 @@ static void cconv_ascii2petscii(const char *in, const BYTE inlen, char *out, con
 }
 
 static void cconv_petscii2ascii(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+	//printf("cconv_petscii2ascii(%s)\n", in);
 	BYTE i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = petscii_to_ascii(*(in++));
@@ -93,6 +97,7 @@ static charconv_t convtable[NUM_OF_CHARSETS][NUM_OF_CHARSETS] = {
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to) {
+	//printf("Getting converter from %d to %d\n", from, to);
 	if (from < 0 || from >= NUM_OF_CHARSETS) {
 		return cconv_identity;
 	}

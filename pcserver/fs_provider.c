@@ -858,6 +858,9 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 	if (toreal != NULL) {
 		// target already exists
 		er = ERROR_FILE_EXISTS;
+	} else
+	if (fromreal == NULL) {
+		er = ERROR_FILE_NOT_FOUND;
 	} else {
 		// check both paths against container boundaries
 		if ((strstr(fromreal, fsep->basepath) == fromreal)

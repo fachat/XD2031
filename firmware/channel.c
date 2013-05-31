@@ -137,7 +137,7 @@ static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(packet_t *, uint8_t drive), 
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(void *ep, packet_t *, uint8_t drive), 
 	uint8_t drive) {
 
 //debug_printf("channel_open: chan=%d\n", chan);
@@ -246,7 +246,7 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
 				//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
-				chan->directory_converter(&chan->buf[chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[chan->current], chan->drive);
 			}
 			// we have one packet, and it's already converted as well
 			chan->pull_state = PULL_ONEREAD;
@@ -264,7 +264,7 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
 				//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
-				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}
@@ -391,7 +391,7 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
-				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}

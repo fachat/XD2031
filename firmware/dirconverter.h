@@ -25,8 +25,7 @@
 ****************************************************************************/
 
 
-int8_t directory_converter(packet_t *p, uint8_t drive);
-int8_t to_provider(packet_t *p);
+int8_t directory_converter(void *ep, packet_t *p, uint8_t drive);
 
 
 

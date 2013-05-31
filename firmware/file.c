@@ -22,6 +22,7 @@
 
 
 #include <inttypes.h>
+#include <string.h>
 
 #include "packet.h"
 #include "channel.h"
@@ -186,6 +187,19 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
 	}
 
+	// convert from bus' PETSCII to provider
+	// currently only up to the first zero byte is converted, options like file type
+	// are still ASCII only
+	// in the future the bus may have an own conversion option...
+	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+		((char*)nameinfo.name, strlen((char*)nameinfo.name), 
+		(char*)nameinfo.name, strlen((char*)nameinfo.name));
+	if (nameinfo.name2 != NULL) {
+		cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+			((char*)nameinfo.name2, strlen((char*)nameinfo.name2), 
+			(char*)nameinfo.name2, strlen((char*)nameinfo.name2));
+	}
+
 	if (type == FS_MOVE 
 		&& nameinfo.drive2 != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
 		&& nameinfo.drive2 != nameinfo.drive) {		// no need to check if the same
@@ -235,15 +249,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	packet_init(&activeslot->txbuf, len, cmd_buffer);
 	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
 
-	// convert character set, e.g. from petscii to ascii
-	if (provider->to_provider != NULL && provider->to_provider(&activeslot->txbuf) < 0) {
-		// converting the file name to the provider exceeded the buffer space
-		debug_puts("NAME CONVERSION EXCEEDS BUFFER!");
-		debug_putcrlf();
-		set_error(errormsg, ERROR_SYNTAX_NONAME);
-		return -1;
-	}
-
 	if (!iscmd) {
 		// only for file opens
 		// note: we need the provider for the dir converter,
@@ -261,7 +266,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			writetype |= WTYPE_NONBLOCKING;
 		}
 
-		int8_t (*converter)(packet_t*, uint8_t) = 
+		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
 		channel_t *channel = channel_find(channel_no);

@@ -63,7 +63,7 @@ struct {
 
 int provider_register(provider_t *provider) {
         int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+        for(i=0;i<MAX_NUMBER_OF_PROVIDERS;i++) {
           	if (providers[i].provider == NULL) {
 			providers[i].provider = provider;
 			if (provider->native_charset != NULL) {
@@ -83,7 +83,7 @@ int provider_register(provider_t *provider) {
 // return the index of the given provider in the providers[] table
 static int provider_index(provider_t *prov) {
 	int i;
-	for (i = 0; i < MAX_NUMBER_OF_ENDPOINTS;i++) {
+	for (i = 0; i < MAX_NUMBER_OF_PROVIDERS;i++) {
 		if (providers[i].provider == prov) {
 			return i;
 		}
@@ -113,8 +113,10 @@ void provider_set_ext_charset(char *charsetname) {
 
 charconv_t provider_convto(provider_t *prov) {
 	int idx = provider_index(prov);
-	if (idx > 0) {
+	if (idx >= 0) {
 		return providers[idx].to_provider;
+	} else {
+		log_error("Could not find provider %p\n", prov);
 	}
 	// fallback
 	return cconv_identity;
@@ -122,8 +124,10 @@ charconv_t provider_convto(provider_t *prov) {
 
 charconv_t provider_convfrom(provider_t *prov) {
 	int idx = provider_index(prov);
-	if (idx > 0) {
+	if (idx >= 0) {
 		return providers[idx].from_provider;
+	} else {
+		log_error("Could not find provider %p\n", prov);
 	}
 	// fallback
 	return cconv_identity;

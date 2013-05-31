@@ -34,6 +34,7 @@
 #include "packet.h"
 #include "errormsg.h"
 #include "charconvert.h"
+#include "provider.h"
 
 // all 10 drives can be used
 #define	MAX_DRIVES	10
@@ -57,11 +58,8 @@ typedef struct {
                 uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(packet_t *p, uint8_t);
-	// convert a packet from CBM codepage to provider
-	// used only for open and commands!
-	// return -1 if packet is too small to hold converted value
-	int8_t (*to_provider)(packet_t *p);
+	// note: first pointer argument is endpoint_t* (!)
+	int8_t (*directory_converter)(void *ep, packet_t *p, uint8_t);
 } provider_t;
 
 typedef struct {

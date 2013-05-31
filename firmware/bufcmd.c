@@ -677,8 +677,7 @@ static provider_t provider = {
 	NULL,			// set new charset
 	NULL,			// submit
 	submit_call,		// submit_call
-	NULL,			// directory_converter
-	NULL			// to_provider
+	NULL			// directory_converter
 };
 
 static endpoint_t endpoint = {
