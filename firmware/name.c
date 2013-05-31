@@ -217,14 +217,14 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 				// found drive separator
 				result->drive2 = drv;
 				state = NAME_NAME2;
+				result->name2 = p+1;
+				result->namelen2 = len-1;
 				break;
 			} else {
 				drv = NAMEINFO_UNDEF_DRIVE;
 			}
-			// fallthrough
+			break;
 		case NAME_NAME2:
-			result->name2 = p;
-			result->namelen2 = len;
 			len = 0; // we're done
 			break;
 		case NAME_OPTS:
