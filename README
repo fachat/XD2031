@@ -105,6 +105,8 @@ in favour of a device number switch, an SD card interface, and maybe a serial co
 Further ideas:
 
 	- support a non-parallel fast loader for the C64 (e.g. Jiffy-DOS?)
+        - M-R/W feature to mimic existing drives (to fool copy programs,
+          possibly change unit address via M-W)
 
 
 REFERENCES
