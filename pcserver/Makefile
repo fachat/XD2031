@@ -55,7 +55,7 @@ runv:
 
 runv2:
 	# I'm lazy...
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet .
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -A9:di=../sample/COPYALL\ V2.D64 -Xiec:U=9 . 
 
 rungdb:
 	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser

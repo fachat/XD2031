@@ -21,6 +21,7 @@
 
 #include <string.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "wildcard.h"
 
@@ -35,6 +36,8 @@
 static int8_t classic_match(const uint8_t *x, const uint8_t *y) {
 	int i = 0;	// current position
 	uint8_t a,b;
+
+	//printf("classic match between '%s' and '%s'\n", (char*)x, (char*)y);
 
 	while(1) {
 		a = x[i];

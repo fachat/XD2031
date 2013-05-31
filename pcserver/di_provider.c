@@ -1193,7 +1193,7 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
          return ERROR_FAULT;
    }
    FirstSlot(diep,&file->Slot);
-   np  = MatchSlot(diep,&file->Slot,file->CBM_file);
+   np  = MatchSlot(diep,&file->Slot,filename);
    file->next_track  = file->Slot.start_track;
    file->next_sector = file->Slot.start_sector;
    file->chp = 255;
