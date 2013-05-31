@@ -746,8 +746,9 @@ static void cmd_dispatch(char *buf, int fd) {
 		break;
 	case FS_CHARSET:
 		log_info("CHARSET: %s\n", buf+FSP_DATA);
-		if (tfd == FSFD_SETOPT) {
+		if (tfd == FSFD_CMD) {
 			provider_set_ext_charset(buf+FSP_DATA);
+			retbuf[FSP_DATA] = ERROR_OK;
 		}
 		break;
 	default:

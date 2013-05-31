@@ -33,6 +33,7 @@
 
 #include "packet.h"
 #include "errormsg.h"
+#include "charconvert.h"
 
 // all 10 drives can be used
 #define	MAX_DRIVES	10
@@ -42,6 +43,11 @@ typedef struct {
 	void *(*prov_assign)(const char *name);
 	// free the ASSIGN-related data structure
 	void (*prov_free)(void *);
+	// get the (currently used) character set for name conversion
+	// use the same void* from assign to distinguish different channels (endpoints)
+	charset_t (*charset)(void *);
+	// set a new charset
+	void (*set_charset)(void*, charset_t new_charset);
 	// submit a fire-and-forget packet (log_*, terminal)
 	void (*submit)(void *pdata, packet_t *buf);
 	// submit a request/response packet; call the callback function when the 

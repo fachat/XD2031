@@ -33,6 +33,11 @@
 #ifndef ERRORS_H
 #define ERRORS_H
 
+/*
+ * note: should better be <100 for two-digit display
+ * note: should better be <128 to not mess up sign handling in some places
+ * 	(e.g. out_callback in rtconfig.c)
+ */
 
 typedef enum {
 	ERROR_OK 			= 0,

@@ -40,6 +40,7 @@
 // Note: -1 = 0xff is reserved
 #define	FSFD_TERM	126	// terminal output from device to server
 #define	FSFD_SETOPT	125	// send options from server to device
+#define	FSFD_CMD	124	// send commands from device to server (FS_CHARSET)
 
 // the first byte of the payload is the (binary) drive number, or one of those two
 #define NAMEINFO_UNUSED_DRIVE   0xff    // unspecified like: LOAD"file",8

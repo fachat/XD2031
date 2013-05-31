@@ -100,6 +100,8 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 int main()
 {
+	int8_t er = ERROR_OK;
+
 	// Initialisierungen
 	//
 	// first some basic hardware infrastructure

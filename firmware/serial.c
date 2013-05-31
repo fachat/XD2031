@@ -34,6 +34,7 @@
 #include "serial.h"
 #include "uarthw.h"
 #include "dirconverter.h"
+#include "charconvert.h"
 
 #include "debug.h"
 #include "led.h"
@@ -49,6 +50,7 @@
  */
 
 static uint8_t serial_lock;
+static charset_t current_charset;
 
 /**
  * submit the contents of a buffer to the UART
@@ -85,9 +87,23 @@ static void prov_free(void *epdata) {
 	return;
 }
 
+static charset_t charset(void *epdata) {
+	return current_charset;
+}
+
+/*
+ * set the character set used on the wire. This is determined/changed
+ * by a packet call from the main code, and then updated here
+ */
+void set_charset(void *epdata, charset_t new_charset) {
+	current_charset = new_charset;
+}
+
 provider_t serial_provider  = {
 	prov_assign,
 	prov_free,
+	charset,
+	set_charset,
         serial_submit,
         serial_submit_call,
 	directory_converter,
@@ -420,6 +436,9 @@ provider_t *serial_init() {
 	// selected, the remote end does not know about it currently, as we
 	// do not notify it. So open requests will be returned with an error
 	//provider_register("FS", &serial_provider);
+
+	// this is the default
+	current_charset = CHARSET_ASCII;
 
 	return &serial_provider;
 }

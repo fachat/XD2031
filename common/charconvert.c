@@ -37,6 +37,14 @@ static char *charsets[] = {
 	"ASCII", "PETSCII"
 };
 
+// get a const pointer to the string name of the character set
+const char *cconv_charsetname(charset_t cnum) {
+	if (cnum < 0 || cnum >= NUM_OF_CHARSETS) {
+		return NULL;
+	}
+	return charsets[cnum];
+}
+
 // get the charset number from the character set name
 charset_t cconv_getcharset(const char *charsetname) {
 	for (int i = 0; i < NUM_OF_CHARSETS; i++) {

@@ -35,7 +35,12 @@
 typedef signed char charset_t;
 
 // get the charset number from the character set name
+// return -1 for an unsupported character set
 charset_t cconv_getcharset(const char *charsetname);
+
+// to avoid costly lookups and wasted memory, those are pre-defined here
+#define	CHARSET_ASCII		0
+#define	CHARSET_PETSCII		1
 
 // convert from input buffer (with length inlen) to output buffer (of length outlen)
 // must work with in = out buffer (i.e. in place conversion), zero-bytes in the input
@@ -49,6 +54,9 @@ void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outl
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
+
+// get a const pointer to the string name of the character set
+const char *cconv_charsetname(charset_t cnum);
 
 #endif
 

@@ -666,10 +666,15 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 	callback(channelno, 0, rxbuf);	
 }
 
+static charset_t charset(void *epdata) {
+	return CHARSET_ASCII;
+}
 
 static provider_t provider = {
 	NULL,			// prov_assign
 	NULL,			// prov_free
+	charset,		// get current character set
+	NULL,			// set new charset
 	NULL,			// submit
 	submit_call,		// submit_call
 	NULL,			// directory_converter
