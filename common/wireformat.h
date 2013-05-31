@@ -85,6 +85,9 @@
 
 #define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
 
+#define   FS_CHARSET 	 27	/* send to the server the name of the requested character set for
+				   file names and directory entries */
+
 /*
  * BLOCK and DIRECT commands
  *

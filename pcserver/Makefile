@@ -51,15 +51,18 @@ run:
 
 runv:
 	# I'm lazy...
-	#MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet .
 	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools .
+
+runv2:
+	# I'm lazy...
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet .
 
 rungdb:
 	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser
 	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample -A1:fs=../tools ." ./fsser
 
 run9:
-	MALLOC_CHECK_=1 ./fsser -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .
 
 debug:
 	echo "Start with: run -d auto ../sample"

@@ -157,6 +157,7 @@ int main()
 	serial_sync();		
 
 	// pull in command line config options from server
+	// also send directory charset
 	rtconfig_pullconfig();
 
 	// show our version...

@@ -92,6 +92,7 @@ const char *nameofcmd(int cmdno) {
 	case FS_BLOCK:		return "BLOCK";
 	case FS_DIRECT:		return "DIRECT";
 	case FS_GETDATIM:	return "GETDATIM";
+	case FS_CHARSET:	return "CHARSET";
 	default:		return "???";
 	}
 }
@@ -109,7 +110,7 @@ void cmd_init() {
 	xcmd_init();
 
 	// default
-	provider_set_ext_charset("ASCII");
+	provider_set_ext_charset("PETSCII");
 }
 
 /**
@@ -237,6 +238,13 @@ static void cmd_sendxcmd(int writefd, char buf[]) {
 	}
 }
 
+static void cmd_sendreset(int writefd, char buf[]) {
+	buf[FSP_CMD] = FS_RESET;
+	buf[FSP_LEN] = FSP_DATA;
+	buf[FSP_FD] = FSFD_SETOPT;
+	write_packet(writefd, buf);
+}
+
 /**
  * this is the main loop of the program
  *
@@ -257,15 +265,17 @@ int cmd_loop(int readfd, int writefd) {
 	// sync device and server
 	cmd_sync(readfd, writefd);
 
-	cmd_sendxcmd(writefd, buf);
-
+	// tell the device we've reset
+	// (it will answer with FS_RESET, which gives us the chance to send the X commands)
+	cmd_sendreset(writefd, buf);
+	
         /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
 
         for(;;) {
 	      n = read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
-	      printf("read %d bytes: ",n);
+	      printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
 	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
 #endif
 
@@ -299,6 +309,7 @@ int cmd_loop(int readfd, int writefd) {
                 if(wrp-rdp >= plen) {
 		  // did we already receive the full packet?
                   // yes, then execute
+		  //printf("dispatch @rdp=%d [%02x %02x ... ]\n", rdp, buf[rdp], buf[rdp+1]);
                   cmd_dispatch(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
@@ -361,12 +372,16 @@ static void cmd_dispatch(char *buf, int fd) {
 
 	// not on FS_TERM
 	tfd = buf[FSP_FD];
-	if (tfd < 0) {
-		printf("Illegal file descriptor: %d\n", tfd);
+	if (tfd < 0 /*&& ((unsigned char) tfd) != FSFD_SETOPT*/) {
+		log_error("Illegal file descriptor: %d\n", tfd);
 		return;
 	}
 
-	buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
+	// this stupidly overwrites the first byte of following commands
+	// in case the new command has already been received (e.g. FS_CHARSET
+	// on reset. This code is commented here as reminder just in case if
+	// some error pops up by removing it
+	//buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
 
 	provider_t *prov = NULL; //&fs_provider;
 	endpoint_t *ep = NULL;
@@ -729,7 +744,12 @@ static void cmd_dispatch(char *buf, int fd) {
 		// we have already sent everything
 		sendreply = 0;
 		break;
-
+	case FS_CHARSET:
+		log_info("CHARSET: %s\n", buf+FSP_DATA);
+		if (tfd == FSFD_SETOPT) {
+			provider_set_ext_charset(buf+FSP_DATA);
+		}
+		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
 	}

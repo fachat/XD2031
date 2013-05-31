@@ -146,6 +146,7 @@ static int16_t read_char_from_packet(packet_t *buf) {
         case TX_TYPE:
                 txstate = TX_LEN;
                 rv = 0xff & packet_get_type(buf);
+//if (rv == FS_TERM && packet_get_chan(buf) == FSFD_SETOPT) led_on();
                 break;
         case TX_LEN:
                 txstate = TX_CHANNEL;
@@ -222,7 +223,8 @@ static void push_data_to_packet(int8_t rxdata)
 			// yes, send sync
 			uarthw_send(FS_SYNC);
 		} else
-		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF || rxdata == FS_SETOPT) {
+		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF 
+			|| rxdata == FS_SETOPT || rxdata == FS_RESET) {
 			// note EOI flag
 			current_is_eoi = rxdata;
 			// start a reply handling
@@ -256,19 +258,22 @@ static void push_data_to_packet(int8_t rxdata)
 		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
 		if (current_data_left == 0) {
 			// we are actually already done. do callback and set status to idle
+			// prohibit receiving just in case (we reuse the rx buffer e.g. 
+			// in X option)
+			serial_lock = 1;
 			if ((rxstate == RX_DATA) 
 				&& (rx_channels[current_channelpos].callback(current_channelno, 
 					(rxstate == RX_IGNORE) ? -1 : 0, 
 					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0)) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
+			serial_lock = 0;
 			rxstate = RX_IDLE;
 		}
 		break;
 	case RX_DATA:
 		packet_write_char(current_rxpacket, rxdata);
 		current_data_left --;
-//if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
 			// prohibit receiving just in case (we reuse the rx buffer e.g. 
 			// in X option)
@@ -377,7 +382,11 @@ void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_
 	int8_t channelpos = -1;
 	while (channelpos < 0) {
 		for (uint8_t i = 0; i < NUMBER_OF_SLOTS; i++) {
-			if (rx_channels[i].channelno < 0) {
+			// note: take either a free one or overwrite an existing one
+			// the latter case is only used for rtconfig_pullconfig()
+			// sending a new request
+			if (rx_channels[i].channelno < 0
+				|| rx_channels[i].channelno == channelno) {
 				channelpos = i;
 				break;
 			}

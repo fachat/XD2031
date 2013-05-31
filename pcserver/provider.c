@@ -98,6 +98,8 @@ static int provider_index(provider_t *prov) {
 // caches the to_provider and from_provider values in the providers[] table
 void provider_set_ext_charset(char *charsetname) {
 
+	log_info("Setting filename communication charset to '%s'\n", charsetname);
+
 	charset_t ext_cset_idx = cconv_getcharset(charsetname);
 
 	int i;
