@@ -1192,10 +1192,19 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
          log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
          return ERROR_FAULT;
    }
-   FirstSlot(diep,&file->Slot);
-   np  = MatchSlot(diep,&file->Slot,filename);
-   file->next_track  = file->Slot.start_track;
-   file->next_sector = file->Slot.start_sector;
+   if (*filename == '$' && di_cmd == FS_OPEN_RD) {
+	// reading the directory as normal file just returns the standard
+	// blocks 18/0 -> 18/1 -> and following the block chain
+   	Disk_Image_t *di = &diep->DI;
+	file->next_track = di->DirTrack;
+	file->next_sector = 0;
+	np=1;
+   } else {
+   	FirstSlot(diep,&file->Slot);
+   	np  = MatchSlot(diep,&file->Slot,filename);
+   	file->next_track  = file->Slot.start_track;
+   	file->next_sector = file->Slot.start_sector;
+   }
    file->chp = 255;
    log_debug("File starts at (%d/%d)\n",file->next_track,file->next_sector);
    if (file_required && np == 0)

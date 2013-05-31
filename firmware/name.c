@@ -60,7 +60,7 @@ nameinfo_t nameinfo;
  * To distinguish numeric drive numbers from unassigned (undefined) drives like "ftp:",
  * the provider name must not end with a digit.
  */
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 
 	int8_t len = in->command_length;	//  includes the zero-byte
 
@@ -92,7 +92,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	result->name2 = NULL;
 	result->namelen2 = 0;
 	result->recordlen = 0;
-	if (is_command) {
+	if (parsehint & PARSEHINT_COMMAND) {
 		state = NAME_COMMAND;
 		result->name = NULL;
 		result->namelen = 0;
@@ -147,7 +147,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			}
 			break;
 		case NAME_FILE:
-			if (ch == '$') {
+			if (ch == '$' && (parsehint & PARSEHINT_LOAD)) {
 				result->cmd = CMD_DIR;	// directory
 				result->namelen = 0;	// just to be sure, until we parsed it
 				state = NAME_CMDDRIVE;	// jump into command parser
@@ -183,7 +183,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			}
 			// fallthrough
 		case NAME_NAME:
-			if (is_command) {
+			if (parsehint & PARSEHINT_COMMAND) {
 				if (ch == '=') {
 					*p = 0;	// end first file name
 					result->namelen = (p-result->name);

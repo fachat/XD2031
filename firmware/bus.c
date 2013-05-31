@@ -184,13 +184,19 @@ static int16_t cmd_handler (bus_t *bus)
 		//bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
     	} else {
       		/* Handle filenames */
-
+		uint8_t openflag = 0;
+		if (secaddr == 1) {
+			openflag = OPENFLAG_SAVE;
+		} else
+		if (secaddr == 0) {
+			openflag = OPENFLAG_LOAD;
+		}
 #ifdef DEBUG_BUS
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
       		rv = file_open(bus_secaddr_adjust(bus, secaddr), bus, &error, 
-							_cmd_callback, secaddr == 1);
+							_cmd_callback, openflag);
     	}
 
       	if (rv < 0) {

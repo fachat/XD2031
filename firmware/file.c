@@ -72,7 +72,7 @@ void file_init(void) {
 // set appropriately.
 //
 int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, 
-			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
+			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t openflag) {
 
 	assert_not_null(bus, "file_open: bus is null");
 
@@ -87,7 +87,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
-	parse_filename(command, &nameinfo, 0);
+	parse_filename(command, &nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
 
 	// post-parse
 
@@ -136,9 +136,15 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 	// either ",W" or secondary address is one, i.e. save
-	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
+	if ((nameinfo.access == 'W') || (openflag & OPENFLAG_SAVE)) type = FS_OPEN_WR;
 	if (nameinfo.access == 'A') type = FS_OPEN_AP;
-	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
+	if (nameinfo.cmd == CMD_DIR) {
+		if (openflag & OPENFLAG_LOAD) {
+			type = FS_OPEN_DR;
+		} else {
+			type = FS_OPEN_RD;
+		}
+	} else
 	if (nameinfo.cmd == CMD_OVERWRITE) type = FS_OPEN_OW;
 
 #ifdef DEBUG_FILE

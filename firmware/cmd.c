@@ -143,7 +143,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 
-	parse_filename(command, &nameinfo, 1);
+	parse_filename(command, &nameinfo, PARSEHINT_COMMAND);
 
 #ifdef DEBUG_CMD
         debug_printf("CMD=%s\n", nameinfo.cmd == CMD_NONE ? "-" : command_to_name(nameinfo.cmd));

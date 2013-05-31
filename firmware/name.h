@@ -71,7 +71,10 @@ extern nameinfo_t nameinfo;
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.
  */
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command);
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint);
+
+#define	PARSEHINT_COMMAND	1	// when called from command handler
+#define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
 
 /**
  * assembles the filename packet from nameinfo into the target buffer.
