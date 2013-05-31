@@ -1294,6 +1294,12 @@ int di_directory_header(char *dest, di_endpoint_t *diep)
       memcpy(dest+FS_DIR_NAME   ,diep->BAM[0]+0x90,16);
       memcpy(dest+FS_DIR_NAME+16,diep->BAM[0]+0xA2, 5);
    }
+   // fix up $a0 into $20 characters
+   for (int i = FS_DIR_NAME; i < FS_DIR_NAME + 22; i++) {
+	if (dest[i] == 0xa0) {
+		dest[i] = 0x20;
+	}
+   }
    dest[FS_DIR_NAME + 22] = 0;
    log_debug("di_directory_header (%s)\n",dest+FS_DIR_NAME);
    return FS_DIR_NAME + 23; 
