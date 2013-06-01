@@ -1139,13 +1139,31 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen
    if (FindFreeSlot(diep,&file->Slot)) return ERROR_DISK_FULL;
    if (FindFreeBlock(diep,file) < 0)   return ERROR_DISK_FULL;
    strcpy((char *)file->Slot.filename,(char *)name);
-   file->Slot.size = 1;
    file->Slot.type = 0x80 | type;
-   file->Slot.start_track  = file->cht;
-   file->Slot.start_sector = file->chs;
    file->chp = 0;
    file->Slot.ss_track  = 0;	// invalid;
    file->Slot.ss_sector = 0;
+   file->Slot.start_track  = 0;
+   file->Slot.start_sector = 0;
+   file->Slot.start_track  = file->cht;
+   file->Slot.start_sector = file->chs;
+   if (type == FS_DIR_TYPE_REL) {
+	// on rel files, the size reported is zero after creation
+	// despite two blocks being taken
+   	file->Slot.size = 0;
+        if (FindFreeBlock(diep,file) < 0) {
+		// couldn't allocate the side sector block
+		di_block_free(diep, file->Slot.start_track, file->Slot.start_sector);
+		return ERROR_DISK_FULL;
+	} else {
+		// found a side sector block
+		// TODO: clear out side sector block to default
+	}
+   	file->Slot.ss_track  = file->cht;
+   	file->Slot.ss_sector = file->chs;
+   } else {
+   	file->Slot.size = 1;
+   }
    file->Slot.recordlen = reclen;
    WriteSlot(diep,&file->Slot);
    // PrintSlot(&file->Slot);
@@ -1274,11 +1292,21 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
    	file->next_sector = file->Slot.start_sector;
 	if (type == FS_DIR_TYPE_REL) {
 		// check record length
-		if (reclen == 0) {
-			reclen = file->Slot.recordlen;
-		} else {
-			if (reclen != file->Slot.recordlen) {
+		if (!np) {
+			// does not exist yet
+			if (reclen == 0) {
 				return ERROR_RECORD_NOT_PRESENT;
+			}
+		} else {
+			if (reclen == 0) {
+				// no reclen is given in the open
+				reclen = file->Slot.recordlen;
+			} else {
+				// there is a rec len in the open and in the file
+				// so they need to be the same
+				if (reclen != file->Slot.recordlen) {
+					return ERROR_RECORD_NOT_PRESENT;
+				}
 			}
 		}
 	}
