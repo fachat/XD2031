@@ -213,6 +213,9 @@ typedef struct
    BYTE  type;         // file type
    BYTE  start_track;  // first track
    BYTE  start_sector; // first sector
+   BYTE  ss_track;     // side sector track
+   BYTE  ss_sector;    // side sector sector
+   BYTE  recordlen;    // REL file record length
    BYTE  eod;          // end of directory
 } slot_t;
 
@@ -379,6 +382,9 @@ void WriteSlot(di_endpoint_t *diep, slot_t *slot)
    p[ 2] = slot->type;
    p[ 3] = slot->start_track;
    p[ 4] = slot->start_sector;
+   p[21] = slot->ss_track;
+   p[22] = slot->ss_sector;
+   p[23] = slot->recordlen;
    p[30] = slot->size & 0xff;
    p[31] = slot->size >> 8;
 
@@ -795,6 +801,10 @@ void ReadSlot(di_endpoint_t *diep, slot_t *slot)
       slot->next_track  = p[0];
       slot->next_sector = p[1];
    }
+   slot->ss_track     = p[21];
+   slot->ss_sector    = p[22];
+   slot->recordlen    = p[23];
+
    log_debug("ReadSlot <%s>\n",slot->filename);
 }
 
@@ -1134,6 +1144,9 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen
    file->Slot.start_track  = file->cht;
    file->Slot.start_sector = file->chs;
    file->chp = 0;
+   file->Slot.ss_track  = 0;	// invalid;
+   file->Slot.ss_sector = 0;
+   file->Slot.recordlen = reclen;
    WriteSlot(diep,&file->Slot);
    // PrintSlot(&file->Slot);
    return ERROR_OK;
@@ -1164,12 +1177,15 @@ void PosAppend(di_endpoint_t *diep, File *f)
 }
 
 // ********
-// OpenFile
+// di_open_file
 // ********
 
 static void di_process_options(BYTE *opts, BYTE *type, BYTE *reclen) {
 	BYTE *p = opts;
 	BYTE typechar;
+	int reclenw;
+	int n;
+	BYTE *t;
 
 	while (*p != 0) {
 		switch(*(p++)) {
@@ -1180,12 +1196,26 @@ static void di_process_options(BYTE *opts, BYTE *type, BYTE *reclen) {
 				case 'U':	*type = FS_DIR_TYPE_USR; break;
 				case 'P':	*type = FS_DIR_TYPE_PRG; break;
 				case 'S':	*type = FS_DIR_TYPE_SEQ; break;
-				case 'R':	*type = FS_DIR_TYPE_REL; break;
+				case 'L':	
+					*type = FS_DIR_TYPE_REL; 
+					n=sscanf((char*)p, "%d", &reclenw);
+					if (n == 1 && reclenw > 0 && reclenw < 255) {
+						*reclen = reclenw;
+					}
+					t = strchr((char*)p, ',');
+					if (t == NULL) {
+						t = p + strlen((char*)p);
+					}
+					p = t;
+					break;
 				default:
 					log_warn("Unknown open file type option %c\n", typechar);
 					break;
 				}
 			}
+			break;
+		case ',':
+			p++;
 			break;
 		default:
 			// syntax error
@@ -1195,17 +1225,17 @@ static void di_process_options(BYTE *opts, BYTE *type, BYTE *reclen) {
 	}
 }
 
-static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_cmd)
+static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_cmd)
 {
    int np,rv;
    File *file;
    enum boolean { FALSE, TRUE };
-   BYTE type = 2;	// PRG
-   BYTE reclen = 0;	// REL record length
+   BYTE type = FS_DIR_TYPE_PRG;	// PRG
+   BYTE reclen = 0;		// REL record length (default 0 means is not set)
 
    di_process_options(opts, &type, &reclen);
  
-   log_info("OpenFile(..,%d,%s,%s)\n", tfd, filename, opts);
+   log_info("OpenFile(..,%d,%s,%c,%d)\n", tfd, filename, type + 0x30, reclen);
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    file = reserve_file(diep, tfd);
  
@@ -1220,6 +1250,12 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_
       case FS_OPEN_RD: file_required       = TRUE; break;
       case FS_OPEN_WR: file_must_not_exist = TRUE; break;
       case FS_OPEN_OW: break;
+      case FS_OPEN_RW:
+	 if (type != FS_DIR_TYPE_REL) {
+         	log_error("Read/Write currently only supported for REL files on disk images\n");
+		return ERROR_FAULT;
+	 }
+	 break;
       default:
          log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
          return ERROR_FAULT;
@@ -1236,6 +1272,16 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_
    	np  = MatchSlot(diep,&file->Slot,filename);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
+	if (type == FS_DIR_TYPE_REL) {
+		// check record length
+		if (reclen == 0) {
+			reclen = file->Slot.recordlen;
+		} else {
+			if (reclen != file->Slot.recordlen) {
+				return ERROR_RECORD_NOT_PRESENT;
+			}
+		}
+	}
    }
    file->chp = 255;
    log_debug("File starts at (%d/%d)\n",file->next_track,file->next_sector);
@@ -1658,7 +1704,7 @@ static int di_cd(endpoint_t *ep, char *buf)
 
 static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
-   return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_RD);
+   return di_open_file(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_RD);
 }
 
 //***********
@@ -1668,8 +1714,8 @@ static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts
 static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts,
                         const int is_overwrite)
 {
-  if (is_overwrite) return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_OW);
-  else              return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_WR);
+  if (is_overwrite) return di_open_file(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_OW);
+  else              return di_open_file(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_WR);
 }
 
 //***********
@@ -1678,7 +1724,7 @@ static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts
 
 static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
-       return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_AP);
+       return di_open_file(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_AP);
 }
 
 // **********
@@ -1687,15 +1733,7 @@ static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts
 
 static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
-   (void) ep; // silence -Wunused-parameter
-
-   log_debug("di_open_rw(ep,%d,%s)\n",tfd,buf);
-   if (*buf == '#') // ok, open a direct block channel
-   {
-      log_error("wrong call\n");
-      return ERROR_FAULT;
-   }
-   return ERROR_DRIVE_NOT_READY;
+       return di_open_file(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_RW);
 }
 
 

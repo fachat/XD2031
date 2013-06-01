@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#undef	DEBUG_NAME 
+#define	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
@@ -74,7 +74,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	// adjust so we exclude final null byte
 	len--;
 
-	// runtime vars
+	// runtime vars (uint e.g. to avoid sign extension on REL file record len)
 	uint8_t *p = in->command_buffer + diff;
 	uint8_t ch;
 
@@ -267,7 +267,12 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	}
 
 	if (result->access == 0) {
-		result->access = 'R';
+		if (result->type == 'L') {
+			// if access is not set on a REL file, it's read & write
+			result->access = 'X';
+		} else {
+			result->access = 'R';
+		}
 	}
 
 #ifdef DEBUG_NAME
@@ -336,7 +341,6 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 		}
 		*(p++) = 0;
 	}
-
 
 	return p-trg;
 }

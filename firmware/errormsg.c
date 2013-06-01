@@ -77,6 +77,7 @@ static const uint8_t IN_ROM messages[] = {
 	H(ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
 					'O','R',' ','S','E','C','T','O','R',
 	H(ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
+	H(ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
 	0
 };
 
