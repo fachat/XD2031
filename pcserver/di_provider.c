@@ -1167,8 +1167,32 @@ void PosAppend(di_endpoint_t *diep, File *f)
 // OpenFile
 // ********
 
-static void di_process_options(const char opts, BYTE *type, BYTE *reclen) {
-	
+static void di_process_options(BYTE *opts, BYTE *type, BYTE *reclen) {
+	BYTE *p = opts;
+	BYTE typechar;
+
+	while (*p != 0) {
+		switch(*(p++)) {
+		case 'T':
+			if (*(p++) == '=') {
+				typechar = *(p++);
+				switch(typechar) {
+				case 'U':	*type = FS_DIR_TYPE_USR; break;
+				case 'P':	*type = FS_DIR_TYPE_PRG; break;
+				case 'S':	*type = FS_DIR_TYPE_SEQ; break;
+				case 'R':	*type = FS_DIR_TYPE_REL; break;
+				default:
+					log_warn("Unknown open file type option %c\n", typechar);
+					break;
+				}
+			}
+			break;
+		default:
+			// syntax error
+			log_warn("error parsing file open options %s\n", opts);
+			return;
+		}
+	}
 }
 
 static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_cmd)
