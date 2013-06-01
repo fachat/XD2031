@@ -59,11 +59,11 @@ typedef struct {
 
 	// file-related	
 	void		(*close)(endpoint_t *ep, int chan);	// close a channel
-        int             (*open_rd)(endpoint_t *ep, int chan, const char *name); // open a file
-        int             (*open_wr)(endpoint_t *ep, int chan, const char *name, const int is_overwrite); // open a file
-        int             (*open_ap)(endpoint_t *ep, int chan, const char *name); // open a file
-        int             (*open_rw)(endpoint_t *ep, int chan, const char *name); // open a file
-	int		(*opendir)(endpoint_t *ep, int chan, const char *name);	// open a directory for reading
+        int             (*open_rd)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+        int             (*open_wr)(endpoint_t *ep, int chan, const char *name, const char *opts, const int is_overwrite); // open a file
+        int             (*open_ap)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+        int             (*open_rw)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+	int		(*opendir)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a directory for reading
 	int		(*readfile)(endpoint_t *ep, int chan, char *retbuf, int len, int *readflag);	// read file data
 	int		(*writefile)(endpoint_t *ep, int chan, char *buf, int len, int is_eof);	// write a file
 

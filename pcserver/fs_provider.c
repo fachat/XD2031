@@ -641,7 +641,7 @@ exit:
 }
 
 // open a directory read
-static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
+static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -1002,11 +1002,11 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
        return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
 	if (is_overwrite) {
        		return open_file(ep, tfd, buf, FS_OPEN_OW);
 	} else {
@@ -1014,11 +1014,11 @@ static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_o
 	}
 }
 
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
        return open_file(ep, tfd, buf, FS_OPEN_AP);
 }
 
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 	if (*buf == '#') {
 		// ok, open a direct block channel
 

@@ -322,6 +322,14 @@ int cmd_loop(int readfd, int writefd) {
 }
 
 
+char *get_options(char *name, int len) {
+	int l = strlen(name);
+	if ((l + 1) < len) {
+		return name + l + 1;
+	}
+	return NULL;
+}
+
 // ----------------------------------------------------------------------------------
 
 /**
@@ -405,6 +413,9 @@ static void cmd_dispatch(char *buf, int fd) {
 	int drive = buf[FSP_DATA]&255;
 	int convlen = len - FSP_DATA-1;
 
+	// options string just in case
+	char *options = NULL;
+
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
@@ -414,9 +425,10 @@ static void cmd_dispatch(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_wr != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
 					prov->name, name);
-				rv = prov->open_wr(ep, tfd, name, cmd == FS_OPEN_OW);
+				rv = prov->open_wr(ep, tfd, name, options, cmd == FS_OPEN_OW);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					channel_set(tfd, ep);
@@ -435,8 +447,9 @@ static void cmd_dispatch(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rw(ep, tfd, name);
+				rv = prov->open_rw(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					channel_set(tfd, ep);
@@ -457,8 +470,9 @@ static void cmd_dispatch(char *buf, int fd) {
 			// not all providers support directory operation
 			if (prov->opendir != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->opendir(ep, tfd, name);
+				rv = prov->opendir(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					channel_set(tfd, ep);
@@ -477,8 +491,9 @@ static void cmd_dispatch(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rd != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rd(ep, tfd, name);
+				rv = prov->open_rd(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					channel_set(tfd, ep);
@@ -497,8 +512,9 @@ static void cmd_dispatch(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_ap != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
-				rv = prov->open_ap(ep, tfd, name);
+				rv = prov->open_ap(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
 					channel_set(tfd, ep);

@@ -1121,7 +1121,7 @@ int FindFreeBlock(di_endpoint_t *diep, File *f)
 // CreateEntry // TODO: set file type
 // ***********
 
-int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name)
+int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen)
 {
    log_debug("CreateEntry(%s)\n",name);
    File *file = find_file(diep, tfd);
@@ -1130,7 +1130,7 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name)
    if (FindFreeBlock(diep,file) < 0)   return ERROR_DISK_FULL;
    strcpy((char *)file->Slot.filename,(char *)name);
    file->Slot.size = 1;
-   file->Slot.type = 0x82; // PRG
+   file->Slot.type = 0x80 | type;
    file->Slot.start_track  = file->cht;
    file->Slot.start_sector = file->chs;
    file->chp = 0;
@@ -1167,13 +1167,21 @@ void PosAppend(di_endpoint_t *diep, File *f)
 // OpenFile
 // ********
 
-static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
+static void di_process_options(const char opts, BYTE *type, BYTE *reclen) {
+	
+}
+
+static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int di_cmd)
 {
    int np,rv;
    File *file;
    enum boolean { FALSE, TRUE };
+   BYTE type = 2;	// PRG
+   BYTE reclen = 0;	// REL record length
+
+   di_process_options(opts, &type, &reclen);
  
-   log_info("OpenFile(..,%d,%s)\n", tfd, filename);
+   log_info("OpenFile(..,%d,%s,%s)\n", tfd, filename, opts);
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    file = reserve_file(diep, tfd);
  
@@ -1219,7 +1227,7 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
    }
    if (!np)
    {
-      rv = CreateEntry(diep, tfd, file->CBM_file);
+      rv = CreateEntry(diep, tfd, filename, type, reclen);
       if (rv != ERROR_OK) return rv;
    }
    if (di_cmd == FS_OPEN_AP) PosAppend(diep,file);
@@ -1230,7 +1238,7 @@ static int OpenFile(endpoint_t *ep, int tfd, BYTE *filename, int di_cmd)
 // di_opendir
 // **********
 
-static int di_opendir(endpoint_t *ep, int tfd, const char *buf)
+static int di_opendir(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    log_debug("di_opendir(%s)\n",buf);
@@ -1624,36 +1632,36 @@ static int di_cd(endpoint_t *ep, char *buf)
 // di_open_rd
 //***********
 
-static int di_open_rd(endpoint_t *ep, int tfd, const char *buf)
+static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
-   return OpenFile(ep, tfd, (BYTE *)buf, FS_OPEN_RD);
+   return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_RD);
 }
 
 //***********
 // di_open_wr
 //***********
 
-static int di_open_wr(endpoint_t *ep, int tfd, const char *buf,
+static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts,
                         const int is_overwrite)
 {
-  if (is_overwrite) return OpenFile(ep, tfd, (BYTE *)buf, FS_OPEN_OW);
-  else              return OpenFile(ep, tfd, (BYTE *)buf, FS_OPEN_WR);
+  if (is_overwrite) return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_OW);
+  else              return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_WR);
 }
 
 //***********
 // di_open_ap
 //***********
 
-static int di_open_ap(endpoint_t *ep, int tfd, const char *buf)
+static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
-       return OpenFile(ep, tfd, (BYTE *)buf, FS_OPEN_AP);
+       return OpenFile(ep, tfd, (BYTE *)buf, (BYTE *)opts, FS_OPEN_AP);
 }
 
 // **********
 // di_open_rw
 // **********
 
-static int di_open_rw(endpoint_t *ep, int tfd, const char *buf)
+static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
    (void) ep; // silence -Wunused-parameter
 
