@@ -23,8 +23,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define	VERSION_STR		"0.02.01"
-
 #define F_CPU                 14745600UL
 
 // LED configuration
@@ -38,32 +36,5 @@
 
 // number of direct buffers (for U1/U2/B-* commands)
 #define	CONFIG_NUM_DIRECT_BUFFERS	2
-
-
-#if 0
-/*
-//#define IEC_TEST
-#define IEC_SEPARATE_OUT				// For separate Input/Output lines
-#define XA1541							// For XA1541 adapter on IEC
-//#define OLIMEX						// For Olimex 40 pin board (LED)
-//#define OLIMEX2  						// negative logic for LED
-#define EMBEDIT 						// Embedit Prototype Board (LED)
-*/
-
-//#define IEC_TEST
-//#define IEC_SEPARATE_OUT				// For separate Input/Output lines
-//#define XA1541							// For XA1541 adapter on IEC
-//#define OLIMEX						// For Olimex 40 pin board (LED)
-#define OLIMEX2  						// negative logic for LED
-//#define EMBEDIT 						// Embedit Prototype Board (LED)
-
-#endif
-
-#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ ||  \
-			__AVR_ATmega324__ || defined __AVR_ATmega324P__ 
-	#define SRQ_INT_VECT					// 644, 324 only!
-#endif
-
-
 
 #endif
