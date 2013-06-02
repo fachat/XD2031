@@ -36,6 +36,7 @@
 #include <alloca.h>
 
 #include "config.h"
+#include "hwdefines.h"
 #include "arch.h"
 #include "version.h"
 #include "main.h"

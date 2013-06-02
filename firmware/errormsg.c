@@ -27,7 +27,7 @@
 #include "errormsg.h"
 #include "channel.h"
 #include "version.h"		/* for SW_NAME */
-#include "device.h"		/* for HW_NAME */
+#include "hwdefines.h"		/* for HW_NAME */
 #include "debug.h"
 #include "led.h"
 

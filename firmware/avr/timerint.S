@@ -21,7 +21,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "config.h"		// LED definitions
+#include "hwdefines.h"		// LED definitions
 
 /**
  * LED interrupt handler

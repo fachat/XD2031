@@ -31,7 +31,7 @@
 #include <avr/interrupt.h>
 #include <inttypes.h>
 
-#include "config.h"
+#include "hwdefines.h"
 #include "mem.h"
 #include "led.h"
 

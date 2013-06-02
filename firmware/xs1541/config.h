@@ -25,11 +25,6 @@
 
 #define F_CPU                 14745600UL
 
-// LED configuration
-#define LED_DDR               DDRC
-#define LED_PORT              PORTC
-#define LED_BIT               PC0
-
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46
