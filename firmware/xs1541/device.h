@@ -28,7 +28,16 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include "hwdefines.h"
+
 void device_init(void);
 
+static inline void device_led_on (void) {
+    LED_PORT |= _BV(LED_BIT);
+}
+
+static inline void device_leds_off (void) {
+    LED_PORT &= ~_BV(LED_BIT);
+}
 
 #endif

@@ -28,6 +28,21 @@
 #ifndef PETSD_H
 #define PETSD_H
 
+#include "hwdefines.h"
+
 void device_init(void);
+
+static inline void device_led_on (void) {
+    LED_PORT |= _BV(LED_BIT);
+}
+
+static inline void device_active_led_on (void) {
+    ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+}
+
+static inline void device_leds_off (void) {
+    LED_PORT &= ~_BV(LED_BIT);
+    ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
+}
 
 #endif

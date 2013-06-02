@@ -28,45 +28,21 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-// bus definitions
-#  define IEEE_PORT_TE          PORTC   /* TE */
-#  define IEEE_DDR_TE           DDRC
-#  define IEEE_PIN_TE           PC3
-// DC is controlled by slave MCU
-
-#  define IEEE_INPUT_ATN        PIND    /* ATN */
-#  define IEEE_PORT_ATN         PORTD
-#  define IEEE_DDR_ATN          DDRD
-#  define IEEE_PIN_ATN          PD2
-#  define IEEE_INPUT_NDAC       PINC    /* NDAC */
-#  define IEEE_PORT_NDAC        PORTC
-#  define IEEE_DDR_NDAC         DDRC
-#  define IEEE_PIN_NDAC         PC6
-#  define IEEE_INPUT_NRFD       PINC    /* NRFD */
-#  define IEEE_PORT_NRFD        PORTC
-#  define IEEE_DDR_NRFD         DDRC
-#  define IEEE_PIN_NRFD         PC7
-#  define IEEE_INPUT_DAV        PINC    /* DAV */
-#  define IEEE_PORT_DAV         PORTC
-#  define IEEE_DDR_DAV          DDRC
-#  define IEEE_PIN_DAV          PC5
-#  define IEEE_INPUT_EOI        PINC    /* EOI */
-#  define IEEE_PORT_EOI         PORTC
-#  define IEEE_DDR_EOI          DDRC
-#  define IEEE_PIN_EOI          PC4
-
-#  define IEEE_D_PIN            PINA    /* Data */
-#  define IEEE_D_PORT           PORTA
-#  define IEEE_D_DDR            DDRA
-
-#define IEEE_ATN_HANDLER        ISR(IEEE_ATN_INT_VECT)
-#define IEEE_ATN_INT            INT0
-
-#define HW_NAME			"PETSD-II"
-
-#define	IEEE_SECADDR_OFFSET	0
-#define	IEC_SECADDR_OFFSET	16
+#include "hwdefines.h"
 
 void device_init(void);
+
+static inline void device_led_on (void) {
+    LED_PORT &= ~_BV(LED_BIT);
+}
+
+static inline void device_active_led_on (void) {
+    ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
+}
+
+static inline void device_leds_off (void) {
+    LED_PORT |= _BV(LED_BIT);
+    ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+}
 
 #endif

@@ -74,15 +74,15 @@
 #define	IEEE_SECADDR_OFFSET	0
 #define	IEC_SECADDR_OFFSET	16
 
-// LED configuration for single LED HW / error LED
+// LED configuration for single LED HW / red error LED
 #define LED_DDR			DDRD
 #define LED_PORT		PORTD
-#define LED_BIT			PD6	// red LED
+#define LED_BIT			PD6
 
-// LED configuration for separate activity LED
+// LED configuration for separate green activity LED
 // Leave ACTIVE_LED_DDR undefined for HW without activity LED
 #define ACTIVE_LED_DDR		DDRD
 #define ACTIVE_LED_PORT		PORTD
-#define ACTIVE_LED_BIT		PD5	// green LED
+#define ACTIVE_LED_BIT		PD5
 
 #endif
