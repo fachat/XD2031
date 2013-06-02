@@ -3,6 +3,7 @@
 # Uncomment one of the following lines to select your device:
 DEVICE=xs1541
 #DEVICE=petSD
+#DEVICE=petSD2
 
 # This defines the serial-over-USB port to use when loading the
 # firmware into the device with "make load"
@@ -46,7 +47,7 @@ BAR="======================================================================\\n"
 zoo:			   # Compile everything
 	rm -f $(BINDIR)/*
 	mkdir -p $(BINDIR)
-	@for d in xs1541 petSD ;do \
+	@for d in xs1541 petSD petSD2 ;do \
 	  echo "\n$(BAR)   Compiling $$d\n$(BAR)" ;\
 	  make DEVICE=$$d ;\
 	  make DEVICE=$$d clean; \
