@@ -68,7 +68,7 @@ void log_errno(const char *msg, ...) {
        va_start(args, msg);
 	char buffer[1024];
 
-	if (index(msg, '%') != NULL) {
+	if (strchr(msg, '%') != NULL) {
 		// the msg contains parameter, so we need to fix it
 		vsprintf(buffer, msg, args);
 		msg = buffer;

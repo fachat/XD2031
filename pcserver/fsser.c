@@ -41,7 +41,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <pwd.h>
 
 #include "fscmd.h"
 #include "privs.h"

@@ -52,6 +52,7 @@
 #include "mem.h"
 #include "wireformat.h"
 #include "channel.h"
+#include "os.h"
 
 #include "log.h"
 

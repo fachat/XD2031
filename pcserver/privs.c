@@ -33,7 +33,7 @@
 #include "privs.h"
 #include "log.h"
 
-#ifdef UNPRIVILEGED
+#if defined(UNPRIVILEGED) || defined(_WIN32)
 void drop_privileges() { 
 	log_info("Compiled with unprivileged rights\n");
 }

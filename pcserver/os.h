@@ -45,10 +45,15 @@ static inline char *os_realpath (const char *path)
 	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
 }
 #else
+#ifdef _WIN32
+#define PATH_MAX 255
+	char *realpath(const char *path, char resolved_path[PATH_MAX]);
+#else
 static inline char *os_realpath (const char *path) 
 {
 	return realpath(path, NULL);
 }
+#endif
 #endif
 
 /*

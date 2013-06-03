@@ -128,7 +128,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 		if ((strlen(argv[i]) >2) 
 			&& argv[i][1] == 'X') {
 
-			if (index(argv[i]+2, ':') == NULL) {
+			if (strchr(argv[i]+2, ':') == NULL) {
 				// we need a ':' as separator between bus name and actual command
 				log_error("Could not find bus name separator ':' in '%s'\n", argv[i]+2);
 				continue;
