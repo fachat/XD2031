@@ -30,10 +30,10 @@
 #ifdef FIRMWARE
 typedef uint8_t BYTE;
 #endif
-#ifdef SERVER
-typedef char BYTE;
-#endif
 
+#ifdef SERVER
+#include "os.h"
+#endif
 
 #endif
 

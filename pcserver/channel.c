@@ -24,24 +24,8 @@
 
 ****************************************************************************/
 
-#include <stdio.h>
-
 #include "log.h"
 #include "provider.h"
-
-/*
-#include <errno.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
-#include <strings.h>
-#include <ctype.h>
-
-#include "wireformat.h"
-#include "fscmd.h"
-#include "dir.h"
-#include "xcmd.h"
-*/
 
 
 //------------------------------------------------------------------------------------

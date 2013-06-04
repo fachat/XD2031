@@ -37,7 +37,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
@@ -558,7 +557,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	log_info("open file for fd=%d in dir %s with name %s\n", tfd, fsep->curpath, buf);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
-	patch_dir_separator(fullname);
+	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
 		return ERROR_NO_PERMISSION;
@@ -592,7 +591,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 			goto exit;
 	}
 
-	char *name = find_first_match(path, filename, path_is_file);
+	char *name = find_first_match(path, filename, os_path_is_file);
 	if(!name) {
 		// something with that name exists that isn't a file
 		log_error("Unable to open '%s': not a file\n", filename);
@@ -647,7 +646,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
        	char *fullname = malloc_path(fsep->curpath, buf);
-	patch_dir_separator(fullname);
+	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
 		return ERROR_NO_PERMISSION;
@@ -806,13 +805,13 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	int matches = 0;
 	char *p = buf;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	do {
 		// comma is file pattern separator
-		char *pnext = index(p, ',');
+		char *pnext = strchr(p, ',');
 		if (pnext != NULL) {
 			*pnext = 0;	// write file name terminator (replacing the ',')
 		}
@@ -843,7 +842,7 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
 #endif
 
-	if ((index(nameto, '/') != NULL) || (index(nameto,'\\') != NULL)) {
+	if ((strchr(nameto, '/') != NULL) || (strchr(nameto,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return ERROR_SYNTAX_DIR_SEPARATOR;
@@ -889,7 +888,7 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 static int fs_cd(endpoint_t *ep, char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	log_debug("Change dir to: %s\n", buf);
 
@@ -936,7 +935,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 
@@ -947,7 +946,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 		er = ERROR_FILE_EXISTS;
 	} else {
 		mode_t oldmask=umask(0);
-		int rv = mkdir(newpath, 0755);
+		int rv = os_mkdir(newpath, 0755);
 		umask(oldmask);
 
 		if (rv < 0) {
@@ -970,7 +969,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 

@@ -28,16 +28,6 @@
 #define	DIR_H
 
 /**
- * check a path, making sure it's something readable, not a directory
- */
-int path_is_file(const char *name);
-
-/**
- * check a path, making sure it's a directory
- */
-int path_is_dir(const char *name);
-
-/**
  * traverse a directory and find the first match for the pattern,
  * using the Commodore file search pattern matching algorithm.
  * Returns a malloc'd pathname, which has to be freed

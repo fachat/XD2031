@@ -33,7 +33,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
@@ -431,6 +430,7 @@ static int close_fd(di_endpoint_t *diep, File *f)
      log_debug("Updated chain to (%d/%d)\n",t,s);
      WriteSlot(diep,&f->Slot); // Save new status of directory entry
      SyncBAM(diep);            // Save BAM status
+     fflush(diep->Ip);
   }
   init_fp(f);
   return 0;
@@ -772,7 +772,7 @@ static void di_close(endpoint_t *ep, int tfd)
    log_debug("di_close %d\n",tfd);
    File *file = find_file((di_endpoint_t *)ep, tfd);
    if (file) close_fd((di_endpoint_t *)ep,file);
-   sync();
+   os_sync();
 }
 
 // ********

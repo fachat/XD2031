@@ -31,10 +31,11 @@
  * In this file the actual command work is done
  */
 
+#include "os.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>

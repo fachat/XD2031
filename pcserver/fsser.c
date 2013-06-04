@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 	if(argc == 1) {
 		// Default assigns
 		log_info("Using built-in default assigns\n");
-		provider_assign(0, "fs",   get_home_dir());
+		provider_assign(0, "fs",   os_get_home_dir());
 		provider_assign(1, "fs",   "/usr/local/xd2031/sample");
 		provider_assign(2, "fs",   "/usr/local/xd2031/tools");
 		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm");

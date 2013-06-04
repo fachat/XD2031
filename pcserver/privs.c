@@ -89,4 +89,4 @@ static void drop_to_uid(uid_t ruid) {
 
 }
 
-#endif /* __APPLE__ */
+#endif

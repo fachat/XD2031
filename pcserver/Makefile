@@ -7,7 +7,8 @@ TOOLSDIR=xd2031/tools
 DROPDIR=xd2031
 
 CC=gcc
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I../common -DSERVER
+FSSER_EXE=fsser
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
 COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
 COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/byte.h ../common/charconvert.h 
@@ -26,6 +27,11 @@ ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
 endif
 
+ifeq ($(WIN),y)
+	CC=mingw32-gcc.exe
+	FSSER_EXE=fsser.exe
+endif
+
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
@@ -33,7 +39,7 @@ all: fsser
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} fsser.c $(COMMONC) -o fsser ${LIBS}
+	${CC} ${CFLAGS} fsser.c $(COMMONC) -o $(FSSER_EXE) ${LIBS}
 ifeq ($(PRIVILEGED),y)
 	sudo chown root $@
 	sudo chmod u+s $@

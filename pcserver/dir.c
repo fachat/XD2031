@@ -27,12 +27,11 @@
 #include "os.h"
 
 #include <stdio.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/statvfs.h>
+// #include <sys/statvfs.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
@@ -48,49 +47,6 @@
 
 
 /**
- * check a path, making sure it's something readable, not a directory
- */
-int path_is_file(const char *name) {
-	struct stat sbuf;
-	int isfile = 1;
-
-	log_debug("checking file with name %s\n",name);
-
-	if (lstat(name, &sbuf) < 0) {
-		log_errno("Error stat'ing file");
-		// note we still return 1, as open may succeed - e.g. for save where the
-		// file does not exist in the first place
-	} else {
-		if (S_ISDIR(sbuf.st_mode)) {
-			isfile = 0;
-			log_error("Error trying to open a directory as file");
-		}
-	}
-	return isfile;
-}
-
-/**
- * check a path, making sure it's a directory
- */
-int path_is_dir(const char *name) {
-	struct stat sbuf;
-	int isfile = 1;
-
-	log_info("checking dir with name %s\n",name);
-
-	if (lstat(name, &sbuf) < 0) {
-		log_errno("Error stat'ing file");
-		isfile = 0;
-	} else {
-		if (!S_ISDIR(sbuf.st_mode)) {
-			isfile = 0;
-			log_error("Error trying to open a directory as file");
-		}
-	}
-	return isfile;
-}
-
-/**
  * traverse a directory and find the first match for the pattern,
  * using the Commodore file search pattern matching algorithm.
  * Returns a malloc'd pathname, which has to be freed
@@ -100,7 +56,7 @@ char *find_first_match(const char *dir, const char *pattern, int (*check)(const 
 	struct dirent *de;
 
 	// shortcut - if we don't have wildcards, just open it
-	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+	if (strchr(pattern, '*') == NULL && strchr(pattern, '?') == NULL) {
 		char *namebuf = malloc_path(dir, pattern);
 
 		if (check(namebuf)) {
@@ -142,7 +98,7 @@ char *find_first_match(const char *dir, const char *pattern, int (*check)(const 
 FILE *open_first_match(const char *dir, const char *pattern, const char *options) {
 	FILE *fp = NULL;
 
-	char *name = find_first_match(dir, pattern, path_is_file);
+	char *name = find_first_match(dir, pattern, os_path_is_file);
 	if (name != NULL) {
 		fp = fopen(name, options);
 		if (fp == NULL) {
@@ -168,7 +124,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
 	int onlyone = 0;
 
 	// shortcut - if we don't have wildcards, just open it
-	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+	if (strchr(pattern, '*') == NULL && strchr(pattern, '?') == NULL) {
 		onlyone = 1;
 	}
 
@@ -320,12 +276,10 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
  * fill in the buffer with the final disk info entry
  */
 int dir_fill_disk(char *dest, char *curpath) {
-	struct statvfs buf;
-	int er = statvfs(curpath, &buf);
-	if (er == 0) {
-		unsigned long blksize = buf.f_frsize;
-		fsblkcnt_t free_blocks = buf.f_bavail;	// unprivileged users
-		unsigned long long total = (unsigned long long) blksize * (unsigned long long) free_blocks;
+	signed long long total;
+
+	total = os_free_disk_space(curpath);
+	if (total > 0) {
 		if (total > 0xffffffff) {
 			// max in FS_DIR stuff
 			total = 0xffffffff;
@@ -335,7 +289,7 @@ int dir_fill_disk(char *dest, char *curpath) {
 	        dest[FS_DIR_LEN+2] = (total >> 16) & 255;
 	        dest[FS_DIR_LEN+3] = (total >> 24) & 255;
 	} else {
-		log_errno("Error in statvfs()");
+		log_errno("Could not get free disk space for '%s'\n", curpath);
 	        dest[FS_DIR_LEN] = 1;
 	        dest[FS_DIR_LEN+1] = 0;
 	        dest[FS_DIR_LEN+2] = 0;
