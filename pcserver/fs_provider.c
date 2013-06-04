@@ -550,7 +550,6 @@ static void close_fds(endpoint_t *ep, int tfd) {
 static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	int er = CBM_ERROR_FAULT;
 	File *file;
-	enum boolean { FALSE, TRUE };
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 

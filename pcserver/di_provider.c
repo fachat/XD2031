@@ -1247,7 +1247,6 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
 {
    int np,rv;
    File *file;
-   enum boolean { FALSE, TRUE };
    BYTE type = FS_DIR_TYPE_PRG;	// PRG
    BYTE reclen = 0;		// REL record length (default 0 means is not set)
 

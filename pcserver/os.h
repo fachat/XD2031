@@ -42,6 +42,8 @@
 
 #include "mem.h"
 
+enum boolean { FALSE, TRUE };
+
 typedef char BYTE;   // actually a signed char due CFLAGS -funsigned-char
 
 
@@ -80,6 +82,8 @@ static inline void os_sync(void) {
 #include <sys/syslimits.h>
 
 #include "mem.h"
+
+enum boolean { FALSE, TRUE };
 
 typedef char BYTE;   // actually a signed char due CFLAGS -funsigned-char
 
