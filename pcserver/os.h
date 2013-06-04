@@ -79,6 +79,8 @@ static inline void os_sync(void) {
 #include <sys/stat.h>
 #include <sys/syslimits.h>
 
+#include "mem.h"
+
 typedef char BYTE;   // actually a signed char due CFLAGS -funsigned-char
 
 static inline int os_mkdir(const char *pathname, mode_t mode) {
