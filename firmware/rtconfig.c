@@ -105,7 +105,7 @@ static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) 
 	int8_t outrv;
 
         //debug_printf("setopt cb err=%d\n", errno);
-        if (errno == ERROR_OK) {
+        if (errno == CBM_ERROR_OK) {
                 //debug_printf("rx command: %s\n", buf);
 
 		uint8_t cmd = packet_get_type(rxpacket);
@@ -113,7 +113,7 @@ static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) 
 		switch(cmd) {
 		case FS_REPLY:
 			outrv = packet_get_buffer(rxpacket)[0];
-			if (outrv != ERROR_OK) {
+			if (outrv != CBM_ERROR_OK) {
 				// fallback to ASCII
 				current_charset = CHARSET_ASCII;
 			}	
@@ -168,7 +168,7 @@ static void do_setopt(char *buf, uint8_t len) {
 static uint8_t setopt_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) {
 
         //debug_printf("setopt cb err=%d\n", errno);
-        if (errno == ERROR_OK) {
+        if (errno == CBM_ERROR_OK) {
                 //debug_printf("rx command: %s\n", buf);
 
 		uint8_t cmd = packet_get_type(rxpacket);
@@ -210,7 +210,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 
 	debug_printf("CMD:'%s'\n", cmd);
 
-	errno_t er = ERROR_SYNTAX_UNKNOWN;
+	errno_t er = CBM_ERROR_SYNTAX_UNKNOWN;
 
 	const char *ptr = cmd;
 
@@ -236,10 +236,10 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			if (isdigit(*ptr)) devaddr = atoi(ptr);
 			if (devaddr >= 4 && devaddr <= 30) {
 				rtc->device_address = devaddr;
-				er = ERROR_OK;
+				er = CBM_ERROR_OK;
 				debug_printf("SETTING UNIT# TO %d ON %s\n", devaddr, rtc->name);
 			} else {
-				er = ERROR_SYNTAX_INVAL;
+				er = CBM_ERROR_SYNTAX_INVAL;
 				debug_printf("ERROR SETTING UNIT# TO %d ON %s\n", devaddr, rtc->name);
 			}
 		}
@@ -254,7 +254,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			if (isdigit(*ptr)) drv=atoi(ptr);
 			if (drv < MAX_DRIVES) {
 				rtc->last_used_drive = drv;
-				er = ERROR_OK;
+				er = CBM_ERROR_OK;
 				debug_printf("SETTING DRIVE# TO %d ON %s\n", drv, rtc->name);
 			}
 		}
@@ -262,12 +262,12 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 	case 'I':
 		// INIT: restore default values
 		rtconfig_init_rtc(rtc, get_default_device_address());
-		er = ERROR_OK;
+		er = CBM_ERROR_OK;
 		debug_puts("RUNTIME CONFIG INITIALIZED\n");
 	case 'W':
 		// write runtime config to EEPROM
 		nv_save_config(rtc);
-		er = ERROR_OK;
+		er = CBM_ERROR_OK;
 		break;
 	case 'R':
 		if(!strcmp(ptr, "RESET")) {
@@ -284,7 +284,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			if (new_charset >= 0) {
 				current_charset = new_charset;
 				do_charset();
-				er = ERROR_OK;
+				er = CBM_ERROR_OK;
 			}
 		}
 		break;		

@@ -178,7 +178,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 		if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
 			// no drive
-        	        set_error(errormsg, ERROR_DRIVE_NOT_READY);
+        	        set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
 			return -1;
 		}
 
@@ -190,14 +190,14 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 				errormsg, rtconf, callback, 1);
 		} else {
 			// need to unlock the caller by calling the callback function
-			callback(ERROR_OK, NULL);
+			callback(CBM_ERROR_OK, NULL);
 		}
 		return 0;
 	} else
 	if (nameinfo.cmd == CMD_INITIALIZE) {
 		debug_puts("INITIALIZE\n");
 		// need to unlock the caller by calling the callback function
-		callback(ERROR_OK, NULL);
+		callback(CBM_ERROR_OK, NULL);
 		return 0;
 	} else
 	if (nameinfo.cmd == CMD_UX) {
@@ -226,7 +226,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 	// need to have the error message set when returning <0
-        set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
+        set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
 	return -1;
 }
 

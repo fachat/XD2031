@@ -266,8 +266,8 @@ static int di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector);
 int di_assert_ts(di_endpoint_t *diep, BYTE track, BYTE sector)
 {
    if (track < 1 || track > diep->DI.Tracks * diep->DI.Sides ||
-       sector > diep->DI.Sectors) return ERROR_ILLEGAL_T_OR_S;
-   return ERROR_OK;
+       sector > diep->DI.Sectors) return CBM_ERROR_ILLEGAL_T_OR_S;
+   return CBM_ERROR_OK;
 }
 
 // ************
@@ -716,7 +716,7 @@ int di_write_block(di_endpoint_t *diep, char *buf, int len)
 
 int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 {
-   int rv = ERROR_OK;
+   int rv = CBM_ERROR_OK;
 
    di_endpoint_t *diep = (di_endpoint_t *)ep;
 
@@ -727,7 +727,7 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 
    log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d\n",cmd,track,sector,chan);
    rv = di_assert_ts(diep,track,sector);
-   if (rv != ERROR_OK) return rv; // illegal track or sector
+   if (rv != CBM_ERROR_OK) return rv; // illegal track or sector
 
    switch (cmd)
    {
@@ -740,7 +740,7 @@ int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
       case FS_BLOCK_BW:
       case FS_BLOCK_U2: 
       	if (!di_alloc_buffer(diep)) {
-		return ERROR_NO_CHANNEL; // OOM
+		return CBM_ERROR_NO_CHANNEL; // OOM
 	}
 	di_flag_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
@@ -1004,16 +1004,16 @@ static int di_block_alloc(di_endpoint_t *diep, BYTE *track, BYTE *sector) {
 			// sync BAM to disk (image)
 			SyncBAM(diep);
 			// ok
-			return ERROR_OK;
+			return CBM_ERROR_OK;
 		}
 		// we found another block
 		*track = diep->CurrentTrack;
 		*sector = Sector;
-		return ERROR_NO_BLOCK;
+		return CBM_ERROR_NO_BLOCK;
 	}
    } while (NextTrack(diep) != *track);
 
-   return ERROR_DISK_FULL;
+   return CBM_ERROR_DISK_FULL;
 }
 
 
@@ -1135,9 +1135,9 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen
 {
    log_debug("CreateEntry(%s)\n",name);
    File *file = find_file(diep, tfd);
-   if (!file) return ERROR_FAULT;
-   if (FindFreeSlot(diep,&file->Slot)) return ERROR_DISK_FULL;
-   if (FindFreeBlock(diep,file) < 0)   return ERROR_DISK_FULL;
+   if (!file) return CBM_ERROR_FAULT;
+   if (FindFreeSlot(diep,&file->Slot)) return CBM_ERROR_DISK_FULL;
+   if (FindFreeBlock(diep,file) < 0)   return CBM_ERROR_DISK_FULL;
    strcpy((char *)file->Slot.filename,(char *)name);
    file->Slot.type = 0x80 | type;
    file->chp = 0;
@@ -1154,7 +1154,7 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen
         if (FindFreeBlock(diep,file) < 0) {
 		// couldn't allocate the side sector block
 		di_block_free(diep, file->Slot.start_track, file->Slot.start_sector);
-		return ERROR_DISK_FULL;
+		return CBM_ERROR_DISK_FULL;
 	} else {
 		// found a side sector block
 		// TODO: clear out side sector block to default
@@ -1167,7 +1167,7 @@ int CreateEntry(di_endpoint_t *diep, int tfd, BYTE *name, BYTE type, BYTE reclen
    file->Slot.recordlen = reclen;
    WriteSlot(diep,&file->Slot);
    // PrintSlot(&file->Slot);
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 // *********
@@ -1271,12 +1271,12 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
       case FS_OPEN_RW:
 	 if (type != FS_DIR_TYPE_REL) {
          	log_error("Read/Write currently only supported for REL files on disk images\n");
-		return ERROR_FAULT;
+		return CBM_ERROR_FAULT;
 	 }
 	 break;
       default:
          log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
-         return ERROR_FAULT;
+         return CBM_ERROR_FAULT;
    }
    if (*filename == '$' && di_cmd == FS_OPEN_RD) {
 	// reading the directory as normal file just returns the standard
@@ -1295,7 +1295,7 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
 		if (!np) {
 			// does not exist yet
 			if (reclen == 0) {
-				return ERROR_RECORD_NOT_PRESENT;
+				return CBM_ERROR_RECORD_NOT_PRESENT;
 			}
 		} else {
 			if (reclen == 0) {
@@ -1305,7 +1305,7 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
 				// there is a rec len in the open and in the file
 				// so they need to be the same
 				if (reclen != file->Slot.recordlen) {
-					return ERROR_RECORD_NOT_PRESENT;
+					return CBM_ERROR_RECORD_NOT_PRESENT;
 				}
 			}
 		}
@@ -1316,20 +1316,20 @@ static int di_open_file(endpoint_t *ep, int tfd, BYTE *filename, BYTE *opts, int
    if (file_required && np == 0)
    {
      log_error("Unable to open '%s': file not found\n", filename);
-     return ERROR_FILE_NOT_FOUND;
+     return CBM_ERROR_FILE_NOT_FOUND;
    }
    if (file_must_not_exist && np > 0)
    {
      log_error("Unable to open '%s': file exists\n", filename);
-     return ERROR_FILE_EXISTS;
+     return CBM_ERROR_FILE_EXISTS;
    }
    if (!np)
    {
       rv = CreateEntry(diep, tfd, filename, type, reclen);
-      if (rv != ERROR_OK) return rv;
+      if (rv != CBM_ERROR_OK) return rv;
    }
    if (di_cmd == FS_OPEN_AP) PosAppend(diep,file);
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 // **********
@@ -1347,9 +1347,9 @@ static int di_opendir(endpoint_t *ep, int tfd, const char *buf, const char *opts
       if (buf && buf[0]) strcpy((char *)file->dirpattern, buf);
       else               strcpy((char *)file->dirpattern, "*");
       file->is_first = 1;
-      return ERROR_OK;
+      return CBM_ERROR_OK;
    }
-   else return ERROR_FAULT;
+   else return CBM_ERROR_FAULT;
 }
 
 char *extension[6] = { "DEL","SEQ","PRG","USR","REL","CBM" };
@@ -1478,7 +1478,7 @@ int read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
    File *file = find_file(diep, tfd);
    log_debug("read_dir_entry(%d)\n",tfd);
 
-   if (!file) return -ERROR_FAULT;
+   if (!file) return -CBM_ERROR_FAULT;
 
    *eof = READFLAG_DENTRY;
 
@@ -1541,7 +1541,7 @@ int WriteByte(di_endpoint_t *diep, File *f, BYTE ch)
       f->chp = 0;
       oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
       block = FindFreeBlock(diep,f);
-      if (block < 0) return ERROR_DISK_FULL;
+      if (block < 0) return CBM_ERROR_DISK_FULL;
       di_fseek_pos(diep,oldpos);
       fwrite(&f->cht,1,1,diep->Ip);
       fwrite(&f->chs,1,1,diep->Ip);
@@ -1553,7 +1553,7 @@ int WriteByte(di_endpoint_t *diep, File *f, BYTE ch)
    }
    fwrite(&ch,1,1,diep->Ip);
    ++f->chp;
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 // ***********
@@ -1588,20 +1588,20 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
    {
       di_write_block(diep,buf,len);
       if (is_eof) di_save_buffer(diep);
-      return ERROR_OK;
+      return CBM_ERROR_OK;
    }
 
    File *f = find_file(diep, tfd);
    di_fseek_tsp(diep,f->cht,f->chs,2+f->chp);
    for (i=0 ; i < len ; ++i)
-      if (WriteByte(diep, f, (BYTE)buf[i])) return -ERROR_DISK_FULL;
+      if (WriteByte(diep, f, (BYTE)buf[i])) return -CBM_ERROR_DISK_FULL;
 
    if (is_eof)
    {
       log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
       di_close(ep, tfd);
    }
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 // *************
@@ -1624,10 +1624,10 @@ static int di_block_free(di_endpoint_t *diep, BYTE Track, BYTE Sector)
 
       SyncBAM(diep);
 
-      return ERROR_OK;
+      return CBM_ERROR_OK;
    }
 
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 // **************
@@ -1677,7 +1677,7 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
       }
    }  while (found && NextSlot(diep,&slot));
    SyncBAM(diep);
-   return ERROR_SCRATCHED;  // FILES SCRATCHED message
+   return CBM_ERROR_SCRATCHED;  // FILES SCRATCHED message
 }
 
 // *********
@@ -1699,7 +1699,7 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    FirstSlot(diep,&slot);
    if ((found = MatchSlot(diep,&slot,(BYTE *)nameto)))
    {
-      return ERROR_FILE_EXISTS;
+      return CBM_ERROR_FILE_EXISTS;
    }
 
    FirstSlot(diep,&slot);
@@ -1710,9 +1710,9 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
       memset(slot.filename,0xA0,16); // fill filename with $A0
       memcpy(slot.filename,nameto,n);
       WriteSlot(diep,&slot);
-      return ERROR_OK;
+      return CBM_ERROR_OK;
    }
-   return ERROR_FILE_NOT_FOUND;
+   return CBM_ERROR_FILE_NOT_FOUND;
 }
 
 // *****
@@ -1722,7 +1722,7 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
 static int di_cd(endpoint_t *ep, char *buf)
 {
    log_debug("di_cd %p %s\n",ep,buf);
-   return ERROR_OK;
+   return CBM_ERROR_OK;
 }
 
 

@@ -487,7 +487,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	} else {
 		log_error("fp is NULL on read attempt\n");
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 
@@ -570,9 +570,9 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 
 		printf("multi add returns %d\n", rv);
 
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 /**
@@ -587,7 +587,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
 				len, FS_DIR_NAME+1);
-		return -ERROR_FAULT;
+		return -CBM_ERROR_FAULT;
 	}
 
 	// prepare dir entry
@@ -631,7 +631,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
-					return -ERROR_DIR_ERROR;
+					return -CBM_ERROR_DIR_ERROR;
 				}
 			}
 			// find length of name
@@ -723,9 +723,9 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 
 		printf("multi add returns %d\n", rv);
 
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 
@@ -801,7 +801,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int iseof) {
 	} else {
 		log_error("fp is NULL on read attempt\n");
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 #endif
@@ -854,7 +854,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 		}
 		if (plen + l + 1 > MAX_BUFFER_SIZE) {
 			log_error("new path for chdir too long: %d\n", plen+l+1);
-			return ERROR_FILE_NAME_TOO_LONG;
+			return CBM_ERROR_FILE_NAME_TOO_LONG;
 		}
 		strcat(cep->path_buffer, "/");
 		strncat(cep->path_buffer, p, plen);
@@ -867,7 +867,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 	log_debug("CHDIR: New path is '%s'\n", cep->path_buffer);
 
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 

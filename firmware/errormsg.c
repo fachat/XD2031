@@ -53,31 +53,31 @@ static const uint8_t IN_ROM tokens[] = {
 };
 
 static const uint8_t IN_ROM messages[] = {
-	H(ERROR_OK),			' ','O','K',
-	H(ERROR_SCRATCHED), 		2,'S',' ','S','C','R','A','T','C','H','E','D',
-	H(ERROR_WRITE_PROTECT),		3,'P','R','O','T','E','C','T',' ',1,
-	H(ERROR_WRITE_ERROR),		3,1,		// WRITE ERROR
-	H(ERROR_SYNTAX_UNKNOWN),
-	H(ERROR_SYNTAX_NONAME),
-	H(ERROR_SYNTAX_INVAL),
-	H(ERROR_SYNTAX_DIR_SEPARATOR),
-	H(ERROR_FILE_NAME_TOO_LONG),	4,1,		// SYNTAX ERROR
-	H(ERROR_FILE_NOT_FOUND),	2,' ',5,7,	// FILE NOT FOUND
-	H(ERROR_FILE_NOT_OPEN),		2,' ',5,6,	// FILE NOT OPEN
-	H(ERROR_FILE_EXISTS),		2,' ','E','X','I','S','T','S',
-	H(ERROR_FILE_TYPE_MISMATCH),	2,' ','T','Y','P','E',' ','M','I','S','M','A','T','C','H',
-	H(ERROR_DIR_NOT_EMPTY),		8,  5,'E','M','T','Y',
-	H(ERROR_NO_PERMISSION),		9,'P','E','R','M','I','S','S','I','O','N',
-	H(ERROR_FAULT),			'G','E','N','E','R','A','L',' ','F','A','U','L','T',
-	H(ERROR_NO_CHANNEL),		9,'C','H','A','N','N','E','L',
-	H(ERROR_DIR_ERROR),		8,1,
-	H(ERROR_DISK_FULL),		'D','I','S','K',' ','F','U','L','L',
-	H(ERROR_DRIVE_NOT_READY),	'D','R','I','V','E',' ',  5,'R','E','A','D','Y',
-	H(ERROR_NO_BLOCK),		9,'B','L','O','C','K',
-	H(ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
+	H(CBM_ERROR_OK),			' ','O','K',
+	H(CBM_ERROR_SCRATCHED), 		2,'S',' ','S','C','R','A','T','C','H','E','D',
+	H(CBM_ERROR_WRITE_PROTECT),		3,'P','R','O','T','E','C','T',' ',1,
+	H(CBM_ERROR_WRITE_ERROR),		3,1,		// WRITE ERROR
+	H(CBM_ERROR_SYNTAX_UNKNOWN),
+	H(CBM_ERROR_SYNTAX_NONAME),
+	H(CBM_ERROR_SYNTAX_INVAL),
+	H(CBM_ERROR_SYNTAX_DIR_SEPARATOR),
+	H(CBM_ERROR_FILE_NAME_TOO_LONG),	4,1,		// SYNTAX ERROR
+	H(CBM_ERROR_FILE_NOT_FOUND),	2,' ',5,7,	// FILE NOT FOUND
+	H(CBM_ERROR_FILE_NOT_OPEN),		2,' ',5,6,	// FILE NOT OPEN
+	H(CBM_ERROR_FILE_EXISTS),		2,' ','E','X','I','S','T','S',
+	H(CBM_ERROR_FILE_TYPE_MISMATCH),	2,' ','T','Y','P','E',' ','M','I','S','M','A','T','C','H',
+	H(CBM_ERROR_DIR_NOT_EMPTY),		8,  5,'E','M','T','Y',
+	H(CBM_ERROR_NO_PERMISSION),		9,'P','E','R','M','I','S','S','I','O','N',
+	H(CBM_ERROR_FAULT),			'G','E','N','E','R','A','L',' ','F','A','U','L','T',
+	H(CBM_ERROR_NO_CHANNEL),		9,'C','H','A','N','N','E','L',
+	H(CBM_ERROR_DIR_ERROR),		8,1,
+	H(CBM_ERROR_DISK_FULL),		'D','I','S','K',' ','F','U','L','L',
+	H(CBM_ERROR_DRIVE_NOT_READY),	'D','R','I','V','E',' ',  5,'R','E','A','D','Y',
+	H(CBM_ERROR_NO_BLOCK),		9,'B','L','O','C','K',
+	H(CBM_ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
 					'O','R',' ','S','E','C','T','O','R',
-	H(ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
-	H(ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
+	H(CBM_ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
+	H(CBM_ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
 	0
 };
 
@@ -141,7 +141,7 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
   	msg = appendnumber(msg,errornum);
   	*msg++ = ',';
 
-	if (errornum == ERROR_DOSVERSION) {
+	if (errornum == CBM_ERROR_DOSVERSION) {
 		char *p = (char*) versionstr;
 		uint8_t c;
 		while ((c = rom_read_byte(p++)) != 0) {
@@ -161,7 +161,7 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
   	// end string marker
   	*msg = 0;
 
-	if (errornum != ERROR_OK && errornum != ERROR_DOSVERSION && errornum != ERROR_SCRATCHED) {
+	if (errornum != CBM_ERROR_OK && errornum != CBM_ERROR_DOSVERSION && errornum != CBM_ERROR_SCRATCHED) {
 		led_set(ERROR);
 
 		term_printf("Setting status to: %s\n", err->error_buffer);

@@ -404,7 +404,7 @@ static void cmd_dispatch(char *buf, int fd) {
 	retbuf[FSP_CMD] = FS_REPLY;
 	retbuf[FSP_LEN] = FSP_DATA + 1;		// 4 byte default packet
 	retbuf[FSP_FD] = tfd;
-	retbuf[FSP_DATA] = ERROR_FAULT;
+	retbuf[FSP_DATA] = CBM_ERROR_FAULT;
 
 	int readflag = 0;
 	int outdeleted = 0;
@@ -580,7 +580,7 @@ static void cmd_dispatch(char *buf, int fd) {
 			log_info("CLOSE(%d)\n", tfd);
 			prov->close(ep, tfd);
 			channel_free(tfd);
-			retbuf[FSP_DATA] = ERROR_OK;
+			retbuf[FSP_DATA] = CBM_ERROR_OK;
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
 		}
@@ -596,7 +596,7 @@ static void cmd_dispatch(char *buf, int fd) {
 				log_info("DELETE(%s)\n", name);
 
 				rv = prov->scratch(ep, name, &outdeleted);
-				if (rv == ERROR_SCRATCHED) {
+				if (rv == CBM_ERROR_SCRATCHED) {
 					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
 					retbuf[FSP_LEN] = FSP_DATA + 2;
 				} else 
@@ -628,7 +628,7 @@ static void cmd_dispatch(char *buf, int fd) {
 					// drivefrom is UNUSED, then same as driveto
 					log_warn("Drive spec combination not supported\n");
 
-					rv = ERROR_DRIVE_NOT_READY;
+					rv = CBM_ERROR_DRIVE_NOT_READY;
 				} else {
 				
 					log_info("RENAME(%s -> %s)\n", namefrom, name);
@@ -765,7 +765,7 @@ static void cmd_dispatch(char *buf, int fd) {
 		log_info("CHARSET: %s\n", buf+FSP_DATA);
 		if (tfd == FSFD_CMD) {
 			provider_set_ext_charset(buf+FSP_DATA);
-			retbuf[FSP_DATA] = ERROR_OK;
+			retbuf[FSP_DATA] = CBM_ERROR_OK;
 		}
 		break;
 	default:

@@ -182,7 +182,7 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 		if (newep) {
 			newep->is_temporary = 0;
 		} else {
-			return ERROR_FAULT;
+			return CBM_ERROR_FAULT;
 		}
 	}
 
@@ -208,9 +208,9 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 				break;
                 	}
         	}
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 void provider_cleanup(endpoint_t *ep) {

@@ -101,7 +101,7 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 int main()
 {
-	int8_t er = ERROR_OK;
+	int8_t er = CBM_ERROR_OK;
 
 	// Initialisierungen
 	//

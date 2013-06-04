@@ -95,7 +95,7 @@ static uint8_t secaddr_offset_counter;
 void bus_init() {
 	secaddr_offset_counter = 0;
 
-	set_error(&error, ERROR_DOSVERSION);
+	set_error(&error, CBM_ERROR_DOSVERSION);
 }
 
 uint8_t get_default_device_address(void) {
@@ -136,7 +136,7 @@ static volatile bus_t *bus_for_irq;
 
 static void _cmd_callback(int8_t errnum, uint8_t *rxdata) {
     	bus_for_irq->errnum = errnum;
-    	if (errnum == ERROR_SCRATCHED) {
+    	if (errnum == CBM_ERROR_SCRATCHED) {
 		// files deleted
 		if (rxdata != NULL) {
 			// this is the "number of files deleted" parameter
@@ -278,7 +278,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
       if (bus->channel != NULL) {
 	bus->channel = channel_put(bus->channel, data, with_eoi);
 	int8_t err = channel_last_push_error(bus->channel);
-	if (err != ERROR_OK) {
+	if (err != CBM_ERROR_OK) {
 	  set_error(&error, err);
 	  st |= STAT_WRTIMEOUT;
 	}
@@ -315,7 +315,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			if (error.error_buffer[error.readp] == 0) {
 				// finished reading the error message
 				// set OK
-				set_error(&error, ERROR_OK);
+				set_error(&error, CBM_ERROR_OK);
 			}
 		}
 	} else {
@@ -323,7 +323,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		// if still NULL, error
 		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
-		set_error(&error, ERROR_FILE_NOT_OPEN);
+		set_error(&error, CBM_ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
 #ifdef DEBUG_BUS
@@ -338,7 +338,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				channel->channel_no, st);
 #endif
 			int8_t err = channel_last_pull_error(channel);
-			if (err != ERROR_OK) {
+			if (err != CBM_ERROR_OK) {
 				set_error(&error, err);
 			}
 		} else {
@@ -357,7 +357,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				if (!channel_next(channel, preload & BUS_SYNC)) {
 					// no further data on channel available
 					int8_t err = channel_last_pull_error(channel);
-					if (err != ERROR_OK) {
+					if (err != CBM_ERROR_OK) {
 						set_error(&error, err);
 					}
 				}

@@ -40,41 +40,41 @@
  */
 
 typedef enum {
-	ERROR_OK 			= 0,
-	ERROR_SCRATCHED			= 1,
+	CBM_ERROR_OK 			= 0,
+	CBM_ERROR_SCRATCHED			= 1,
 	// in CBM DOS error numbers 20-29 are translated from FDC errors (mostly unused here)
-//	ERROR_WRITE_VERIFY		= 25,
-	ERROR_WRITE_PROTECT		= 26,
-	ERROR_WRITE_ERROR		= 28,
+//	CBM_ERROR_WRITE_VERIFY		= 25,
+	CBM_ERROR_WRITE_PROTECT		= 26,
+	CBM_ERROR_WRITE_ERROR		= 28,
 	// error numbers 30-34 are all just "SYNTAX ERROR" on the 1541
-	ERROR_SYNTAX_UNKNOWN		= 30,
-	ERROR_SYNTAX_NONAME		= 34,
-	ERROR_FILE_NAME_TOO_LONG	= 38,	// new for ENAMETOOLONG
-	ERROR_FILE_NOT_FOUND		= 39,
+	CBM_ERROR_SYNTAX_UNKNOWN		= 30,
+	CBM_ERROR_SYNTAX_NONAME		= 34,
+	CBM_ERROR_FILE_NAME_TOO_LONG	= 38,	// new for ENAMETOOLONG
+	CBM_ERROR_FILE_NOT_FOUND		= 39,
 	// new problems
-	ERROR_SYNTAX_INVAL		= 40,	// EINVAL
-	ERROR_SYNTAX_DIR_SEPARATOR	= 41,	// name contains directory separator
+	CBM_ERROR_SYNTAX_INVAL		= 40,	// EINVAL
+	CBM_ERROR_SYNTAX_DIR_SEPARATOR	= 41,	// name contains directory separator
 	// REL file errors
-	ERROR_RECORD_NOT_PRESENT	= 50,	// also when REL file rec lengths not match
-	ERROR_OVERFLOW_IN_RECORD	= 51,
+	CBM_ERROR_RECORD_NOT_PRESENT	= 50,	// also when REL file rec lengths not match
+	CBM_ERROR_OVERFLOW_IN_RECORD	= 51,
 
-	ERROR_DIR_NOT_EMPTY		= 57,	// new for ENOTEMPTY
-	ERROR_NO_PERMISSION		= 58,	// new for EACCESS
-	ERROR_FAULT			= 59,	// new for EFAULT and others (fallback)
+	CBM_ERROR_DIR_NOT_EMPTY		= 57,	// new for ENOTEMPTY
+	CBM_ERROR_NO_PERMISSION		= 58,	// new for EACCESS
+	CBM_ERROR_FAULT			= 59,	// new for EFAULT and others (fallback)
 
 	// DOS file level problems
-//	ERROR_WRITE_FILE_OPEN		= 60,
-	ERROR_FILE_NOT_OPEN		= 61,	
-	ERROR_FILE_EXISTS		= 63,	// also used for EEXIST
-	ERROR_FILE_TYPE_MISMATCH	= 64,
-	ERROR_NO_BLOCK			= 65,	// error for FS_BLOCK_ALLOCATE
-	ERROR_ILLEGAL_T_OR_S		= 66,	// error for FS_BLOCK_ALLOCATE
+//	CBM_ERROR_WRITE_FILE_OPEN		= 60,
+	CBM_ERROR_FILE_NOT_OPEN		= 61,	
+	CBM_ERROR_FILE_EXISTS		= 63,	// also used for EEXIST
+	CBM_ERROR_FILE_TYPE_MISMATCH	= 64,
+	CBM_ERROR_NO_BLOCK			= 65,	// error for FS_BLOCK_ALLOCATE
+	CBM_ERROR_ILLEGAL_T_OR_S		= 66,	// error for FS_BLOCK_ALLOCATE
 	// DOS/disk problems and status
-	ERROR_NO_CHANNEL		= 70,
-	ERROR_DIR_ERROR			= 71,
-	ERROR_DISK_FULL			= 72,
-	ERROR_DOSVERSION		= 73,
-	ERROR_DRIVE_NOT_READY		= 74
+	CBM_ERROR_NO_CHANNEL		= 70,
+	CBM_ERROR_DIR_ERROR			= 71,
+	CBM_ERROR_DISK_FULL			= 72,
+	CBM_ERROR_DOSVERSION		= 73,
+	CBM_ERROR_DRIVE_NOT_READY		= 74
 } errno_t;
 
 

@@ -59,11 +59,11 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpac
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
 		if (errorno < 0 || rxpacket == NULL) {
-                	p->last_pull_errorno = ERROR_FAULT;
+                	p->last_pull_errorno = CBM_ERROR_FAULT;
 		} else if (packet_get_type(rxpacket) == FS_REPLY) {
 			p->last_pull_errorno = packet_get_buffer(rxpacket)[0];
 		} else {
-			p->last_pull_errorno = ERROR_OK;
+			p->last_pull_errorno = CBM_ERROR_OK;
 		}
 
 		// TODO: only if errorno == 0?
@@ -423,11 +423,11 @@ static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacke
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
 		if (errnum < 0 || rxpacket == NULL) {
-                	p->last_push_errorno = ERROR_FAULT;
+                	p->last_push_errorno = CBM_ERROR_FAULT;
 		} else if (packet_get_type(rxpacket) == FS_REPLY) {
 			p->last_push_errorno = packet_get_buffer(rxpacket)[0];
 		} else {
-			p->last_push_errorno = ERROR_OK;
+			p->last_push_errorno = CBM_ERROR_OK;
 		}
 
                 // TODO: only if errorno == 0?
@@ -465,7 +465,7 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 
 	}
 
-	if (channel_last_push_error(chan) != ERROR_OK) {
+	if (channel_last_push_error(chan) != CBM_ERROR_OK) {
 		return NULL;
 	}
 	return chan;

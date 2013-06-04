@@ -290,15 +290,15 @@ char *os_realpath(const char *path)
         //Convert MS errors into standard errors
         switch (GetLastError())
         {
-          case ERROR_FILE_NOT_FOUND:
+          case CBM_ERROR_FILE_NOT_FOUND:
             errno = ENOENT;
             break;
 
-          case ERROR_PATH_NOT_FOUND: case ERROR_INVALID_DRIVE:
+          case CBM_ERROR_PATH_NOT_FOUND: case CBM_ERROR_INVALID_DRIVE:
             errno = ENOTDIR;
             break;
 
-          case ERROR_ACCESS_DENIED:
+          case CBM_ERROR_ACCESS_DENIED:
             errno = EACCES;
             break;
 
