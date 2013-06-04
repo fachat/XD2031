@@ -140,6 +140,7 @@ signed long long os_free_disk_space (char *path) {
 // ========================================================================
 
 #include <windows.h>
+#include <stdio.h>
 #include <limits.h>
 #include <sys/stat.h>
 
