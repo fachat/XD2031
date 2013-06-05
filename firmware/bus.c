@@ -41,7 +41,6 @@
 #include <ctype.h>
 
 #include "channel.h"
-#include "status.h"
 #include "errormsg.h"
 #include "cmd.h"
 #include "cmd2.h"
