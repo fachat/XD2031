@@ -6,7 +6,19 @@ TOOLSDIR=xd2031/tools
 # The space separeted list of directories in DROPDIR will be removed at uninstall too
 DROPDIR=xd2031
 
-CC=gcc
+# To cross compile on Linux for Windows with MXE installed,
+# call this Makefile with 
+# make WIN=y
+ifeq ($(WIN),y)
+	CROSS=i686-pc-mingw32-
+	FSSER_EXE=fsser.exe
+endif
+
+CC=$(CROSS)gcc
+LD=$(CROSS)ld
+AR=$(CROSS)ar
+PKG_CONFIG=$(CROSS)pkg-config
+
 FSSER_EXE=fsser
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
@@ -25,11 +37,6 @@ ifeq ($(UNAME),Darwin)
 endif
 ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
-endif
-
-ifeq ($(WIN),y)
-	CC=mingw32-gcc.exe
-	FSSER_EXE=fsser.exe
 endif
 
 # fstcp builds a version that listens on a TCP/IP port - but there is not
