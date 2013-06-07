@@ -41,11 +41,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "fscmd.h"
 #include "privs.h"
 #include "log.h"
-#include "byte.h"
 #include "charconvert.h"
 #include "provider.h"
 #include "mem.h"

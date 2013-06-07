@@ -33,9 +33,9 @@
  * 	"?" - single character is ignored
  */
 
-static int8_t classic_match(const uint8_t *x, const uint8_t *y) {
+static int8_t classic_match(const char *x, const char *y) {
 	int i = 0;	// current position
-	uint8_t a,b;
+	char a,b;
 
 	//printf("classic match between '%s' and '%s'\n", (char*)x, (char*)y);
 
@@ -60,5 +60,5 @@ static int8_t classic_match(const uint8_t *x, const uint8_t *y) {
 int8_t compare_pattern(const char *name, const char *pattern) {
 	// 1581 matching style not yet implemented
 	// so do always a "classic" matching:
-	return classic_match((uint8_t *)name, (uint8_t *)pattern);
+	return classic_match(name, pattern);
 }

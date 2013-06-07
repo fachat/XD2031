@@ -28,7 +28,6 @@
 #include <ctype.h>
 
 #include "debug.h"
-#include "byte.h"
 #include "petscii.h"
 
 #if DEBUG

@@ -33,7 +33,6 @@
 #include "errors.h"
 #include "wireformat.h"
 
-#include "byte.h"
 #include "charconvert.h"
 
 

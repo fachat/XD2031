@@ -28,7 +28,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "byte.h"
 #include "charconvert.h"
 #include "petscii.h"
 
@@ -58,7 +57,7 @@ charset_t cconv_getcharset(const char *charsetname) {
 
 
 // conversion functions
-void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+void cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_identity(%s)\n", in);
 	if (in != out) {
 		// not an in-place conversion
@@ -67,18 +66,18 @@ void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outl
 	}
 }
 
-static void cconv_ascii2petscii(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+static void cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_ascii2petscii(%s)\n", in);
-	BYTE i = 0;
+	uint8_t i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = ascii_to_petscii(*(in++));
 		i++;
 	}
 }
 
-static void cconv_petscii2ascii(const char *in, const BYTE inlen, char *out, const BYTE outlen) {
+static void cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_petscii2ascii(%s)\n", in);
-	BYTE i = 0;
+	uint8_t i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = petscii_to_ascii(*(in++));
 		i++;

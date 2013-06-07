@@ -31,7 +31,7 @@
 /**
  * simple conversion
  */
-static inline BYTE petscii_to_ascii(BYTE v) {
+static inline uint8_t petscii_to_ascii(uint8_t v) {
 	if (v < 0x41) return v;	
 	if (v < 0x5b) return v+0x20;	// lower PETSCII to lower ASCII
 	if (v < 0x61) return v;
@@ -44,7 +44,7 @@ static inline BYTE petscii_to_ascii(BYTE v) {
 /**
  * simple conversion
  */
-static inline BYTE ascii_to_petscii(BYTE v) {
+static inline uint8_t ascii_to_petscii(uint8_t v) {
 	if (v < 0x41) return v;	
 	if (v < 0x5b) return v+0x80;	// upper ASCII to upper PETSCII
 	if (v < 0x61) return v;
@@ -55,7 +55,7 @@ static inline BYTE ascii_to_petscii(BYTE v) {
 /**
  * string ASCII --> PETSCII
  */
-static inline void str_ascii_to_petscii(BYTE *a, BYTE *b) {
+static inline void str_ascii_to_petscii(uint8_t *a, uint8_t *b) {
    while (*a) *b++ = ascii_to_petscii(*a++);
    *b = 0;
 }
@@ -63,7 +63,7 @@ static inline void str_ascii_to_petscii(BYTE *a, BYTE *b) {
 /**
  * string PETSCII --> ASCII
  */
-static inline void str_petscii_to_ascii(BYTE *a, BYTE *b) {
+static inline void str_petscii_to_ascii(uint8_t *a, uint8_t *b) {
    while (*a) *b++ = petscii_to_ascii(*a++);
    *b = 0;
 }

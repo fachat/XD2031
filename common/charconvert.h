@@ -27,9 +27,7 @@
 #ifndef CHARCONVERT_H
 #define	CHARCONVERT_H
 
-// I know this is awkward, but I currently don't have another idea
-// to avoid including byte.h everywhere 
-#include "byte.h"
+#include <inttypes.h>
 
 // charset number is defined by supported charset table, -1 is unsupported
 typedef signed char charset_t;
@@ -46,11 +44,11 @@ charset_t cconv_getcharset(const char *charsetname);
 // must work with in = out buffer (i.e. in place conversion), zero-bytes in the input
 // that must be converted to zero in the output (so multiple strings are converted 
 // in one call), 
-typedef void (*charconv_t)(const char *in, const BYTE inlen, char *out, const BYTE outlen);
+typedef void (*charconv_t)(const char *in, const uint8_t inlen, char *out, const uint8_t outlen);
 
 // fallback
 //charconv_t cconv_identity;
-void cconv_identity(const char *in, const BYTE inlen, char *out, const BYTE outlen);
+void cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen);
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);

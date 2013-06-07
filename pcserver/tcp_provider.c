@@ -49,7 +49,6 @@
 #include "errors.h"
 #include "mem.h"
 
-#include "byte.h"
 #include "charconvert.h"
 
 #include "log.h"

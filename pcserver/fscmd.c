@@ -39,6 +39,7 @@
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "wireformat.h"
 #include "fscmd.h"

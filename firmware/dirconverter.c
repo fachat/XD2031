@@ -28,7 +28,6 @@
 #include <string.h>
 
 #include "packet.h"
-#include "byte.h"
 #include "petscii.h"
 #include "version.h"
 #include "provider.h"

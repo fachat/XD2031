@@ -44,8 +44,6 @@
 
 enum boolean { FALSE, TRUE };
 
-typedef char BYTE;   // actually a signed char due CFLAGS -funsigned-char
-
 
 static inline int os_mkdir(const char *pathname, mode_t mode) {
 	return mkdir(pathname, mode);
@@ -84,8 +82,6 @@ static inline void os_sync(void) {
 #include "mem.h"
 
 enum boolean { FALSE, TRUE };
-
-typedef char BYTE;   // actually a signed char due CFLAGS -funsigned-char
 
 static inline int os_mkdir(const char *pathname, mode_t mode) {
 	return mkdir(pathname, mode);
