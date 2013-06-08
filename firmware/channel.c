@@ -475,7 +475,9 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 
 		uint8_t channo = chan->channel_no;
 
-		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
+		packet_set_filled(curpack, channo, 
+			(forceflush & PUT_FLUSH) ? FS_EOF : FS_WRITE, 
+			packet_get_contentlen(curpack));
 
 		// wait until the other packet has been replied to,
 		// i.e. it has been sent, the buffer is free again 

@@ -774,8 +774,8 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 			return -CBM_ERROR_WRITE_ERROR;
 		  }
 		  if(is_eof) {
-		    log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
-		    close_fds(ep, tfd);
+		    log_debug("fd=%d received an EOF on write file (ignored)\n", tfd);
+		    //close_fds(ep, tfd);
 		  }
 		  return CBM_ERROR_OK;
 		}
