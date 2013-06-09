@@ -666,6 +666,19 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 	callback(channelno, 0, rxbuf);	
 }
 
+// proxies a relative file through the bufcmd layer
+endpoint_t *bufcmd_open_relative(endpoint_t *ep, uint8_t channel_no, uint16_t reclen) {
+	// NOP (for now)
+	return ep;
+}
+
+// execute a P command
+int8_t bufcmd_position(bus_t *bus, char *cmdpars, errormsg_t *errormsg) {
+	// NOP for now
+	return CBM_ERROR_DRIVE_NOT_READY;
+}
+
+
 static charset_t charset(void *epdata) {
 	return CHARSET_ASCII;
 }

@@ -275,6 +275,12 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
+		// proxy relative files through the bufcmd layer
+		if (nameinfo.type == 'L') {
+			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
+			endpoint = bufcmd_open_relative(endpoint, channel_no, nameinfo.recordlen);
+		}
+
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
 			debug_puts("FILE OPEN ERROR");
