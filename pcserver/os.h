@@ -23,12 +23,22 @@
 #ifndef OS_H
 #define OS_H
 
+/* 
+
+  This file contains
+
+  - instructions to include headers for the specific operating system
+  - shared code for POSIX systems (Linux, OS X)
+  - specifics for Linux, Apple OX X and Windows
+  - meta functions/prototypes for all operating systems
+
+*/
+
 // =======================================================================
-//	LINUX and possibly other POSIX compatible systems
+//	INCLUDES FOR LINUX and possibly other POSIX compatible systems
 // =======================================================================
 
 #if !defined(_WIN32) && !defined(__APPLE__)
-
 #define	__USE_POSIX
 #define _XOPEN_SOURCE 
 #define _XOPEN_SOURCE_EXTENDED
@@ -39,35 +49,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
-
 #include "mem.h"
-
-enum boolean { FALSE, TRUE };
-
-
-static inline int os_mkdir(const char *pathname, mode_t mode) {
-	return mkdir(pathname, mode);
-}
-
-
-static inline char *os_realpath (const char *path) {
-	return realpath(path, NULL);
-}
-
-
-static inline void os_sync(void) {
-	sync();
-}
-
 #endif
 
-
 // =======================================================================
-// 	APPLE OS X
+// 	INCLUDES FOR APPLE OS X
 // =======================================================================
 
 #ifdef __APPLE__ // OS X 10.6.8, Darwin Kernel Version 10.8.0
-
 #define	__USE_POSIX
 #define _XOPEN_SOURCE 
 #define _XOPEN_SOURCE_EXTENDED
@@ -78,8 +67,30 @@ static inline void os_sync(void) {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syslimits.h>
-
 #include "mem.h"
+#endif
+
+// =======================================================================
+//	INCLUDES FOR WIN32
+// ======================================================================= 
+
+#ifdef _WIN32
+#include <stdlib.h>
+#include <windows.h>
+#include <io.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+#include "mem.h"
+#endif
+
+
+
+// =======================================================================
+//	COMMON POSIX
+// =======================================================================
+
+#ifndef _WIN32
 
 enum boolean { FALSE, TRUE };
 
@@ -87,30 +98,38 @@ static inline int os_mkdir(const char *pathname, mode_t mode) {
 	return mkdir(pathname, mode);
 }
 
-
-static inline char *os_realpath (const char *path) {
-	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
-}
-
-
 static inline void os_sync(void) {
 	sync();
 }
 
-#endif
+
+// -----------------------------------------------------------------------
+//	LINUX
+// -----------------------------------------------------------------------
+
+#ifndef __APPLE__
+static inline char *os_realpath (const char *path) {
+	return realpath(path, NULL);
+}
+#endif // LINUX
+
+// -----------------------------------------------------------------------
+//	APPLE OS X
+// -----------------------------------------------------------------------
+
+#ifdef __APPLE__
+static inline char *os_realpath (const char *path) {
+	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
+}
+#endif // APPLE OS X
+
+#endif // POSIX
 
 // =======================================================================
 //	WIN32
 // ======================================================================= 
 
 #ifdef _WIN32
-
-#include <stdlib.h>
-#include <windows.h>
-#include <io.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
 
 // realpath contained in os.c
 char *os_realpath(const char *path); 
@@ -180,7 +199,7 @@ void          rewinddir(DIR *);
 
 
 // =======================================================================
-//	COMMON
+//	COMMON FOR ALL OPERATING SYSTEMS
 // =======================================================================
 
 // return a const char pointer to the home directory of the user 
