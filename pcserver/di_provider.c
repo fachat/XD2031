@@ -48,6 +48,7 @@
 #include "wireformat.h"
 #include "channel.h"
 #include "wildcard.h"
+#include "openpars.h"
 
 #include "log.h"
 
@@ -1189,54 +1190,6 @@ void di_pos_append(di_endpoint_t *diep, File *f)
    log_debug("di_pos_append (%d/%d) %d\n",t,s,ns);
 }
 
-// ************
-// di_open_file
-// ************
-
-static void di_process_options(uint8_t *opts, uint8_t *type, uint8_t *reclen) {
-	uint8_t *p = opts;
-	uint8_t typechar;
-	int reclenw;
-	int n;
-	uint8_t *t;
-
-	while (*p != 0) {
-		switch(*(p++)) {
-		case 'T':
-			if (*(p++) == '=') {
-				typechar = *(p++);
-				switch(typechar) {
-				case 'U':	*type = FS_DIR_TYPE_USR; break;
-				case 'P':	*type = FS_DIR_TYPE_PRG; break;
-				case 'S':	*type = FS_DIR_TYPE_SEQ; break;
-				case 'L':	
-					*type = FS_DIR_TYPE_REL; 
-					n=sscanf((char*)p, "%d", &reclenw);
-					if (n == 1 && reclenw > 0 && reclenw < 255) {
-						*reclen = reclenw;
-					}
-					t = (uint8_t*) strchr((char*)p, ',');
-					if (t == NULL) {
-						t = p + strlen((char*)p);
-					}
-					p = t;
-					break;
-				default:
-					log_warn("Unknown open file type option %c\n", typechar);
-					break;
-				}
-			}
-			break;
-		case ',':
-			p++;
-			break;
-		default:
-			// syntax error
-			log_warn("error parsing file open options %s\n", opts);
-			return;
-		}
-	}
-}
 
 static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opts, int di_cmd)
 {
@@ -1245,7 +1198,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    uint8_t type = FS_DIR_TYPE_PRG;	// PRG
    uint8_t reclen = 0;		// REL record length (default 0 means is not set)
 
-   di_process_options(opts, &type, &reclen);
+   openpars_process_options(opts, &type, &reclen);
  
    log_info("OpenFile(..,%d,%s,%c,%d)\n", tfd, filename, type + 0x30, reclen);
    di_endpoint_t *diep = (di_endpoint_t*) ep;
