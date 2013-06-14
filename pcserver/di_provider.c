@@ -1196,11 +1196,17 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    int np,rv;
    File *file;
    uint8_t type = FS_DIR_TYPE_PRG;	// PRG
-   uint8_t reclen = 0;		// REL record length (default 0 means is not set)
+   uint16_t reclen = 0;		// REL record length (default 0 means is not set)
 
    openpars_process_options(opts, &type, &reclen);
- 
+
+
    log_info("OpenFile(..,%d,%s,%c,%d)\n", tfd, filename, type + 0x30, reclen);
+
+   if (reclen > 254) {
+	return CBM_ERROR_OVERFLOW_IN_RECORD;
+   }
+
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    file = di_reserve_file(diep, tfd);
  
@@ -1285,6 +1291,8 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 
 static int di_opendir(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
+   (void) opts;
+
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    log_debug("di_opendir(%s)\n",buf);
    File *file = di_reserve_file(diep, tfd);
@@ -1677,7 +1685,7 @@ static int di_cd(endpoint_t *ep, char *buf)
 // di_open_rd
 //***********
 
-static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts)
+static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
 {
    return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_RD);
 }
@@ -1686,7 +1694,7 @@ static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts
 // di_open_wr
 //***********
 
-static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts,
+static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen,
                         const int is_overwrite)
 {
   if (is_overwrite) return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_OW);
@@ -1697,7 +1705,7 @@ static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts
 // di_open_ap
 //***********
 
-static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts)
+static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
 {
        return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_AP);
 }
@@ -1706,7 +1714,7 @@ static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts
 // di_open_rw
 // **********
 
-static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts)
+static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
 {
        return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_RW);
 }

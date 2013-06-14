@@ -549,7 +549,10 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 	return fp;
 }
 
-static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+
+	(void) opts;
+	(void) reclen;
 
 	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {
@@ -696,6 +699,8 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 
 static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void) opts;
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = open_file(ep, tfd, buf, 1);

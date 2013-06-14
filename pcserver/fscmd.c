@@ -92,7 +92,7 @@ const char *nameofcmd(int cmdno) {
 	case FS_SETOPT:		return "SETOPT";
 	case FS_RESET:		return "RESET";
 	case FS_BLOCK:		return "BLOCK";
-	case FS_DIRECT:		return "DIRECT";
+	case FS_POSITION:	return "POSITION";
 	case FS_GETDATIM:	return "GETDATIM";
 	case FS_CHARSET:	return "CHARSET";
 	default:		return "???";
@@ -414,6 +414,7 @@ static void cmd_dispatch(char *buf, int fd) {
 	char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
 	int convlen = len - FSP_DATA-1;
+	int record = 0;
 
 	// options string just in case
 	char *options = NULL;
@@ -430,9 +431,14 @@ static void cmd_dispatch(char *buf, int fd) {
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
 					prov->name, name);
-				rv = prov->open_wr(ep, tfd, name, options, cmd == FS_OPEN_OW);
+				rv = prov->open_wr(ep, tfd, name, options, &record, cmd == FS_OPEN_OW);
 				retbuf[FSP_DATA] = rv;
-				if (rv == 0) {
+				if (rv == CBM_ERROR_OPEN_REL) {
+					retbuf[FSP_DATA+1] = record & 0xff;
+					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
+					retbuf[FSP_LEN] = FSP_DATA + 3;	
+				}
+				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
@@ -451,9 +457,14 @@ static void cmd_dispatch(char *buf, int fd) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rw(ep, tfd, name, options);
+				rv = prov->open_rw(ep, tfd, name, options, &record);
 				retbuf[FSP_DATA] = rv;
-				if (rv == 0) {
+				if (rv == CBM_ERROR_OPEN_REL) {
+					retbuf[FSP_DATA+1] = record & 0xff;
+					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
+					retbuf[FSP_LEN] = FSP_DATA + 3;	
+				}
+				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
@@ -495,9 +506,14 @@ static void cmd_dispatch(char *buf, int fd) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rd(ep, tfd, name, options);
+				rv = prov->open_rd(ep, tfd, name, options, &record);
 				retbuf[FSP_DATA] = rv;
-				if (rv == 0) {
+				if (rv == CBM_ERROR_OPEN_REL) {
+					retbuf[FSP_DATA+1] = record & 0xff;
+					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
+					retbuf[FSP_LEN] = FSP_DATA + 3;	
+				}
+				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
@@ -516,9 +532,14 @@ static void cmd_dispatch(char *buf, int fd) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
-				rv = prov->open_ap(ep, tfd, name, options);
+				rv = prov->open_ap(ep, tfd, name, options, &record);
 				retbuf[FSP_DATA] = rv;
-				if (rv == 0) {
+				if (rv == CBM_ERROR_OPEN_REL) {
+					retbuf[FSP_DATA+1] = record & 0xff;
+					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
+					retbuf[FSP_LEN] = FSP_DATA + 3;	
+				}
+				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
@@ -568,6 +589,20 @@ static void cmd_dispatch(char *buf, int fd) {
 				log_info("CLOSE_BY_EOF(%d)\n", tfd);
 			}
 			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
+			if (rv != 0) {
+				log_rv(rv);
+			}
+			retbuf[FSP_DATA] = rv;
+		}
+		break;
+	case FS_POSITION:
+		// position the read/write cursor into a file
+		ep = channel_to_endpoint(tfd);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
+			printf("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
+			rv = prov->position(ep, tfd, record);
 			if (rv != 0) {
 				log_rv(rv);
 			}
@@ -696,16 +731,16 @@ static void cmd_dispatch(char *buf, int fd) {
 			provider_cleanup(ep);
 		}
 		break;
-	case FS_DIRECT:
+	case FS_BLOCK:
 		// not file-related, so no file descriptor (tfd)
 		// we only support mapped drives (thus name is NULL)
 		ep = provider_lookup(drive, NULL);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			if (prov->direct != NULL) {
+			if (prov->block != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("DIRECT(%d,...)\n", tfd);
-				rv = prov->direct(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
+				rv = prov->block(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
 				if (rv != 0) {
 					log_rv(rv);
 				}
@@ -716,21 +751,7 @@ static void cmd_dispatch(char *buf, int fd) {
 			provider_cleanup(ep);
 		}
 		break;
-	case FS_BLOCK:
-		// file-related Block commands (e.g. U1/U2)
-		ep = channel_to_endpoint(tfd);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->block != NULL) {
-				log_info("BLOCK(%d,...)\n", tfd);
-				rv = prov->block(ep, tfd, buf+FSP_DATA);
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-		}
-		break;
+	
 	case FS_ASSIGN:
 		// assign an endpoint number (i.e. a drive number for the PET)
 		// to a filesystem provider and path

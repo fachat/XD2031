@@ -25,12 +25,13 @@
 
 #include "errors.h"
 #include "wireformat.h"
+#include "log.h"
 
 // ************
 // process options from the optional OPEN parameter string
 // ************
 
-void openpars_process_options(uint8_t *opts, uint8_t *type, uint8_t *reclen) {
+void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
         uint8_t *p = opts;
         uint8_t typechar;
         int reclenw;
@@ -49,7 +50,7 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint8_t *reclen) {
                                 case 'L':
                                         *type = FS_DIR_TYPE_REL;
                                         n=sscanf((char*)p, "%d", &reclenw);
-                                        if (n == 1 && reclenw > 0 && reclenw < 255) {
+                                        if (n == 1 && reclenw > 0 && reclenw < (2<<16)) {
                                                 *reclen = reclenw;
                                         }
                                         t = (uint8_t*) strchr((char*)p, ',');

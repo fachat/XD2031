@@ -52,6 +52,7 @@
 #include "wireformat.h"
 #include "channel.h"
 #include "os.h"
+#include "openpars.h"
 
 #include "log.h"
 
@@ -71,6 +72,7 @@ typedef struct {
 	struct dirent	*de;
 	unsigned int	is_first :1;	// is first directory entry?
 	char		*block;		// direct channel block buffer, 256 byte when allocated
+	uint16_t	recordlen;
 	unsigned char	block_ptr;
 } File;
 
@@ -102,6 +104,7 @@ static void init_fp(File *fp) {
 	fp->dp = NULL;
 	fp->block = NULL;
 	fp->block_ptr = 0;
+	fp->recordlen = 0;	// not a rel file
 }
 
 // close a file descriptor
@@ -504,6 +507,9 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 }
 
 static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
+
+	(void) is_eof;
+
 	File *file = find_file(ep, tfd);
 
 	log_debug("write_block: file=%p, len=%d\n", file, len);
@@ -547,13 +553,43 @@ static void close_fds(endpoint_t *ep, int tfd) {
 }
 
 // open a file for reading, writing, or appending
-static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
+static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int fs_cmd) {
 	int er = CBM_ERROR_FAULT;
 	File *file;
+	
+	uint16_t recordlen = 0;
+	uint8_t type;
+	openpars_process_options((const uint8_t*) opts, &type, &recordlen);
+
+	if (fs_cmd == FS_OPEN_RW) {
+		if (*buf == '#') {
+			// ok, open a direct block channel
+
+			File *file = reserve_file(ep, tfd);
+
+			int er = open_block_channel(file);
+
+			if (er) {
+				// error
+				close_fd(file);
+				log_error("Could not reserve file\n");
+			}
+			return er;
+		}
+		if (type != 'L' || recordlen <= 0) {
+			// RW is currently only supported for REL files
+			return CBM_ERROR_DRIVE_NOT_READY;
+		}
+	}
+	if (type != 'L') {
+		// no record length without relative file
+		recordlen = 0;
+	}
+	*reclen = recordlen;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	log_info("open file for fd=%d in dir %s with name %s\n", tfd, fsep->curpath, buf);
+	log_info("open file for fd=%d in dir %s with name %s (recordlen=%d)\n", tfd, fsep->curpath, buf, recordlen);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
 	os_patch_dir_separator(fullname);
@@ -612,18 +648,31 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	FILE *fp = fopen(name, options);
 	if(fp) {
 
+		if (recordlen > 0) {
+			if (fseek(fp, 0, SEEK_SET) < 0) {
+				log_errno("Could not seek a rel file!");
+				er = errno_to_error(errno);
+				fclose(fp);
+				goto exit;
+			}
+		}
+
 		file = reserve_file(ep, tfd);
 
 		if (file) {
 			file->fp = fp;
 			file->dp = NULL;
-			er = CBM_ERROR_OK;
+			if (recordlen == 0) {
+				er = CBM_ERROR_OK;
+			} else {
+				er = CBM_ERROR_OPEN_REL;
+				file->recordlen = recordlen;
+			}
 		} else {
 			fclose(fp);
 			log_error("Could not reserve file\n");
 			er = CBM_ERROR_FAULT;
 		}
-
 	} else {
 
 		log_errno("Error opening file '%s/%s'", path, filename);
@@ -641,6 +690,8 @@ exit:
 
 // open a directory read
 static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void) opts;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -781,6 +832,25 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		}
 	}
 	return -CBM_ERROR_FAULT;
+}
+
+// position to record
+static int fs_position(endpoint_t *ep, int tfd, int recordno) {
+
+	File *file = find_file(ep, tfd);
+	if (file != NULL) {
+		// because we do fread/fwrite, we can just fseek 
+
+		if (file->recordlen > 0) {
+			if (fseek(file->fp, recordno * file->recordlen, SEEK_SET) < 0) {
+				log_errno("Could not fseek()");
+				return CBM_ERROR_DRIVE_NOT_READY;
+			}
+			return CBM_ERROR_OK;
+		}
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+	return CBM_ERROR_DRIVE_NOT_READY;
 }
 
 // ----------------------------------------------------------------------------------
@@ -1001,41 +1071,24 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
-       return open_file(ep, tfd, buf, FS_OPEN_RD);
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_RD);
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, const int is_overwrite) {
 	if (is_overwrite) {
-       		return open_file(ep, tfd, buf, FS_OPEN_OW);
+       		return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_OW);
 	} else {
-       		return open_file(ep, tfd, buf, FS_OPEN_WR);
+       		return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_WR);
 	}
 }
 
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
-       return open_file(ep, tfd, buf, FS_OPEN_AP);
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_AP);
 }
 
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
-	if (*buf == '#') {
-		// ok, open a direct block channel
-
-		File *file = reserve_file(ep, tfd);
-
-		int er = open_block_channel(file);
-
-		if (er) {
-			// error
-			close_fd(file);
-			log_error("Could not reserve file\n");
-		}
-		return er;
-
-	} else {
-		// no support for r/w for "standard" files for now
-		return CBM_ERROR_DRIVE_NOT_READY;
-	}
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_RW);
 }
 
 
@@ -1104,7 +1157,7 @@ provider_t fs_provider = {
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	NULL,
+	fs_position,
 	fs_direct
 };
 

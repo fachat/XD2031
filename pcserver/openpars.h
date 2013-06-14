@@ -26,7 +26,7 @@
 // process options from the optional OPEN parameter string
 // ************
 
-void openpars_process_options(uint8_t *opts, uint8_t *type, uint8_t *reclen);
+void openpars_process_options(const uint8_t *opts, uint8_t *type, uint16_t *reclen);
 
 #endif
 
