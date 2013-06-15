@@ -39,7 +39,7 @@
 #undef DEBUG_FILE
 
 #define	MAX_ACTIVE_OPEN		2
-#define	OPEN_RX_DATA_LEN	2
+#define	OPEN_RX_DATA_LEN	3	// error code, plus optional 8 bit scratched or 16 bit record length
 
 static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 
@@ -278,7 +278,15 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		// proxy relative files through the bufcmd layer
 		if (nameinfo.type == 'L') {
 			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
-			endpoint = bufcmd_open_relative(endpoint, channel_no, nameinfo.recordlen);
+debug_printf("ep=%p\n", (void*)endpoint);
+			int8_t err = bufcmd_open_relative(&endpoint, channel_no, nameinfo.recordlen);
+debug_printf("ep=%p\n", (void*)endpoint);
+			provider = endpoint->provider;
+			if (err != CBM_ERROR_OK) {
+debug_printf("-> err=%d\n", err);
+				set_error(errormsg, err);
+				return -1;
+			}
 		}
 
 		channel_t *channel = channel_find(channel_no);

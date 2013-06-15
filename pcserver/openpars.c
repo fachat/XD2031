@@ -40,14 +40,14 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
 
         while (*p != 0) {
                 switch(*(p++)) {
-                case 'T':
+                case 't':
                         if (*(p++) == '=') {
                                 typechar = *(p++);
                                 switch(typechar) {
-                                case 'U':       *type = FS_DIR_TYPE_USR; break;
-                                case 'P':       *type = FS_DIR_TYPE_PRG; break;
-                                case 'S':       *type = FS_DIR_TYPE_SEQ; break;
-                                case 'L':
+                                case 'u':       *type = FS_DIR_TYPE_USR; break;
+                                case 'p':       *type = FS_DIR_TYPE_PRG; break;
+                                case 's':       *type = FS_DIR_TYPE_SEQ; break;
+                                case 'l':
                                         *type = FS_DIR_TYPE_REL;
                                         n=sscanf((char*)p, "%d", &reclenw);
                                         if (n == 1 && reclenw > 0 && reclenw < (2<<16)) {

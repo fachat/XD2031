@@ -42,7 +42,7 @@ int8_t bufcmd_open_direct(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 
 // proxies a relative file through the bufcmd layer
-endpoint_t *bufcmd_open_relative(endpoint_t *ep, uint8_t channel_no, uint16_t reclen);
+int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen);
 
 // execute a P command
 int8_t bufcmd_position(bus_t *bus, char *cmdpars, errormsg_t *errormsg);

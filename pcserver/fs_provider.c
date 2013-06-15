@@ -559,7 +559,11 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 	
 	uint16_t recordlen = 0;
 	uint8_t type;
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
 	openpars_process_options((const uint8_t*) opts, &type, &recordlen);
+
+	log_info("open file (cmd=%d) for fd=%d in dir %s with name %s (type=%c, recordlen=%d)\n", fs_cmd, tfd, fsep->curpath, buf, 0x30+type, recordlen);
 
 	if (fs_cmd == FS_OPEN_RW) {
 		if (*buf == '#') {
@@ -576,20 +580,18 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			}
 			return er;
 		}
-		if (type != 'L' || recordlen <= 0) {
+		if (type != FS_DIR_TYPE_REL || recordlen <= 0) {
 			// RW is currently only supported for REL files
 			return CBM_ERROR_DRIVE_NOT_READY;
 		}
 	}
-	if (type != 'L') {
+	if (type != FS_DIR_TYPE_REL) {
 		// no record length without relative file
 		recordlen = 0;
 	}
 	*reclen = recordlen;
 
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	log_info("open file for fd=%d in dir %s with name %s (recordlen=%d)\n", tfd, fsep->curpath, buf, recordlen);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
 	os_patch_dir_separator(fullname);
@@ -600,6 +602,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 
 	char *path     = safe_dirname(fullname);
 	char *filename = safe_basename(fullname);
+	char *name     = NULL;
 
 	char *options;
 	int file_required = FALSE;
@@ -615,18 +618,21 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			file_must_not_exist = TRUE;
 			break;
 		case FS_OPEN_AP:
-			options = "ap";
+			options = "ab";
 			file_required = TRUE;
 			break;
 		case FS_OPEN_OW:
 			options = "wb";
+			break;
+		case FS_OPEN_RW:
+			options = "r+";
 			break;
 		default:
 			log_error("Internal error: open_file with fs_cmd %d\n", fs_cmd);
 			goto exit;
 	}
 
-	char *name = find_first_match(path, filename, os_path_is_file);
+	name = find_first_match(path, filename, os_path_is_file);
 	if(!name) {
 		// something with that name exists that isn't a file
 		log_error("Unable to open '%s': not a file\n", filename);
@@ -643,6 +649,9 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 		log_error("Unable to open '%s': file exists\n", name);
 		er = CBM_ERROR_FILE_EXISTS;
 		goto exit;
+	}
+	if (fs_cmd == FS_OPEN_RW && !file_exists) {
+		options = "w+";
 	}
 
 	FILE *fp = fopen(name, options);
