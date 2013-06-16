@@ -38,6 +38,12 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
         int n;
         uint8_t *t;
 
+	if (p == NULL) {
+		type = FS_DIR_TYPE_PRG;
+		reclen = 0;
+		return;
+	}
+
         while (*p != 0) {
                 switch(*(p++)) {
                 case 't':
