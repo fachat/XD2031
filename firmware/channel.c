@@ -100,7 +100,7 @@ static inline uint8_t channel_is_eof(channel_t *chan) {
 static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	packet_t *p = &c->buf[slot];
 
-	//debug_printf("pull: chan=%p, channo=%d\n", c, c->channel_no);
+debug_printf("pull: chan=%p, channo=%d (ep=%p)\n", c, c->channel_no, (void*)c->endpoint);
 
 	// prepare to write a buffer with length 0
 	packet_set_filled(p, c->channel_no, FS_READ, 0);

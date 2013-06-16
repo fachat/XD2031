@@ -232,7 +232,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 	if (nameinfo.cmd == CMD_POSITION) {
 		debug_puts("REL FILE POSITION\n");
-		int8_t rv = bufcmd_position(bus, (char*) nameinfo.name, errormsg);
+		int8_t rv = bufcmd_position(bus, (char*) nameinfo.name, nameinfo.namelen, errormsg);
 		if (rv >= 0) {
 			callback(rv, NULL);
 			return 0;

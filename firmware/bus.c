@@ -53,7 +53,7 @@
 
 #include "device.h"
 
-#undef	DEBUG_BUS
+#define	DEBUG_BUS
 #undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
@@ -207,6 +207,9 @@ static int16_t cmd_handler (bus_t *bus)
 		// as this code is not (yet?) prepared for async operation, we 
 		// need to wait here until the response from the server comes
 		// Note: use bus_for_irq here, as it is volatile
+#ifdef DEBUG_BUS
+		debug_puts("Waiting for callback\n"); debug_flush();
+#endif
 		while (bus_for_irq->cmd_done == 0) {
 			// TODO this should be reworked more backend (serial) independent
 			main_delay();

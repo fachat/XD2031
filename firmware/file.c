@@ -278,10 +278,9 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		// proxy relative files through the bufcmd layer
 		if (nameinfo.type == 'L') {
 			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
-debug_printf("ep=%p\n", (void*)endpoint);
 			int8_t err = bufcmd_open_relative(&endpoint, channel_no, nameinfo.recordlen);
-debug_printf("ep=%p\n", (void*)endpoint);
 			provider = endpoint->provider;
+debug_printf("new endpoint=%p\n", endpoint);
 			if (err != CBM_ERROR_OK) {
 debug_printf("-> err=%d\n", err);
 				set_error(errormsg, err);
@@ -326,6 +325,8 @@ debug_printf("-> err=%d\n", err);
 }
 
 static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
+
+	debug_puts("file_open_callback\n"); debug_flush();
 
 	// callback to opener
 	// free data structure for next open	
