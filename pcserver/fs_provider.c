@@ -506,6 +506,8 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	File *file = find_file(ep, tfd);
 
+	(void)is_eof; // silence warning unused parameter
+
 	log_debug("write_block: file=%p, len=%d\n", file, len);
 
 	if (file != NULL) {
@@ -641,6 +643,8 @@ exit:
 
 // open a directory read
 static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void)opts; // silence warning unused parameter
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -1002,10 +1006,12 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 // ----------------------------------------------------------------------------------
 
 static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
        return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
 static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
+	(void)opts; // silence warning unused parameter
 	if (is_overwrite) {
        		return open_file(ep, tfd, buf, FS_OPEN_OW);
 	} else {
@@ -1014,10 +1020,12 @@ static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *op
 }
 
 static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
        return open_file(ep, tfd, buf, FS_OPEN_AP);
 }
 
 static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
 	if (*buf == '#') {
 		// ok, open a direct block channel
 

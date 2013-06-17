@@ -1332,6 +1332,8 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 
 static int di_opendir(endpoint_t *ep, int tfd, const char *buf, const char *opts)
 {
+   (void) opts;		// silence warning unused parameter
+
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    log_debug("di_opendir(%s)\n",buf);
    File *file = di_reserve_file(diep, tfd);

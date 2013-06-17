@@ -149,7 +149,7 @@ static curl_endpoint_t *new_endpoint(const char *path) {
 	fsep->host_buffer[0] = 0;
 	// separate host from path
 	// if hostend is NULL, then we only have the host
-	char *hostend=index(path, '/');
+	char *hostend=strchr(path, '/');
 
 	int hostlen = strlen(path);
 	if (hostend != NULL) {
@@ -550,6 +550,7 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 }
 
 static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
 
 	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {
@@ -696,6 +697,8 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 
 static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void)opts; // silence warning unused parameter
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = open_file(ep, tfd, buf, 1);

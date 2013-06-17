@@ -59,6 +59,7 @@ charset_t cconv_getcharset(const char *charsetname) {
 // conversion functions
 void cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_identity(%s)\n", in);
+	(void) inlen; // silence warning unused parameter
 	if (in != out) {
 		// not an in-place conversion
 		// assumption: callers behave in terms of buffer lengths
