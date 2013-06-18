@@ -75,8 +75,8 @@ void usage(void) {
 
 
 int main(int argc, char *argv[]) {
-	int writefd, readfd;
-	int fdesc;
+	serial_port_t writefd, readfd;
+	serial_port_t fdesc;
 	int i;
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
@@ -141,19 +141,21 @@ int main(int argc, char *argv[]) {
 
 	if(chdir(dir)<0) { 
 	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
-			dir, errno, strerror(errno));
+			dir, os_errno(), os_strerror(os_errno()));
 	  exit(1);
 	}
 
 	if (device != NULL) {
 		fdesc = device_open(device);
-		if (fdesc < 0) {
+		if (os_open_failed(fdesc)) {
 		  /* error */
 		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
-			device, errno, strerror(errno));
+			device, os_errno(), os_strerror(os_errno()));
 		  exit(1);
 		}
-		if(config_ser(fdesc) < 0) {
+		if(config_ser(fdesc)) {
+		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)",
+			device, os_errno(), os_strerror(os_errno()));
 		  exit(1);
 		}
 		readfd = fdesc;
@@ -178,7 +180,7 @@ int main(int argc, char *argv[]) {
 	int res = cmd_loop(readfd, writefd);
 
 	if (device != NULL) {
-		close(fdesc);
+		device_close(fdesc);
 	}
 
 	if(res) {

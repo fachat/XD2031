@@ -32,6 +32,40 @@
  * local filesystem.
  */
 
+// TODO: port TCP provider to Windows
+
+// -------------------------------------------------------------------------
+#ifdef _WIN32
+// This is just a dummy that enables compilation
+#include <stddef.h>	// NULL
+#include "provider.h"
+provider_t tcp_provider = {
+	"tcp",
+	"ASCII",		// not used as we don't do directories, but still
+	NULL,	//tnp_init,
+	NULL,	//tnp_new,
+	NULL,	//tnp_temp,
+	NULL,	//tnp_free,
+	NULL,	//close_fds,
+	NULL,	//open_file_rd,
+	NULL,	//open_file_wr,
+	NULL,	//open_file_ap,
+	NULL,	//open_file_rw,
+	NULL,	//open_dr,
+	NULL,	//read_file,
+	NULL,	//write_file,
+	NULL,	//fs_delete,
+	NULL,	//fs_rename,
+	NULL,	//fs_cd,
+	NULL,	//fs_mkdir,
+	NULL,	//fs_rmdir
+	NULL,	// block
+	NULL	// direct
+};
+
+#else
+// -------------------------------------------------------------------------
+
 #include "os.h"
 
 #include <errno.h>
@@ -40,8 +74,6 @@
 #include <string.h>
 
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
 #include "fscmd.h"
 
@@ -486,4 +518,4 @@ provider_t tcp_provider = {
 	NULL	// direct
 };
 
-
+#endif

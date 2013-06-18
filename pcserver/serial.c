@@ -24,9 +24,14 @@
 
 ****************************************************************************/
 
+
+#ifndef _WIN32
+
 /*
- * rs232 interface handling
+ * POSIX RS232 interface handling
  */
+
+#include "os.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,12 +59,12 @@ int config_ser(int fd) {
 	struct termios  config;
 
 	if(!isatty(fd)) { 
-		log_error("device is not a TTY!");
+		log_error("device is not a TTY!\n");
 		return -1;
 	 }
 
 	if(tcgetattr(fd, &config) < 0) { 
-		log_error("Could not get TTY attributes!");
+		log_error("Could not get TTY attributes!\n");
 		return -1;
 	}
 
@@ -162,4 +167,99 @@ void guess_device(char** device) {
   }
 }
 
+#else
 
+/*
+ * WIN32 RS232 interface handling
+ */
+
+#include "os.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <ctype.h>
+
+#include "serial.h"
+#include "log.h"
+
+serial_port_t device_open(char *device) {
+	return (CreateFile(device, GENERIC_READ | GENERIC_WRITE,
+			0,
+			0,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			0));
+}
+
+int config_ser(serial_port_t h) {
+	DCB dcb = {0};
+
+	dcb.DCBlength = sizeof(dcb);
+
+	if (!GetCommState(h, &dcb)) {
+		log_error("Error getting serial state\n");
+		return -1;
+	}
+
+	dcb.BaudRate = CBR_115200;
+	dcb.ByteSize = 8;
+	dcb.StopBits = ONESTOPBIT;
+	dcb.Parity   = NOPARITY;
+
+	if (!SetCommState(h, &dcb)) {
+		log_error("Error setting serial port state\n");
+		return -1;
+	}
+
+	COMMTIMEOUTS timeouts = {0};
+
+	// no blocking read(), even if there aren't any characters in the buffer
+	timeouts.ReadIntervalTimeout = MAXWORD;
+	timeouts.ReadTotalTimeoutConstant = 0;
+	timeouts.ReadTotalTimeoutMultiplier = 0;
+
+	timeouts.WriteTotalTimeoutConstant = 50;
+	timeouts.WriteTotalTimeoutMultiplier = 10;
+
+	if (!SetCommTimeouts(h, &timeouts)) {
+		log_error("Error setting serial timeouts\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+void guess_device(char** device) {
+	// just a very vague guess
+	static char devicename[] = "COM5";
+	log_info("Using default serial device %s\n", devicename);
+	*device = devicename;
+}
+
+#endif
+
+#if 0
+int main(void)
+{
+	char *devicename;
+	serial_port_t serial_port;
+
+	guess_device(&devicename);
+
+	serial_port = device_open(devicename);
+	if(os_open_failed(serial_port)) {
+		log_error("Unable to open serial device: %s\n", os_strerror(os_errno()));
+		exit(1);
+	}
+	if(config_ser(serial_port)) {
+		log_error("Unable to configure serial port: %s\n", os_strerror(os_errno()));
+		exit(1);
+	}
+	device_close(serial_port);
+
+	return 0;
+}
+#endif

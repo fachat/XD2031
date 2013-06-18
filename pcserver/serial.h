@@ -34,7 +34,7 @@
 /**
  * See http://en.wikibooks.org/wiki/Serial_Programming:Unix/termios
  */
-int config_ser(int fd);
+int config_ser(serial_port_t serport);
 
 /* search /dev for a virtual serial port 
    Change "device" to it, if exactly one found
@@ -42,7 +42,7 @@ int config_ser(int fd);
 void guess_device(char** device);
 
 /* open a device (as returned by guess_device or given on the cmdline */
-int device_open(char *name);
+serial_port_t device_open(char *name);
 
 #endif
 

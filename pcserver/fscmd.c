@@ -57,8 +57,8 @@
 
 #define	MAX_BUFFER_SIZE			64
 
-static void cmd_dispatch(char *buf, int fs);
-static void write_packet(int fd, char *retbuf);
+static void cmd_dispatch(char *buf, serial_port_t fs);
+static void write_packet(serial_port_t fd, char *retbuf);
 
 
 //------------------------------------------------------------------------------------
@@ -182,7 +182,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 	}
 }
 
-static void cmd_sync(int readfd, int writefd) {
+static void cmd_sync(serial_port_t readfd, serial_port_t writefd) {
 	char syncbuf[1];
 
 	// first sync the device and the server.
@@ -196,7 +196,7 @@ static void cmd_sync(int readfd, int writefd) {
 #if defined DEBUG_WRITE || defined DEBUG_CMD
 		printf("sync write %02x\n", syncbuf[0]);
 #endif
-		e = write(writefd, syncbuf, 1);
+		e = os_write(writefd, syncbuf, 1);
 	} while (e == 0 || (e < 0 &&  errno == EAGAIN));
 	if (e < 0) {
 		log_errno("Error on sync write", errno);
@@ -204,7 +204,7 @@ static void cmd_sync(int readfd, int writefd) {
 	// wait for a sync byte
 	int n = 0;
 	do {
-		n = read(readfd, syncbuf, 1);
+		n = os_read(readfd, syncbuf, 1);
 #ifdef DEBUG_READ
 	        printf("sync read %d bytes: ",n);
 	        for(int i=0;i<n;i++) printf("%02x ",255&syncbuf[i]); printf("\n");
@@ -216,7 +216,7 @@ static void cmd_sync(int readfd, int writefd) {
 }
 
 
-static void cmd_sendxcmd(int writefd, char buf[]) {
+static void cmd_sendxcmd(serial_port_t writefd, char buf[]) {
 	// now send all the X-commands
 	int ncmds = xcmd_num_options();
 	log_debug("Got %d options to send:\n", ncmds);
@@ -240,7 +240,7 @@ static void cmd_sendxcmd(int writefd, char buf[]) {
 	}
 }
 
-static void cmd_sendreset(int writefd, char buf[]) {
+static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 	buf[FSP_CMD] = FS_RESET;
 	buf[FSP_LEN] = FSP_DATA;
 	buf[FSP_FD] = FSFD_SETOPT;
@@ -258,7 +258,7 @@ static void cmd_sendreset(int writefd, char buf[]) {
  *   1 if read fails (errno gives more information)
  *   0 if other strange things happened
  */
-int cmd_loop(int readfd, int writefd) {
+int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 
         char buf[8192];
         int wrp,rdp,plen, cmd;
@@ -275,14 +275,14 @@ int cmd_loop(int readfd, int writefd) {
         wrp = rdp = 0;
 
         for(;;) {
-	      n = read(readfd, buf+wrp, 8192-wrp);
+	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
 	      printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
 	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
 #endif
 
               if(n <= 0) {
-                fprintf(stderr,"fsser: read error %d (%s)\n",errno,strerror(errno));
+                fprintf(stderr,"fsser: read error %d (%s)\n",os_errno(),strerror(os_errno()));
 		fprintf(stderr,"Did you power off your device?\n");
                 return 1;
               }
@@ -343,7 +343,7 @@ char *get_options(char *name, int len) {
  *
  * The return packet is written into the file descriptor fd
  */
-static void cmd_dispatch(char *buf, int fd) {
+static void cmd_dispatch(char *buf, serial_port_t fd) {
 	int tfd, cmd;
 	unsigned int len;
 	char retbuf[200];
@@ -778,9 +778,9 @@ static void cmd_dispatch(char *buf, int fd) {
 	}
 }
 
-static void write_packet(int fd, char *retbuf) {
+static void write_packet(serial_port_t fd, char *retbuf) {
 
-	int e = write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
+	int e = os_write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
 	if (e < 0) {
 		printf("Error on write: %d\n", errno);
 	}

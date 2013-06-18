@@ -39,7 +39,7 @@ void cmd_init();
 
 void cmd_assign_from_cmdline(int argc, char *argv[]);
 
-int cmd_loop(int readfs, int writefd);
+int cmd_loop(serial_port_t readfs, serial_port_t writefd);
 
 //void do_cmd(char *buf, int fs);
 

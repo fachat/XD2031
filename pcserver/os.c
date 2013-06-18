@@ -143,6 +143,7 @@ signed long long os_free_disk_space (char *path) {
 #include <stdio.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 const char* os_get_home_dir (void) {
         char* dir = getenv("HOME");
@@ -487,38 +488,68 @@ void rewinddir(DIR *dir)
 
 */
 
-
-#endif
-
-#if 0
-/* 
-	gcc os.c log.c -o testos(.exe) 
-*/
-int main (int argc, char **argv)
-{
-  if (argc < 2) exit(1);
-  char *s = argv[1];
-  printf("%s\n", s);
-
-  printf("home_dir: %s\n", os_get_home_dir());
-  printf("is_file: %d\n", os_path_is_file(s));
-  int isdir= os_path_is_dir(s); printf("is_dir: %d\n", isdir);
-  char *rp = os_realpath(s); printf("realpath: %s\n", rp); free(rp);
-  printf("free space: %lld MB\n", (signed long long) os_free_disk_space(s) / (1024 * 1024));
-
-  if(isdir) {
-    DIR *pdir; struct dirent *de;
-    pdir = opendir(s);
-    if(pdir) {
-      while ((de = readdir(pdir)) != NULL) {
-        printf("[%s] ", de->d_name);
-      }
-      printf("\n");
-      closedir(pdir);
-    } else {
-      perror("Unable to open directory");
-    }
-  }
-  return 0;
+// helper function for os_strerror
+static char *drop_crlf(char *s) {
+	char *p = s + strlen(s);
+	while(p > s) {
+		if(iscntrl(*p)) *p=0;
+		p--;
+	}
+	return s;
 }
+
+// convert errnum into a string error message
+char *os_strerror(int errnum) {
+	static char msg[80];
+
+	DWORD len = FormatMessage(
+		//FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		errnum,
+		MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+		//MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),     // Unicode? ANSI?
+		(LPTSTR) &msg,
+		sizeof(msg), // minimum number of TCHARs to allocate when FORMAT_MESSAGE_ALLOCATE_BUFFER
+		NULL);
+	if(len) {
+		drop_crlf(msg);
+		return (char *) msg;
+	}
+	return "Unknown error";
+}
+
+// Check if we have a valid file descriptor/handle
+int os_open_failed(serial_port_t device) {
+	return (device == INVALID_HANDLE_VALUE);
+}
+
+// Read data from the specified file or input/output device
+ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
+	DWORD read_bytes = 0;
+	int success;
+
+	// Read at least 1 Byte
+	while (!read_bytes) {
+		success = ReadFile(fd, buf, count, &read_bytes, NULL);
+
+		if(success && (read_bytes >= 1)) return read_bytes;
+	}
+
+	return -1;
+}
+
+// Write data to the specified file or input/output device
+ssize_t os_write(serial_port_t fd, const void *buf, size_t count) {
+	DWORD written_bytes = 0;
+	int success;
+
+	success = WriteFile(fd, buf, count, &written_bytes, NULL);
+
+	if(success) return written_bytes;
+
+	return -1;
+}
+
 #endif

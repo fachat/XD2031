@@ -49,6 +49,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include "mem.h"
 #endif
 
@@ -67,6 +71,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syslimits.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include "mem.h"
 #endif
 
@@ -81,6 +89,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <winsock2.h>
 #include "mem.h"
 #endif
 
@@ -94,6 +103,17 @@
 
 enum boolean { FALSE, TRUE };
 
+typedef int serial_port_t;
+#define OS_OPEN_FAILED -1
+
+static inline ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
+	return read(fd, buf, count);
+}
+
+static inline ssize_t os_write(serial_port_t fd, const void *buf, size_t count) {
+	return write(fd, buf, count);
+}
+
 static inline int os_mkdir(const char *pathname, mode_t mode) {
 	return mkdir(pathname, mode);
 }
@@ -102,6 +122,25 @@ static inline void os_sync(void) {
 	sync();
 }
 
+static inline int os_open_failed(serial_port_t device) {
+	return (device < 0);
+}
+
+static inline int device_close(int fildes) {
+	return close(fildes);
+}
+
+static inline int socket_close(int descriptor) {
+	return close(descriptor);
+}
+
+static inline int os_errno(void) {
+	return errno;
+}
+
+static inline char *os_strerror(int errnum) {
+	return strerror(errnum);
+}
 
 // -----------------------------------------------------------------------
 //	LINUX
@@ -131,6 +170,12 @@ static inline char *os_realpath (const char *path) {
 
 #ifdef _WIN32
 
+typedef HANDLE serial_port_t;
+#define OS_OPEN_FAILED INVALID_HANDLE
+static inline int device_close(serial_port_t device) {
+	return CloseHandle(device);
+}
+
 // realpath contained in os.c
 char *os_realpath(const char *path); 
 
@@ -139,6 +184,11 @@ static inline int os_mkdir(const char *pathname, int mode)
 {
 	(void)(mode); // silence unused parameter warning
 	return mkdir(pathname);
+}
+
+// Get last system error
+static inline int os_errno(void) {
+	return GetLastError();
 }
 
 /* Windows doesn't know sync. A cheat to sync all open files
@@ -195,6 +245,15 @@ void          rewinddir(DIR *);
 }
 #endif
 
+static inline int socket_close(int descriptor) {
+	int res;
+
+	res = closesocket (descriptor);
+	WSACleanup();
+
+	return res;
+}
+
 #endif // WIN32
 
 
@@ -220,5 +279,17 @@ char *os_patch_dir_separator (char *path);
 static inline char dir_separator_char(void) { return '/'; }
 static inline char* dir_separator_string(void) { return "/"; }
 
+// convert errnum into a string error message
+char *os_strerror(int errnum);
+
+// get last system error
+int os_errno(void);
+
+// check if we have a valid file descriptor/handle
+int os_open_failed(serial_port_t device);
+
+ssize_t os_read(serial_port_t fd, void *buf, size_t count);
+
+ssize_t os_write(serial_port_t fd, const void *buf, size_t count);
 
 #endif // OS_H
