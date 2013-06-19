@@ -1,7 +1,15 @@
+# Compile for Windows on Linux, see doc/README-win32
+
 DISTDIR=xd2031-win32
 
-#CROSS=i686-pc-mingw32-
-CROSS=i586-mingw32msvc-
+CFLAGS=-c -g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common
+CFLAGS+=-DSERVER -DUNPRIVILEGED
+
+CROSS=i686-pc-mingw32-
+#CROSS=i586-mingw32msvc-
+#CFLAGS+=-I$(HOME)/mingw-install/include
+#LDFLAGS+=-L$(HOME)/mingw-install/lib
+
 FSSER_EXE=fsser.exe
 
 CC=$(CROSS)gcc
@@ -9,33 +17,35 @@ LD=$(CROSS)ld
 AR=$(CROSS)ar
 PKG_CONFIG=$(CROSS)pkg-config
 
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER -DUNPRIVILEGED
+COMMONC=fsser.c fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c
+COMMONC+=serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
+COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h
+COMMONH+=provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h
+COMMONH+=../common/petscii.h ../common/charconvert.h 
+COMMONC+=curl_provider.c
+#COMMONC+=tcp_provider.c 
 
-COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
-COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h 
-# curl_provider.c tcp_provider.c 
+OBJECTS=$(COMMONC:.c=.o)
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
-#LIBS=-lcurl
-#CFLAGS+=-DCURL_STATICLIB
-#LIBS+=-lws2_32 -lcurl
-#LIBS+=-lgnutls -lgnutls-openssl -lkernel32 -lhogweed -lgmp
-#LIBS+=-lz -lgcrypt -lcrypt32 -lidn -lnettle -lwldap32 -liconv -lintl
-#LIBS+=-lssh2
-#LIBS+=-static
+LIBS=-lcurl -static -Wl,-Bsymbolic-functions -lssh2 -lidn -lgnutls -lwldap32 -lz -lnettle
+LIBS+=-lgcrypt -lintl -liconv -lhogweed -lgmp -lgnutls-openssl -lgpg-error -lws2_32 
+CFLAGS+=-DCURL_STATICLIB
 
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
-all: fsser
+all: $(COMMONC) $(COMMONH) $(FSSER_EXE)
 
-fsser: fsser.c $(COMMONC) $(COMMONH)
-	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} fsser.c $(COMMONC) -o $(FSSER_EXE) ${LIBS}
+$(FSSER_EXE): $(OBJECTS)
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS) 
+
+.c.o:
+	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(FSSER_EXE) curltest.exe
+	rm -f $(FSSER_EXE) curltest.exe $(OBJECTS)
 
 distclean:
 	rm -rf $(DISTDIR)
@@ -62,7 +72,7 @@ doc:
 	mkdir -p ../docsrc/doxygen
 	doxygen Doxyfile
 
-dist:	distclean fsser
+dist:	distclean $(FSSER_EXE)
 	mkdir -p $(DISTDIR)
 	cp -r ../sample $(DISTDIR)
 	cp -r ../tools $(DISTDIR)

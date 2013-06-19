@@ -1,7 +1,10 @@
 fstcp
 fsser
+fsser.exe
 curltest
 .svn
 .project
 .cproject
 fsser.init.d.localized
+*.o
+xd2031-win32*
