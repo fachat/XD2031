@@ -1,0 +1,77 @@
+DISTDIR=xd2031-win32
+
+#CROSS=i686-pc-mingw32-
+CROSS=i586-mingw32msvc-
+FSSER_EXE=fsser.exe
+
+CC=$(CROSS)gcc
+LD=$(CROSS)ld
+AR=$(CROSS)ar
+PKG_CONFIG=$(CROSS)pkg-config
+
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER -DUNPRIVILEGED
+
+COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
+COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h 
+# curl_provider.c tcp_provider.c 
+
+#output of `curl-config --libs`
+#LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
+#LIBS=-lcurl
+#CFLAGS+=-DCURL_STATICLIB
+#LIBS+=-lws2_32 -lcurl
+#LIBS+=-lgnutls -lgnutls-openssl -lkernel32 -lhogweed -lgmp
+#LIBS+=-lz -lgcrypt -lcrypt32 -lidn -lnettle -lwldap32 -liconv -lintl
+#LIBS+=-lssh2
+#LIBS+=-static
+
+# fstcp builds a version that listens on a TCP/IP port - but there is not
+# device (yet) to use it
+#all: fstcp fsser
+all: fsser
+
+fsser: fsser.c $(COMMONC) $(COMMONH)
+	# Note: LIBS must be at the end for curl/libs to be found
+	${CC} ${CFLAGS} fsser.c $(COMMONC) -o $(FSSER_EXE) ${LIBS}
+
+clean:
+	rm -f $(FSSER_EXE) curltest.exe
+
+distclean:
+	rm -rf $(DISTDIR)
+
+run:
+	MALLOC_CHECK_=1 wine fsser.exe -d auto -A0:fs=../sample -A1:fs=../tools .
+
+runv:
+	# I'm lazy...
+	MALLOC_CHECK_=1 wine fsser.exe -v -d auto -A0:fs=../sample -A1:fs=../tools .
+
+runv2:
+	# I'm lazy...
+	MALLOC_CHECK_=1 wine fsser.exe -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -A9:di=../sample/COPYALL\ V2.D64 -Xiec:U=9 . 
+
+run9:
+	MALLOC_CHECK_=1 wine fsser.exe -v -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .
+
+
+curltest: curl_test.c curl_provider.c log.c
+	${CC} ${CFLAGS} -o curltest.exe curl_provider.c curl_test.c log.c ${LIBS}
+
+doc:
+	mkdir -p ../docsrc/doxygen
+	doxygen Doxyfile
+
+dist:	distclean fsser
+	mkdir -p $(DISTDIR)
+	cp -r ../sample $(DISTDIR)
+	cp -r ../tools $(DISTDIR)
+	cp $(FSSER_EXE) $(DISTDIR)
+	cp COPYING $(DISTDIR)/COPYING.txt
+	cp StartServer.bat $(DISTDIR)
+	find $(DISTDIR) \( -iname *.txt -o -iname *.bat \) -exec unix2dos {} \;
+	zip -r $(DISTDIR).zip $(DISTDIR)
+
+
+
+.PHONY: all install uninstall run fsser

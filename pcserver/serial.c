@@ -195,9 +195,15 @@ serial_port_t device_open(char *device) {
 }
 
 int config_ser(serial_port_t h) {
-	DCB dcb = {0};
+	// DCB dcb = {0};
+	// COMMTIMEOUTS timeouts = {0};
+	DCB dcb;
+	COMMTIMEOUTS timeouts;
 
-	dcb.DCBlength = sizeof(dcb);
+	memset(&dcb, 0, sizeof dcb);
+	memset(&timeouts, 0, sizeof timeouts);
+
+	dcb.DCBlength = sizeof(DCB);
 
 	if (!GetCommState(h, &dcb)) {
 		log_error("Error getting serial state\n");
@@ -208,21 +214,31 @@ int config_ser(serial_port_t h) {
 	dcb.ByteSize = 8;
 	dcb.StopBits = ONESTOPBIT;
 	dcb.Parity   = NOPARITY;
+	dcb.fBinary  = TRUE;
+	dcb.fParity  = FALSE;
+	dcb.fOutxCtsFlow = FALSE; 	// no hardware handshake
+	dcb.fOutxDsrFlow = FALSE;
+	dcb.fDtrControl = DTR_CONTROL_DISABLE;
+	dcb.fDsrSensitivity = FALSE; 	// Ignore DSR
+	dcb.fTXContinueOnXoff = TRUE;
+	dcb.fOutX = FALSE; 		// no XON/XOFF
+	dcb.fInX = FALSE;		// no XON/XOFF
+	dcb.fNull = FALSE;		// receive null bytes too
+	dcb.fRtsControl = RTS_CONTROL_DISABLE;
+	dcb.fAbortOnError = FALSE;
+
 
 	if (!SetCommState(h, &dcb)) {
 		log_error("Error setting serial port state\n");
 		return -1;
 	}
 
-	COMMTIMEOUTS timeouts = {0};
+	timeouts.ReadIntervalTimeout = MAXDWORD;
+	timeouts.ReadTotalTimeoutConstant = 50;
+	timeouts.ReadTotalTimeoutMultiplier = MAXDWORD;
 
-	// no blocking read(), even if there aren't any characters in the buffer
-	timeouts.ReadIntervalTimeout = MAXWORD;
-	timeouts.ReadTotalTimeoutConstant = 0;
-	timeouts.ReadTotalTimeoutMultiplier = 0;
-
-	timeouts.WriteTotalTimeoutConstant = 50;
-	timeouts.WriteTotalTimeoutMultiplier = 10;
+	timeouts.WriteTotalTimeoutConstant = 0;
+	timeouts.WriteTotalTimeoutMultiplier = 0;
 
 	if (!SetCommTimeouts(h, &timeouts)) {
 		log_error("Error setting serial timeouts\n");

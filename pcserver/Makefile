@@ -6,15 +6,6 @@ TOOLSDIR=xd2031/tools
 # The space separeted list of directories in DROPDIR will be removed at uninstall too
 DROPDIR=xd2031
 
-# To cross compile on Linux for Windows with MXE installed,
-# call this Makefile with 
-# make WIN=y
-ifeq ($(WIN),y)
-	CROSS=i686-pc-mingw32-
-#	CROSS=i586-mingw32msvc-
-	FSSER_EXE=fsser.exe
-endif
-
 CC=$(CROSS)gcc
 LD=$(CROSS)ld
 AR=$(CROSS)ar
@@ -29,14 +20,6 @@ COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
 LIBS=-lcurl
-ifeq ($(WIN),y)
-	CFLAGS+=-DCURL_STATICLIB
-	LIBS+=-lws2_32 -lcurl
-	LIBS+=-lgnutls -lgnutls-openssl -lkernel32 -lhogweed -lgmp
-	LIBS+=-lz -lgcrypt -lcrypt32 -lidn -lnettle -lwldap32 -liconv -lintl
-	LIBS+=-lssh2
-	LIBS+=-static
-endif
 
 # Open the serial device with root or user rights
 PRIVILEGED=y
@@ -163,4 +146,4 @@ daemon: install
 	sed -i -e 's|BINDIR|'$(BINDIR)'|g' fsser.init.d.localized
 	./daemon.sh
 
-.PHONY: all install uninstall run dmg
+.PHONY: all install uninstall run dmg fsser

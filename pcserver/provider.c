@@ -230,6 +230,7 @@ void provider_init() {
         fs_provider.init();
 	provider_register(&fs_provider);
 
+#ifndef _WIN32
         ftp_provider.init();
 	provider_register(&ftp_provider);
 
@@ -238,6 +239,7 @@ void provider_init() {
 
         tcp_provider.init();
 	provider_register(&tcp_provider);
+#endif
 
         di_provider.init();
 	provider_register(&di_provider);

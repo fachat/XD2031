@@ -36,6 +36,11 @@
 char *os_patch_dir_separator(char *path) {
 	char *newpath = path;
 
+	if(!path) {
+		log_debug("os_patch_dir_separator(NULL)\n");
+		return NULL;
+	}
+
 	while(*path) {
 		if(*path == '\\') *path = dir_separator_char();
 		path++;
@@ -338,7 +343,7 @@ char *os_realpath(const char *path)
   {
     errno = EINVAL;
   }
-
+  os_patch_dir_separator(return_path);
   return return_path;
 }
 
@@ -534,7 +539,10 @@ ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
 	while (!read_bytes) {
 		success = ReadFile(fd, buf, count, &read_bytes, NULL);
 
-		if(success && (read_bytes >= 1)) return read_bytes;
+		if(success && (read_bytes >= 1)) {
+			log_debug("os_read bytes read: %u\n", read_bytes);
+			return read_bytes;
+		}
 	}
 
 	return -1;
