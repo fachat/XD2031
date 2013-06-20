@@ -764,11 +764,11 @@ Sehen wir uns doch einfach mal die dämliche Demo auf Laufwerk 1 an:
 LOAD"$1:DUMB*",8
 LIST
 
- 0  "DUMB*           " XD2031
- 1     "DUMBDEMO64"       PRG
- 1     "DUMBDEMOPET"      PRG
- 1     "DUMBDEMOVIC20"    PRG
- 1  BLOCKS FREE
+ 1 "DUMB*           "XD2031
+ 1     "DUMBDEMO64"      PRG
+ 1     "DUMBDEMOPET"     PRG
+ 1     "DUMBDEMOVIC20"   PRG
+ 63999 BLOCKS FREE.
 READY.
 \end{verbatim}
 
@@ -812,8 +812,8 @@ Leider wird die Laufwerksangabe streng geprüft. Bei Angaben größer 1
 wird ein \texttt{ILLEGAL QUANTITY ERROR} gemeldet. Dreifachlaufwerke
 waren Commodore dann wohl doch nicht geheuer.
 
-Immerhin sind ist bei der Angabe der Geräteadresse über ONU alle
-sinnvollen Werte möglich. Mit \texttt{CATALOG ONU 20} würde das
+Immerhin sind bei der Angabe der Geräteadresse über ONU alle
+zulässigen Werte möglich. Mit \texttt{CATALOG ONU 20} würde das
 Inhaltsverzeichnis eines Laufwerks an Geräteadresse 20 angezeigt werden.
 Werte größer als 31 oder kleiner als drei werden verweigert. 
 
@@ -1055,7 +1055,7 @@ viele weitere\footnote{
 	In der Praxis wird die Anzahl durch andere Umstände begrent, 
 	wie etwa die Größe des Zwischenspeichers, der einen Befehl
 	aufnehmen soll
-} durch Komma getrennte Parameter annehmen. Die optionale Wiederholung
+} durch Kommata getrennte Parameter annehmen. Die optionale Wiederholung
 wird dann durch ein Komma gefolgt von drei Punkten dargestellt:
 
 \mbox{\textit{<Name>} \Big[ \texttt{,} \ldots \ \Big]}
@@ -1071,12 +1071,6 @@ PETER,PAUL,MARY
 
 Dieser Befehl ist nur aus Kompatibilitätsgründen enthalten.
 Seine einzige Wirkung ist das Rücksetzen der Statusmeldung.
-
-Er stammt aus der Zeit, als Diskettenlaufwerke noch keine Schalter
-eingebaut hatten, die einen Diskettenwechsel hätten erkennen können.
-Mit diesem Befehl musste nach dem Einlegen einer Diskette dem
-Laufwerk mitgeteilt werden, dass eine neue Diskette initialisiert
-werden soll, also zur weiteren Benutzung vorbereitet werden soll.
 
 Beispiele:
 \begin{verbatim}
@@ -1102,7 +1096,7 @@ Beispiele:
 \textit{<Dateimaske>} \Big[ \texttt{,} \ldots \  \Big]
 
 Löscht die angegebenen Datei(en). Mehrere Dateinamen bzw. Suchmuster
-können durch Komma getrennt angegeben werden.
+können durch Kommata getrennt angegeben werden.
 
 Beispiele:
 
@@ -1242,8 +1236,19 @@ Einstellungen ist in der Be\-schrei\-bung des \texttt{XI}-Befehls enthalten.
 \texttt{XRESET}
 
 Dieser Befehl ist die Software-Entsprechung zum Druck auf die Reset-Taste
-des Adapters. Alle nicht gespeicherten Daten und Einstellungen gehen
-dabei verloren.
+des Adapters. Alle nicht gespeicherten Daten und Einstellungen gehen dabei
+verloren.
+
+Die Daten des nichtflüchtigen Speichers bleiben erhalten. Die darin
+gespeicherte Konfiguration kann sich jedoch von der zuletzt verwendeten
+unterscheiden, wenn nicht zuvor ein \texttt{XW}-Befehl abgesetzt
+wurde. 
+
+Wenn noch Dateien zum Schreiben geöffnet sind, droht Datenverlust. 
+Bei Dateisystemen, die auf dem Adapter gespeichert werden, wie etwa SD-Karten,
+droht die Korrumpierung des gesamten Dateisystems, wenn zuvor
+Schreibzugriffe erfolgt sind. Schließen Sie daher immer erst alle
+geöffneten Dateien, bevor Sie diesen Befehl verwenden!
 
 Wenn der Adapter über einen Bootloader zur Aktualisierung der Firmware
 verfügt, wird dieser vor dem Starten der Firmware aktiv. \texttt{XRESET}
