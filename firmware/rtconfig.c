@@ -270,7 +270,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		er = CBM_ERROR_OK;
 		break;
 	case 'R':
-		if(!strcmp(ptr, "RESET")) {
+		if(!strncmp(ptr, "RESET", 5)) {		// ignore CR or whatever follows
 			// reset everything
 			reset_mcu();
 		}
