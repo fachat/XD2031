@@ -31,6 +31,13 @@ ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
 endif
 
+# Check if AVRDUDE configuration has already been added to /etc/avrdude.conf
+CONF_MISSING := $(shell grep petsd2 /etc/avrdude.conf > /dev/null; echo  $$?)
+ADD_AVRDUDE_CONF=echo "AVRDUDE configuration already installed."
+ifeq ($(CONF_MISSING),1)
+	ADD_AVRDUDE_CONF=cat ../firmware/avr/avrdude.conf >> /etc/avrdude.conf; echo "AVRDUDE configuration added."
+endif
+
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
@@ -93,6 +100,8 @@ endif
 	cp ../sample/* $(PREFIX)/$(SAMPLEDIR)
 	test -d $(PREFIX)/$(TOOLSDIR) || mkdir -p $(PREFIX)/$(TOOLSDIR)
 	cp ../tools/* $(PREFIX)/$(TOOLSDIR)
+	@# Add petSD2 programmer to /etc/avrdude.conf if not already there
+	@$(ADD_AVRDUDE_CONF)
 
 uninstall:
 	rm -f $(PREFIX)/$(BINDIR)/fsser

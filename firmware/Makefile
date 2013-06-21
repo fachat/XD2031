@@ -13,10 +13,12 @@ SERIAL=/dev/ttyUSB0
 # If you do ISP programming with "make flash", select your programmer/port:
 DUDE_PROGRAMMER = avrispmkii
 # DUDE_PROGRAMMER = stk200
+# DUDE_PROGRAMMER = petsd2
 
 DUDE_PORT = usb
 # DUDE_PORT = /dev/parport0
 # DUDE_PORT = lpt1
+# DUDE_PORT = /dev/ttyUSB0
 
 # If you didn't find your programmer, have a took at the list given from:
 # avrdude -c ?
