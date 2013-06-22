@@ -138,7 +138,7 @@ uint8_t channel_next(channel_t *chan, uint8_t options);
 // returns 0 when data is available, or -1 when not (r/w channel)
 int8_t channel_preloadp(channel_t *chan);
 
-channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush);
+int8_t channel_put(channel_t *chan, char c, uint8_t forceflush);
 
 void channel_close(int8_t secondary_address);
 

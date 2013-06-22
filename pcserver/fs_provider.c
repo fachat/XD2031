@@ -580,7 +580,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			}
 			return er;
 		}
-		if (type != FS_DIR_TYPE_REL || recordlen <= 0) {
+		if (type != FS_DIR_TYPE_REL) {
 			// RW is currently only supported for REL files
 			return CBM_ERROR_DRIVE_NOT_READY;
 		}
@@ -591,6 +591,12 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 	}
 	*reclen = recordlen;
 
+	if (type == FS_DIR_TYPE_REL && recordlen == 0) {
+		// not specifying record length means reading it from the file
+		// which we don't support. So let's give 62 FILE NOT FOUND as if
+		// the file weren't there
+		return CBM_ERROR_FILE_NOT_FOUND62;
+	}
 
 
 	char *fullname = malloc_path(fsep->curpath, buf);
@@ -846,16 +852,44 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 // position to record
 static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 
+	int rv = CBM_ERROR_OK;
+
 	File *file = find_file(ep, tfd);
 	if (file != NULL) {
 		// because we do fread/fwrite, we can just fseek 
 
+		size_t newpos = recordno * file->recordlen;
+		size_t oldlen = 0;
+		
+		// check if the new path really is a directory
+		struct stat fdstat;
+		fflush(file->fp);
+		if(fstat(fileno(file->fp), &fdstat) < 0) {
+			log_error("Could not stat file\n");
+			return CBM_ERROR_DRIVE_NOT_READY;
+		}
+		oldlen = fdstat.st_size;
+		if (oldlen > file->recordlen) {
+			oldlen -= file->recordlen;
+		} else {
+			oldlen = 0;
+		}
+		log_debug("file size=%ld, reclen=%d, oldlen=%ld, newpos=%ld\n", fdstat.st_size,
+					file->recordlen, oldlen, newpos);
+
+		if (oldlen < newpos) {
+			rv = CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+
 		if (file->recordlen > 0) {
-			if (fseek(file->fp, recordno * file->recordlen, SEEK_SET) < 0) {
+			// we seek anyway, so file may or may not be expanded
+			// depending on the implementation of the underlying OS.
+			// Which may be different from the CBM. Ah, well...
+			if (fseek(file->fp, newpos, SEEK_SET) < 0) {
 				log_errno("Could not fseek()");
 				return CBM_ERROR_DRIVE_NOT_READY;
 			}
-			return CBM_ERROR_OK;
+			return rv;
 		}
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	}

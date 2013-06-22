@@ -231,7 +231,7 @@ static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uin
 
 static uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t receive_nbytes) {
 
-	uint16_t restlength = receive_nbytes;
+	uint16_t lengthread = 0;
 
 	uint8_t ptype = FS_REPLY;
 
@@ -244,9 +244,9 @@ static uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint
 		return CBM_ERROR_NO_CHANNEL;
 	}
 
-	while (ptype != FS_EOF && restlength != 0) {
+	while (ptype != FS_EOF && lengthread < receive_nbytes) {
 
-                packet_init(&datapack, 128, buffer->buffer + receive_nbytes - restlength);
+                packet_init(&datapack, 128, buffer->buffer + lengthread);
                 packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
                 packet_set_filled(&cmdpack, channel_no, FS_READ, 0);
 	
@@ -264,18 +264,18 @@ static uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint
 		} else
 		if (ptype == FS_WRITE || ptype == FS_EOF) {
 
-			restlength -= packet_get_contentlen(&datapack);
+			lengthread += packet_get_contentlen(&datapack);
 		}
 	}
 
-	if (restlength > 0) {
+	if (lengthread < receive_nbytes) {
 		// received short package
 		term_printf("RECEIVED SHORT BUFFER, EXPECTED %d, GOT %d\n", 
-					receive_nbytes, receive_nbytes-restlength);
+					receive_nbytes, lengthread);
 	}
 
 	buffer->rptr = 0;
-	buffer->wptr =(receive_nbytes - restlength) & 0xff;
+	buffer->wptr =lengthread & 0xff;
 
 	return rv;
 }
@@ -314,88 +314,7 @@ uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	return rv;
 }
 
-/**
- * send FS_POSITION
- */
-static int8_t bufcmd_send_position(cmdbuf_t *buffer, int8_t channel) {
 
-	uint16_t recordno = buffer->buf_recordno;
-	int8_t rv;
-
-#ifdef DEBUG_RELFILE
-	debug_printf("send_position: chan=%d, record=%d\n", channel, recordno);
-	debug_flush();
-#endif
-
-        //channel_flush(channel);
-
-debug_puts("Done flush\n"); debug_flush();
-
-	if (recordno == 0) {
-		recordno = 1;
-		buffer->buf_recordno = 1;
-	}
-
-        buf[0] = recordno & 0xff;        
-        buf[1] = (recordno >> 8) & 0xff;
-
-        packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
-        // FS_POSITION packet with 2 data bytes, sent on file channel
-        packet_set_filled(&cmdpack, channel, FS_POSITION, 2);
-
-	endpoint_t *endpoint = buffer->real_endpoint;
-
-	cbstat = 0;
-	endpoint->provider->submit_call(endpoint->provdata, channel, 
-						&cmdpack, &cmdpack, cmd_callback);
-	rv = cmd_wait_cb();
-debug_printf("Sent position - got: %d\n", rv); debug_flush();
-
-	return rv;
-}
-
-/**
- * relative file read/write the current record
- */
-static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
-
-	int8_t channel = buffer->channel_no;
-	int8_t rv = CBM_ERROR_FAULT;
-
-#ifdef DEBUG_RELFILE
-	debug_printf("rw_record: chan=%d, iswrite=%d\n", channel, is_write);
-	debug_flush();
-#endif
-
-	bufcmd_send_position(buffer, channel);
-
-	if (is_write) {
-		rv = bufcmd_write_buffer(channel, buffer->real_endpoint, buffer->recordlen);
-	} else {
-		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
-			uint8_t *b = buffer->buffer;
-			for (uint8_t i = buffer->recordlen - 1; i >= 0; i--) {
-				*(b++) = 0;
-			}
-			buffer->lastvalid = 0;
-		} else {
-			rv = bufcmd_read_buffer(channel, buffer->real_endpoint, buffer->recordlen);
-			buffer->lastvalid = buffer->wptr;
-			if (buffer->lastvalid > 0) {
-				buffer->lastvalid --;
-			}
-		}
-	}
-debug_printf("Transferred data - got: %d\n", rv); debug_flush();
-
-	buffer->cur_pos_in_record = 0;
-	buffer->wptr = 0;
-	buffer->rptr = 0;
-	buffer->pflag |= PFLAG_PRELOAD;
-	buffer->pflag &= ~PFLAG_ISREAD;
-
-	return rv;
-}
 
 /**
  * user commands
@@ -784,11 +703,91 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 // ----------------------------------------------------------------------------------
 // provider for relative files
 
+/**
+ * send FS_POSITION
+ */
+static int8_t bufcmd_send_position(cmdbuf_t *buffer, int8_t channel) {
+
+	uint16_t recordno = buffer->buf_recordno;
+	int8_t rv;
+
+#ifdef DEBUG_RELFILE
+	debug_printf("send_position: chan=%d, record=%d\n", channel, recordno);
+	debug_flush();
+#endif
+
+	// protocol is zero-based, CBM is 1-based
+	if (recordno != 0) {
+		recordno--;
+	}
+
+        buf[0] = recordno & 0xff;        
+        buf[1] = (recordno >> 8) & 0xff;
+
+        packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
+        // FS_POSITION packet with 2 data bytes, sent on file channel
+        packet_set_filled(&cmdpack, channel, FS_POSITION, 2);
+
+	endpoint_t *endpoint = buffer->real_endpoint;
+
+	cbstat = 0;
+	endpoint->provider->submit_call(endpoint->provdata, channel, 
+						&cmdpack, &cmdpack, cmd_callback);
+	rv = cmd_wait_cb();
+debug_printf("Sent position - got: %d\n", rv); debug_flush();
+
+	return rv;
+}
+
+/**
+ * relative file read/write the current record
+ */
+static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
+
+	int8_t channel = buffer->channel_no;
+	int8_t rv = CBM_ERROR_FAULT;
+
+#ifdef DEBUG_RELFILE
+	debug_printf("rw_record: chan=%d, iswrite=%d\n", channel, is_write);
+	debug_flush();
+#endif
+
+	bufcmd_send_position(buffer, channel);
+
+	if (is_write) {
+		rv = bufcmd_write_buffer(channel, buffer->real_endpoint, buffer->recordlen);
+	} else {
+		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
+			uint8_t *b = buffer->buffer;
+			for (uint8_t i = buffer->recordlen - 1; i >= 0; i--) {
+				*(b++) = 0;
+			}
+			buffer->lastvalid = 0;
+		} else {
+			rv = bufcmd_read_buffer(channel, buffer->real_endpoint, buffer->recordlen);
+			buffer->lastvalid = buffer->wptr;
+			if (buffer->lastvalid > 0) {
+				buffer->lastvalid --;
+			}
+		}
+	}
+debug_printf("Transferred data - got: %d\n", rv); debug_flush();
+
+	buffer->cur_pos_in_record = 0;
+	buffer->wptr = 0;
+	buffer->rptr = 0;
+	buffer->pflag |= PFLAG_PRELOAD;
+	buffer->pflag &= ~PFLAG_ISREAD;
+
+	return rv;
+} 
+
+
 static void relfile_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 #ifdef DEBUG_BLOCK
-	debug_printf("submit call for direct file, chan=%d, cmd=%d, len=%d, name=%s\n", 
+	debug_printf("submit call for relaive file, chan=%d, cmd=%d, len=%d, name=%s\n", 
 		channelno, txbuf->type, txbuf->wp, ((txbuf->type == FS_OPEN_DIRECT || txbuf->type == FS_OPEN_RW) ? ((char*) txbuf->buffer+1) : ""));
 debug_flush();
 #endif
@@ -888,8 +887,9 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			plen = packet_get_contentlen(txbuf);
 			ptr = packet_get_buffer(txbuf);
 
-			debug_printf("wptr=%d, len=%d, 1st data=%d,%d (%02x, %02x)\n", buffer->wptr, 
-					plen, ptr[0], ptr[1], ptr[0], ptr[1]);
+			debug_printf("wptr=%d, len=%d, pflag=%02x, 1st data=%d,%d (%02x, %02x)\n", 
+					buffer->wptr, 
+					plen, buffer->pflag, ptr[0], ptr[1], ptr[0], ptr[1]);
 
 			if (buffer->pflag & PFLAG_ISREAD) {
 				// we need to skip to the beginning of the next record
@@ -903,17 +903,17 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			err = CBM_ERROR_OK;
 
 			for (p = 0; p < plen; p++) {
+//debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", *ptr, buffer->wptr, buffer->cur_pos_in_record, buffer->recordlen);
 				if (buffer->cur_pos_in_record < buffer->recordlen) {
 					// not rel file or end of record reached
 					buffer->buffer[buffer->wptr] = *ptr;
 					ptr++;
 					// rolls over on 256
 					buffer->wptr++;
-					if (buffer->recordlen > 0) {
-						buffer->cur_pos_in_record++;
-					}
+					buffer->cur_pos_in_record++;
 				} else {
 					err = CBM_ERROR_OVERFLOW_IN_RECORD;
+debug_printf("-> overflow %d\n", err);
 					break;
 				}
 			}
@@ -923,6 +923,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			buffer->rptr = buffer->wptr;
 			buffer->lastvalid = (buffer->wptr == 0) ? 0 : buffer->wptr - 1;
 			packet_get_buffer(rxbuf)[0] = err;
+
 			if (txbuf->type == FS_EOF) {
 				// fill up record with zero
 				while (buffer->cur_pos_in_record < buffer->recordlen) {
@@ -936,6 +937,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 		} else {
 			packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
 		}
+debug_printf("-> send rxbuf %02x\n", packet_get_buffer(rxbuf)[0]);
 		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
 		break;
 	case FS_CLOSE:
@@ -977,11 +979,21 @@ debug_printf("position: chan=%d, recordno=%d, in record=%d\n", channel, recordno
 
         channel_flush(channel);
 
+	buffer->buf_recordno = recordno;
+	// position is 1-based
+	if (position > 0) {
+		position --;
+	}
 	if (position == 0) {
+		buffer->pflag &= ~PFLAG_ISREAD;
 		rv = bufcmd_send_position(buffer, channel);
 	} else {
 		rv = bufcmd_rw_record(buffer, 0);
+		buffer->rptr += position;
+		buffer->wptr += position;
+		buffer->cur_pos_in_record = position;
 	}
+	
 	return rv;
 }
 

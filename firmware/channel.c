@@ -81,6 +81,7 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpac
 static uint8_t _close_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
+debug_printf("close_cb: c=%d, errorno=%d, rxp=%p\n", channel_no, errorno, rxpacket);
                 p->last_push_errorno = errorno;
 		p->push_state = PUSH_CLOSE;
 	}
@@ -422,6 +423,7 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
+debug_printf("push_cb: c=%d, p=%p, type=%d, errnum=%d, rxp=%p, p[0]=%02x\n", channelno, p, packet_get_type(rxpacket), errnum, rxpacket,  packet_get_buffer(rxpacket)[0]);
 		if (errnum < 0 || rxpacket == NULL) {
                 	p->last_push_errorno = CBM_ERROR_FAULT;
 		} else if (packet_get_type(rxpacket) == FS_REPLY) {
@@ -429,6 +431,7 @@ static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacke
 		} else {
 			p->last_push_errorno = CBM_ERROR_OK;
 		}
+debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
 
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
@@ -445,7 +448,7 @@ static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacke
 }
 	
 
-channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
+int8_t channel_put(channel_t *chan, char c, uint8_t forceflush) {
 
 	uint8_t channo = chan->channel_no;
 	packet_t *curpack = &chan->buf[push_slot(chan)];
@@ -465,10 +468,7 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 
 	}
 
-	if (channel_last_push_error(chan) != CBM_ERROR_OK) {
-		return NULL;
-	}
-	return chan;
+	return channel_last_push_error(chan);
 }
 
 static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush) {

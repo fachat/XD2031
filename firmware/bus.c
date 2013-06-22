@@ -53,7 +53,7 @@
 
 #include "device.h"
 
-#define	DEBUG_BUS
+#undef	DEBUG_BUS
 #undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
@@ -278,11 +278,12 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
       }
     } else {
       if (bus->channel != NULL) {
-	bus->channel = channel_put(bus->channel, data, with_eoi);
-	int8_t err = channel_last_push_error(bus->channel);
+	int8_t err = channel_put(bus->channel, data, with_eoi);
+debug_printf("last_push_error: %d (ch=%p)\n", err, bus->channel);
 	if (err != CBM_ERROR_OK) {
 	  set_error(&error, err);
 	  st |= STAT_WRTIMEOUT;
+	  bus->channel = NULL;
 	}
       } else {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
