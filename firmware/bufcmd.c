@@ -270,7 +270,8 @@ static uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint
 
 	if (restlength > 0) {
 		// received short package
-		term_printf("RECEIVED SHORT BUFFER, EXPECTED %d, GOT %d\n", 256, 256-restlength);
+		term_printf("RECEIVED SHORT BUFFER, EXPECTED %d, GOT %d\n", 
+					receive_nbytes, receive_nbytes-restlength);
 	}
 
 	buffer->rptr = 0;
@@ -371,7 +372,7 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 	if (is_write) {
 		rv = bufcmd_write_buffer(channel, buffer->real_endpoint, buffer->recordlen);
 	} else {
-		if (rv == CBM_ERROR_RECORD_NOT_PRESENT && !is_write) {
+		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
 			uint8_t *b = buffer->buffer;
 			for (uint8_t i = buffer->recordlen - 1; i >= 0; i--) {
 				*(b++) = 0;
@@ -379,7 +380,10 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 			buffer->lastvalid = 0;
 		} else {
 			rv = bufcmd_read_buffer(channel, buffer->real_endpoint, buffer->recordlen);
-			buffer->lastvalid = buffer->recordlen-1;
+			buffer->lastvalid = buffer->wptr;
+			if (buffer->lastvalid > 0) {
+				buffer->lastvalid --;
+			}
 		}
 	}
 debug_printf("Transferred data - got: %d\n", rv); debug_flush();
@@ -656,7 +660,131 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 // ----------------------------------------------------------------------------------
 // provider for direct files
 
-static void submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+static void block_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
+
+#ifdef DEBUG_BLOCK
+	debug_printf("submit call for direct file, chan=%d, cmd=%d, len=%d, name=%s\n", 
+		channelno, txbuf->type, txbuf->wp, ((txbuf->type == FS_OPEN_DIRECT || txbuf->type == FS_OPEN_RW) ? ((char*) txbuf->buffer+1) : ""));
+debug_flush();
+#endif
+
+	int bufno;
+
+	int8_t err = CBM_ERROR_NO_CHANNEL;
+	uint8_t rtype = FS_REPLY;
+	uint8_t plen, p;
+	uint8_t *ptr = NULL;
+	ptr+=2;
+	cmdbuf_t *buffer = NULL;
+
+	switch(txbuf->type) {
+	case FS_OPEN_DIRECT:
+		ptr = packet_get_buffer(txbuf);
+		if (*ptr) {
+			// name after '#' is not empty - parse buffer number
+			plen = sscanf((char*)ptr, "%d", &bufno);
+			if (plen == 1) {
+				buffer = cmdbuf_reserve_buf(channelno, bufno);
+			}
+		} else {
+			// reserve buffer
+			buffer = cmdbuf_reserve(channelno);
+		}
+		if (buffer == NULL) {
+			packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
+		} else {
+			packet_get_buffer(rxbuf)[0] = CBM_ERROR_OK;
+			// directly after OPEN, the pointer is at position 1
+			buffer->rptr = 1;
+			buffer->wptr = 1;
+			buffer->pflag = 0;
+		}
+		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		break;
+	case FS_READ:
+		buffer = cmdbuf_find(channelno);
+		rtype = FS_EOF;		// just in case, for an error
+		if (buffer != NULL) {
+			if ((buffer->pflag & PFLAG_PRELOAD) == 0) {
+				// only direct block access
+				// buffer not yet loaded - set channel number
+				packet_get_buffer(rxbuf)[0] = buffer-buffers;
+			} else {
+				//debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
+				//		direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
+				packet_get_buffer(rxbuf)[0] = buffer->buffer[buffer->rptr];
+				// wptr is one "behind" the rptr (which is incremented below), to
+				// accomodate for the preload byte. 
+				// as long as we track it here, this needs to be single-byte packets
+				buffer->wptr = buffer->rptr;
+				// see DOS 2.7 @ $d885 (getbyt)
+				if (buffer->lastvalid == 0 || buffer->rptr != buffer->lastvalid) {
+					rtype = FS_WRITE;
+					buffer->rptr ++;
+				} else {
+					buffer->rptr = 0;
+					// not sure if this is entirely true.
+					// if IEEE preloads the EOF, but never fetches it?
+					buffer->wptr = 1;
+				}
+debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
+			}
+		}
+		packet_set_filled(rxbuf, channelno, rtype, 1);
+		break;
+	case FS_WRITE:
+	case FS_EOF:
+		buffer = cmdbuf_find(channelno);
+		if (buffer != NULL) {
+			plen = packet_get_contentlen(txbuf);
+			ptr = packet_get_buffer(txbuf);
+
+			debug_printf("wptr=%d, len=%d, 1st data=%d,%d (%02x, %02x)\n", buffer->wptr, 
+					plen, ptr[0], ptr[1], ptr[0], ptr[1]);
+
+			err = CBM_ERROR_OK;
+
+			for (p = 0; p < plen; p++) {
+				// not rel file or end of record reached
+				buffer->buffer[buffer->wptr] = *ptr;
+				ptr++;
+				// rolls over on 256
+				buffer->wptr++;
+				if (buffer->recordlen > 0) {
+					buffer->cur_pos_in_record++;
+				}
+			}
+			// disable preload
+			buffer->pflag |= PFLAG_PRELOAD;
+			// align pointers
+			buffer->rptr = buffer->wptr;
+			buffer->lastvalid = (buffer->wptr == 0) ? 0 : buffer->wptr - 1;
+			packet_get_buffer(rxbuf)[0] = err;
+		} else {
+			packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
+		}
+		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		break;
+	case FS_CLOSE:
+		buffer = cmdbuf_find(channelno);
+		if (buffer != NULL) {
+			plen = cmdbuf_free(channelno);
+			if (plen == 0) {
+				packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
+			} else {
+				packet_get_buffer(rxbuf)[0] = CBM_ERROR_OK;
+			}
+			packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
+		}
+		break;
+	}
+	fncallback(channelno, 0, rxbuf);
+}
+// ----------------------------------------------------------------------------------
+// provider for relative files
+
+static void relfile_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
                 uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 #ifdef DEBUG_BLOCK
@@ -704,74 +832,52 @@ debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_fl
                         }
 		}
 		break;
-	case FS_OPEN_DIRECT:
-		ptr = packet_get_buffer(txbuf);
-		if (*ptr) {
-			// name after '#' is not empty - parse buffer number
-			plen = sscanf((char*)ptr, "%d", &bufno);
-			if (plen == 1) {
-				buffer = cmdbuf_reserve_buf(channelno, bufno);
-			}
-		} else {
-			// reserve buffer
-			buffer = cmdbuf_reserve(channelno);
-		}
-		if (buffer == NULL) {
-			packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
-		} else {
-			packet_get_buffer(rxbuf)[0] = CBM_ERROR_OK;
-			// directly after OPEN, the pointer is at position 1
-			buffer->rptr = 1;
-			buffer->wptr = 1;
-			buffer->pflag = 0;
-		}
-		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
-		break;
 	case FS_READ:
 		buffer = cmdbuf_find(channelno);
 		rtype = FS_EOF;		// just in case, for an error
 		if (buffer != NULL) {
-			if (buffer->recordlen > 0 && (buffer->pflag & PFLAG_PRELOAD) == 0) {
+			if ((buffer->pflag & PFLAG_PRELOAD) == 0) {
 				// position to record and read into buffer
 				bufcmd_rw_record(buffer, 0);
 			} 
-			if (buffer->recordlen == 0 && (buffer->pflag & PFLAG_PRELOAD) == 0) {
-				// only direct block access
-				// buffer not yet loaded - set channel number
-				packet_get_buffer(rxbuf)[0] = buffer-buffers;
-			} else {
-				//debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
-				//		direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
-				packet_get_buffer(rxbuf)[0] = buffer->buffer[buffer->rptr];
-				// wptr is one "behind" the rptr (which is incremented below), to
-				// accomodate for the preload byte. 
-				// as long as we track it here, this needs to be single-byte packets
-				buffer->wptr = buffer->rptr;
-				// see DOS 2.7 @ $d885 (getbyt)
-				if (buffer->recordlen > 0) {
-					// mark so write will skip to next record
-					buffer->pflag |= PFLAG_ISREAD;
-					if (buffer->rptr != buffer->lastvalid) {
+			//debug_printf("rptr=%d, 1st data=%d (%02x)\n", buffer_rptr, 
+			//		direct_buffer[buffer_rptr], direct_buffer[buffer_rptr]);
+			packet_get_buffer(rxbuf)[0] = buffer->buffer[buffer->rptr];
+			// wptr is one "behind" the rptr (which is incremented below), to
+			// accomodate for the preload byte. 
+			// as long as we track it here, this needs to be single-byte packets
+			buffer->wptr = buffer->rptr;
+			// see DOS 2.7 @ $d885 (getbyt)
+			// mark so write will skip to next record
+			buffer->pflag |= PFLAG_ISREAD;
+			if (buffer->cur_pos_in_record < buffer->recordlen) {
+				buffer->cur_pos_in_record++;
+				buffer->rptr ++;
+				// check if the rest of the record is empty
+				uint8_t *p = buffer->buffer + buffer->rptr;
+				uint8_t n = buffer->recordlen - buffer->cur_pos_in_record;
+				while (n) {
+					if (*p) {
 						rtype = FS_WRITE;
-						buffer->rptr ++;
-					} else {
-						// go to next record (read it when used)
-						buffer->buf_recordno++;
-						buffer->pflag &= ~PFLAG_PRELOAD;
+						break;
 					}
-				} else {
-					if (buffer->lastvalid == 0 || buffer->rptr != buffer->lastvalid) {
-						rtype = FS_WRITE;
-						buffer->rptr ++;
-					} else {
-						buffer->rptr = 0;
-						// not sure if this is entirely true.
-						// if IEEE preloads the EOF, but never fetches it?
-						buffer->wptr = 1;
-					}
+					p++;
+					n--;
 				}
-debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
+			} else {
+				// rtype defaults to EOF
+				// go to next record (read it when used)
+				buffer->buf_recordno++;
+				if ((buffer->lastvalid - buffer->rptr) > buffer->recordlen) {
+					// the following record is still in the buffer
+					buffer->rptr ++;
+					buffer->cur_pos_in_record = 0;
+				} else {
+					// read it when needed on the next read
+					buffer->pflag &= ~PFLAG_PRELOAD;
+				}
 			}
+debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
 		}
 		packet_set_filled(rxbuf, channelno, rtype, 1);
 		break;
@@ -785,7 +891,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			debug_printf("wptr=%d, len=%d, 1st data=%d,%d (%02x, %02x)\n", buffer->wptr, 
 					plen, ptr[0], ptr[1], ptr[0], ptr[1]);
 
-			if (buffer->recordlen > 0 && buffer->pflag & PFLAG_ISREAD) {
+			if (buffer->pflag & PFLAG_ISREAD) {
 				// we need to skip to the beginning of the next record
 				// and as we overwrite it, there is no need to read it first
 				buffer->buf_recordno++;
@@ -797,8 +903,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			err = CBM_ERROR_OK;
 
 			for (p = 0; p < plen; p++) {
-				if (buffer->recordlen == 0 
-					|| buffer->cur_pos_in_record < buffer->recordlen) {
+				if (buffer->cur_pos_in_record < buffer->recordlen) {
 					// not rel file or end of record reached
 					buffer->buffer[buffer->wptr] = *ptr;
 					ptr++;
@@ -818,7 +923,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			buffer->rptr = buffer->wptr;
 			buffer->lastvalid = (buffer->wptr == 0) ? 0 : buffer->wptr - 1;
 			packet_get_buffer(rxbuf)[0] = err;
-			if (buffer->recordlen > 0 && txbuf->type == FS_EOF) {
+			if (txbuf->type == FS_EOF) {
 				// fill up record with zero
 				while (buffer->cur_pos_in_record < buffer->recordlen) {
 					buffer->buffer[buffer->wptr] = 0;
@@ -844,14 +949,6 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			cmd_wait_cb();
 			// ignore error here?
 			cmdbuf_free(channelno);
-		} else {
-			plen = cmdbuf_free(channelno);
-			if (plen == 0) {
-				packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
-			} else {
-				packet_get_buffer(rxbuf)[0] = CBM_ERROR_OK;
-			}
-			packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
 		}
 		break;
 	}
@@ -893,18 +990,33 @@ static charset_t charset(void *epdata) {
 	return CHARSET_ASCII;
 }
 
-static provider_t provider = {
+static provider_t block_provider = {
 	NULL,			// prov_assign
 	NULL,			// prov_free
 	charset,		// get current character set
 	NULL,			// set new charset
 	NULL,			// submit
-	submit_call,		// submit_call
+	block_submit_call,	// submit_call
+	NULL			// directory_converter
+};
+
+static provider_t relfile_provider = {
+	NULL,			// prov_assign
+	NULL,			// prov_free
+	charset,		// get current character set
+	NULL,			// set new charset
+	NULL,			// submit
+	relfile_submit_call,	// submit_call
 	NULL			// directory_converter
 };
 
 static endpoint_t block_endpoint = {
-	&provider,
+	&block_provider,
+	NULL
+};
+
+static endpoint_t relfile_endpoint = {
+	&relfile_provider,
 	NULL
 };
 
@@ -925,7 +1037,7 @@ int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen
 	if (buffer != NULL) {
 		buffer->real_endpoint = *ep;
 		buffer->recordlen = reclen;
-		*ep = &block_endpoint;
+		*ep = &relfile_endpoint;
 		err = CBM_ERROR_OK;
 	}
 	return err;

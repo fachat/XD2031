@@ -44,6 +44,8 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
 		return;
 	}
 
+	log_debug("openpars options: %s\n", opts);
+
         while (*p != 0) {
                 switch(*(p++)) {
                 case 't':
