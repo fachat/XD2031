@@ -294,9 +294,10 @@ char channel_current_byte(channel_t *chan, uint8_t *iseof) {
  */
 uint8_t channel_next(channel_t *chan, uint8_t options) {
 
-	if (channel_is_eof(chan)) {
-		return 0;
-	}
+// commenting this is not necessarily ok, but needed for relative files for now
+//	if (channel_is_eof(chan)) {
+//		return 0;
+//	}
 
 	// make sure we do have something at least
 	int8_t no_data = channel_preload_int(chan, 1);
@@ -319,11 +320,12 @@ uint8_t channel_next(channel_t *chan, uint8_t options) {
 			return 1;	// ok
 		}
 
-		if (!packet_is_eof(&chan->buf[pull_slot(chan)])) {
+// commenting this is not necessarily ok, but needed for relative files for now
+//		if (!packet_is_eof(&chan->buf[pull_slot(chan)])) {
 			// not eof packet, so pull another one
 			channel_refill(chan, options);
 			return 1;
-		}
+//		}
 	}
 	return 0;
 }

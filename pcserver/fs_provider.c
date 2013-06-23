@@ -90,6 +90,11 @@ static type_t block_type = {
 	sizeof(char[256])
 };
 
+static type_t record_type = {
+	"record_buffer",
+	sizeof(char[65536])
+};
+
 void fsp_init() {
 }
 
@@ -743,6 +748,17 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 	return CBM_ERROR_FAULT;
 }
 
+// TODO: put that ... into dir.c?
+static size_t file_get_size(FILE *fp) {
+	struct stat fdstat;
+	fflush(fp);
+	if(fstat(fileno(fp), &fdstat) < 0) {
+		log_error("Could not stat file\n");
+		return CBM_ERROR_DRIVE_NOT_READY;
+	}
+	return fdstat.st_size;
+}
+
 // read directory
 //
 // Note: there is a race condition, as we do not save the current directory path
@@ -828,8 +844,98 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 	//log_debug("write_file: file=%p\n", file);
 
 	if (file != NULL) {
-
 		FILE *fp = file->fp;
+
+		if (file->recordlen > 0) {
+			long curpos = ftell(fp);
+			long cursize = file_get_size(fp);
+			log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
+			// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
+			// record
+			if ((curpos + file->recordlen) > cursize) {
+				char *buf = mem_alloc(&record_type);
+				size_t n;
+				int nrec;
+				int brec;
+				unsigned int rest;
+				unsigned int rest2;
+				long pos;
+				memset(buf, 0, record_type.sizeoftype);
+				// reset to end of file
+				fseek(fp, cursize, SEEK_SET);
+				// fill rest of last existing record when needed
+				rest = cursize % file->recordlen;
+				if (rest > 0) {
+					rest = file->recordlen - rest;	
+					log_debug("having to fill %d rest bytes\n", rest);
+					cursize += rest;	// adjust
+					while(rest) {
+						if (rest > 256) {
+							rest2 = 256;
+						} else {
+							rest2 = rest;
+						}
+						n = fwrite(buf, 1, rest2, fp);
+						if (n < rest2) {
+							log_errno("Could not write first filler record");
+							mem_free(buf);
+							return -CBM_ERROR_WRITE_ERROR;
+						}
+						rest -= n;
+					}
+				}
+				// done filling rest of last record. Now all the other records
+				// calculate up to what record would be filled by the drive
+				// adjust newpos to record boundary (absolute file size)
+				pos = curpos;
+				n = pos % file->recordlen;
+				// partial record used, adjust (add full record if on boundary)
+				pos = pos + file->recordlen - n;
+				// now check for blocks
+				n = pos % 254;	// part used in last drive block
+				if (n > 0) {
+					// bytes in need to fill in last block
+					n = 254 - n;
+				}
+				pos += n;
+				// which make up this number of records
+				// ignoring the rest of the division, as partial record 
+				// at end of block is ignored. cursize is record-aligned,
+				// so no problem just substracting it
+				nrec = (pos - cursize) / file->recordlen;
+				log_debug("calculate file to be %d bytes - %d records to write\n", pos, nrec);
+				// prepare buffer
+				n = 0;
+				while (n < record_type.sizeoftype) {
+					buf[n] = 255;
+					n+= file->recordlen;
+				}
+				// number of records in buffer
+				brec = (n / file->recordlen) - 1;
+				// write filler records
+				n = 1;
+				while (n > 0 && nrec) {
+					log_debug("append min(nrec=%d, brec=%d) records\n", nrec, brec);
+					if (nrec >= brec) {
+						n = fwrite(buf, brec * file->recordlen, 1, fp);
+						nrec -= brec;
+					} else {
+						n = fwrite(buf, nrec * file->recordlen, 1, fp);
+						// done
+						break;
+					}
+				}
+				// done with it
+				mem_free(buf);
+				if (n == 0) {
+					log_errno("Could not write filler record");
+					return -CBM_ERROR_WRITE_ERROR;
+				}
+				// back to original file position
+				fseek(fp, curpos, SEEK_SET);
+			}
+		}
+
 		if(fp) {
 		  // TODO: evaluate return value
 		  int n = fwrite(buf, 1, len, fp);
@@ -861,7 +967,6 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 		size_t newpos = recordno * file->recordlen;
 		size_t oldlen = 0;
 		
-		// check if the new path really is a directory
 		struct stat fdstat;
 		fflush(file->fp);
 		if(fstat(fileno(file->fp), &fdstat) < 0) {

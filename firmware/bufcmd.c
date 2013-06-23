@@ -81,8 +81,7 @@ typedef struct {
 } cmdbuf_t;
 
 #define	PFLAG_PRELOAD		1		// preload has happened
-#define	PFLAG_DIRTY		2		// buffer is dirty
-#define	PFLAG_ISREAD		4		// buffer has been read from
+#define	PFLAG_ISREAD		2		// buffer has been read from (for rel files)
 
 static cmdbuf_t buffers[CONFIG_NUM_DIRECT_BUFFERS];
 
@@ -787,7 +786,7 @@ static void relfile_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, 
                 uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 #ifdef DEBUG_BLOCK
-	debug_printf("submit call for relaive file, chan=%d, cmd=%d, len=%d, name=%s\n", 
+	debug_printf("submit call for relative file, chan=%d, cmd=%d, len=%d, name=%s\n", 
 		channelno, txbuf->type, txbuf->wp, ((txbuf->type == FS_OPEN_DIRECT || txbuf->type == FS_OPEN_RW) ? ((char*) txbuf->buffer+1) : ""));
 debug_flush();
 #endif
@@ -828,6 +827,7 @@ debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_fl
 				buffer->buf_recordno = 0;	// not loaded
 				buffer->cur_pos_in_record = 0;	// not loaded
                                 buf[0] = CBM_ERROR_OK;
+				buffer->pflag = 0;
                         }
 		}
 		break;
@@ -856,12 +856,13 @@ debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_fl
 				uint8_t *p = buffer->buffer + buffer->rptr;
 				uint8_t n = buffer->recordlen - buffer->cur_pos_in_record;
 				while (n) {
-					if (*p) {
+debug_printf("check n=%d, *p=%d\n", n, *p);
+					n--;
+					if (n && *p) {
 						rtype = FS_WRITE;
 						break;
 					}
 					p++;
-					n--;
 				}
 			} else {
 				// rtype defaults to EOF
@@ -876,7 +877,9 @@ debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_fl
 					buffer->pflag &= ~PFLAG_PRELOAD;
 				}
 			}
-debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
+debug_printf("read -> %s (%d)(ptr=%d, rec pos=%d, reclen=%d, lastvalid=%d)\n", 
+			(rtype == FS_EOF) ? "EOF" : "WRITE", rtype, buffer->rptr, buffer->cur_pos_in_record,
+			buffer->recordlen, buffer->lastvalid);
 		}
 		packet_set_filled(rxbuf, channelno, rtype, 1);
 		break;
@@ -903,7 +906,7 @@ debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "W
 			err = CBM_ERROR_OK;
 
 			for (p = 0; p < plen; p++) {
-//debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", *ptr, buffer->wptr, buffer->cur_pos_in_record, buffer->recordlen);
+debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", *ptr, buffer->wptr, buffer->cur_pos_in_record, buffer->recordlen);
 				if (buffer->cur_pos_in_record < buffer->recordlen) {
 					// not rel file or end of record reached
 					buffer->buffer[buffer->wptr] = *ptr;
@@ -933,6 +936,8 @@ debug_printf("-> overflow %d\n", err);
 				}
 				// write current record
 				bufcmd_rw_record(buffer, 1);
+				buffer->buf_recordno++;
+				buffer->pflag = 0;
 			}
 		} else {
 			packet_get_buffer(rxbuf)[0] = CBM_ERROR_NO_CHANNEL;
@@ -986,13 +991,16 @@ debug_printf("position: chan=%d, recordno=%d, in record=%d\n", channel, recordno
 	}
 	if (position == 0) {
 		buffer->pflag &= ~PFLAG_ISREAD;
+		buffer->pflag &= ~PFLAG_PRELOAD;
+		// this send_position is only done to get the NO RECORD error.
+		// wouldn't be necessary otherwise
 		rv = bufcmd_send_position(buffer, channel);
 	} else {
 		rv = bufcmd_rw_record(buffer, 0);
 		buffer->rptr += position;
 		buffer->wptr += position;
-		buffer->cur_pos_in_record = position;
 	}
+	buffer->cur_pos_in_record = position;
 	
 	return rv;
 }
