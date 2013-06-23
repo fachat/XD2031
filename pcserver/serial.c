@@ -24,9 +24,14 @@
 
 ****************************************************************************/
 
+
+#ifndef _WIN32
+
 /*
- * rs232 interface handling
+ * POSIX RS232 interface handling
  */
+
+#include "os.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,12 +59,12 @@ int config_ser(int fd) {
 	struct termios  config;
 
 	if(!isatty(fd)) { 
-		log_error("device is not a TTY!");
+		log_error("device is not a TTY!\n");
 		return -1;
 	 }
 
 	if(tcgetattr(fd, &config) < 0) { 
-		log_error("Could not get TTY attributes!");
+		log_error("Could not get TTY attributes!\n");
 		return -1;
 	}
 
@@ -120,9 +125,12 @@ int config_ser(int fd) {
 }
 
 void guess_device(char** device) {
-/* search /dev for a virtual serial port 
+/* search /dev for a (virtual) serial port 
    Change "device" to it, if exactly one found
-   If none found or more than one, exit(1) with error msg */
+   If none found or more than one, exit(1) with error msg.
+   FT232 (XS-1541, petSD) connects as ttyUSB0 (ttyUSB1 ...) on Linux,
+   and as cu.usbserial-<SERIAL NUMBER> on OS X.
+   ttyAMA0 is Raspberry Pi's serial port (3.1541) */
 
   DIR *dirptr;
   struct direct *entry;
@@ -132,7 +140,8 @@ void guess_device(char** device) {
   dirptr = opendir(devicename);
   while((entry=readdir(dirptr))!=NULL) {
     if ((!fnmatch("cu.usbserial-*",entry->d_name,FNM_NOESCAPE)) ||
-        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE))) 
+        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE)) ||
+        (!strcmp("ttyAMA0",entry->d_name)))
     {
       strncpy(devicename + 5, entry->d_name, 80-5); 
       devicename[80] = 0; // paranoid... wish I had strncpy_s...
@@ -158,4 +167,115 @@ void guess_device(char** device) {
   }
 }
 
+#else
 
+/*
+ * WIN32 RS232 interface handling
+ */
+
+#include "os.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <ctype.h>
+
+#include "serial.h"
+#include "log.h"
+
+serial_port_t device_open(char *device) {
+	return (CreateFile(device, GENERIC_READ | GENERIC_WRITE,
+			0,
+			0,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			0));
+}
+
+int config_ser(serial_port_t h) {
+	// DCB dcb = {0};
+	// COMMTIMEOUTS timeouts = {0};
+	DCB dcb;
+	COMMTIMEOUTS timeouts;
+
+	memset(&dcb, 0, sizeof dcb);
+	memset(&timeouts, 0, sizeof timeouts);
+
+	dcb.DCBlength = sizeof(DCB);
+
+	if (!GetCommState(h, &dcb)) {
+		log_error("Error getting serial state\n");
+		return -1;
+	}
+
+	dcb.BaudRate = CBR_115200;
+	dcb.ByteSize = 8;
+	dcb.StopBits = ONESTOPBIT;
+	dcb.Parity   = NOPARITY;
+	dcb.fBinary  = TRUE;
+	dcb.fParity  = FALSE;
+	dcb.fOutxCtsFlow = FALSE; 	// no hardware handshake
+	dcb.fOutxDsrFlow = FALSE;
+	dcb.fDtrControl = DTR_CONTROL_DISABLE;
+	dcb.fDsrSensitivity = FALSE; 	// Ignore DSR
+	dcb.fTXContinueOnXoff = TRUE;
+	dcb.fOutX = FALSE; 		// no XON/XOFF
+	dcb.fInX = FALSE;		// no XON/XOFF
+	dcb.fNull = FALSE;		// receive null bytes too
+	dcb.fRtsControl = RTS_CONTROL_DISABLE;
+	dcb.fAbortOnError = FALSE;
+
+
+	if (!SetCommState(h, &dcb)) {
+		log_error("Error setting serial port state\n");
+		return -1;
+	}
+
+	timeouts.ReadIntervalTimeout = MAXDWORD;
+	timeouts.ReadTotalTimeoutConstant = 50;
+	timeouts.ReadTotalTimeoutMultiplier = MAXDWORD;
+
+	timeouts.WriteTotalTimeoutConstant = 0;
+	timeouts.WriteTotalTimeoutMultiplier = 0;
+
+	if (!SetCommTimeouts(h, &timeouts)) {
+		log_error("Error setting serial timeouts\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+void guess_device(char** device) {
+	// just a very vague guess
+	static char devicename[] = "COM5";
+	log_info("Using default serial device %s\n", devicename);
+	*device = devicename;
+}
+
+#endif
+
+#if 0
+int main(void)
+{
+	char *devicename;
+	serial_port_t serial_port;
+
+	guess_device(&devicename);
+
+	serial_port = device_open(devicename);
+	if(os_open_failed(serial_port)) {
+		log_error("Unable to open serial device: %s\n", os_strerror(os_errno()));
+		exit(1);
+	}
+	if(config_ser(serial_port)) {
+		log_error("Unable to configure serial port: %s\n", os_strerror(os_errno()));
+		exit(1);
+	}
+	device_close(serial_port);
+
+	return 0;
+}
+#endif

@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#undef	DEBUG_NAME 
+#define	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
@@ -43,6 +43,7 @@
 #define	NAME_FILE	6
 #define	NAME_DRIVE2	7
 #define	NAME_NAME2	8
+#define	NAME_RELPAR	9
 
 // shared global variable to be used in parse_filename, as long as it's threadsafe
 nameinfo_t nameinfo;
@@ -59,9 +60,9 @@ nameinfo_t nameinfo;
  * To distinguish numeric drive numbers from unassigned (undefined) drives like "ftp:",
  * the provider name must not end with a digit.
  */
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 
-	uint8_t len = in->command_length;	//  includes the zero-byte
+	int8_t len = in->command_length;	//  includes the zero-byte
 
 	// copy over command to the end of the buffer, so we can 
 	// construct it from the parts at the beginning after parsing it
@@ -73,7 +74,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	// adjust so we exclude final null byte
 	len--;
 
-	// runtime vars
+	// runtime vars (uint e.g. to avoid sign extension on REL file record len)
 	uint8_t *p = in->command_buffer + diff;
 	uint8_t ch;
 
@@ -90,7 +91,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	uint8_t *name = p;		// initial name ptr
 	result->name2 = NULL;
 	result->namelen2 = 0;
-	if (is_command) {
+	result->recordlen = 0;
+	if (parsehint & PARSEHINT_COMMAND) {
 		state = NAME_COMMAND;
 		result->name = NULL;
 		result->namelen = 0;
@@ -145,7 +147,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			}
 			break;
 		case NAME_FILE:
-			if (ch == '$') {
+			if (ch == '$' && (parsehint & PARSEHINT_LOAD)) {
 				result->cmd = CMD_DIR;	// directory
 				result->namelen = 0;	// just to be sure, until we parsed it
 				state = NAME_CMDDRIVE;	// jump into command parser
@@ -181,7 +183,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			}
 			// fallthrough
 		case NAME_NAME:
-			if (is_command) {
+			if (parsehint & PARSEHINT_COMMAND) {
 				if (ch == '=') {
 					*p = 0;	// end first file name
 					result->namelen = (p-result->name);
@@ -189,7 +191,11 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 					result->drive2 = NAMEINFO_UNUSED_DRIVE;
 					result->name2 = (p+1);
 					result->namelen2 = len-1;
-					state = NAME_DRIVE2;
+					if (result->cmd == CMD_ASSIGN) {
+						state = NAME_NAME2;
+					} else {
+						state = NAME_DRIVE2;
+					}
 				}
 				break;
 			}
@@ -210,24 +216,20 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			if (ch == ':') {
 				// found drive separator
 				result->drive2 = drv;
-				if (drv != NAMEINFO_UNDEF_DRIVE) {
-					// if we had a real drive, hide it from name,
-					// otherwise the "provider:" part is included in the name
-					result->name2 = (p+1);
-					result->namelen2 = len-1;
-				}
 				state = NAME_NAME2;
+				result->name2 = p+1;
+				result->namelen2 = len-1;
 				break;
 			} else {
 				drv = NAMEINFO_UNDEF_DRIVE;
 			}
-			// fallthrough
+			break;
 		case NAME_NAME2:
-			// nothing to do, only commands here
+			len = 0; // we're done
 			break;
 		case NAME_OPTS:
 			// options can be used in any order, but each type only once
-			if ((ch == 'P' || ch == 'S' || ch == 'R') && result->type == 0) {
+			if ((ch == 'P' || ch == 'S' || ch == 'U') && result->type == 0) {
 				result->type = ch;
 			} else
 			if ((ch == 'R' || ch == 'W' || ch == 'A' || ch == 'X') && result->access == 0) {
@@ -235,8 +237,28 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 			} else
 			if (ch == 'N') {
 				result->options |= NAMEOPT_NONBLOCKING;
+			} else
+			if (ch == 'L') {
+				result->type = ch;
+				state = NAME_RELPAR;
 			}
+			// note the ',' are just stepped over
 			break;
+		case NAME_RELPAR:
+			// separator after the "L" in the filename open
+			if (ch == ',') {
+				// CBM is single byte format, but we "integrate" the closing null-byte
+				// to allow two byte record lengths
+				len--;
+				p++;
+				result->recordlen = *p;
+				if (*p != 0) {
+					len--;
+					p++;
+					result->recordlen |= (*p << 8);
+				}
+				break;
+			}
 		default:
 			break;
 		}
@@ -245,7 +267,12 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	}
 
 	if (result->access == 0) {
-		result->access = 'R';
+		if (result->type == 'L') {
+			// if access is not set on a REL file, it's read & write
+			result->access = 'X';
+		} else {
+			result->access = 'R';
+		}
 	}
 
 #ifdef DEBUG_NAME
@@ -260,6 +287,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
 	debug_printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' : 
 				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive2 + 0x30));
+	debug_printf("RECLEN=%d\n", result->recordlen); 
+	debug_flush();
 #endif
 }
 
@@ -272,6 +301,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command) {
  * beginning of the command_buffer.
  * 
  * it returns the number of bytes in the buffer
+ *
+ * TODO: check for buffer overflow
  */
 uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
@@ -287,17 +318,29 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	}
 
 	strcpy((char*)p, (char*)nameinfo->name);
+	// let p point to the byte after the null byte
 	p += nameinfo->namelen + 1;
 
-	if (nameinfo->namelen2 == 0) {
-		return p-trg;
+	// it's either two file names (like MOVE), or one file name with parameters (for OPEN_*)
+	if (nameinfo->namelen2 != 0) {
+		// two file names
+		*p = nameinfo->drive2;
+		p++;
+
+		strcpy((char*)p, (char*)nameinfo->name2);
+		p += nameinfo->namelen2 + 1;
+	} else 
+	if (nameinfo->type != 0) {
+		// parameters are comma-separated lists of "<name>'='<values>", e.g. "T=S"
+		*(p++) = 'T';
+		*(p++) = '=';
+		*(p++) = nameinfo->type;
+		if (nameinfo->recordlen > 0) {
+			sprintf((char*)p, "%d", nameinfo->recordlen);
+			p = p + strlen((char*)p);
+		}
+		*(p++) = 0;
 	}
-
-	*p = nameinfo->drive2;
-	p++;
-
-	strcpy((char*)p, (char*)nameinfo->name2);
-	p += nameinfo->namelen2 + 1;
 
 	return p-trg;
 }

@@ -41,11 +41,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <pwd.h>
+#include <inttypes.h>
 
 #include "fscmd.h"
 #include "privs.h"
 #include "log.h"
+#include "charconvert.h"
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
@@ -56,9 +57,9 @@
 void usage(void) {
 	printf("Usage: fsser [options] run_directory\n"
 		" options=\n"
-                "   -A<drv>=<provider-string>\n"
+                "   -A<drv>:<provider-string>\n"
                 "               assign a provider to a drive\n"
-                "               e.g. use '-A0=fs:.' to assign the current directory\n"
+                "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
 		"   -X<bus>:<cmd>\n"
 		"               send an 'X'-command to the specified bus, e.g. to set\n"
@@ -67,14 +68,15 @@ void usage(void) {
 		"   -d <device>	define serial device to use\n"
 		"   -d auto     auto-detect serial device\n"
 		"   -v          enable debug log output\n"
+		"   -?          gives you this help text\n"
 	);
 	exit(1);
 }
 
 
 int main(int argc, char *argv[]) {
-	int writefd, readfd;
-	int fdesc;
+	serial_port_t writefd, readfd;
+	serial_port_t fdesc;
 	int i;
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
@@ -127,31 +129,33 @@ int main(int argc, char *argv[]) {
 		// Use default configuration if no parameters were given
 		// Default assigns are made later
 		dir = ".";
-	} else
-	{
-		if(i!=argc-1) {
-		  usage();
-		}
+	} else if (i == argc) {
+		log_error("Missing run_directory\n");
+		usage();
+	} else if (argc > i+1) {
+		log_error("Multiple run_directories or missing option sign '-'\n");
+		usage();
+	} else dir = argv[i];
 
-		dir = argv[i++];
-	}
-	printf("dir=%s\n",dir);
+	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
 	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
-			dir, errno, strerror(errno));
+			dir, os_errno(), os_strerror(os_errno()));
 	  exit(1);
 	}
 
 	if (device != NULL) {
 		fdesc = device_open(device);
-		if (fdesc < 0) {
+		if (os_open_failed(fdesc)) {
 		  /* error */
 		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
-			device, errno, strerror(errno));
+			device, os_errno(), os_strerror(os_errno()));
 		  exit(1);
 		}
-		if(config_ser(fdesc) < 0) {
+		if(config_ser(fdesc)) {
+		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)",
+			device, os_errno(), os_strerror(os_errno()));
 		  exit(1);
 		}
 		readfd = fdesc;
@@ -165,21 +169,18 @@ int main(int argc, char *argv[]) {
 
 	if(argc == 1) {
 		// Default assigns
-		char *fs_home;
-		fs_home = (char*) malloc(strlen(get_home_dir()) + 4);
-		strcpy(fs_home, "fs:");
-		strcat(fs_home, get_home_dir());
-		provider_assign(0, fs_home);
-		provider_assign(1, "fs:/usr/local/xd2031/sample");
-		provider_assign(2, "fs:/usr/local/xd2031/tools");
-		provider_assign(3, "ftp:ftp.zimmers.net/pub/cbm");
-		provider_assign(7, "http:www.zimmers.net/anonftp/pub/cbm/");
+		log_info("Using built-in default assigns\n");
+		provider_assign(0, "fs",   os_get_home_dir());
+		provider_assign(1, "fs",   "/usr/local/xd2031/sample");
+		provider_assign(2, "fs",   "/usr/local/xd2031/tools");
+		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm");
+		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/");
 	} else cmd_assign_from_cmdline(argc, argv);
 
 	int res = cmd_loop(readfd, writefd);
 
 	if (device != NULL) {
-		close(fdesc);
+		device_close(fdesc);
 	}
 
 	if(res) {

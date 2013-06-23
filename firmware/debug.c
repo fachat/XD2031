@@ -1,7 +1,7 @@
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2013 Andre Fachat, Nils Eilers
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -21,37 +21,47 @@
 ****************************************************************************/
 
 /**
- * conversion between PETSCII and ASCII
+ * Debug helpers
  */
 
-#ifndef PETSCII_H
-#define PETSCII_H
+#include <inttypes.h>
+#include <ctype.h>
 
-uint8_t *petscii_to_ascii_str (uint8_t *s);
-uint8_t *ascii_to_petscii_str (uint8_t *s);
+#include "debug.h"
+#include "petscii.h"
 
-/**
- * simple conversion
- */
-static inline uint8_t petscii_to_ascii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x20;	// lower PETSCII to lower ASCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// upper C64 PETSCII to upper ASCII
-	if (v < 0xc1) return v;
-	if (v < 0xdb) return v & 0x7f;	// upper PET PETSCII to upper ASCII
-	return v;
-}
+#if DEBUG
 
-/**
- * simple conversion
- */
-static inline uint8_t ascii_to_petscii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x80;	// upper ASCII to upper PETSCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// lower ASCII to lower C64/PET PETSCII
-	return v;
+void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
+	uint16_t tot = 0;
+	uint8_t line = 0;
+	uint8_t x = 0;
+
+	if(len) {
+		while(tot < len) {
+			debug_printf("%04X  ", tot);
+			for(x=0; x<16; x++) {
+				if(line+x < len) {
+					tot++;
+					debug_printf("%02X ", p[line+x]);
+				}
+				else debug_puts("   ");
+				if(x == 7) debug_putc(' ');
+			}
+			debug_puts(" |");
+			for(x=0; x<16; x++) {
+				if(line+x < len) {
+					uint8_t c = p[line+x];
+					if (petscii) c = petscii_to_ascii(c);
+					if(isprint(c)) debug_putc(c); else debug_putc(' ');
+				} else debug_putc(' ');
+			}
+			debug_putc('|');
+			debug_putcrlf();
+			line = tot;
+		}
+
+	}
 }
 
 #endif

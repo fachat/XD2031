@@ -105,12 +105,23 @@ FS_OPEN_*
 
 	FSP_FD		contains the channel; starts with 0, may legally be up to 120
 			(which is an arbitrary number below FSFD_SETOPT, which is 125)
-	FSP_DATA	contains the two things:
+	FSP_DATA	contains these two things:
 			- first byte contains the drive number as binary number
 				This enables the server to determine the actual 
 				provider to use
 			- further bytes contain the file name, with a trailing zero
 				included
+			- optionally, behind the zero byte, there is an option string.
+			  	The option string consists of <name>'='<value> pairs, like
+				"T=S". The name 'T' is defined for the file type, which is:
+				'S' - sequential access file
+				'P' - executable file
+				'U' - user defined file (R/W access)
+				'L' - record-oriented format, with the record size in 
+					textual number trailing, like "T=L14"
+				Multiple options are separated by comma ','.
+				The option string is ended with an included terminating zero byte
+
 	If the first byte in FSP_DATA is 255, then the drive given in the 
 	original file name is not valid but contains a provider name. This is thus
 	included in the file name payload data.
@@ -188,16 +199,33 @@ FS_OPEN_DR
 	hex or bcd or ascii):
 
 	FS_DIR_LEN	0-3	file length in bytes, four bytes, low byte first
-	FS_DIR_YEAR	4	last modification date, year-1900
-	FS_DIR_MONTH	5	-"- month
-	FS_DIR_DAY	6	-"- day
-	FS_DIR_HOUR	7	-"- hour
-	FS_DIR_MIN	8	-"- minute
-	FS_DIR_SEC	9	-"- second
-	FS_DIR_MODE	10	type of directory entry, see below
-	FS_DIR_NAME	11-	zero-terminated file name in ASCII
+	FS_DIR_ATTR	4	file attribute byte - see below
+	FS_DIR_YEAR	5	last modification date, year-1900
+	FS_DIR_MONTH	6	-"- month
+	FS_DIR_DAY	7	-"- day
+	FS_DIR_HOUR	8	-"- hour
+	FS_DIR_MIN	9	-"- minute
+	FS_DIR_SEC	10	-"- second
+	FS_DIR_MODE	11	type of directory entry, see below
+	FS_DIR_NAME	12-	zero-terminated file name in ASCII
 
-	The mode byte contains the type of the file as:
+	The attribute byte contains additional information about the file:
+	
+	FS_DIR_ATTR_SPLAT	0x80	file is currently in use (displayed as "*" before the type)
+	FS_DIR_ATTR_LOCKED	0x40	file is write-protected (locked, "<" after the type)
+	FS_DIR_ATTR_TRANS	0x20	transient (temporary) file, during "@" replacement
+	FS_DIR_ATTR_ESTIMATE	0x10	file size is an estimate only (real value to costly to find)
+	FS_DIR_ATTR_TYPEMASK	0x07	file type mask
+
+	The value in the file type mask describe the type of the file:
+
+	FS_DIR_TYPE_DEL		0	deleted file
+	FS_DIR_TYPE_SEQ		1	sequential access file (seek may not be possible)
+	FS_DIR_TYPE_PRG		2	executable program file
+	FS_DIR_TYPE_USR		3	
+	FS_DIR_TYPE_REL		4	record-oriented file
+
+	The mode byte contains the type of the directory entry as:
 
 	FS_DIR_MOD_FIL	0	file
 	FS_DIR_MOD_NAM	1	disk name
@@ -209,7 +237,7 @@ FS_OPEN_DR
 	
 FS_CLOSE
 	This closes a channel - TODO: currently not used, but probably should
-	Note that channels are also closed on receiving an FS_EOF packet.
+	Note that channels are NOT closed on receiving an FS_EOF packet.
 
 
 Read and Write
@@ -236,7 +264,9 @@ FS_EOF
 	further data available on this channel.
 	It tries to obeys the Commodore semantics, in that it always should have a valid data
 	byte with it.
-	Receiving an FS_EOF automatically closes the channel.
+	Receiving an FS_EOF does not automatically close the channel, an FS_CLOSE has to follow.
+	A channel may be "reopened" for example by sending a P (position), or Block read or write
+	command.
 
 
 File operations

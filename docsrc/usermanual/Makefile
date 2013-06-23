@@ -1,3 +1,12 @@
+# List LaTeX files files here:
+TEX_EN = gpl-2.0.tex
+TEX_DE = XD2031-Benutzerhandbuch.tex
+
+# Specify main document here without extension:
+MAINDOC = XD2031-Benutzerhandbuch
+
+###################################################################
+
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 ifeq ($(uname_S),not)
@@ -22,14 +31,22 @@ MAKEINDEX = makeindex
 OPEN = xdg-open
 endif
 
-all:	XD2031-Benutzerhandbuch.tex gpl-2.0.tex
-	pdflatex XD2031-Benutzerhandbuch.tex
-	$(MAKEINDEX) XD2031-Benutzerhandbuch.idx
-	pdflatex XD2031-Benutzerhandbuch.tex
+all:    $(TEX_EN) $(MAINDOC).tex
+	pdflatex $(MAINDOC).tex
+	$(MAKEINDEX) $(MAINDOC).idx
+	pdflatex $(MAINDOC).tex
 	# Move generated PDF to doc/
-	mv XD2031-Benutzerhandbuch.pdf ../../doc/XD2031-Benutzerhandbuch.pdf
+	mv $(MAINDOC).pdf ../../doc/$(MAINDOC).pdf
 	# Display PDF
-	$(OPEN) ../../doc/XD2031-Benutzerhandbuch.pdf
+	$(OPEN) ../../doc/$(MAINDOC).pdf
+
+spellcheck:
+ifneq ($(strip $(TEX_EN)),)
+	hunspell -t -d en_US $(TEX_EN)
+endif
+ifneq ($(strip $(TEX_DE)),)
+	hunspell -t -d de_DE $(TEX_DE)
+endif
 
 clean:
-	rm -f *.aux *.fot *.glo *.idx *.ilg *.ind *.log *.out *.pdf *.toc
+	rm -f *.aux *.fot *.glo *.idx *.ilg *.ind *.log *.out *.toc

@@ -47,6 +47,7 @@ void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr);
 errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
 
 // send an FS_RESET packet and pull in cmdline options
-void rtconfig_pullconfig();
+// also tries to send the preferred character set
+void rtconfig_pullconfig(void);
 
 #endif

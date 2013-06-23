@@ -41,7 +41,6 @@
 #include <ctype.h>
 
 #include "channel.h"
-#include "status.h"
 #include "errormsg.h"
 #include "cmd.h"
 #include "cmd2.h"
@@ -69,7 +68,6 @@
 #define	BUSCMD_UNLISTEN	0x3f
 #define	BUSCMD_DATA	0x60
 
-#define	CMD_SECADDR	15	// command channel
 #define	LOAD_SECADDR	0	// load channel
 
 #define	BUSSEC_OPEN	0xf0	// secaddr for open
@@ -96,7 +94,7 @@ static uint8_t secaddr_offset_counter;
 void bus_init() {
 	secaddr_offset_counter = 0;
 
-	set_error(&error, ERROR_DOSVERSION);
+	set_error(&error, CBM_ERROR_DOSVERSION);
 }
 
 uint8_t get_default_device_address(void) {
@@ -137,7 +135,7 @@ static volatile bus_t *bus_for_irq;
 
 static void _cmd_callback(int8_t errnum, uint8_t *rxdata) {
     	bus_for_irq->errnum = errnum;
-    	if (errnum == ERROR_SCRATCHED) {
+    	if (errnum == CBM_ERROR_SCRATCHED) {
 		// files deleted
 		if (rxdata != NULL) {
 			// this is the "number of files deleted" parameter
@@ -165,6 +163,14 @@ static int16_t cmd_handler (bus_t *bus)
 	bus_for_irq = bus;
 	bus_for_irq->cmd_done = 0;
 
+	// empty command (JiffyDOS sends a lot of them)
+	if (bus->command.command_length == 0) {
+		bus->cmd_done = 1;
+		bus_for_irq = bus;
+		bus_for_irq->cmd_done = 1;
+		return 0;
+	}
+
 	// zero termination
 	bus->command.command_buffer[bus->command.command_length++] = 0;
 
@@ -177,13 +183,19 @@ static int16_t cmd_handler (bus_t *bus)
 		//bus_for_irq->current_device_address = bus_for_irq->rtconf.device_address;
     	} else {
       		/* Handle filenames */
-
+		uint8_t openflag = 0;
+		if (secaddr == 1) {
+			openflag = OPENFLAG_SAVE;
+		} else
+		if (secaddr == 0) {
+			openflag = OPENFLAG_LOAD;
+		}
 #ifdef DEBUG_BUS
       		debug_printf("Open file secaddr=%02x, name='%s'\n",
          		secaddr, bus->command.command_buffer);
 #endif
       		rv = file_open(bus_secaddr_adjust(bus, secaddr), bus, &error, 
-							_cmd_callback, secaddr == 1);
+							_cmd_callback, openflag);
     	}
 
       	if (rv < 0) {
@@ -214,17 +226,24 @@ static int16_t cmd_handler (bus_t *bus)
 #endif
 
 		if (secaddr != CMD_SECADDR) {
+			uint8_t channel_no = bus_secaddr_adjust(bus, secaddr);
 			// only open, not for commands
 
 	        	if (bus_for_irq->errnum != 0) {
 				// close channel on error. Is this ok?
-	        	        channel_close(bus_secaddr_adjust(bus, secaddr));
+	        	        channel_close(channel_no);
 	        	} else {
 #ifdef DEBUG_BUS
-				debug_printf("preload channel %d\n", bus_secaddr_adjust(bus, secaddr));
+				debug_printf("preload channel %d\n", channel_no);
 #endif
+                		channel_t *chan = channel_find(channel_no);
                 		// really only does something on read-only channels
-                		channel_preload(bus_secaddr_adjust(bus, secaddr));
+				if (chan == NULL) {
+			                term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", 
+						channel_no);
+				} else {
+                			channel_preloadp(chan);
+				}
 			}
 		}
       	}
@@ -257,8 +276,12 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     } else {
       if (bus->channel != NULL) {
 	bus->channel = channel_put(bus->channel, data, with_eoi);
-      }
-      if (bus->channel == NULL) {
+	int8_t err = channel_last_push_error(bus->channel);
+	if (err != CBM_ERROR_OK) {
+	  set_error(&error, err);
+	  st |= STAT_WRTIMEOUT;
+	}
+      } else {
 	st = STAT_NODEV | STAT_WRTIMEOUT;	// correct code?
       }
     }
@@ -272,6 +295,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 
 	int16_t st = 0;
+	uint8_t iseof = 0;
 
 	uint8_t secaddr = bus->secondary & SECADDR_MASK;
 	channel_t *channel = bus->channel;
@@ -290,7 +314,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			if (error.error_buffer[error.readp] == 0) {
 				// finished reading the error message
 				// set OK
-				set_error(&error, ERROR_OK);
+				set_error(&error, CBM_ERROR_OK);
 			}
 		}
 	} else {
@@ -298,7 +322,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		// if still NULL, error
 		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
-		set_error(&error, ERROR_FILE_NOT_OPEN);
+		set_error(&error, CBM_ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
 #ifdef DEBUG_BUS
@@ -312,10 +336,14 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
 				channel->channel_no, st);
 #endif
+			int8_t err = channel_last_pull_error(channel);
+			if (err != CBM_ERROR_OK) {
+				set_error(&error, err);
+			}
 		} else {
 
-			*data = channel_current_byte(channel);
-			if (channel_current_is_eof(channel)) {
+			*data = channel_current_byte(channel, &iseof);
+			if (iseof) {
 #ifdef DEBUG_BUS
 				debug_puts("EOF!\n");
 #endif
@@ -327,6 +355,10 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				// make sure the next call does have a data byte
 				if (!channel_next(channel, preload & BUS_SYNC)) {
 					// no further data on channel available
+					int8_t err = channel_last_pull_error(channel);
+					if (err != CBM_ERROR_OK) {
+						set_error(&error, err);
+					}
 				}
 			}
 		}

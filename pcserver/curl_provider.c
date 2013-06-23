@@ -32,6 +32,8 @@
  * curl-library-based internet access filesystem.
  */
 
+#include "os.h"
+
 #include <curl/curl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +44,7 @@
 #include "wireformat.h"
 #include "provider.h"
 #include "log.h"
+
 
 #undef DEBUG_CURL
 
@@ -146,7 +149,7 @@ static curl_endpoint_t *new_endpoint(const char *path) {
 	fsep->host_buffer[0] = 0;
 	// separate host from path
 	// if hostend is NULL, then we only have the host
-	char *hostend=index(path, '/');
+	char *hostend=strchr(path, '/');
 
 	int hostlen = strlen(path);
 	if (hostend != NULL) {
@@ -384,7 +387,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	if (running_handles == 0) {
 		// no more data will be available
 		log_debug("pull_data sets EOF (running=0), rv=%d, datalen=%d\n", rv, fp->rdbufdatalen);
-		*eof = 1;
+		*eof = READFLAG_EOF;
 	}
 
 	int msgs_in_queue = 0;
@@ -402,7 +405,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 				log_error("errorbuffer = %s\n", cep->error_buffer);
 			}
 			log_debug("pull_data sets EOF (err msg)\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			break;
 		}
 	}
@@ -428,13 +431,13 @@ static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len
 			rv = pull_data(cep, fp, &(fp->read_state));
 			if (rv != CURLM_OK) {
 				log_debug("reply_with_data sets EOF rv=%d, datalen=%d\n", rv, fp->rdbufdatalen);
-				*eof = 1;
+				*eof = READFLAG_EOF;
 			}
 		}
 
 		if (fp->read_state && fp->rdbufdatalen <= fp->bufrp) {
 			log_debug("reply with data sets EOF (2)\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 		}
 	}
 	return datalen;
@@ -473,7 +476,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 			
 		if (fp->read_state != 0) {
 			log_warn("adding bogus zero byte, to make CBM noticing the EOF\n");
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			*retbuf = 0;
 			return 1;
 		}
@@ -484,7 +487,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	} else {
 		log_error("fp is NULL on read attempt\n");
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 
@@ -546,7 +549,8 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 	return fp;
 }
 
-static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
+static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
 
 	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {
@@ -567,9 +571,9 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
 
 		printf("multi add returns %d\n", rv);
 
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 /**
@@ -579,22 +583,26 @@ static int open_rd(endpoint_t *ep, int tfd, const char *buf) {
  * Because of the FS_DIR_* macros used here, the wireformat.h include
  * is required, which I would like to have avoided...
  */
-int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *readflag) {
 
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
 				len, FS_DIR_NAME+1);
-		return -ERROR_FAULT;
+		return -CBM_ERROR_FAULT;
 	}
 
 	// prepare dir entry
 	memset(retbuf, 0, FS_DIR_NAME+1);	
-	
+
+	*readflag = READFLAG_DENTRY;
+
+	int eof = 0;	
 	int l = 0;
 	char *namep = retbuf + FS_DIR_NAME;
 	switch(fp->read_state) {
 	case 0:		// disk name
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_NAM;
+		retbuf[FS_DIR_ATTR] = FS_DIR_TYPE_PRG;
 		l = strlen(fp->name_buffer);
 		if (len < FS_DIR_NAME + l + 1) {
 			log_error("read buffer too small for dir name (is %d, need at least %d - concatenating)\n",
@@ -610,21 +618,21 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		// file names
 #ifdef DEBUG_CURL
 		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
-			fp->rdbufdatalen, fp->bufrp, *eof);
+			fp->rdbufdatalen, fp->bufrp, *readflag);
 #endif
 
 		l = FS_DIR_NAME;
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FIL;
 		do {
-			while ((fp->rdbufdatalen <= fp->bufrp) && (*eof == 0)) {
+			while ((fp->rdbufdatalen <= fp->bufrp) && (eof == 0)) {
 
 				//log_debug("Trying to pull...\n");
 
-				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, eof);
+				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, &eof);
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
-					return -ERROR_DIR_ERROR;
+					return -CBM_ERROR_DIR_ERROR;
 				}
 			}
 			// find length of name
@@ -656,14 +664,14 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 					break;
 				}
 			}
-			if (*eof != 0) {
+			if (eof != 0) {
 				log_debug("end of dir read\n");
 				fp->read_state++;
 				*namep = 0;
 			}
 		}
-		while (*namep != 0 && *eof == 0);	// not null byte, then not done
-		*eof = 0;
+		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
+		eof = 0;
 		if (l > FS_DIR_NAME) {
 			break;
 		}
@@ -673,7 +681,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FRE;
 		retbuf[FS_DIR_NAME] = 0;
 		l = FS_DIR_NAME + 1;
-		*eof = 1;
+		*readflag |= READFLAG_EOF;
 		fp->read_state++;
 		break;
 	}
@@ -688,7 +696,9 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 }
 
 
-static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
+static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void)opts; // silence warning unused parameter
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
 	File *fp = open_file(ep, tfd, buf, 1);
@@ -716,9 +726,9 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 
 		printf("multi add returns %d\n", rv);
 
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 
@@ -794,7 +804,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int iseof) {
 	} else {
 		log_error("fp is NULL on read attempt\n");
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 #endif
@@ -847,7 +857,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 		}
 		if (plen + l + 1 > MAX_BUFFER_SIZE) {
 			log_error("new path for chdir too long: %d\n", plen+l+1);
-			return ERROR_FILE_NAME_TOO_LONG;
+			return CBM_ERROR_FILE_NAME_TOO_LONG;
 		}
 		strcat(cep->path_buffer, "/");
 		strncat(cep->path_buffer, p, plen);
@@ -860,7 +870,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 	log_debug("CHDIR: New path is '%s'\n", cep->path_buffer);
 
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 
@@ -868,6 +878,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 provider_t ftp_provider = {
 	"ftp",
+	"ASCII",
 	curl_init,
 	ftp_new,
 	ftp_temp,
@@ -886,11 +897,13 @@ provider_t ftp_provider = {
 	do_chdir,
 	NULL, // do_mkdir,
 	NULL,  // do_rmdir
-	NULL 	// block
+	NULL, 	// block
+	NULL 	// direct
 };
 
 provider_t http_provider = {
 	"http",
+	"ASCII",
 	curl_init,
 	http_new,
 	http_temp,
@@ -909,7 +922,8 @@ provider_t http_provider = {
 	do_chdir,
 	NULL, // do_mkdir,
 	NULL,  // do_rmdir
-	NULL 	// block
+	NULL, 	// block
+	NULL 	// direct
 };
 
 

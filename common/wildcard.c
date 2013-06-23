@@ -1,12 +1,7 @@
 /****************************************************************************
 
     Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
-
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
+    Copyright (C) 2013 Andre Fachat, Edilbert Kirk, Nils Eilers
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,16 +19,46 @@
 
 ****************************************************************************/
 
-#ifndef NAME_H
-#define	NAME_H
+#include <string.h>
+#include <inttypes.h>
+#include <stdio.h>
+
+#include "wildcard.h"
+
+
+/**
+ * classic Commodore pattern matching:
+ * 	"*" - only works as the last pattern char and matches everything
+ * 	      further chars in the pattern are ignored
+ * 	"?" - single character is ignored
+ */
+
+static int8_t classic_match(const char *x, const char *y) {
+	int i = 0;	// current position
+	char a,b;
+
+	//printf("classic match between '%s' and '%s'\n", (char*)x, (char*)y);
+
+	while(1) {
+		a = x[i];
+		b = y[i++];
+		if (a ==  0  && b ==  0 ) return 1; // match
+		if (a == '*' || b == '*') return 1; // match
+		if (a == '?' || b == '?') continue; // wild letter
+		if (a != b) break;
+	}
+	return 0;
+}
+
 
 /**
  * compares the given name to the given pattern
  * and returns true if it matches.
  * Both names are null-terminated
  */
-int compare_pattern(const char *name, const char *pattern);
 
-
-#endif
-
+int8_t compare_pattern(const char *name, const char *pattern) {
+	// 1581 matching style not yet implemented
+	// so do always a "classic" matching:
+	return classic_match(name, pattern);
+}

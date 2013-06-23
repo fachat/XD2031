@@ -80,6 +80,12 @@
 #define	PUSH_FILLTWO	2		// filling the second buffer
 #define	PUSH_CLOSE	3		// channel has been closed
 
+#define	PUT_FLUSH	0x01
+#define	PUT_SYNC	0x02
+
+#define	GET_WAIT	0x01
+#define	GET_SYNC	0x02
+
 typedef struct {
 	// channel globals
 	int8_t		channel_no;
@@ -89,7 +95,7 @@ typedef struct {
 	endpoint_t	*endpoint;
 	// directory handling
 	uint8_t		drive;
-	int8_t		(*directory_converter)(packet_t *packet, uint8_t drive);
+	int8_t		(*directory_converter)(void *ep, packet_t *packet, uint8_t drive);
 	// channel pull state - only one can be pulled at a time
 	int8_t		pull_state;
 	int8_t		last_pull_errorno;
@@ -112,7 +118,8 @@ void channel_init(void);
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconverter)(packet_t *, uint8_t drive),
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, 
+		int8_t (*dirconverter)(void *ep, packet_t *, uint8_t drive),
 		uint8_t drive);
 
 channel_t* channel_find(int8_t chan);
@@ -124,61 +131,26 @@ channel_t* channel_find(int8_t chan);
  */
 channel_t *channel_flush(int8_t chan);
 
-static inline int8_t channel_is_writable(channel_t *chan) {
-	return chan->writetype == WTYPE_WRITEONLY || chan->writetype == WTYPE_READWRITE;
-}
-
-static inline uint8_t channel_is_rel(channel_t *chan) {
-	// check recordlen > 0 for REL files
-	return 0;	// we don't support REL files so far
-}
-
-char channel_current_byte(channel_t *chan);
-
-static inline uint8_t channel_is_eof(channel_t *chan) {
-        // return buf->sendeoi && (buf->position == buf->lastused);
-        return packet_is_eof(&chan->buf[chan->current]);
-}       
-
-static inline uint8_t channel_current_is_eof(channel_t *chan) {
-        // return buf->sendeoi && (buf->position == buf->lastused);
-        return packet_current_is_eof(&chan->buf[chan->current]);
-}       
+char channel_current_byte(channel_t *chan, uint8_t *iseof);
 
 uint8_t channel_next(channel_t *chan, uint8_t options);
 
-uint8_t channel_has_more(channel_t *chan);
-
-void channel_preload(int8_t channelno);
 // returns 0 when data is available, or -1 when not (r/w channel)
 int8_t channel_preloadp(channel_t *chan);
-
-#define	PUT_FLUSH	0x01
-#define	PUT_SYNC	0x02
-
-#define	GET_WAIT	0x01
-#define	GET_SYNC	0x02
 
 channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush);
 
 void channel_close(int8_t secondary_address);
 
-//static inline void channel_status_set(uint8_t *error_buffer, int len) {
-  //if (errornum >= 20 && errornum != ERROR_DOSVERSION) {
-  //  FIXME: Compare to E648
-  //  // NOTE: 1571 doesn't write the BAM and closes some buffers if an error occured
-  //  led_state |= LED_ERROR;
-  //} else {
-  //  led_state &= (uint8_t)~LED_ERROR;
-  //  set_error_led(0);
-  //}
-  //// WTF?
-  //buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
-  ///* Send message without the final 0x0d */
-  //display_errorchannel(msg - error_buffer, error_buffer);
-//}
-
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl);
+
+static inline int8_t channel_last_pull_error(channel_t *chan) {
+	return chan->last_pull_errorno;
+}
+
+static inline int8_t channel_last_push_error(channel_t *chan) {
+	return chan->last_push_errorno;
+}
 
 #endif

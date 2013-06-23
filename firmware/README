@@ -13,7 +13,9 @@ BUILD
 -----
 
 Type
+
 	make
+
 On a Linux box with AVR cross-compiler installed
 
 
@@ -21,7 +23,9 @@ INSTALLATION
 ------------
 
 Type
+
 	sudo make load
+
 on a Linux box, with avrdude installed, the XS1541 connected to /dev/ttyUSB0,
 the XS1541 having the bootloader installed, don't press Enter yet.
 Press the RESET button on the XS1541, then press ENTER to start the load process.
@@ -30,17 +34,19 @@ If you're slow with typing in the root password (for the sudo command), either c
 /dev/ttyUSB0 (not tried) or do a sudo with a normal command, as the access is
 stored.
 
+Another way, if you have a flash programmer connected, type
+
+	make flash
+
+which will flash the device with the new firmware. Note that the bootloader is
+removed in this case. The advantage of this approach is that you can even leave the 
+server part running, it will automatically catch up with the resetted device.
 
 BUGS
 ----
 
 There are a number of bugs and missing features:
 
-Missing features:
-	- no commands
-	- no command channel
-	- a RESET command to tell the server that the device has been reset, to clean up
+For the bugs and missing features please see the main list in the README file 
+in the main directory.
 
-Bugs:
-	- Sure. Many.
- 

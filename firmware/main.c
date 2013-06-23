@@ -36,6 +36,7 @@
 #include <alloca.h>
 
 #include "config.h"
+#include "hwdefines.h"
 #include "arch.h"
 #include "version.h"
 #include "main.h"
@@ -62,6 +63,7 @@
 #include "channel.h"
 #include "bus.h"
 #include "mem.h"
+#include "bufcmd.h"
 
 #include "timer.h"
 #include "led.h"
@@ -103,6 +105,8 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 int main()
 {
+	int8_t er = CBM_ERROR_OK;
+
 	// Initialisierungen
 	//
 	// first some basic hardware infrastructure
@@ -135,6 +139,8 @@ int main()
 
 	// init file handling (active open calls)
 	file_init();
+	// buffer structures
+	bufcmd_init();
 	// init main channel handling
 	channel_init();
 
@@ -158,6 +164,7 @@ int main()
 	serial_sync();		
 
 	// pull in command line config options from server
+	// also send directory charset
 	rtconfig_pullconfig();
 
 #ifdef USE_FAT

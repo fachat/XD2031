@@ -1,0 +1,25 @@
+
+Description of the test cases for the relative file access:
+
+reltest1
+
+1) open a new rel file with no record len given
+	should result in an error
+2) open a new rel file with record len
+	should be ok
+3) open an existing rel file without record len
+	should be ok
+4) open an existing rel file with wrong record len
+	should error
+5) open an existing rel file with correct record len
+	should error
+6) directory of rel file
+	should display a length of 0 and use 2 block on disk
+
+reltest2
+
+10) position to a record in the first side sector block, not crossing block
+	boundaries - not writing data should give NO BLOCK error
+11) after the previous positioning, write a data byte
+	file should be expanded up until the selected sector
+

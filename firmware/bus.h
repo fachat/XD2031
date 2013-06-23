@@ -36,6 +36,8 @@
  * calls to the channel framework, open calls etc.
  */
 
+#define CMD_SECADDR     15      // command channel
+
 // these are the runtime variables for a bus end point like
 // the IEEE488 or the serial IEC bus.
 typedef struct {

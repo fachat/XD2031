@@ -33,6 +33,8 @@
 
 #include "packet.h"
 #include "errormsg.h"
+#include "charconvert.h"
+#include "provider.h"
 
 // all 10 drives can be used
 #define	MAX_DRIVES	10
@@ -42,20 +44,22 @@ typedef struct {
 	void *(*prov_assign)(const char *name);
 	// free the ASSIGN-related data structure
 	void (*prov_free)(void *);
+	// get the (currently used) character set for name conversion
+	// use the same void* from assign to distinguish different channels (endpoints)
+	charset_t (*charset)(void *);
+	// set a new charset
+	void (*set_charset)(void*, charset_t new_charset);
 	// submit a fire-and-forget packet (log_*, terminal)
 	void (*submit)(void *pdata, packet_t *buf);
 	// submit a request/response packet; call the callback function when the 
 	// response is received; If callback returns != 0 then the call is kept open,
 	// and further responses can be received
 	void (*submit_call)(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum));
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 	// convert the directory entry from the provider to the CBM codepage
 	// return -1 if packet is too small to hold converted value
-	int8_t (*directory_converter)(packet_t *p, uint8_t);
-	// convert a packet from CBM codepage to provider
-	// used only for open and commands!
-	// return -1 if packet is too small to hold converted value
-	int8_t (*to_provider)(packet_t *p);
+	// note: first pointer argument is endpoint_t* (!)
+	int8_t (*directory_converter)(void *ep, packet_t *p, uint8_t);
 } provider_t;
 
 typedef struct {
@@ -63,7 +67,7 @@ typedef struct {
 	void		*provdata;
 } endpoint_t;
 
-int8_t provider_assign(uint8_t drive, const char *name);
+int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to);
 
 endpoint_t* provider_lookup(uint8_t drive, const char *name);
 

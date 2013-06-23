@@ -28,16 +28,6 @@
 #define	DIR_H
 
 /**
- * check a path, making sure it's something readable, not a directory
- */
-int path_is_file(const char *name);
-
-/**
- * check a path, making sure it's a directory
- */
-int path_is_dir(const char *name);
-
-/**
  * traverse a directory and find the first match for the pattern,
  * using the Commodore file search pattern matching algorithm.
  * Returns a malloc'd pathname, which has to be freed
@@ -79,10 +69,12 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize);
 
 /**
  * fill in the buffer with the final disk info entry
+ * Needs current path to statvfs() the correct file system to 
+ * get the free byte count
  *
  * returns the length of the written buffer
  */
-int dir_fill_disk(char *dest);
+int dir_fill_disk(char *dest, char *curpath);
 
 /**
  * malloc a new path, and copy the given base path and name to it,

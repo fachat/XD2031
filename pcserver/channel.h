@@ -2,7 +2,6 @@
 
     Serial line filesystem server
     Copyright (C) 2012 Andre Fachat
-    Copyright (C) 2012 Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -25,45 +24,18 @@
 
 ****************************************************************************/
 
-#include <string.h>
+#ifndef CHANNEL_H
+#define CHANNEL_H
 
-#include "name.h"
 
-/**
- * compares the given name to the given pattern
- * and returns true if it matches.
- * Both names are null-terminated
- *
- * This implementation is roughly based on the Commodore semantics
- * of "*" and "?":
- * Commodore:
- * 	"*" - only works as the last pattern char and matches everything
- * 	      further chars in the pattern are ignored
- * 	"?" - single character is ignored
- */
-int compare_pattern(const char *name, const char *pattern) {
+//------------------------------------------------------------------------------------
+// Mapping from channel number for open files to endpoint providers
+// These are set when the channel is opened
 
-	int p = 0;		// current position
+void channel_init();
+endpoint_t *channel_to_endpoint(int chan);
+void channel_free(int channo);
+void channel_set(int channo, endpoint_t *ep);
 
-	do {
-		if (pattern[p] == '*') {
-			// For Commodore, we are basically done here - anything else does not count
-			return 1;
-		} else
-		if (pattern[p] != '?') {
-			if (pattern[p] != name[p]) {
-				// not equal
-				return 0;
-			}
-		}
-	} while (name[p] && pattern[p++]);
+#endif
 
-	if(name[p] == 0 && pattern[p] == 0) {
-		// both, name and pattern are finished, and
-		// not exited so far, so both match
-		return 1;
-	}
-
-	// no match
-	return 0;
-}

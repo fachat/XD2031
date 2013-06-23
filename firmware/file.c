@@ -22,6 +22,7 @@
 
 
 #include <inttypes.h>
+#include <string.h>
 
 #include "packet.h"
 #include "channel.h"
@@ -29,6 +30,7 @@
 #include "name.h"
 #include "serial.h"
 #include "wireformat.h"
+#include "bufcmd.h"
 
 #include "debug.h"
 #include "led.h"
@@ -39,7 +41,7 @@
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	2
 
-static uint8_t _file_open_callback(int8_t channelno, int8_t errnum);
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 
 typedef struct {
 	int8_t 		channel_no;
@@ -70,7 +72,7 @@ void file_init(void) {
 // set appropriately.
 //
 int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg, 
-			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save) {
+			void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t openflag) {
 
 	assert_not_null(bus, "file_open: bus is null");
 
@@ -85,7 +87,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
-	parse_filename(command, &nameinfo, 0);
+	parse_filename(command, &nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
 
 	// post-parse
 
@@ -95,40 +97,54 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		debug_printf("NO CORRECT CMD: %s\n", command_to_name(nameinfo.cmd));
 		nameinfo.cmd = 0;
 	}
-	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P' && nameinfo.type != 'U') {
+	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P' 
+		&& nameinfo.type != 'U' && nameinfo.type != 'L') {
 		// not set, or set as not sequential and not program
-		debug_puts("UNKNOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
-		set_error(errormsg, ERROR_FILE_TYPE_MISMATCH);
+		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
+		set_error(errormsg, CBM_ERROR_FILE_TYPE_MISMATCH);
 		return -1;
 	}
 	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
 			&& nameinfo.access != 'A' && nameinfo.access != 'X') {
 		debug_puts("UNKNOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
 		// not set, or set as not read, write, or append, or r/w ('X')
-		set_error(errormsg, ERROR_SYNTAX_UNKNOWN);
+		set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
 		return -1;
 	}
 	if (nameinfo.cmd == CMD_DIR && (nameinfo.access != 0 && nameinfo.access != 'R')) {
 		// trying to write to a directory
 		debug_puts("WRITE TO DIRECTORY!"); debug_putcrlf();
-		set_error(errormsg, ERROR_FILE_EXISTS);
+		set_error(errormsg, CBM_ERROR_FILE_EXISTS);
 		return -1;
 	}
 
 	uint8_t type = FS_OPEN_RD;
 
-	if (nameinfo.name[1] == '#' || nameinfo.access == 'X') {
-		// trying to open up a direct channel
-		// Note: needs to be supported for D64 support with U1/U2/...
-		// Note: '#' is still blocking on read!
+	if (nameinfo.access == 'X') {
+		// trying to open up a R/W channel
 		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
 		type = FS_OPEN_RW;
 	}
 
+	if (nameinfo.name[0] == '#') {
+		// trying to open up a direct channel
+		// Note: needs to be supported for D64 support with U1/U2/...
+		// Note: '#' is still blocking on read!
+		debug_puts("OPENING UP A DIRECT CHANNEL!"); debug_putcrlf();
+
+		type = FS_OPEN_DIRECT;
+	}
+
 	// either ",W" or secondary address is one, i.e. save
-	if (nameinfo.access == 'W' || is_save) type = FS_OPEN_WR;
+	if ((nameinfo.access == 'W') || (openflag & OPENFLAG_SAVE)) type = FS_OPEN_WR;
 	if (nameinfo.access == 'A') type = FS_OPEN_AP;
-	if (nameinfo.cmd == CMD_DIR) type = FS_OPEN_DR;
+	if (nameinfo.cmd == CMD_DIR) {
+		if (openflag & OPENFLAG_LOAD) {
+			type = FS_OPEN_DR;
+		} else {
+			type = FS_OPEN_RD;
+		}
+	} else
 	if (nameinfo.cmd == CMD_OVERWRITE) type = FS_OPEN_OW;
 
 #ifdef DEBUG_FILE
@@ -169,7 +185,26 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// the two bus systems. This is done depending on the drive number
 	// and managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
-	endpoint_t *endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+	endpoint_t *endpoint = NULL;
+	if (type == FS_OPEN_DIRECT) {
+		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
+		endpoint = bufcmd_provider();
+	} else {
+		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+	}
+
+	// convert from bus' PETSCII to provider
+	// currently only up to the first zero byte is converted, options like file type
+	// are still ASCII only
+	// in the future the bus may have an own conversion option...
+	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+		((char*)nameinfo.name, strlen((char*)nameinfo.name), 
+		(char*)nameinfo.name, strlen((char*)nameinfo.name));
+	if (nameinfo.name2 != NULL) {
+		cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+			((char*)nameinfo.name2, strlen((char*)nameinfo.name2), 
+			(char*)nameinfo.name2, strlen((char*)nameinfo.name2));
+	}
 
 	if (type == FS_MOVE 
 		&& nameinfo.drive2 != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
@@ -180,7 +215,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 		if (endpoint2 != endpoint) {
 			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.drive2+0x30);
-			set_error(errormsg, ERROR_DRIVE_NOT_READY);
+			set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
 			return -1;
 		}
 	}
@@ -190,7 +225,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// may do further checks
 	if (endpoint == NULL) {
 		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
-		set_error(errormsg, ERROR_DRIVE_NOT_READY);
+		set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
 		return -1;
 	}
 	provider_t *provider = endpoint->provider;
@@ -209,7 +244,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	if (activeslot == NULL) {
 		debug_puts("NO OPEN SLOT FOR OPEN!");
 		debug_putcrlf();
-		set_error(errormsg, ERROR_NO_CHANNEL);
+		set_error(errormsg, CBM_ERROR_NO_CHANNEL);
 		return -1;
 	}
 
@@ -219,15 +254,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 #endif
 	packet_init(&activeslot->txbuf, len, cmd_buffer);
 	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
-
-	// convert character set, e.g. from petscii to ascii
-	if (provider->to_provider != NULL && provider->to_provider(&activeslot->txbuf) < 0) {
-		// converting the file name to the provider exceeded the buffer space
-		debug_puts("NAME CONVERSION EXCEEDS BUFFER!");
-		debug_putcrlf();
-		set_error(errormsg, ERROR_SYNTAX_NONAME);
-		return -1;
-	}
 
 	if (!iscmd) {
 		// only for file opens
@@ -246,14 +272,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			writetype |= WTYPE_NONBLOCKING;
 		}
 
-		int8_t (*converter)(packet_t*, uint8_t) = 
+		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
 			debug_puts("FILE OPEN ERROR");
 			debug_putcrlf();
-			set_error(errormsg, ERROR_NO_CHANNEL);
+			set_error(errormsg, CBM_ERROR_NO_CHANNEL);
 			// clean up
 			channel_close(channel_no);
 			return -1;
@@ -261,7 +287,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
 		if (e < 0) {
 			debug_puts("E="); debug_puthex(e); debug_putcrlf();
-			set_error(errormsg, ERROR_NO_CHANNEL);
+			set_error(errormsg, CBM_ERROR_NO_CHANNEL);
 			return -1;
 		}
 	}
@@ -285,7 +311,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	return 0;
 }
 
-static uint8_t _file_open_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
 
 	// callback to opener
 	// free data structure for next open	
@@ -293,7 +319,7 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum) {
 		if (active[i].channel_no == channelno) {
 			if (errnum < 0) {
 				// we did not receive the packet!
-				active[i].callback(ERROR_DRIVE_NOT_READY, NULL);
+				active[i].callback(CBM_ERROR_DRIVE_NOT_READY, NULL);
 			} else {
 				// we did receive the reply packet
 				// NOTE: rxdata[0] is actually rxdata[FSP_DATA], as first

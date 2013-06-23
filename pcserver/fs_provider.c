@@ -37,7 +37,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
@@ -51,11 +50,14 @@
 #include "errors.h"
 #include "mem.h"
 #include "wireformat.h"
+#include "channel.h"
+#include "os.h"
 
 #include "log.h"
 
 #undef DEBUG_READ
 #define DEBUG_CMD
+#define DEBUG_BLOCK
 
 #define	MAX_BUFFER_SIZE	64
 
@@ -105,6 +107,9 @@ static void init_fp(File *fp) {
 // close a file descriptor
 static int close_fd(File *file) {
 
+	if (file->chan < 0) {
+		return CBM_ERROR_NO_CHANNEL;
+	}
 	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
 	if (file->fp != NULL) {
@@ -134,7 +139,7 @@ static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
         int i;
         for(i=0;i<MAXFILES;i++) {
-                close_fd(&(cep->files[i]));
+	        close_fd(&(cep->files[i]));
         }
 	mem_free(cep->basepath);
 	mem_free(cep->curpath);
@@ -142,6 +147,11 @@ static void fsp_free(endpoint_t *ep) {
 }
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
+
+	if((path == NULL) || (*path == 0)) {
+		log_error("Empty path for assign");
+		return NULL;
+	}
 
 	log_debug("Setting fs endpoint to '%s'\n", path);
 
@@ -232,28 +242,28 @@ static int errno_to_error(int err) {
 
 	switch(err) {
 	case EEXIST:
-		return ERROR_FILE_EXISTS;
+		return CBM_ERROR_FILE_EXISTS;
 	case EACCES:
-		return ERROR_NO_PERMISSION;
+		return CBM_ERROR_NO_PERMISSION;
 	case ENAMETOOLONG:
-		return ERROR_FILE_NAME_TOO_LONG;
+		return CBM_ERROR_FILE_NAME_TOO_LONG;
 	case ENOENT:
-		return ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_FILE_NOT_FOUND;
 	case ENOSPC:
-		return ERROR_DISK_FULL;
+		return CBM_ERROR_DISK_FULL;
 	case EROFS:
-		return ERROR_WRITE_PROTECT;
+		return CBM_ERROR_WRITE_PROTECT;
 	case ENOTDIR:	// mkdir, rmdir
 	case EISDIR:	// open, rename
-		return ERROR_FILE_TYPE_MISMATCH;
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	case ENOTEMPTY:
-		return ERROR_DIR_NOT_EMPTY;
+		return CBM_ERROR_DIR_NOT_EMPTY;
 	case EMFILE:
-		return ERROR_NO_CHANNEL;
+		return CBM_ERROR_NO_CHANNEL;
 	case EINVAL:
-		return ERROR_SYNTAX_INVAL;
+		return CBM_ERROR_SYNTAX_INVAL;
 	default:
-		return ERROR_FAULT;
+		return CBM_ERROR_FAULT;
 	}
 }
 
@@ -399,50 +409,90 @@ static int open_block_channel(File *fp) {
 
 		log_warn("Buffer memory alloc failed!");
 
-		return ERROR_NO_CHANNEL;
+		return CBM_ERROR_NO_CHANNEL;
+	} else {
+		memset(fp->block, 0, 256);
 	}
 	fp->block_ptr = 0;
 
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
-// U1/U2/B-P/B-R/B-W
-static int fs_block(endpoint_t *ep, int chan, char *buf) {
 
-	// note: that is not true for all commands - B-P for example
-	unsigned char cmd = buf[0];
-	unsigned char drive = buf[1];
-	unsigned char track = buf[2];
-	unsigned char sector = buf[3];
+// in Firmware currently used for:
+// B-A/B-F/U1/U2
+static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 
-	log_debug("BLOCK cmd: %d, dr=%d, tr=%d, se=%d\n", cmd, drive, track, sector);
+	// Note that buf has already consumed the drive (first byte), so all indexes are -1
+	unsigned char cmd = buf[FS_BLOCK_PAR_CMD-1];
+	unsigned int track = (buf[FS_BLOCK_PAR_TRACK-1]&0xff) | ((buf[FS_BLOCK_PAR_TRACK]<<8)&0xff00);
+	unsigned int sector = (buf[FS_BLOCK_PAR_SECTOR-1]&0xff) | ((buf[FS_BLOCK_PAR_SECTOR]<<8)&0xff00);
+	unsigned char channel = buf[FS_BLOCK_PAR_CHANNEL-1];
 
-	File *file = find_file(ep, chan);
+	log_debug("DIRECT cmd: %d, tr=%d, se=%d, chan=%d\n", cmd, track, sector, channel);
 
-	if (file != NULL) {
+	File *file = NULL;
 
-		// note: not for B-P
-		// also B-R / B-W use block[0] as length value!
-		file->block_ptr = 0;
+	// (bogus) check validity of parameters, otherwise fall through to error
+	// need to be validated for other commands besides U1/U2
+	if (sector > 0 && sector < 100 && track < 100) {
+		switch (cmd) {
+		case FS_BLOCK_U1:
+			// U1 basically opens a short-lived channel to read the contents of a
+			// buffer into the device
+			// channel is closed by device with separate FS_CLOSE
+
+			file = reserve_file(ep, channel);
+			open_block_channel(file);
+			// copy the file contents into the buffer
+			// test
+			for (int i = 0; i < 256; i++) {
+				file->block[i] = i;
+			}
+
+			channel_set(channel, ep);
+		
+			return CBM_ERROR_OK;
+		case FS_BLOCK_U2:
+			// U2 basically opens a short-lived channel to write the contents of a
+			// buffer from the device
+			// channel is closed by device with separate FS_CLOSE
+			file = reserve_file(ep, channel);
+			open_block_channel(file);
+
+			channel_set(channel, ep);
+		
+			return CBM_ERROR_OK;
+		}
 	}
 
-	return ERROR_OK;
+	retbuf[0] = track & 0xff;
+	retbuf[1] = (track >> 8) & 0xff;
+	retbuf[2] = sector & 0xff;
+	retbuf[3] = (sector >> 8) & 0xff;
+	*retlen = 4;
+
+	return CBM_ERROR_ILLEGAL_T_OR_S;
 }
 
 static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	File *file = find_file(ep, tfd);
 
+#ifdef DEBUG_BLOCK
 	log_debug("read_block: file=%p, len=%d\n", file, len);
+#endif
 
 	if (file != NULL) {
 		int avail = 256 - file->block_ptr;
 		int n = len;
 		if (len >= avail) {
 			n = avail;
-			*eof = 1;
+			*eof = READFLAG_EOF;
 		}
 
+#ifdef DEBUG_BLOCK
 		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+#endif
 
 		if (n > 0) {
 			memcpy(retbuf, file->block+file->block_ptr, n);
@@ -450,7 +500,39 @@ static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) 
 		}
 		return n;
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
+}
+
+static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
+	File *file = find_file(ep, tfd);
+
+	(void)is_eof; // silence warning unused parameter
+
+	log_debug("write_block: file=%p, len=%d\n", file, len);
+
+	if (file != NULL) {
+		int avail = 256 - file->block_ptr;
+		int n = len;
+		if (len >= avail) {
+			n = avail;
+		}
+
+		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+
+		if (n > 0) {
+			memcpy(file->block+file->block_ptr, buf, n);
+			file->block_ptr += n;
+		}
+
+#ifdef DEBUG_BLOCK
+		log_debug("Block:");
+		for (int i = 0; i < 256; i++) {
+			log_debug(" %02x", file->block[i] & 0xff);
+		}
+#endif
+		return CBM_ERROR_OK;
+	}
+	return -CBM_ERROR_FAULT;
 }
 
 // ----------------------------------------------------------------------------------
@@ -468,19 +550,18 @@ static void close_fds(endpoint_t *ep, int tfd) {
 
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
-	int er = ERROR_FAULT;
+	int er = CBM_ERROR_FAULT;
 	File *file;
-	enum boolean { FALSE, TRUE };
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	log_info("open file for fd=%d in dir %s with name %s\n", tfd, fsep->curpath, buf);
 
 	char *fullname = malloc_path(fsep->curpath, buf);
-	patch_dir_separator(fullname);
+	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
-		return ERROR_NO_PERMISSION;
+		return CBM_ERROR_NO_PERMISSION;
 	}
 
 	char *path     = safe_dirname(fullname);
@@ -511,22 +592,22 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 			goto exit;
 	}
 
-	char *name = find_first_match(path, filename, path_is_file);
+	char *name = find_first_match(path, filename, os_path_is_file);
 	if(!name) {
 		// something with that name exists that isn't a file
 		log_error("Unable to open '%s': not a file\n", filename);
-		er = ERROR_FILE_TYPE_MISMATCH;
+		er = CBM_ERROR_FILE_TYPE_MISMATCH;
 		goto exit;
 	}
 	int file_exists = !access(name, F_OK);
 	if(file_required && !file_exists) {
 		log_error("Unable to open '%s': file not found\n", name);
-		er = ERROR_FILE_NOT_FOUND;
+		er = CBM_ERROR_FILE_NOT_FOUND;
 		goto exit;
 	}
 	if(file_must_not_exist && file_exists) {
 		log_error("Unable to open '%s': file exists\n", name);
-		er = ERROR_FILE_EXISTS;
+		er = CBM_ERROR_FILE_EXISTS;
 		goto exit;
 	}
 
@@ -538,11 +619,11 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 		if (file) {
 			file->fp = fp;
 			file->dp = NULL;
-			er = ERROR_OK;
+			er = CBM_ERROR_OK;
 		} else {
 			fclose(fp);
 			log_error("Could not reserve file\n");
-			er = ERROR_FAULT;
+			er = CBM_ERROR_FAULT;
 		}
 
 	} else {
@@ -554,20 +635,24 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, int fs_cmd) {
 	log_debug("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
 
 exit:
-	mem_free(name); mem_free(path); mem_free(filename);
+	mem_free(name); 
+	mem_free(path); 
+	mem_free(filename);
 	return er;
 }
 
 // open a directory read
-static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
+static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+
+	(void)opts; // silence warning unused parameter
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
        	char *fullname = malloc_path(fsep->curpath, buf);
-	patch_dir_separator(fullname);
+	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
-		return ERROR_NO_PERMISSION;
+		return CBM_ERROR_NO_PERMISSION;
 	}
  
 	File *file = reserve_file(ep, tfd);
@@ -585,7 +670,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		  file->fp = NULL;
 		  file->dp = dp;
 		  file->is_first = 1;
-		  return ERROR_OK;
+		  return CBM_ERROR_OK;
 		} else {
 		  log_errno("Error opening directory");
 		  int er = errno_to_error(errno);
@@ -593,7 +678,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf) {
 		  return er;
 		}
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 // read directory
@@ -614,6 +699,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 	if (file != NULL) {
 		int rv = 0;
+		*eof = READFLAG_DENTRY;
 		  if (file->is_first) {
 		    file->is_first = 0;
 		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
@@ -622,9 +708,8 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    return rv;
 		  }
 		  if(!file->de) {
-		    //close_fds(ep, tfd);
-		    *eof = 1;
-		    int l = dir_fill_disk(retbuf);
+		    *eof |= READFLAG_EOF;
+		    int l = dir_fill_disk(retbuf, fsep->curpath);
 		    rv = l;
 		    return rv;
 		  }
@@ -634,7 +719,7 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  file->de = dir_next(file->dp, file->dirpattern);
 		  return rv;
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 // read file data
@@ -653,7 +738,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  rv = n;
 		  if(n<len) {
 		    // short read, so either error or eof
-		    *eof = 1;
+		    *eof = READFLAG_EOF;
 		    log_debug("short read on %d\n", tfd);
 		  } else {
 		    // as feof() does not let us know if the file is EOF without
@@ -661,7 +746,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		    int eofc = fgetc(fp);
 		    if (eofc < 0) {
 		      // EOF
-		      *eof = 1;
+		      *eof = READFLAG_EOF;
 		      log_debug("EOF on read %d\n", tfd);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
@@ -671,7 +756,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		  }
 		return rv;
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 // write file data
@@ -690,16 +775,16 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 			// short write indicates an error
 			log_debug("Close fd=%d on short write!\n", tfd);
 			close_fds(ep, tfd);
-			return -ERROR_WRITE_ERROR;
+			return -CBM_ERROR_WRITE_ERROR;
 		  }
 		  if(is_eof) {
-		    log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
-		    close_fds(ep, tfd);
+		    log_debug("fd=%d received an EOF on write file (ignored)\n", tfd);
+		    //close_fds(ep, tfd);
 		  }
-		  return ERROR_OK;
+		  return CBM_ERROR_OK;
 		}
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 // ----------------------------------------------------------------------------------
@@ -715,7 +800,7 @@ static int _delete_callback(const int num_of_match, const char *name) {
 
 		return -errno_to_error(errno);
 	}
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
@@ -723,13 +808,13 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 	int matches = 0;
 	char *p = buf;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	do {
 		// comma is file pattern separator
-		char *pnext = index(p, ',');
+		char *pnext = strchr(p, ',');
 		if (pnext != NULL) {
 			*pnext = 0;	// write file name terminator (replacing the ',')
 		}
@@ -747,12 +832,12 @@ static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
 
 	*outdeleted = matches;
 
-	return ERROR_SCRATCHED;	// FILES SCRATCHED message
+	return CBM_ERROR_SCRATCHED;	// FILES SCRATCHED message
 }
 
 static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 
-	int er = ERROR_FAULT;
+	int er = CBM_ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
@@ -760,10 +845,10 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
 #endif
 
-	if ((index(nameto, '/') != NULL) || (index(nameto,'\\') != NULL)) {
+	if ((strchr(nameto, '/') != NULL) || (strchr(nameto,'\\') != NULL)) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
-		return ERROR_SYNTAX_DIR_SEPARATOR;
+		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
 	}
 
 	char *frompath = malloc_path(fsep->curpath, namefrom);
@@ -775,7 +860,10 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 
 	if (toreal != NULL) {
 		// target already exists
-		er = ERROR_FILE_EXISTS;
+		er = CBM_ERROR_FILE_EXISTS;
+	} else
+	if (fromreal == NULL) {
+		er = CBM_ERROR_FILE_NOT_FOUND;
 	} else {
 		// check both paths against container boundaries
 		if ((strstr(fromreal, fsep->basepath) == fromreal)
@@ -788,7 +876,7 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 				er = errno_to_error(errno);
 				log_errno("Error renaming a file\n");
 			} else {
-				er = ERROR_OK;
+				er = CBM_ERROR_OK;
 			}
 		}
 	}
@@ -803,7 +891,7 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 static int fs_cd(endpoint_t *ep, char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	log_debug("Change dir to: %s\n", buf);
 
@@ -815,7 +903,7 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	if (newreal == NULL) {
 		// target does not exist
 		log_error("Unable to change dir to '%s'\n", newpath);
-		return ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
 	// free buffer so we don't forget it
@@ -825,32 +913,32 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
 		mem_free(newreal);
-		return ERROR_NO_PERMISSION;
+		return CBM_ERROR_NO_PERMISSION;
 	}
 
 	// check if the new path really is a directory
 	struct stat path;
 	if(stat(newreal, &path) < 0) {
 		log_error("Could not stat '%s'\n", newreal);
-		return ERROR_DIR_ERROR;
+		return CBM_ERROR_DIR_ERROR;
 	}
 	if(!S_ISDIR(path.st_mode)) {
 		log_error("CHDIR: '%s' is not a directory\n", newreal);
-		return ERROR_DIR_ERROR;
+		return CBM_ERROR_DIR_ERROR;
 	}
 
 	mem_free(fsep->curpath);
 	fsep->curpath = newreal;
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 static int fs_mkdir(endpoint_t *ep, char *buf) {
 
-	int er = ERROR_DIR_ERROR;
+	int er = CBM_ERROR_DIR_ERROR;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 
@@ -858,10 +946,10 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 	if (newreal != NULL) {
 		// file or directory exists
-		er = ERROR_FILE_EXISTS;
+		er = CBM_ERROR_FILE_EXISTS;
 	} else {
 		mode_t oldmask=umask(0);
-		int rv = mkdir(newpath, 0755);
+		int rv = os_mkdir(newpath, 0755);
 		umask(oldmask);
 
 		if (rv < 0) {
@@ -869,7 +957,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 			er = errno_to_error(errno);
 		} else {
 			// ok
-			er = ERROR_OK;
+			er = CBM_ERROR_OK;
 		}
 	}
 	mem_free(newpath);
@@ -880,11 +968,11 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 
 static int fs_rmdir(endpoint_t *ep, char *buf) {
 
-	int er = ERROR_FAULT;
+	int er = CBM_ERROR_FAULT;
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	patch_dir_separator(buf);
+	os_patch_dir_separator(buf);
 
 	char *newpath = malloc_path(fsep->curpath, buf);
 
@@ -893,7 +981,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 	if (newreal == NULL) {
 		// directory does not exist
-		er = ERROR_FILE_NOT_FOUND;
+		er = CBM_ERROR_FILE_NOT_FOUND;
 	} else
 	if (strstr(newreal, fsep->basepath) == newreal) {
 		// current path is still at the start of new path
@@ -906,7 +994,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 			log_errno("Error trying to remove a directory");
 		} else {
 			// ok
-			er = ERROR_OK;
+			er = CBM_ERROR_OK;
 		}
 	}
 	mem_free(newreal);
@@ -917,11 +1005,13 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
        return open_file(ep, tfd, buf, FS_OPEN_RD);
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
+	(void)opts; // silence warning unused parameter
 	if (is_overwrite) {
        		return open_file(ep, tfd, buf, FS_OPEN_OW);
 	} else {
@@ -929,11 +1019,13 @@ static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_o
 	}
 }
 
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
        return open_file(ep, tfd, buf, FS_OPEN_AP);
 }
 
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+	(void)opts; // silence warning unused parameter
 	if (*buf == '#') {
 		// ok, open a direct block channel
 
@@ -950,7 +1042,7 @@ static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
 
 	} else {
 		// no support for r/w for "standard" files for now
-		return ERROR_DRIVE_NOT_READY;
+		return CBM_ERROR_DRIVE_NOT_READY;
 	}
 }
 
@@ -979,10 +1071,30 @@ static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 	return rv;
 }
 
+// write file data
+static int writefile(endpoint_t *ep, int chan, char *buf, int len, int is_eof) {
+	File *file = find_file(ep, chan);
+
+	int rv = -CBM_ERROR_FAULT;
+
+	//log_debug("write_file: file=%p\n", file);
+
+	if (file != NULL) {
+
+		if (file->block != NULL) {
+			rv = write_block(ep, chan, buf, len, is_eof);
+		} else {
+			rv = write_file(ep, chan, buf, len, is_eof);
+		}	
+	}
+	return rv;
+}
+
 // ----------------------------------------------------------------------------------
 
 provider_t fs_provider = {
 	"fs",
+	"ASCII",
 	fsp_init,
 	fsp_new,
 	fsp_temp,
@@ -994,13 +1106,14 @@ provider_t fs_provider = {
 	open_file_rw,
 	open_dr,
 	readfile,
-	write_file,
+	writefile,
 	fs_delete,
 	fs_rename,
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	fs_block
+	NULL,
+	fs_direct
 };
 
 

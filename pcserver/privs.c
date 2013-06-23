@@ -33,7 +33,7 @@
 #include "privs.h"
 #include "log.h"
 
-#ifdef UNPRIVILEGED
+#if defined(UNPRIVILEGED) || defined(_WIN32)
 void drop_privileges() { 
 	log_info("Compiled with unprivileged rights\n");
 }
@@ -89,4 +89,4 @@ static void drop_to_uid(uid_t ruid) {
 
 }
 
-#endif /* __APPLE__ */
+#endif

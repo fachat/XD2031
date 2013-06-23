@@ -28,13 +28,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "version.h"
 #include "packet.h"
 #include "provider.h"
 #include "wireformat.h"
 #include "serial.h"
 #include "uarthw.h"
-#include "petscii.h"
+#include "dirconverter.h"
+#include "charconvert.h"
 
 #include "debug.h"
 #include "led.h"
@@ -50,6 +50,7 @@
  */
 
 static uint8_t serial_lock;
+static charset_t current_charset;
 
 /**
  * submit the contents of a buffer to the UART
@@ -74,10 +75,7 @@ void serial_submit(void *epdata, packet_t *buf);
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum));
-
-static int8_t directory_converter(packet_t *p, uint8_t drive);
-static int8_t to_provider(packet_t *p);
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 // dummy
 static void *prov_assign(const char *name) {
@@ -89,13 +87,26 @@ static void prov_free(void *epdata) {
 	return;
 }
 
+static charset_t charset(void *epdata) {
+	return current_charset;
+}
+
+/*
+ * set the character set used on the wire. This is determined/changed
+ * by a packet call from the main code, and then updated here
+ */
+void set_charset(void *epdata, charset_t new_charset) {
+	current_charset = new_charset;
+}
+
 provider_t serial_provider  = {
 	prov_assign,
 	prov_free,
+	charset,
+	set_charset,
         serial_submit,
         serial_submit_call,
-	directory_converter,
-	to_provider
+	directory_converter
 };
 
 #define	NUMBER_OF_SLOTS		4
@@ -118,7 +129,7 @@ static int8_t		txstate;
 static struct {
 	int8_t		channelno;	// -1 is unused
 	packet_t	*rxpacket;
-	uint8_t		(*callback)(int8_t channelno, int8_t errnum);
+	uint8_t		(*callback)(int8_t channelno, int8_t errnum, packet_t *packet);
 } rx_channels[NUMBER_OF_SLOTS];
 
 #define	RX_IDLE		0
@@ -133,177 +144,6 @@ static int8_t			current_channelpos;
 static packet_t			*current_rxpacket;
 static int8_t			current_data_left;
 static int8_t			current_is_eoi;
-
-/*****************************************************************************
- * conversion routines between wire format and packet format
- */
-
-/*
- * helper for conversion of ASCII to PETSCII
- */
-
-static uint8_t *append(uint8_t *outp, const char *to_append) {
-	while(*to_append != 0) {
-		*outp = ascii_to_petscii(*to_append);
-		outp++;
-		to_append++;
-	}
-	*outp = 0;
-	outp++;
-	return outp;
-}
-
-/*
- * each packet from the UART contains one directory entry. 
- * The format is defined as FS_DIR_* offset definitions
- *
- * This method converts it into a Commodore BASIC line definition
- *
- * Note that it currently relies on an entry FS_DIR_MOD_NAME as first
- * and FS_DIR_MOD_FRE as last entry, to add the PET BASIC header and
- * footer!
- */
-static uint8_t out[64];
-
-static int8_t directory_converter(packet_t *p, uint8_t drive) {
-	uint8_t *inp = NULL;
-	uint8_t *outp = &(out[0]);
-
-	if (p == NULL) {
-		debug_puts("P IS NULL!");
-		return -1;
-	}
-
-	inp = packet_get_buffer(p);
-	uint8_t type = inp[FS_DIR_MODE];
-
-	//packet_update_wp(p, 2);
-
-	if (type == FS_DIR_MOD_NAM) {
-		*outp = 1; outp++;	// load address low
-		*outp = 4; outp++;	// load address high
-	}
-
-	*outp = 1; outp++;		// link address low; will be overwritten on LOAD
-	*outp = 1; outp++;		// link address high
-
-	uint16_t lineno = 0;
-	if (type == FS_DIR_MOD_NAM) {
-		lineno = drive;
-	} else {
-		// line number, derived from file length
-		if (inp[FS_DIR_LEN+3] != 0 
-			|| inp[FS_DIR_LEN+2] > 0xf9
-			|| (inp[FS_DIR_LEN+2] == 0xf9 && inp[FS_DIR_LEN+1] == 0xff && inp[FS_DIR_LEN] != 0)) {
-			// more than limit of 63999 blocks
-			lineno = 63999;
-		} else {
-			lineno = inp[FS_DIR_LEN+1] | (inp[FS_DIR_LEN+2] << 8);
-			if (inp[FS_DIR_LEN] != 0) {
-				lineno++;
-			}
-		}
-	}
-	*outp = lineno & 255; outp++;
-	*outp = (lineno>>8) & 255; outp++;
-
-	//snprintf(outp, 5, "%hd", (unsigned short)lineno);
-	//outp++;
-	if (lineno < 10) { *outp = ' '; outp++; }
-	if (type == FS_DIR_MOD_NAM) {
-		*outp = 0x12;	// reverse for disk name
-		outp++;
-	} else {
-		if (type != FS_DIR_MOD_FRE) {
-			if (lineno < 100) { *outp = ' '; outp++; }
-			if (lineno < 1000) { *outp = ' '; outp++; }
-			if (lineno < 10000) { *outp = ' '; outp++; }
-		}
-	}
-
-	if (type != FS_DIR_MOD_FRE) {
-		*outp = '"'; outp++;
-		uint8_t i = FS_DIR_NAME;
-		// note the check i<16 - this is buffer overflow protection
-		// file names longer than 16 chars are not displayed
-		while ((inp[i] != 0) && (i < (FS_DIR_NAME + 16))) {
-			*outp = ascii_to_petscii(inp[i]);
-			outp++;
-			i++;
-		}
-		// note: not counted in i
-		*outp = '"'; outp++;
-	
-		// fill up with spaces, at least one space behind filename
-		while (i < FS_DIR_NAME + 16 + 1) {
-			*outp = ' '; outp++;
-			i++;
-		}
-	}
-
-	// add file type
-	if (type == FS_DIR_MOD_NAM) {
-		// file name entry
-		outp = append(outp, SW_NAME_LOWER);
-		//strcpy(outp, SW_NAME_LOWER);
-		//outp += strlen(SW_NAME_LOWER)+1;	// includes ending 0-byte
-	} else
-	if (type == FS_DIR_MOD_DIR) {
-		outp = append(outp, "dir");
-		//strcpy(outp, "dir");
-		//outp += 4;	// includes ending 0-byte
-	} else
-	if (type == FS_DIR_MOD_FIL) {
-		outp = append(outp, "prg");
-		//strcpy(outp, "prg");
-		//outp += 4;	// includes ending 0-byte
-	} else
-	if (type == FS_DIR_MOD_FRE) {
-		outp = append(outp, "blocks free");
-		//strcpy(outp, "bytes free");
-		//outp += 11;	// includes ending 0-byte
-
-		*outp = 0; outp++;	// BASIC end marker (zero link address)
-		*outp = 0; outp++;	// BASIC end marker (zero link address)
-	}
-
-	uint8_t len = outp - out;
-	if (len > packet_get_capacity(p)) {
-		debug_puts("CONVERSION NOT POSSIBLE!"); debug_puthex(len); debug_putcrlf();
-		return -1;	// conversion not possible
-	}
-
-#if DEBUG_SERIAL
-	debug_puts("CONVERTED TO: LEN="); debug_puthex(len);
-	for (uint8_t j = 0; j < len; j++) {
-		debug_putc(' '); debug_puthex(out[j]);
-	} 
-	debug_putcrlf();
-#endif
-	// this should probably be combined
-	memcpy(packet_get_buffer(p), &out, len);
-	packet_update_wp(p, len);
-
-	return 0;
-}
-
-/**
- * convert PETSCII names to ASCII names
- */
-static int8_t to_provider(packet_t *p) {
-	uint8_t *buf = packet_get_buffer(p);
-	uint8_t len = packet_get_contentlen(p);
-//debug_printf("CONVERT: len=%d, b=%s\n", len, buf);
-	while (len > 0) {
-//debug_puts("CONVERT: "); 
-//debug_putc(*buf); //debug_puthex(*buf);debug_puts("->");
-		*buf = petscii_to_ascii(*buf);
-//debug_putc(*buf);debug_puthex(*buf);debug_putcrlf();
-		buf++;
-		len--;
-	}
-	return 0;
-}
 
 /*****************************************************************************
  * communication with the low level interrupt routines
@@ -321,6 +161,7 @@ static int16_t read_char_from_packet(packet_t *buf) {
         case TX_TYPE:
                 txstate = TX_LEN;
                 rv = 0xff & packet_get_type(buf);
+//if (rv == FS_TERM && packet_get_chan(buf) == FSFD_SETOPT) led_on();
                 break;
         case TX_LEN:
                 txstate = TX_CHANNEL;
@@ -397,7 +238,8 @@ static void push_data_to_packet(int8_t rxdata)
 			// yes, send sync
 			uarthw_send(FS_SYNC);
 		} else
-		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF || rxdata == FS_SETOPT) {
+		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF 
+			|| rxdata == FS_SETOPT || rxdata == FS_RESET) {
 			// note EOI flag
 			current_is_eoi = rxdata;
 			// start a reply handling
@@ -431,24 +273,29 @@ static void push_data_to_packet(int8_t rxdata)
 		// well, RX_IGNORE should not happen, but we have no means of telling anyone here
 		if (current_data_left == 0) {
 			// we are actually already done. do callback and set status to idle
+			// prohibit receiving just in case (we reuse the rx buffer e.g. 
+			// in X option)
+			serial_lock = 1;
 			if ((rxstate == RX_DATA) 
 				&& (rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0) == 0)) {
+					(rxstate == RX_IGNORE) ? -1 : 0, 
+					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0)) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
+			serial_lock = 0;
 			rxstate = RX_IDLE;
 		}
 		break;
 	case RX_DATA:
 		packet_write_char(current_rxpacket, rxdata);
 		current_data_left --;
-//if (packet_get_contentlen(current_rxpacket) > 1) led_on();
 		if (current_data_left <= 0) {
 			// prohibit receiving just in case (we reuse the rx buffer e.g. 
 			// in X option)
 			serial_lock = 1;
 			if (rx_channels[current_channelpos].callback(current_channelno, 
-					(rxstate == RX_IGNORE) ? -1 : 0) == 0) {
+					(rxstate == RX_IGNORE) ? -1 : 0, 
+					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0) {
 				rx_channels[current_channelpos].channelno = -1;
 			}
 			serial_lock = 0;
@@ -536,7 +383,7 @@ void serial_submit(void *epdata, packet_t *buf) {
  * received
  */
 void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
-		uint8_t (*callback)(int8_t channelno, int8_t errnum)) {
+		uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet)) {
 
 	if (channelno < 0) {
 		debug_printf("!!!! submit with channelno=%d\n", channelno);
@@ -550,7 +397,11 @@ void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_
 	int8_t channelpos = -1;
 	while (channelpos < 0) {
 		for (uint8_t i = 0; i < NUMBER_OF_SLOTS; i++) {
-			if (rx_channels[i].channelno < 0) {
+			// note: take either a free one or overwrite an existing one
+			// the latter case is only used for rtconfig_pullconfig()
+			// sending a new request
+			if (rx_channels[i].channelno < 0
+				|| rx_channels[i].channelno == channelno) {
 				channelpos = i;
 				break;
 			}
@@ -584,6 +435,9 @@ provider_t *serial_init() {
 	// selected, the remote end does not know about it currently, as we
 	// do not notify it. So open requests will be returned with an error
 	//provider_register("FS", &serial_provider);
+
+	// this is the default
+	current_charset = CHARSET_ASCII;
 
 	return &serial_provider;
 }

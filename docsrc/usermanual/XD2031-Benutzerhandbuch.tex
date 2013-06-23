@@ -3,8 +3,7 @@
 \parindent 0pt
 \usepackage{makeidx}					% Stichwortverzeichnis
 \makeindex
-\makeglossary
-\usepackage[ngerman]{babel}				% Umlaute "a "s etc.
+% \makeglossary
 \usepackage[utf8]{inputenc}				% Umlaute in Quelldatei UTF8-kodiert
 \usepackage[T1]{fontenc}
 \usepackage{footnpag}					% Nummerierung auf jeder Seite neu beginnen
@@ -28,6 +27,13 @@ citecolor = black] {hyperref}
 \usepackage{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{trees}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage[ngerman]{babel}				% Umlaute "a "s etc.
+\RequirePackage[ngerman=ngerman-x-latest]{hyphsubst}
+
+\hyphenation{zwi-schen}
+
 
 % **************   SERIF   **************
 %\usepackage{mathptmx} % Times Roman
@@ -48,17 +54,16 @@ citecolor = black] {hyperref}
 \newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
 \newcommand{\sfend}[1]{\end{addmargin}}
 
-% -------------------------------------------------------------------------
-% Variablen
-%
-\newcommand{\fwbinaries}{\url{http://xd2031.petsd.net/firmware.php}}
-\newcommand{\osxbinaries}{\url{http://xd2031.petsd.net/serverosx.php}}
-\newcommand{\srcdownloads}{\url{https://github.com/fachat/XD2031/tags}}
-% -------------------------------------------------------------------------
+\input{../globals}
 
 \begin{document}
 
+\title{Benutzerhandbuch}
+\subtitle{XD-2031 Serial line filesystem server}
+\author{}
+\maketitle\thispagestyle{empty}
 
+\clearpage
 
 \tableofcontents
 \clearpage
@@ -74,7 +79,7 @@ Sie dient dem Datenaustausch zwischen alten und modernen Computern, der
 ohne weiteres nicht mehr möglich ist. 
 Moderne Computer können die Datenträger der alten nicht mehr lesen,
 die alten aber auch nicht die der neuen und sie haben auch keine gemeinsame 
-Schnittstelle, über die sie Daten untereinander austauschen könnten.
+Schnittstelle, über die sie Daten austauschen könnten.
 
 XD-2031 schließt diese Lücke mithilfe eines Adapters zwischen den
 damals verwendeten Bus-Systemen und der aktuellen USB-Schnittstelle.
@@ -86,25 +91,28 @@ Damit kann man beispielsweise...
 \item mit modernen Werkzeugen Software für alte Rechner entwickeln
 \end{itemize}
 
-Dabei sind hier ausschließlich die 8-Bit Commodore-Computer gemeint, die über
-einen IEEE-488-Bus \index{IEEE-488-Bus} oder seriellen
-	\index{CBM-Bus} CBM-Bus\footnote
+Dabei sind hier ausschließlich die 8-Bit Commodore-Computer gemeint, die 
+über einen parallelen IEEE-488-Bus \index{IEEE-488-Bus} oder seriellen
+	\index{IEC-Bus} \index{CBM-Bus} IEC-Bus\footnote
 	{Diese proprietäre serielle Variante des IEEE-488-Busses wird
-	oft auch als IEC-Bus \index{IEC-Bus|see{CBM-Bus}} bezeichnet.
-	Da er allerdings \textit{nicht} durch die
+	in deutschsprachiger Literatur auch als CBM-Bus bezeichnet,
+	da er \textit{nicht} durch die
 	\textit{International Electrotechnical Commission} standardisiert
-	wurde, verwendet diese Anleitung den Begriff CBM-Bus}
-verfügen, wie etwa:
+	wurde.}
+verfügen:
 \begin{itemize}
 \item C64, C128, VC20, +4
-\item PET 2001\footnote{
+\item CBM 3032, 
+PET 2001\footnote{
 	Nur mit BASIC 2, erkennbar an der Einschaltmeldung 
 	\texttt{\#\#\# COMMODORE BASIC \#\#\#}}
-, CBM 8032, CBM 610/710
+\item CBM 4032, CBM 8032, CBM 8096, CBM 8296 
+\item CBM 610, CBM 710
 \end{itemize}
-Commodore Amiga und PC gehören nicht dazu, für sie existieren andere Lösungen.
+Commodore Amiga und PC gehören nicht dazu, allerdings existieren 
+für diese Rechner andere Lösungen, wie etwa der HxC Floppy Emulator.
 
-\subsection{Über den Namen \glqq XD-2031\grqq}
+\subsection{Über \glqq XD-2031\grqq}
 Der Name steht in der Tradition der Namensgebung einer ganzen Familie
 von Adapterkabeln, genannt die X-Kabel. Diese konnten zum 
 Datenaustausch zwischen dem Diskettenlaufwerk \mbox{VC 1541} 
@@ -113,6 +121,13 @@ Druckerschnittstelle nach Centronics-Standard verfügten.
 
 Das X symbolisiert den Datenaustausch, D steht für \glqq drive\grqq\ 
 und 2031 erinnert an das Diskettenlaufwerk CBM 2031.
+
+Auch wenn die Namensgebung die Emulation eines bestimmten Laufwerktyps
+vermuten lassen könnte, ist dies nicht der Fall. Es wird auch keine
+in den Original-Laufwerken enthaltene 6502 CPU emuliert.
+Tatsächlich werden auf DOS-Ebene Dateianfragen beantwortet. Die
+Verwendung von Disk-Images (D64, D80 ...) 
+ist allerdings möglich.
 
 \subsection{Unterstützte Adapter}
 \index{Adapter}
@@ -124,6 +139,7 @@ Derzeit läuft die Firmware auf folgenden Geräten:
 Hardware & Homepage \\
 \midrule
 XS-1541	& \url{http://xs1541.t-winkler.net} \\
+Raspberry Pi mit 3.1541 & -- \\
 petSD	& \url{http://petsd.net} \\
 \bottomrule
 \end{tabular}
@@ -135,18 +151,15 @@ verwiesen.
 \index{Leistungsmerkmale}
 \index{Features}
 
-\begin{tabular}[c]{l l l}
+\begin{tabular}[c]{l l l l}
 \toprule
-			& XS-1541	& petSD			\\
+			& XS-1541	& 3.1541       & petSD		\\
 \midrule
-CBM-Bus			& $\checkmark$	& -- 			\\
-IEEE-488-Bus		& $\checkmark$	& $\checkmark$		\\
-Zugriff auf das Dateisystem
-des Hosts		& $\checkmark$	& $\checkmark$		\\
-ftp:// über Host	& $\checkmark$	& $\checkmark$		\\
-http:// über Host	& $\checkmark$	& $\checkmark$		\\
-Telnet über Host	& $\checkmark$	& $\checkmark$		\\
-SD-Karte (FAT)		& --		& $\checkmark$		\\
+IEC-Bus			& $\checkmark$	& $\checkmark$ &  --		\\
+IEEE-488-Bus		& $\checkmark$	& --	       & $\checkmark$	\\
+Zugriff auf XD-2031 Serverdienste
+			& $\checkmark$	& $\checkmark$ & $\checkmark$	\\
+SD-Karte (FAT)		& --		& --	       & $\checkmark$	\\
 \bottomrule
 \end{tabular}
 
@@ -168,55 +181,226 @@ Für OS X und Windows laden Sie sich bitte den Treiber von der
 Herstellerseite \url{http://www.ftdichip.com/Drivers/VCP.htm} 
 herunter und installieren ihn wie auf Ihrem System üblich.
 
+\subsection{Raspberry Pi unter Raspbian mit 3.1541}
+Das 3.1541 wird direkt an den UART des Raspberry Pi angeschlossen.
+Die gängigen Linux-Systeme verwenden diesen UART allerdings von
+Hause aus als Konsole um unter anderem Kernel-Meldungen auszugeben. 
+Da diese Meldungen die Datenübertragung zwischen Raspberry Pi
+und dem Coprozessor stören würden, muss der UART erst frei
+gegeben werden. Damit der R-Pi den Coprozessor zurücksetzen kann,
+wird die Wiring Pi Bibliothek benötigt.
+
+\subsubsection*{Kernelmeldungen nicht mehr auf UART ausgeben}
+Die Datei \texttt{/boot/cmdline.txt} enthält die Kernelparameter, die ihm
+beim Start übergeben werden.  
+Erstellen Sie eine Sicherungskopie, nur für den Fall der Fälle:
+
+\begin{verbatim}
+sudo cp /boot/cmdline.txt /boot/cmdline.txt~
+\end{verbatim}
+
+Bearbeiten Sie nun mit Root-Rechten die Datei \texttt{/boot/cmdline.txt}:
+
+\begin{verbatim}
+sudo vi /boot/cmdline.txt
+\end{verbatim}
+
+Entfernen Sie dort alle Parameter, die den seriellen Port \texttt{ttyAMA0}
+ansprechen, was am Beispiel hier die folgenden waren:
+
+\begin{verbatim}
+console=ttyAMA0,115200 kgdboc=ttyAMA0,115200
+\end{verbatim}
+
+Die verbleibende Zeile lautete hier:
+\begin{verbatim}
+dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 
+rootfstype=ext4 elevator=deadline rootwait
+\end{verbatim}
+
+Speichern Sie Ihre Änderungen.
+
+\subsubsection*{Kein Login mehr über UART}
+Bearbeiten Sie nun wieder unter
+Root-Rechten die Datei \texttt{/etc/inittab}:
+
+\begin{verbatim}
+sudo vi /etc/inittab
+\end{verbatim}
+
+Durchsuchen Sie die Datei nach \glqq{}ttyAMA0 \grqq{}, bis Sie 
+etwa folgendes haben:
+
+\begin{verbatim}
+T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
+\end{verbatim}
+
+Dieser Eintrag erlaubt es, sich über die serielle Schnittstelle
+\texttt{/dev/ttyAMA0} mittels eines Terminals anzumelden.
+Damit der Datenverkehr vom 3.1541 nicht als Benutzername und Passwort
+mißverstanden wird, wird dieser Eintrag durch das Voranstellen einer Raute 
+auskommentiert:
+
+\begin{verbatim}
+#T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
+\end{verbatim}
+
+Speichern Sie Ihre Änderungen und starten Sie den Raspberry Pi neu.
+
+\begin{verbatim}
+sudo shutdown -r now
+\end{verbatim}
+
+\subsubsection*{Installation von Wiring Pi}
+Falls bei Ihrer Linux-Distribution \textit{Wiring Pi}\footnote{\url{http://wiringpi.com/}} 
+noch nicht enthalten ist, muss es noch installiert werden:
+
+\begin{verbatim}
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install git-core
+git clone git://git.drogon.net/wiringPi
+cd wiringPi
+./build
+\end{verbatim}
+
+Die weitere Installation erfolgt wie bei jedem anderen Debian/Ubuntu-artigem Linux.
+
+\subsection{Installation der Server-Software}
+\label{serverinst}
+\subsubsection{Installation der Server-Software unter Linux}
+Für Linux stehen leider noch keine Binärpakete zur Verfügung,
+so dass Sie hier aus dem Quelltext selbst compilieren müssen.
+Das ist allerdings leichter, als es klingt.
+
+Alle für die weitere Installation benötigten Pakete sollten
+sich durch einen Klick auf diesen 
+\href{apt://build-essential,gcc-avr,avr-libc,avrdude,avrdude-doc,libcurl4-gnutls-dev,git}{apturl-Link} installieren lassen.
+
+Ansonsten kopieren Sie folgende Anweisung in die Kommandozeile, 
+achten Sie dabei darauf, dass alles in \textit{einer} Zeile steht:
+
+\begin{verbatim}
+sudo apt-get install build-essential gcc-avr avr-libc 
+avrdude avrdude-doc libcurl4-gnutls-dev git
+\end{verbatim}
+
+Sie haben nun die Wahl, ob Sie den Entwicklerstand oder eine
+bestimme Release-Version verwenden möchten. Ein Entwicklerstand
+enthält die aktuelle Fassung und enthält die neuesten Features,
+Fehlerbehebungen und möglicherweise auch neue Fehler.
+
+\subsubsection*{Installation aus dem Entwicklerstand}
+
+\begin{verbatim}
+git clone https://github.com/fachat/XD2031
+cd XD2031/pcserver
+make
+sudo make install
+\end{verbatim}
+
+Fertig. Wenn Sie später eine neuere Fassung verwenden möchten, müssen Sie
+nicht wieder alles herunter laden, sondern können folgende Befehle
+anwenden:
+
+\begin{verbatim}
+cd XD2031/pcserver
+git pull
+make
+sudo make install
+\end{verbatim}
+
+\subsubsection*{Installation einer Release-Version}
+Laden Sie von \srcdownloads{}  den Quelltext her"-unter und
+entpacken Sie ihn. Wechseln Sie in das Quelltextverzeichnis
+und führen die folgenden Befehle aus:
+
+\begin{lstlisting}
+cd XD2031/pcserver
+make
+sudo make install
+\end{lstlisting}
+
+\subsubsection*{Automatischer Start des Servers}
+Wenn Sie den Server beim Hochfahren des Rechners automatisch mit starten 
+soll\footnote{Bislang nur für Raspbian auf dem Raspberry Pi getestet!},
+führen Sie noch den folgenden Befehl aus:
+
+\begin{verbatim}
+sudo make daemon
+\end{verbatim}
+
+Um den Server manuell zu starten oder zu beenden:
+
+\begin{verbatim}
+sudo service fsser start
+sudo service fsser stop
+\end{verbatim}
+
+Meldungen des Servers werden in \texttt{/var/log/fsser} 
+abgelegt. Sie können wie folgt live mitgelesen werden:
+
+\begin{verbatim}
+tail -f /var/log/fsser
+\end{verbatim}
+
+\subsubsection{Installation der Server-Software unter OS X}
+Laden Sie von \osxbinaries{} den Server her"-unter und installieren ihn 
+wie üblich.
+
 \subsection{Aktualisierung der Firmware}
 \index{Firmware}
 Die XD-2031-Software, die auf einem Mikrocontroller-basiertem Adapter
 läuft, wird auch als \textit{Firmware} bezeichnet.
-Wenn Sie einen vorprogrammierten Adapter erhalten haben,
-dürfen Sie direkt weiter bei \glqq\ref{serverinst} 
-\nameref{serverinst}\grqq\ auf Seite \pageref{serverinst}  weiterlesen.
+
+Sicherheitshalber sollten Sie nach dem Installieren einer neuen
+Server-Version auch die Firmware aktualisieren, damit beide richtig
+zusammen arbeiten können.
+
+Anweisungen für Raspberry Pi / 3.1541 finden Sie unter
+bei \glqq\ref{fwinst31541} \nameref{fwinst31541}\grqq\ auf Seite
+\pageref{fwinst31541}.
 
 Wenn Sie ein petSD besitzen, lesen Sie bitte jetzt bei
 \glqq\ref{petsdfwinst} \nameref{petsdfwinst}\grqq\ auf Seite
 \pageref{petsdfwinst} weiter.
 
+\textbf{Tipp:} Um direkt zur gewünschten Stelle zu gelangen, können 
+Sie auch innerhalb der PDF-Datei die Kapitelnamen oder Seitenzahlen 
+anklicken.
+
 \subsubsection{Aktualisierung der Firmware für XS-1541}
-Laden Sie zunächst von \fwbinaries{} die Firmware für das XS-1541
-herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
-Halten Sie die entpackten Dateien in Ihrem Heimatverzeichnis bereit.
+Laden Sie zunächst von \fwbinaries{} die Firm"-ware für das XS-1541
+herunter und entpacken Sie wenn nötig Archivdateien wie 
+etwa \glqq .zip\grqq . 
+
 \subsubsection*{Linux}
 \begin{enumerate}
-\item Für die weiteren Arbeitsschritte werden Sie das Programm
-\glqq AVRDUDE\grqq\ benötigen.  
-Das Paket \glqq avrdude\grqq\ sollte in allen gängigen Distributionen
-enthalten sein. Wie Sie dieses Paket installieren, hängt von Ihrer
-verwendeten Distribution ab. Für Debian, Ubuntu und deren Verwandte:
-
-\texttt{sudo apt-get install avrdude}
-
 \item Schließen Sie das XS-1541 mittels USB-Kabel an Ihren Computer an.
-\item Öffnen Sie ein Terminal, Sie sollten nun in Ihrem Heimatverzeichnis
-sein, wo Ihre zuvor herunter geladenen Dateien liegen sollten.
+\item Öffnen Sie ein Terminal.
+\item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
 \item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
 
 \texttt{chmod +x xs1541up.sh}
-\item Wenn Sie die aktuelle Firmware verwenden wollen, tippen Sie
-	folgenden Befehl ein, aber noch \textit{nicht} die 
+\item Für die aktuelle Firmware \texttt{XD2031-xs1541.hex}, tippen Sie
+	den folgenden Befehl ein, aber noch \textit{nicht} die 
 	Eingabetaste:
 
 	\texttt{./xs1541up.sh}
 
-	\textbf{--- oder ---}
-
-	Wenn Sie eine bestimmte Firmware-Version aufspielen möchten, geben
-	Sie den Dateinamen an, drücken aber noch \textit{nicht}
-	die Eingabetaste:
-
-	\texttt{./xs1541up.sh XD2031-xs1541-bestimmte-Version.hex}
 \item Drücken Sie am XS-1541 die Reset-Taste und lassen Sie sie wieder los.
-\item Drücken Sie am PC binnen drei Sekunden die Eingabetaste um
-	avrdude nun zu starten.
+\item Drücken Sie am PC binnen drei Sekunden(!) die Eingabetaste
 \end{enumerate}
+
+\textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
+\texttt{XD2031-xs1541.hex}
+eine andere Firmware aufspielen möchten, können Sie
+dem Script auch einen Dateinamen übergeben:
+
+\begin{verbatim}
+./xs1541up.sh Beliebige-xs1541-Firmware.hex
+\end{verbatim}
+
 \subsubsection*{OS X}
 
 \begin{enumerate}
@@ -226,6 +410,7 @@ AVR\textsuperscript{\textregistered} Development} von
 \item Schließen Sie das XS-1541 mittels USB-Kabel an Ihren Computer an.
 \item Klicken Sie auf \glqq Programme\grqq\ $\to$ \glqq Dienstprogramme\grqq
 $\to$ \glqq Terminal\grqq\ um ein Terminal zu öffnen.
+\item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
 \item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
 
 \texttt{chmod +x xs1541up.sh}
@@ -250,24 +435,25 @@ Seriennummer), drücken Sie jetzt die Eingabetaste:
 
 Geben Sie dann Ihr Administrator-Passwort ein, um diesen Vorgang
 zu ermöglichen.
-\item Wenn Sie die aktuelle Firmware verwenden wollen, tippen Sie
+\item Für die aktuelle Firmware 
+   \texttt{XD2031-xs1541.hex} tippen Sie
 	folgenden Befehl ein, aber noch \textit{nicht} die 
 	Eingabetaste:
 
 	\texttt{./xs1541up.sh}
 
-	\textbf{--- oder ---}
-
-	Wenn Sie eine bestimmte Firmware-Version aufspielen möchten, geben
-	Sie den Dateinamen an, drücken aber noch \textit{nicht}
-	die Eingabetaste:
-
-	\texttt{./xs1541up.sh XD2031-xs1541-bestimmte-Version.hex}
-
 \item Drücken Sie am XS-1541 die Reset-Taste und lassen Sie sie wieder los.
-\item Drücken Sie am PC binnen drei Sekunden die Eingabetaste um
-	avrdude nun zu starten.
+\item Drücken Sie am PC binnen drei Sekunden(!) die Eingabetaste
 \end{enumerate}
+
+\textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
+\texttt{XD2031-xs1541.hex}
+eine andere Firmware aufspielen möchten, können Sie
+dem Script auch einen Dateinamen übergeben:
+
+\begin{verbatim}
+./xs1541up.sh Beliebige-xs1541-Firmware.hex
+\end{verbatim}
 
 \subsubsection*{Wenn das Aktualisieren scheitert...}
 Wenn es nicht geklappt hat, weil drei Sekunden doch recht kurz sind,
@@ -278,10 +464,128 @@ wieder erscheinen. Drücken Sie dann Reset und jetzt schnell die Eingabetaste!
 Sollte trotz allem die Fehlermeldung \glqq programmer is not responding\grqq\ 
 erscheinen, wurde Ihr XS-1541 vermutlich \textit{nicht} mit einem Bootloader
 versehen. In diesem Fall kann die Firmware nur unter Verwendung eines
-AVR-ISP-Programmiergerätes aufgespielt werden.
+AVR-ISP-Programmierers aufgespielt werden.
+
+
+
+\subsubsection{Aktualisierung der Firmware für Raspberry Pi / 3.1541}
+\label{fwinst31541}
+Laden Sie zunächst von \fwbinaries{} die Firm\-ware für das 3.1541
+herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
+Das 3.1541 verwendet die selbe Firmware die das XS-1541, sie werden daher
+keine separaten Dateien finden. Allerdings ist der Update-Vorgang etwas
+leichter:
+
+\begin{enumerate}
+\item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
+\item Machen Sie die Script-Datei 3.1541.sh wie folgt ausführbar:
+
+\texttt{chmod +x 3.1541up.sh}
+\item Um die aktuelle Firmware \texttt{XD2031-xs1541.hex} aufzuspielen:
+
+	\texttt{./3.1541up.sh}
+\end{enumerate}
+
+\textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
+\texttt{XD2031-xs1541.hex}
+eine andere Firmware aufspielen möchten, können Sie
+dem Script auch einen Dateinamen übergeben:
+
+\begin{verbatim}
+./3.1541up.sh Beliebige-xs1541-Firmware.hex
+\end{verbatim}
 
 \subsubsection{Aktualisierung der Firmware für petSD}
 \label{petsdfwinst}
+Zwar wurden die 2011er petSD mit einem Bootloader zum einfachen
+Aktualisieren der Firmware über die SD-Karte versehen, es hat
+sich jedoch gezeigt, dass die verwendeten Fuses-Einstellungen
+des AVR Microcontrollers nicht mit der 
+\mbox{XD-2031} Firmware kompatibel sind.
+
+Leider können Bootloader nur die Firmware aktualisieren, 
+aber keine Änderungen an den Fuses vornehmen. 
+Die einzige Möglichkeit, die XD-2031 Firmware
+auf ein petSD aufzuspielen, besteht daher in der Verwendung eines
+AVR-ISP-Programmiergerätes. 
+
+Ein solches Programmiergerät kann je nach Hersteller 
+für einen Betrag von ca. 20,-- bis 30,-- \euro{} erworben werden. 
+Das Atmel AVR ISP mkII ist eine Empfehlung wert und wird in allen
+Scripten als Standard verwendet.
+
+\subsubsection*{Download der Firmware und Einstellen des
+Programmier-Gerätes}
+\begin{enumerate}
+\item Unter OS X installieren Sie bitte erst das 
+\textit{CrossPack for AVR\textsuperscript{\textregistered} Development} von 
+\url{http://www.obdev.at/products/crosspack}
+
+\item Laden Sie von \fwbinaries{} die Firmware herunter und entpacken Sie 
+die Datei
+
+\item Öffnen Sie ein Terminal. Unter OS X klicken Sie dazu auf 
+\glqq Programme\grqq\ $\to$ \glqq Dienstprogramme\grqq
+$\to$ \glqq Terminal\grqq{}
+
+\item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält
+\end{enumerate}
+
+Wenn Sie ein anderes Programmiergerät als das Atmel AVR ISP mkII
+verwenden, müssen die zunächst die für Ihr Programmiergerät passenden
+Werte eintragen. Lesen Sie dazu die Anleitung Ihres Programmiergerätes oder 
+die Online-Hilfe mit \texttt{man avrdude}
+
+\begin{enumerate}
+\setcounter{enumi}{4}
+\item Bearbeiten Sie wenn nötig die Datei \texttt{programmer.cfg} 
+und ändern Sie die beiden Parameter für Typ und Anschluss des 
+Programmiergerätes in pas\-sende Werte:
+\begin{verbatim}
+PROGRAMMER=avrispmkii
+CONNECTED_TO=usb
+\end{verbatim}
+\end{enumerate}
+
+\subsubsection*{Anpassen der Fuses}
+Dieser Schritt ist nur einmalig notwendig und sollte bei
+weiteren Firmware-Updates ausgelassen werden.
+\begin{enumerate}
+\item Machen Sie das Script \texttt{petSD\_fix\_fuses.sh} ausführbar:
+\begin{verbatim}
+chmod +x petSD_fix_fuses.sh
+\end{verbatim}
+
+\item Starten Sie das Script, um die Fuses für XD-2031 zu ändern:
+\begin{verbatim}
+./petSD_fix_fuses.sh
+\end{verbatim}
+
+\end{enumerate}
+
+\subsubsection*{Aktualisieren der Firmware mit AVR ISP Programmierer}
+
+\begin{enumerate}
+\item Machen Sie das Script \texttt{petSDisp.sh} ausführbar:
+\begin{verbatim}
+chmod +x petSDisp.sh
+\end{verbatim}
+
+\item Um die aktuelle Firmware \texttt{XD2031-petSD.hex} aufzuspielen:
+
+\texttt{./petSDisp.sh}
+\end{enumerate}
+
+\textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
+\texttt{XD2031-petSD.hex}
+eine andere Firmware aufspielen möchten, können Sie
+dem Script auch einen Dateinamen übergeben:
+
+\begin{verbatim}
+./petSDisp.sh Beliebige-petSD-Firmware.hex
+\end{verbatim}
+
+\begin{comment}
 Haben Sie Ihr petSD nach Juli 2012 erworben, können Sie die Firmware
 sehr einfach aktualisieren:
 \begin{enumerate}
@@ -300,48 +604,21 @@ nur einmal programmiert.
 Haben Sie dagegen Ihr petSD vor Juli 2012 erworben, kann es zu
 Problemen kommen. Schreiben Sie in diesem Fall an nils.eilers@gmx.de, 
 um weitere Informationen zu erhalten.
+\end{comment}
 
-\subsection{Installation der Server-Software}
-\label{serverinst}
-\subsubsection{Installation der Server-Software unter Linux}
-Die Installation aus dem letzten Stand des Programm-Quelltextes
-ist mit ein paar Befehlen erledigt:
-\lstset{language=,}
-\begin{lstlisting}
-git clone https://github.com/fachat/XD2031
-cd XD2031/
-make pcserver/fsser
-sudo make install
-\end{lstlisting}
-
-Wenn Sie lieber eine bestimmte Release-Version installieren möchten, 
-laden Sie von \srcdownloads{} den Quelltext herunter und führen im 
-Unterverzeichnis des entpackten Quelltextes die folgenden Befehle aus:
-
-\begin{lstlisting}
-make pcserver/fsser
-sudo make install
-\end{lstlisting}
-
-\subsubsection{Installation der Server-Software unter OS X}
-Laden Sie von \osxbinaries{} den Server herunter und installieren ihn 
-wie üblich.
-
+\clearpage
 \section{Erste Schritte}
 Die meiste Arbeit ist nun geschafft. Bevor wir nun zum vergnüglichen
 Teil kommen, sollen kurz drei Begriffe geklärt werden, die von nun
 an in dieser Anleitung verwendet werden:
 \begin{itemize}
-\item Ihr moderner Computer wird fortan kurz \textit{Host}\footnote
-	{Wenn diese Anleitung das Wort \glqq Host\grqq\ statt dem 
-	verständlicherem \glqq PC\grqq\ verwendet, dann möchte sie betonen, 
-	dass damit nicht unbedingt Computer nach dem IBM-PC-Standard 
-	gemeint sind.}
-genannt.
-\item Ihr alter Commodore wird fortan der Einfachkeit halber als 
-\textit{CBM} bezeichnet, ganz gleich, ob es sich um einen CBM / PET / C64 
+\item Ihr moderner Computer wird fortan der Einfachkeit halber 
+	\glqq{}PC\grqq{} genannt.
+\item Ihr alter Commodore wird als 
+\glqq{}CBM\grqq{} bezeichnet, ganz gleich, ob es sich um einen CBM / PET / C64 
 oder anderen 8-Bitter handelt.
-\item Ihr XS-1541 oder petSD wird als \textit{Adapter} bezeichnet.
+\item Ihr XS-1541, 3.1541 oder petSD wird 
+als \glqq{}Adapter\grqq{} bezeichnet.
 \end{itemize}
 
 \subsection{Adapter anschließen}
@@ -351,19 +628,19 @@ auszuschließen.
 \begin{enumerate}
 \item Stellen Sie sicher, dass am Adapter \textit{keine(!)} Kabel angeschlossen sind.
 \item Stellen Sie sicher, dass der CBM ausgeschaltet ist.
-\item Wenn neben dem CBM noch weitere Hardware am IEEE-488-Bus oder CBM-Bus
+\item Wenn neben dem CBM noch weitere Hardware am IEEE-488-Bus oder IEC-Bus
 angeschlossen ist, wie etwa weitere Diskettenlaufwerke oder Drucker,
 müssen diese ebenfalls alle ausgeschaltet sein.
-\item Der Host darf zu diesem Zeitpunkt bereits eingeschaltet sein. Falls er das noch nicht ist, schalten Sie ihn jetzt ein.
-\item Verbinden Sie den Adapter mit dem CBM über ein IEEE-488- oder CBM-Bus-Kabel.
-\item Verbinden Sie den Adapter mit dem Host mittels USB-Kabel.
+\item Der PC darf zu diesem Zeitpunkt bereits eingeschaltet sein. Falls er das noch nicht ist, schalten Sie ihn jetzt ein.
+\item Verbinden Sie den Adapter mit dem CBM über ein IEEE-488- oder IEC-Bus-Kabel.
+\item Verbinden Sie den Adapter mit dem PC mittels USB-Kabel.
 \item Schalten Sie Peripherie wie Diskettenlaufwerke oder Drucker ein.
 \item Wenn der Adapter über eine separate Stromzufuhr verfügt, schalten Sie diese jetzt ein.
 \item Schalten Sie den CBM ein.
 \end{enumerate}
 
 Vielleicht staunen Sie über dieses Prozedere. Tatsache ist, das weder
-IEEE-488-Bus noch CBM-Bus \textit{hot-pluggable} sind; das bedeutet:
+IEEE-488-Bus noch IEC-Bus \textit{hot-pluggable} sind; das bedeutet:
 Ein- oder Ausstecken nur im ausgeschalteten Zustand -- auch wenn man es in
 der Praxis immer wieder anders sieht. Nichtbeachtung kann erforderlich
 machen, dass Sie Ersatzteile für Ihren CBM besorgen müssen und Chips
@@ -387,7 +664,7 @@ XS-1541 zu besprechen. Beim petSD ist die Reihenfolge unerheblich.
 
 \subsection*{XS-1541 einschalten}
 \begin{enumerate}
-\item Schalten Sie immer erst den Host ein. 
+\item Schalten Sie immer erst den PC ein. 
 \item Stellen Sie sicher, dass das USB-Kabel am XS-1541 eingesteckt ist und 
 die Power-LED hell leuchtet.
 \item Wenn vorhanden, schalten Sie jetzt weitere Peripherie wie 
@@ -401,7 +678,7 @@ Geräte in den Grundzustand versetzt werden.
 \item Schalten Sie den CBM und alle am Bus hängenden Peripheriegeräte
 wie Diskettenlaufwerke und Drucker aus.
 \item Ziehen Sie erst jetzt den USB-Stecker vom XS-1541 ab bzw.
-schalten Sie erst jetzt den Host aus.
+schalten Sie erst jetzt den PC aus.
 \end{enumerate}
 
 \subsection{Server starten}
@@ -430,7 +707,7 @@ LOAD"$",8
 LIST
 \end{verbatim}
 
-Probieren Sie es aus. Sie sollten das Heimatverzeichnis Ihres Hosts
+Probieren Sie es aus. Sie sollten das Heimatverzeichnis Ihres PCs
 angezeigt bekommen.
 
 \subsection{LOAD und SAVE}
@@ -487,11 +764,11 @@ Sehen wir uns doch einfach mal die dämliche Demo auf Laufwerk 1 an:
 LOAD"$1:DUMB*",8
 LIST
 
- 0  "DUMB*           " XD2031
- 1     "DUMBDEMO64"       PRG
- 1     "DUMBDEMOPET"      PRG
- 1     "DUMBDEMOVIC20"    PRG
- 1  BLOCKS FREE
+ 1 "DUMB*           "XD2031
+ 1     "DUMBDEMO64"      PRG
+ 1     "DUMBDEMOPET"     PRG
+ 1     "DUMBDEMOVIC20"   PRG
+ 63999 BLOCKS FREE.
 READY.
 \end{verbatim}
 
@@ -521,7 +798,7 @@ werden.
 \subsection{BASIC 4.0 Disketten-Befehle}
 Prinzipiell sind die zusätzlichen Disketten-Befehle des BASIC 4.0
 nützlich und werden auch von der Firmware unterstützt. 
-Eine gute Gelegenheit, das Hauptverzeichnis Ihres Hosts
+Eine gute Gelegenheit, das Hauptverzeichnis Ihres PCs
 wieder zu säubern:
 
 \begin{verbatim}
@@ -535,8 +812,8 @@ Leider wird die Laufwerksangabe streng geprüft. Bei Angaben größer 1
 wird ein \texttt{ILLEGAL QUANTITY ERROR} gemeldet. Dreifachlaufwerke
 waren Commodore dann wohl doch nicht geheuer.
 
-Immerhin sind ist bei der Angabe der Geräteadresse über ONU alle
-sinnvollen Werte möglich. Mit \texttt{CATALOG ONU 20} würde das
+Immerhin sind bei der Angabe der Geräteadresse über ONU alle
+zulässigen Werte möglich. Mit \texttt{CATALOG ONU 20} würde das
 Inhaltsverzeichnis eines Laufwerks an Geräteadresse 20 angezeigt werden.
 Werte größer als 31 oder kleiner als drei werden verweigert. 
 
@@ -578,10 +855,12 @@ Geräteadresse 8. Folgende Software-Versionen werden die Möglichkeit
 bieten, den eingestellten Wert dauerhaft auch über das Ausschalten hinweg
 beizubehalten.
 
+\clearpage %MANFF
 \subsection{Laufwerken Inhalte zuweisen}
 Bei klassischen Diskettenlaufwerken würden Sie eine Diskette 
-einlegen. Hier muss dem Adapter mitgeteilt werden, \textit{wo} wo die Daten 
-liegen, die als virtuelle Diskette erscheinen sollen.
+einlegen. Stattdessen muss hier dem Adapter mitgeteilt werden, 
+\textit{wo} wo die Daten liegen, die als virtuelle Diskette 
+erscheinen sollen.
 
 Weil der Zugriff auf eine Festplatte aber grundsätzlich anders abläuft
 als beispielsweise der Zugriff auf einen FTP-Server im Internet, 
@@ -589,7 +868,7 @@ muss man dem Adapter auch noch mitteilen \textit{wie} er darauf
 zugreifen soll.
 
 Für jeden Speicherort (Dateisystem/FTP/HTTP) gibt es daher einen 
-\textit{Provider}. Auf Deutsch bedeutet das etwa \textit{Lieferant}
+\textit{Provider.} Auf Deutsch bedeutet das etwa \textit{Lieferant}
 oder \textit{Leistungserbringer}. 
 
 Hier ein Beispiel mit vier zugewiesenen Laufwerken:
@@ -604,6 +883,10 @@ Laufwerk & Provider & Ort \\
 3 & HTTP & www.gutenberg.org/ebooks/ \\
 \bottomrule
 \end{tabular}
+
+Beispiele für jeden Provider finden Sie im Kapitel \ 
+\ref{assign} \glqq{}\nameref{assign}\grqq{} ab Seite
+\pageref{assign}.
 
 \clearpage
 \section{Dateien und Verzeichnisse}
@@ -675,11 +958,16 @@ Probieren Sie es aus, indem Sie sich mit \texttt{@\$:*.Q1} die
 etroffenen Dateien anzeigen lassen.
 
 \subsection{Verzeichnisse}
-Um einzelne Verzeichnisnamen in Pfad-Angaben zu trennen, muss der
-einfache Schrägstrich '/' verwendet werden.
+Die Trennzeichen, die verwendet werden können, um einzelne 
+Verzeichnisnamen innerhalb eines Pfades zu trennen, hängen vom
+jeweiligen Provider und Betriebs"-system ab. 
+
+Machen Sie es sich einfach, indem Sie ausschließlich
+den einfachen Schrägstrich '/' verwenden, der immer und 
+überall funktioniert.
 
 Richtig: /Spiele/Strategie\\
-Unzulässig: \textbackslash Spiele\textbackslash Strategie
+Besser nicht: \textbackslash Spiele\textbackslash Strategie
 
 Neben absoluten können auch relative Pfadangaben verwendet werden.
 Was bedeutet das?
@@ -767,7 +1055,7 @@ viele weitere\footnote{
 	In der Praxis wird die Anzahl durch andere Umstände begrent, 
 	wie etwa die Größe des Zwischenspeichers, der einen Befehl
 	aufnehmen soll
-} durch Komma getrennte Parameter annehmen. Die optionale Wiederholung
+} durch Kommata getrennte Parameter annehmen. Die optionale Wiederholung
 wird dann durch ein Komma gefolgt von drei Punkten dargestellt:
 
 \mbox{\textit{<Name>} \Big[ \texttt{,} \ldots \ \Big]}
@@ -783,12 +1071,6 @@ PETER,PAUL,MARY
 
 Dieser Befehl ist nur aus Kompatibilitätsgründen enthalten.
 Seine einzige Wirkung ist das Rücksetzen der Statusmeldung.
-
-Er stammt aus der Zeit, als Diskettenlaufwerke noch keine Schalter
-eingebaut hatten, die einen Diskettenwechsel hätten erkennen können.
-Mit diesem Befehl musste nach dem Einlegen einer Diskette dem
-Laufwerk mitgeteilt werden, dass eine neue Diskette initialisiert
-werden soll, also zur weiteren Benutzung vorbereitet werden soll.
 
 Beispiele:
 \begin{verbatim}
@@ -814,7 +1096,7 @@ Beispiele:
 \textit{<Dateimaske>} \Big[ \texttt{,} \ldots \  \Big]
 
 Löscht die angegebenen Datei(en). Mehrere Dateinamen bzw. Suchmuster
-können durch Komma getrennt angegeben werden.
+können durch Kommata getrennt angegeben werden.
 
 Beispiele:
 
@@ -871,11 +1153,13 @@ Dateien noch Unterverzeichnisse enthält.
 
 Beispiel:
 \begin{verbatim}
-@RM:EXPERIMENT2
+@RD:EXPERIMENT2
 \end{verbatim}
 
 
-
+% ----------------------------------------------------------------
+\label{xcommands}
+% ----------------------------------------------------------------
 
 \subsection{XU -- Change unit -- Geräteadresse ändern}
 
@@ -937,6 +1221,7 @@ Letztes Laufwerk	& XD= & 0 \\
 \bottomrule
 \end{tabular}
 
+\clearpage %MANFF
 \subsection{XW -- Write configuration -- Konfiguration schreiben}
 
 \texttt{XW}
@@ -944,28 +1229,311 @@ Letztes Laufwerk	& XD= & 0 \\
 Speichert die aktuelle Konfiguration in einem nicht flüchtigem Speicher.
 Beim nächsten Einschalten des Adapters werden die gespeicherten Werte
 automatisch wieder hergestellt. Eine Übersicht der gespeicherten
-Einstellungen ist in der Beschreibung des \texttt{XI}-Befehls enthalten.
+Einstellungen ist in der Be\-schrei\-bung des \texttt{XI}-Befehls enthalten.
 
 \subsection{XRESET - Adapter zurücksetzen}
 
 \texttt{XRESET}
 
 Dieser Befehl ist die Software-Entsprechung zum Druck auf die Reset-Taste
-des Adapters. Alle nicht gespeicherten Daten und Einstellungen gehen
-dabei verloren.
+des Adapters. Alle nicht gespeicherten Daten und Einstellungen gehen dabei
+verloren.
+
+Die Daten des nichtflüchtigen Speichers bleiben erhalten. Die darin
+gespeicherte Konfiguration kann sich jedoch von der zuletzt verwendeten
+unterscheiden, wenn nicht zuvor ein \texttt{XW}-Befehl abgesetzt
+wurde. 
+
+Wenn noch Dateien zum Schreiben geöffnet sind, droht Datenverlust. 
+Bei Dateisystemen, die auf dem Adapter gespeichert werden, wie etwa SD-Karten,
+droht die Korrumpierung des gesamten Dateisystems, wenn zuvor
+Schreibzugriffe erfolgt sind. Schließen Sie daher immer erst alle
+geöffneten Dateien, bevor Sie diesen Befehl verwenden!
 
 Wenn der Adapter über einen Bootloader zur Aktualisierung der Firmware
 verfügt, wird dieser vor dem Starten der Firmware aktiv. \texttt{XRESET}
 kann daher dazu verwendet werden, den Aktualisierungsvorgang anzustoßen.
 
+\clearpage
+\section{Konfiguration des Servers}
+Der Server kann durch folgende Kommandozeilenparameter konfiguriert 
+werden:
+
+\texttt{fsser} \Big[ \textit{-<Option> \ldots \ \Big] }
+\textit{<Laufzeit-Verzeichnis>}
+
+\subsection{Laufzeit-Verzeichnis}
+Beim Starten wechselt der Server in das angegebene Unterverzeichnis
+\textit{<Laufzeit-Verzeichnis>}. Alle in den Optionen angegebenen
+relative Pfadangaben beziehen sich dann auf dieses Laufzeitverzeichnis.
+
+Beispiel: Ihre CBM-Software liegt in einem Ordner mit dem Pfad
+
+\texttt{/home/benutzer-name/Software/Commodore/CBM/}
+
+Sie möchten nun Laufwerk 0 und Laufwerk 1 belegen. 
+
+Langform ohne relative Pfadangaben:
+
+\begin{verbatim}
+fsser 
+-A0=fs:/home/benutzer-name/Software/Commodore/CBM/Visicalc
+-A1=fs:/home/benutzer-name/Software/Commodore/CBM/Wordpro
+-A2=fs:/home/benutzer-name/Software/Commodore/CBM/Assembler
+-A3=fs:/home/benutzer-name/Software/Commodore/CBM/Spiele
+-A4=fs:/home/benutzer-name/Software/Commodore/CBM/Spiele/Schach
+.
+\end{verbatim}
+
+Kurzform mit Laufzeit-Verzeichnis und relativen Pfaden:
+
+\begin{verbatim}
+fsser 
+-A0=fs:Visicalc
+-A1=fs:Wordpro
+-A2=fs:Assembler
+-A3=fs:Spiele
+-A4=fs:Spiele/Schach
+/home/benutzer-name/Software/Commodore/CBM
+\end{verbatim}
+
+\subsection{Gerätedatei des Adapters}
+\mbox{\Big[ \texttt{-d} \Big( \texttt{auto} \Big| 
+\textit{<device>} \Big) \Big] }
+
+Die Device-Option \texttt{-d} benennt die durch den
+Adapter verwendete Gerätedatei, wie beispielsweise
+\texttt{/dev/ttyUSB0}.
+
+Wird diese Option nicht angegeben, wird 
+\texttt{-d auto} verwendet.
+
+Die automatische Erkennung \texttt{-d auto}
+prüft, ob eine Reihe typischer Namen verfügbar sind, und wenn
+genau einer dieser Möglichkeiten verfügbar ist, wird
+diese verwendet. Findet der Server keine oder mehrere
+Möglichkeiten wird er nicht starten und folgende Fehlermeldung
+ausgeben:
+
+\begin{verbatim}
+Unable to decide which serial device it is.
+Please pick one.
+\end{verbatim}
+
+Die Benennung unterscheidet sich je nach Betriebssystem.
+Für den vom XS-1541 und petSD verwendeten Serial-over-USB Chip
+FT232RL weist Linux 
+fortlaufende Nummern beginnend bei \texttt{/dev/ttyUSB0} 
+zu, während
+\mbox{OS X} die im Chip gespei"-cherte Seriennummer verwendet. 
+Diese Eigenart kann unter \mbox{OS X} dazu verwendet werden, die 
+Seriennummer durch den Gerätenamen zu ersetzen.
+
+\begin{tabular}[c]{l l l l}
+\toprule 
+Adapter & Betriebs- & Gerätedatei & Bemerkung\\
+& system & & \\
+\midrule
+XS-1541 & Linux & /dev/ttyUSB0 & \\
+XS-1541 & OS X & /dev/cu.usbserial-A10044Co & Standard-Seriennummer \\
+petSD & Linux & /dev/ttyUSB0 & \\
+petSD & OS X & /dev/cu.usbserial-petSD & Seriennummer bearbeitet \\
+3.1541 & Linux & /dev/ttyAMA0 \\
+\bottomrule
+\end{tabular}
+
+\subsection{Ausführlichkeit der Meldungen}
+\mbox{\Big[ \texttt{-v} \Big]}
+
+Wenn die Option \texttt{-v} \glqq{}verbose\grqq{} gegeben wird,
+wird der Server eine Reihe weiterer ausführlicherer
+Ausgaben machen, die bei der Fehlersuche behilflich sein können.
+
+\subsection{Laufwerken Inhalte zuweisen}
+\mbox{ \Big[ \texttt{-A}\textit{<Laufwerk-Nummer>} 
+\texttt{:} \textit{<Provider>} \texttt{=}
+\textit{<Parameter>} \Big] \Big[ \ldots \Big] }
+
+Mit der \glqq{}assign\grqq{}-Option \texttt{-A} werden Laufwerke Inhalte
+eines Providers zugewiesen. 
+
+Einfach formuliert wird damit angegeben,
+welche \glqq{}virtuelle Diskette\grqq{} in welches Laufwerk
+eingeschoben wird. 
+
+Provider können sowohl durch die XD-2031 Server Software,
+die auf dem PC läuft, als auch durch den Adapter zur Verfügung
+gestellt werden.
+
+Neben dem Option \texttt{-A} beim
+Serverstart können Zuweisungen auch vom CBM aus über das
+Senden eines A-Befehls an den Kommandokanal \#15 erfolgen.  
+Daher wird \textit{ASSIGN} in einem eigenem
+Kapitel \ref{assign} \glqq{}\nameref{assign}\grqq{} 
+auf Seite \pageref{assign} beschrieben.
+
+\begin{comment}
+TODO: is this feature broken?
+Bei Providern, die der Server anbietet, ist zu beachten, 
+dass aus Sicherheitsgründen zwar auf 
+Unterverzeichnisse von \textit{<Parameter>} zugegriffen
+werden kann, nicht jedoch auf Verzeichnisse in höherer Ebene.
+\end{comment}
+
+\subsection{Laufzeit-Konfiguration der Busse}
+\mbox{\Big[ \texttt{-X} \textit{<Bus>} \texttt{:}
+\textit{<Befehl>} \Big] \Big[ \ldots \Big] }
+
+Mit Hilfe der X-Option können dem Adapter eine Reihe
+X-Befehle übermittelt werden, die ab Seite \pageref{xcommands}
+beschrieben werden.
+
+Um beispielsweise die Geräteadresse für den IEC-Bus auf
+9 und für den \mbox{IEEE-488} Bus auf 10 zu setzen:
+
+\begin{verbatim}
+-Xiec:U=9 -Xieee:U=10
+\end{verbatim}
+
+\clearpage
+\section{Laufwerken Inhalte zuweisen}
+\label{assign}
+
+\subsection{Allgemeines über Provider}
+
+\mbox{ \Big[ \texttt{A}\textit{<Laufwerk-Nummer>} 
+\texttt{:} \textit{<Provider>} \texttt{=}
+\textit{<Parameter>} \Big] \Big[ \ldots \Big] }
+
+Mit der \glqq{}assign\grqq{}-Option \texttt{-A} werden Laufwerke Inhalte
+eines Providers zugewiesen. Einfach formuliert wird damit angegeben,
+welche \glqq{}virtuelle Diskette\grqq{} in welches Laufwerk
+eingeschoben wird.
+
+\begin{tabular}[c]{l l}
+\toprule 
+Provider & Zugriff auf \\
+\midrule
+fs & Dateisystem des PC \\
+di & Disk-Images im Dateisystem des PC  \\
+ftp & FTP-Server (über PC, nur lesend) \\
+http & Webserver (über PC, nur lesend) \\
+\bottomrule
+\end{tabular}
+
+\subsection{fs: Zugriff auf das Dateisystem des PC}
+\mbox{ \texttt{A}\textit{<Laufwerk-Nummer>} 
+\texttt{:} \textit{fs} \texttt{=}
+\textit{<Pfad-im-PC-Dateisystem>} }
+
+Der filesystem-Provider bietet Schreiblesezugriff auf das
+angegebene Verzeichnis. Bei relativen Pfadangaben beziehen sich diese
+auf das Laufzeit-Verzeichnis des Servers, bei absoluten Pfadangaben
+spielt das Laufzeit-Verzeichnis natürlich keine Rolle.
+
+In diesem Beispiel wird der absolute Pfad /usr/local/xd2031/tools
+dem Laufwerk 0 zugewiesen:
+
+\begin{verbatim}
+fsser -A0:fs=/usr/local/xd2031/tools .
+\end{verbatim}
+
+Das Laufzeit-Verzeichnis des Servers wurde der Einfachkeit halber
+auf das aktuelle Verzeichnis '.' gesetzt.
+
+Ein Beispiel mit relativen Pfaden:
+
+\begin{verbatim}
+fsser -A0:fs=office/text ~/Software/Commodore/CBM
+\end{verbatim}
+
+Pfadangaben sind relativ zum Laufzeit-Verzeichnis, 
+so ergibt sich der Gesamt"-pfad  
+\texttt{\~{}/Software/Commodore/CBM/office/text}.
+Dieses Verzeichnis steht nun als Laufwerk 0 
+für Schreib- und Lesevorgänge zur Verfügung.
+
+\subsection{di: Zugriff auf Disk-Images im Dateisystem des PC}
+\mbox{ \texttt{A}\textit{<Laufwerk-Nummer>} 
+\texttt{:} \textit{di} \texttt{=}
+\textit{<Disk-Image-im-PC-Dateisystem>} }
+
+Mit dem Disk-Image-Provider können Disk-Images einem
+Laufwerk zugewiesen werden. Ein Disk-Image enthält einen 1:1 Abzug
+einer Diskette eines bestimmten Diskettenlaufwerks, inklusive
+aller Daten des Dateisystems.
+
+Die Erkennung des Typ des Disk-Images erfolgt unabhängig vom 
+Dateinamen aufgrund der Dateigröße. 
+
+Es gibt verschiedene Varianten, die sich durch die Anzahl
+der hinterlegten Spuren (35 / 40) oder eine eventuell 
+angehängte 
+Fehlertabelle\footnote{Status-Code des Diskettencontrollers für 
+jeden Block des Abbildes} 
+unterscheiden können. Auch Kombinationen daraus sind möglich.
+
+Varianten werden derzeit noch nicht unterstützt, lediglich die
+Standard-Images.
+
+Folgende Disk-Images werden unterstützt:
+
+\begin{tabular}[c]{l l r}
+\toprule 
+Typ & Original-Laufwerke & Größe in Bytes \\
+\midrule
+D64 & 1541, 1571, 2031, 4031, 4040 & \numprint{174848} \\
+D80 & 8050, 8250 & \numprint{533248} \\
+D81 & 1581 & \numprint{819200} \\
+D82 & 8250 & \numprint{1066496} \\
+\bottomrule
+\end{tabular}
+
+Die Verwendung von Disk-Images bietet sich dort an,
+wo die Erhaltung von Sonderzeichen im Dateinamen oder die
+Anordnung innerhalb des Inhaltsverzeichnis wichtig ist.
+
+Beispiel: die \glqq{}virtuelle Diskette\grqq{}
+\texttt{visicalc.d82} wird in Laufwerk 0 eingelegt:
+
+\begin{verbatim}
+fsser -A0:di=office/calc/visicalc.d82 ~/Software/Commodore/CBM
+\end{verbatim}
+
+\clearpage
 \section{Anhang}
 \subsection{Verwendete Lizenzen}
+\subsubsection{Benutzerhandbuch}
+Dieses Handbuch ist unter der
+\textit{Creative Commons CC BY-SA 3.0} lizensiert.
+
+\copyright{} 2013 Nils Eilers
+
+Eine Beschreibung und den rechtsverbindlichen Lizenzvertrag
+können Sie unter \url{http://creativecommons.org/licenses/by-sa/3.0/de/}
+einsehen.
+
+\includegraphics[scale=1]{by-sa.pdf}
+
+\subsubsection{XD-2031}
+Das Programm \glqq{}XD-2031\grqq{} ist unter der
+\textit{GNU General Public License, Version 2} lizensiert.
+
+\copyright{} 2012-2013 André Fachat, Ingo Korb, Thomas Winkler,
+Nils Eilers und andere.
+
+Der rechtsverbindliche Lizenzvertrag ist im folgenden angehängt.
+Bitte beachten Sie, dass der PC Server auch unter späteren
+Versionen der GPL verfügbar ist, die ATmega Firmware dagegen
+\textbf{nur unter GPL Version 2}. Die tatsächlich anwendbare
+Lizenz ist im Quelltext der jeweiligen Datei enthalten.
+
 \input{gpl-2.0.tex}
 
 % Erzeugt falschen Link im PDF
 % \addcontentsline{toc}{subsection}{Stichwortverzeichnis}
 
-\renewcommand{\indexname}{Stichwortverzeichnis}
+% \renewcommand{\indexname}{Stichwortverzeichnis}
 \printindex
 
 \end{document}

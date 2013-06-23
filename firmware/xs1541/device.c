@@ -21,6 +21,7 @@
 
 */
 
+#include "hwdefines.h"
 #include "device.h"
 #include "iechw.h"
 #include "iec.h"

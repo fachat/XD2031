@@ -41,7 +41,10 @@ void file_init(void);
 //
 // returns -1 on error, with an error message in cmd_t->error
 int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
-					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t is_save);
+					void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t openflag);
+
+#define	OPENFLAG_SAVE	1
+#define	OPENFLAG_LOAD	2
 
 // submit a call to the provider
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *buffer, 

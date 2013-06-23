@@ -7,11 +7,10 @@ able to run the new XD-2031 firmware before changing the fuses first.
 Unfortunately, this cannot be made with the SD-card boot loader update. 
 
 Changing the fuses requires an in-system-programmer like a STK-200 or
-AVRISPmkII. Use AVRDUDE and run:
+AVRISPmkII. 
 
-avrdude -p m1284p -v -y -U lfuse:w:0xf7:m -U hfuse:w:0xd2:m -U efuse:w:0xff:m
+- Edit programmer.cfg for programmers other than Atmel AVR ISP mkII
+- Start the script:
 
-WARNING:   IF YOU DON'T KNOW WHAT YOU'RE DOING, YOU MAY BRICK YOUR DEVICE!
-========   Please feel free to email nils.eilers@gmx.de for further advice.
-
+	./petSD_fix_fuses.sh
 

@@ -44,7 +44,7 @@
 
 channel_t channels[MAX_CHANNELS];
 
-static uint8_t _push_callback(int8_t channelno, int8_t errnum);
+static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 static void channel_close_int(channel_t *chan, uint8_t force);
 static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush);
 static channel_t* channel_refill(channel_t *chan, uint8_t options);
@@ -55,10 +55,16 @@ void channel_init(void) {
 	}
 }
 
-static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
-		p->last_pull_errorno = errorno;
+		if (errorno < 0 || rxpacket == NULL) {
+                	p->last_pull_errorno = CBM_ERROR_FAULT;
+		} else if (packet_get_type(rxpacket) == FS_REPLY) {
+			p->last_pull_errorno = packet_get_buffer(rxpacket)[0];
+		} else {
+			p->last_pull_errorno = CBM_ERROR_OK;
+		}
 
 		// TODO: only if errorno == 0?
 		// Probably need some PULL_ERROR as well	
@@ -72,7 +78,7 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno) {
 	return 0;
 }
 
-static uint8_t _close_callback(int8_t channel_no, int8_t errorno) {
+static uint8_t _close_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
                 p->last_push_errorno = errorno;
@@ -80,6 +86,11 @@ static uint8_t _close_callback(int8_t channel_no, int8_t errorno) {
 	}
 	return 0;
 }
+
+static inline uint8_t channel_is_eof(channel_t *chan) {
+        // return buf->sendeoi && (buf->position == buf->lastused);
+        return packet_is_eof(&chan->buf[chan->current]);
+}       
 
 /**
  * pull in a buffer from the server
@@ -126,7 +137,7 @@ static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(packet_t *, uint8_t drive), 
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(void *ep, packet_t *, uint8_t drive), 
 	uint8_t drive) {
 
 //debug_printf("channel_open: chan=%d\n", chan);
@@ -175,6 +186,7 @@ channel_t* channel_flush(int8_t channo) {
 
 	channel_t *chan = channel_find(channo);
 	if (chan == NULL) {
+		term_printf("DID NOT FIND CHANNEL TO FLUSH FOR %d\n", channo);
 		return NULL;
 	}
 
@@ -190,6 +202,10 @@ channel_t* channel_flush(int8_t channo) {
 		delayms(1);
 		main_delay();
 	}
+
+	//debug_printf("pull_state on flush: %d\n", chan->pull_state);
+	chan->pull_state = PULL_OPEN;
+
 	return chan;
 }
 
@@ -230,7 +246,7 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>1: %p, p=%p\n",chan->directory_converter, &chan->buf[chan->current]);
 				//debug_printf(">>1: b=%p\n", packet_get_buffer(&chan->buf[chan->current]));
-				chan->directory_converter(&chan->buf[chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[chan->current], chan->drive);
 			}
 			// we have one packet, and it's already converted as well
 			chan->pull_state = PULL_ONEREAD;
@@ -248,7 +264,7 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 			if (chan->directory_converter != NULL) {
 				//debug_printf(">>2: %p, p=%p\n",chan->directory_converter, &chan->buf[1-chan->current]);
 				//debug_printf(">>2: b=%p\n", packet_get_buffer(&chan->buf[1-chan->current]));
-				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}
@@ -262,24 +278,13 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 /**
  * pre-load data for a read-only channel
  */
-void channel_preload(int8_t chan) {
-	channel_t *channel = channel_find(chan);
-
-	//debug_printf("channel_preload: chan=%d (%p), wtype=%d, pull_state=%d\n", chan, channel, channel->writetype, channel->pull_state);
-
-	if (channel != NULL) {
-		channel_preload_int(channel, 1);	
-	} else {
-		term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", chan);
-	}
-}
-
 int8_t channel_preloadp(channel_t *chan) {
 	return channel_preload_int(chan, 1);
 }
 
-char channel_current_byte(channel_t *chan) {
+char channel_current_byte(channel_t *chan, uint8_t *iseof) {
 	channel_preload_int(chan, 1);
+	*iseof = packet_current_is_eof(&chan->buf[chan->current]);
         return packet_peek_data(&chan->buf[pull_slot(chan)]);
 }
 
@@ -320,16 +325,6 @@ uint8_t channel_next(channel_t *chan, uint8_t options) {
 		}
 	}
 	return 0;
-}
-
-/*
- * return whether the current packet is the last one
- * called when the packet is empty
- */
-uint8_t channel_has_more(channel_t *chan) {
-	// make sure at least one packet is there
-	channel_preload_int(chan, 1);
-	return !packet_is_eof(&chan->buf[pull_slot(chan)]);
 }
 
 static void channel_close_int(channel_t *chan, uint8_t force) {
@@ -396,7 +391,7 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 		}
 		if (chan->pull_state == PULL_TWOCONV) {
 			if (chan->directory_converter != NULL) {
-				chan->directory_converter(&chan->buf[1-chan->current], chan->drive);
+				chan->directory_converter(chan->endpoint, &chan->buf[1-chan->current], chan->drive);
 			}
 			chan->pull_state = PULL_TWOREAD;
 		}
@@ -424,10 +419,16 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	return NULL;
 }
 
-static uint8_t _push_callback(int8_t channelno, int8_t errnum) {
+static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
-                p->last_push_errorno = errnum;
+		if (errnum < 0 || rxpacket == NULL) {
+                	p->last_push_errorno = CBM_ERROR_FAULT;
+		} else if (packet_get_type(rxpacket) == FS_REPLY) {
+			p->last_push_errorno = packet_get_buffer(rxpacket)[0];
+		} else {
+			p->last_push_errorno = CBM_ERROR_OK;
+		}
 
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
@@ -449,11 +450,12 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 	uint8_t channo = chan->channel_no;
 	packet_t *curpack = &chan->buf[push_slot(chan)];
 
+//debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
+
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;
 		packet_reset(curpack, channo);
 	}
-
 
 	packet_write_char(curpack, (uint8_t) c);
 
@@ -462,6 +464,10 @@ channel_t* channel_put(channel_t *chan, char c, uint8_t forceflush) {
 		channel_write_flush(chan, curpack, forceflush);
 
 	}
+
+	if (channel_last_push_error(chan) != CBM_ERROR_OK) {
+		return NULL;
+	}
 	return chan;
 }
 
@@ -469,7 +475,9 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 
 		uint8_t channo = chan->channel_no;
 
-		packet_set_filled(curpack, channo, FS_WRITE, packet_get_contentlen(curpack));
+		packet_set_filled(curpack, channo, 
+			(forceflush & PUT_FLUSH) ? FS_EOF : FS_WRITE, 
+			packet_get_contentlen(curpack));
 
 		// wait until the other packet has been replied to,
 		// i.e. it has been sent, the buffer is free again 
@@ -478,14 +486,25 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 			delayms(1);
 		}
 
-		// note that we are pushing one and are now filling the second
-		// change that before pushing, as callback might already be done during push
-		chan->push_state = PUSH_FILLTWO;
+		if (packet_get_contentlen(curpack) != 0) {
+			// note that we are pushing one and are now filling the second
+			// change that before pushing, as callback might already be done during push
+			chan->push_state = PUSH_FILLTWO;
 
-		// use same packet as rx/tx buffer
-		endpoint_t *endpoint = chan->endpoint;
-		endpoint->provider->submit_call(endpoint->provdata, 
-			channo, curpack, curpack, _push_callback);
+			// use same packet as rx/tx buffer
+			endpoint_t *endpoint = chan->endpoint;
+			endpoint->provider->submit_call(endpoint->provdata, 
+				channo, curpack, curpack, _push_callback);
+
+			// callback is already done?
+			if (chan->push_state == PUSH_FILLONE) {
+				// TODO the need for this may indicate a race condition
+				// buffer PRINT# with single chars trigger a two-byte
+				// instead of one-byte packet on direct blocks, but not on
+				// files
+				chan->push_state = PUSH_OPEN;
+			}
+		}
 
 		if (chan->writetype == WTYPE_WRITEONLY) {
 			// switch packet buffers for double buffering

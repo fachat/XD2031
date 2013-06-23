@@ -1,7 +1,7 @@
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2013 Andre Fachat, Nils Eilers
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -60,6 +60,8 @@ static inline void debug_puthex(char c) {
 }
 
 
+void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii);
+
 #else	// no DEBUG
 
 // those should be optimized away
@@ -71,6 +73,7 @@ static inline void debug_putputs(char *s) {}
 static inline void debug_putputps(char *s) {}
 static inline void debug_puthex(char c) {}
 static inline void debug_printf(char *format, ...) {}
+static inline void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {}
 
 #endif	// DEBUG
 

@@ -31,7 +31,8 @@
 #include <avr/interrupt.h>
 #include <inttypes.h>
 
-#include "config.h"
+#include "hwdefines.h"
+#include "device.h"
 #include "mem.h"
 #include "led.h"
 
@@ -90,12 +91,12 @@ static uint8_t has_error = 0;
 void led_init() {
 	// set data direction
 	LED_DDR  |= _BV(LED_BIT);
-	// switch LED off
-	LED_PORT &= ~_BV(LED_BIT);
 #	ifdef ACTIVE_LED_DDR
 		ACTIVE_LED_DDR |= _BV(ACTIVE_LED_BIT);
-	  	ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
 #	endif
+
+	// switch LEDs off
+	device_leds_off();
 
 	// switch off led interrupt program
 	led_program = 0;
@@ -107,12 +108,12 @@ void led_init() {
 
 static inline void _led_on() {
 	led_program = 0;
-	LED_PORT |= _BV(LED_BIT);
+	device_led_on();
 }
 
 static inline void _active_led_on() {
 #	ifdef ACTIVE_LED_DDR
-		ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+		device_active_led_on();
 #	else
 		_led_on();
 #	endif
@@ -120,10 +121,7 @@ static inline void _active_led_on() {
 
 static inline void _leds_off() {
 	led_program = 0;
-	LED_PORT &= ~_BV(LED_BIT);
-#	ifdef ACTIVE_LED_DDR
-	  ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
-#	endif
+	device_leds_off();
 }
 
 void led_toggle() {

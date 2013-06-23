@@ -1,5 +1,3 @@
-VERSION=0.9.2-RC2
-
 PREFIX=/usr/local
 BINDIR=bin
 DOCDIR=xd2031/doc
@@ -8,15 +6,16 @@ TOOLSDIR=xd2031/tools
 # The space separeted list of directories in DROPDIR will be removed at uninstall too
 DROPDIR=xd2031
 
-CC=gcc
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -I../common
+CC=$(CROSS)gcc
+LD=$(CROSS)ld
+AR=$(CROSS)ar
+PKG_CONFIG=$(CROSS)pkg-config
 
-# Uncomment the following line for a 32 bit version that will run on 
-# both 32 and 64 bit OS X
-# CFLAGS+= -arch i386
+FSSER_EXE=fsser
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
-COMMONC=fscmd.c privs.c name.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c
-COMMONH=fscmd.h privs.h name.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h
+COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
+COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h 
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
@@ -32,6 +31,13 @@ ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
 endif
 
+# Check if AVRDUDE configuration has already been added to /etc/avrdude.conf
+CONF_MISSING := $(shell grep petsd2 /etc/avrdude.conf > /dev/null; echo  $$?)
+ADD_AVRDUDE_CONF=echo "AVRDUDE configuration already installed."
+ifeq ($(CONF_MISSING),1)
+	ADD_AVRDUDE_CONF=cat ../firmware/avr/avrdude.conf >> /etc/avrdude.conf; echo "AVRDUDE configuration added."
+endif
+
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
@@ -39,7 +45,7 @@ all: fsser
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} fsser.c $(COMMONC) -o fsser ${LIBS}
+	${CC} ${CFLAGS} fsser.c $(COMMONC) -o $(FSSER_EXE) ${LIBS}
 ifeq ($(PRIVILEGED),y)
 	sudo chown root $@
 	sudo chmod u+s $@
@@ -53,14 +59,22 @@ clean:
 
 
 run:
-	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools .
+	MALLOC_CHECK_=1 ./fsser -d auto -A0:fs=../sample -A1:fs=../tools .
 
 runv:
 	# I'm lazy...
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A0=fs:../sample -A1=fs:../tools .
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools .
+
+runv2:
+	# I'm lazy...
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -A9:di=../sample/COPYALL\ V2.D64 -Xiec:U=9 . 
+
+rungdb:
+	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser
+	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample -A1:fs=../tools ." ./fsser
 
 run9:
-	MALLOC_CHECK_=1 ./fsser -d auto -A0=fs:../sample -A1=fs:../tools -Xiec:U=9 -Xieee:U=9 .
+	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .
 
 debug:
 	echo "Start with: run -d auto ../sample"
@@ -86,6 +100,8 @@ endif
 	cp ../sample/* $(PREFIX)/$(SAMPLEDIR)
 	test -d $(PREFIX)/$(TOOLSDIR) || mkdir -p $(PREFIX)/$(TOOLSDIR)
 	cp ../tools/* $(PREFIX)/$(TOOLSDIR)
+	@# Add petSD2 programmer to /etc/avrdude.conf if not already there
+	@$(ADD_AVRDUDE_CONF)
 
 uninstall:
 	rm -f $(PREFIX)/$(BINDIR)/fsser
@@ -99,19 +115,19 @@ uninstall:
 	  rmdir $(PREFIX)/$$i 2>/dev/null | exit 0; \
 	done;
 
-# make dmg generates xd2031-$(VERSION).dmg for binary distribution 
-# with uninstaller
+# make dmg generates xd2031.dmg for binary distribution with uninstaller
+# ---> edit --version "0.9.1" a few lines below
 # ---> compile with -arch i386 in CFLAGS first!
 # works on OS X only
 dmg:
 	# Clean first, then make a temporary fauxroot install
-	rm -rf fauxroot dmg XD-2031-$(VERSION).dmg
+	rm -rf fauxroot dmg xd2031.dmg
 	make install PREFIX=fauxroot/usr/local
 	# Create .pkg from fauxroot
 	mkdir dmg
 	/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker \
 	--verbose --root-volume-only --root fauxroot/  --id com.xd2031 \
-	--version "$(VERSION)" --target 10.5 --discard-forks --out dmg/XD-2031-$(VERSION).pkg \
+	--version "0.9.1" --target 10.5 --discard-forks --out dmg/XD-2031.pkg \
 	--title "XD-2031" --domain system
 	# you may want to add some README etc. to dmg/
 	cp COPYING dmg/
@@ -130,9 +146,13 @@ dmg:
 	echo "read -p \"Press ENTER to continue...\"" >> dmg/XD-2031-uninstall
 	chmod +x dmg/XD-2031-uninstall
 	# Create dmg image from dmg/ directory
-	hdiutil create -srcfolder dmg -volname "XD-2031" XD-2031-$(VERSION).dmg
+	hdiutil create -srcfolder dmg -volname "XD-2031" xd2031.dmg
 	# Clean again
 	rm -rf fauxroot dmg
-	@echo Did you remember compiling first with CFLAGS+= -arch i386?
 
-.PHONY: all install uninstall run dmg
+daemon: install
+	sed -e 's|PREFIX|'$(PREFIX)'|g' fsser.init.d > fsser.init.d.localized
+	sed -i -e 's|BINDIR|'$(BINDIR)'|g' fsser.init.d.localized
+	./daemon.sh
+
+.PHONY: all install uninstall run dmg fsser

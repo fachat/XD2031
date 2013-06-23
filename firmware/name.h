@@ -55,10 +55,8 @@ typedef struct {
 	uint8_t	drive2;		// starts from 0 (real zero, not $30 = ASCII "0")
 	uint8_t *name2;		// pointer to the actual name after the '='
 	uint8_t	namelen2;	// length of remaining file name
+	uint16_t recordlen;	// length of record from opening 'L' file (REL)
 } nameinfo_t;
-
-//#define	NAMEINFO_UNUSED_DRIVE	0xff	// unspecified like: LOAD"file",8
-//#define	NAMEINFO_UNDEF_DRIVE	0xfe	// non-numeric drive like: LOAD"ftp:file",8
 
 // nameinfo option bits
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
@@ -73,7 +71,10 @@ extern nameinfo_t nameinfo;
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.
  */
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t is_command);
+void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint);
+
+#define	PARSEHINT_COMMAND	1	// when called from command handler
+#define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
 
 /**
  * assembles the filename packet from nameinfo into the target buffer.

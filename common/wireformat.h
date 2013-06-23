@@ -40,6 +40,7 @@
 // Note: -1 = 0xff is reserved
 #define	FSFD_TERM	126	// terminal output from device to server
 #define	FSFD_SETOPT	125	// send options from server to device
+#define	FSFD_CMD	124	// send commands from device to server (FS_CHARSET)
 
 // the first byte of the payload is the (binary) drive number, or one of those two
 #define NAMEINFO_UNUSED_DRIVE   0xff    // unspecified like: LOAD"file",8
@@ -78,13 +79,20 @@
 #define   FS_SETOPT      21	/* set an option using an X-command string as payload */
 #define   FS_RESET       22	/* device sends this to notify it has reset */
 
-#define   FS_BLOCK       23	/* summary for U1,U2,B-P,B-R,B-W */
+#define   FS_BLOCK       23	/* summary for U1,U2,B-R,B-W */
 #define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
 
+#define	  FS_DIRECT	 25	/* Non-channel-specific commands similar to FS_BLOCK */ 
+
+#define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
+
+#define   FS_CHARSET 	 27	/* send to the server the name of the requested character set for
+				   file names and directory entries */
+
 /*
- * BLOCK commands
+ * BLOCK and DIRECT commands
  *
- * Those are used as sub-commands in the FS_BLOCK filesystem command
+ * Those are used as sub-commands in the FS_BLOCK or FS_DIRECT filesystem command
  */
 
 #define	FS_BLOCK_U1	0
@@ -92,6 +100,18 @@
 #define	FS_BLOCK_BR	2
 #define	FS_BLOCK_BW	3
 #define	FS_BLOCK_BP	4
+#define	FS_BLOCK_BA	5	/* Block allocate */
+#define	FS_BLOCK_BF	6	/* Block free */
+
+/*
+ * Structure sent for U1/U2
+ */
+#define	FS_BLOCK_PAR_DRIVE	0	/* drive (to get endpoint, as for open */
+#define	FS_BLOCK_PAR_CMD	1	/* actual command, FS_BLOCK_* */
+#define FS_BLOCK_PAR_TRACK	2	/* two byte track number */
+#define	FS_BLOCK_PAR_SECTOR	4	/* two byte sector number */
+#define FS_BLOCK_PAR_CHANNEL	6	/* channel number to use for transfer */
+#define	FS_BLOCK_PAR_LEN	7	/* number of bytes in block cmd parameters */
 
 /* 
  * time and date struct, each entry is a byte
@@ -113,14 +133,15 @@
 /* structure of a directory entry when reading a directory */
 
 #define   FS_DIR_LEN     0    	/* file length in bytes, four bytes, low byte first */
-#define   FS_DIR_YEAR    FS_DATE_YEAR + 4    	/* =4;    last modification date, year-1900 */
-#define   FS_DIR_MONTH   FS_DATE_MONTH + 4    	/* =5;    -"- month */
-#define   FS_DIR_DAY     FS_DATE_DAY + 4    	/* =6;    -"- day */
-#define   FS_DIR_HOUR    FS_DATE_HOUR + 4    	/* =7;    -"- hour */
-#define   FS_DIR_MIN     FS_DATE_MIN + 4    	/* =8;    -"- minute */
-#define   FS_DIR_SEC     FS_DATE_SEC + 4    	/* =9;    -"- second */
-#define   FS_DIR_MODE    FS_DATE_LEN + 4   	/* =10;   type of directory entry, see FS_DIR_MOD_* below */
-#define   FS_DIR_NAME    FS_DATE_LEN + 5   	/* =11;   zero-terminated file name */
+#define	  FS_DIR_ATTR	 4	/* file entry attribute bits, see below */
+#define   FS_DIR_YEAR    FS_DATE_YEAR + 5    	/* =4;    last modification date, year-1900 */
+#define   FS_DIR_MONTH   FS_DATE_MONTH + 5    	/* =5;    -"- month */
+#define   FS_DIR_DAY     FS_DATE_DAY + 5    	/* =6;    -"- day */
+#define   FS_DIR_HOUR    FS_DATE_HOUR + 5    	/* =7;    -"- hour */
+#define   FS_DIR_MIN     FS_DATE_MIN + 5    	/* =8;    -"- minute */
+#define   FS_DIR_SEC     FS_DATE_SEC + 5    	/* =9;    -"- second */
+#define   FS_DIR_MODE    FS_DATE_LEN + 5   	/* =10;   type of directory entry, see FS_DIR_MOD_* below */
+#define   FS_DIR_NAME    FS_DIR_MODE + 1   	/* =11;   zero-terminated file name */
 
 /* type of directory entries */
 
@@ -128,6 +149,27 @@
 #define   FS_DIR_MOD_NAM 1    	/* disk name */
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
+
+/* file attribute bits - note they are like the CBM directory entry type bits,
+   except for $80, which indicates a splat file, which is inverted.
+   For details see also: http://www.baltissen.org/newhtm/1541c.htm
+*/
+#define	  FS_DIR_ATTR_SPLAT	0x80	/* when set file is splat - i.e. open, display "*" */
+#define	  FS_DIR_ATTR_LOCKED	0x40	/* write-protected, show "<" */
+#define	  FS_DIR_ATTR_TRANS	0x20	/* transient - will (be?) @-replace(d by) other file */
+#define	  FS_DIR_ATTR_ESTIMATE	0x10	/* file size is an estimate only (may require lengthy computation) */
+#define	  FS_DIR_ATTR_TYPEMASK	0x07	/* file type mask - see below */
+
+/* represents a (logical) CBM file type - providers may use them or ignore them
+   All are simple sequential files, with REL types (in CBM DOS) being a record-oriented
+   format (see "side sector" containing the list of blocks for direct access. A provider 
+   may choose to allow record-oriented access on all types (with 
+   appropriate open with record length) */
+#define	  FS_DIR_TYPE_DEL	0
+#define	  FS_DIR_TYPE_SEQ	1
+#define	  FS_DIR_TYPE_PRG	2
+#define	  FS_DIR_TYPE_USR	3
+#define	  FS_DIR_TYPE_REL	4
 
 #endif
 

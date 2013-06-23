@@ -31,20 +31,24 @@
  * In this file the actual command work is done
  */
 
+#include "os.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "wireformat.h"
 #include "fscmd.h"
 #include "dir.h"
+#include "charconvert.h"
 #include "provider.h"
 #include "log.h"
 #include "xcmd.h"
+#include "channel.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -53,64 +57,9 @@
 
 #define	MAX_BUFFER_SIZE			64
 
-static void do_cmd(char *buf, int fs);
-static void write_packet(int fd, char *retbuf);
+static void cmd_dispatch(char *buf, serial_port_t fs);
+static void write_packet(serial_port_t fd, char *retbuf);
 
-
-//------------------------------------------------------------------------------------
-// Mapping from channel number for open files to endpoint providers
-// These are set when the channel is opened
-
-typedef struct {
-       int             channo;
-       endpoint_t      *ep;
-} chan_t;
-
-chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
-
-
-void chan_init() {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          chantable[i].channo = -1;
-        }
-}
-
-endpoint_t *chan_to_endpoint(int chan) {
-
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               if (chantable[i].channo == chan) {
-                       return chantable[i].ep;
-               }
-        }
-       log_info("Did not find ep for channel %d\n", chan);
-       return NULL;
-}
-
-void free_chan(int channo) {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               if (chantable[i].channo == channo) {
-                       chantable[i].channo = -1;
-                       chantable[i].ep = NULL;
-               }
-        }
-}
-
-void set_chan(int channo, endpoint_t *ep) {
-       int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-               // we overwrite existing entries, to "heal" leftover cruft
-               // just in case...
-               if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
-                       chantable[i].channo = channo;
-                       chantable[i].ep = ep;
-                       return;
-               }
-        }
-       log_error("Did not find free ep slot for channel %d\n", channo);
-}
 
 //------------------------------------------------------------------------------------
 // debug log helper
@@ -143,7 +92,9 @@ const char *nameofcmd(int cmdno) {
 	case FS_SETOPT:		return "SETOPT";
 	case FS_RESET:		return "RESET";
 	case FS_BLOCK:		return "BLOCK";
+	case FS_DIRECT:		return "DIRECT";
 	case FS_GETDATIM:	return "GETDATIM";
+	case FS_CHARSET:	return "CHARSET";
 	default:		return "???";
 	}
 }
@@ -157,8 +108,11 @@ const char *nameofcmd(int cmdno) {
 
 void cmd_init() {
 	provider_init();
-	chan_init();
+	channel_init();
 	xcmd_init();
+
+	// default
+	provider_set_ext_charset("PETSCII");
 }
 
 /**
@@ -176,7 +130,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 		if ((strlen(argv[i]) >2) 
 			&& argv[i][1] == 'X') {
 
-			if (index(argv[i]+2, ':') == NULL) {
+			if (strchr(argv[i]+2, ':') == NULL) {
 				// we need a ':' as separator between bus name and actual command
 				log_error("Could not find bus name separator ':' in '%s'\n", argv[i]+2);
 				continue;
@@ -192,12 +146,35 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 				continue;
 			}
 
-			if (argv[i][3] != '=') {
+			if (argv[i][3] != ':') {
 				log_error("Could not identify %s as ASSIGN parameter\n", argv[i]);
 				continue;
 			}
 	
-			int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			int rv;
+			int drive = argv[i][2] & 0x0f;
+			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
+			char *provider_parameter;
+
+			// provider name followed by parameter?
+			char *p = strchr(argv[i], '=');
+			if (p) {
+				if ((p - argv[i] - 4) > MAX_LEN_OF_PROVIDER_NAME) {
+					log_error("Provider name '%.8s'.. exceeds %d characters\n", argv[i] + 4,
+						  MAX_LEN_OF_PROVIDER_NAME);
+				} else {
+					strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
+					provider_name[p - argv[i] - 4] = 0;
+					provider_parameter = p + 1;
+					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
+							provider_parameter);
+					rv = provider_assign(drive, provider_name, provider_parameter);
+				}
+			} else {
+				log_debug("No parameter for cmdline_assign\n");
+				rv = provider_assign(drive, argv[i] + 4, NULL);
+			} 
 			if (rv < 0) {
 				log_error("Could not assign, error number is %d\n", rv);
 			}
@@ -205,7 +182,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 	}
 }
 
-static void cmd_sync(int readfd, int writefd) {
+static void cmd_sync(serial_port_t readfd, serial_port_t writefd) {
 	char syncbuf[1];
 
 	// first sync the device and the server.
@@ -219,7 +196,7 @@ static void cmd_sync(int readfd, int writefd) {
 #if defined DEBUG_WRITE || defined DEBUG_CMD
 		printf("sync write %02x\n", syncbuf[0]);
 #endif
-		e = write(writefd, syncbuf, 1);
+		e = os_write(writefd, syncbuf, 1);
 	} while (e == 0 || (e < 0 &&  errno == EAGAIN));
 	if (e < 0) {
 		log_errno("Error on sync write", errno);
@@ -227,7 +204,7 @@ static void cmd_sync(int readfd, int writefd) {
 	// wait for a sync byte
 	int n = 0;
 	do {
-		n = read(readfd, syncbuf, 1);
+		n = os_read(readfd, syncbuf, 1);
 #ifdef DEBUG_READ
 	        printf("sync read %d bytes: ",n);
 	        for(int i=0;i<n;i++) printf("%02x ",255&syncbuf[i]); printf("\n");
@@ -239,7 +216,7 @@ static void cmd_sync(int readfd, int writefd) {
 }
 
 
-static void cmd_sendxcmd(int writefd, char buf[]) {
+static void cmd_sendxcmd(serial_port_t writefd, char buf[]) {
 	// now send all the X-commands
 	int ncmds = xcmd_num_options();
 	log_debug("Got %d options to send:\n", ncmds);
@@ -263,18 +240,25 @@ static void cmd_sendxcmd(int writefd, char buf[]) {
 	}
 }
 
+static void cmd_sendreset(serial_port_t writefd, char buf[]) {
+	buf[FSP_CMD] = FS_RESET;
+	buf[FSP_LEN] = FSP_DATA;
+	buf[FSP_FD] = FSFD_SETOPT;
+	write_packet(writefd, buf);
+}
+
 /**
  * this is the main loop of the program
  *
  * Here the data is read from the given readfd, put into a packet buffer,
- * then given to do_cmd() for the actual execution, and the reply is 
+ * then given to cmd_dispatch() for the actual execution, and the reply is 
  * again packeted and written to the writefd
  *
  * returns
  *   1 if read fails (errno gives more information)
  *   0 if other strange things happened
  */
-int cmd_loop(int readfd, int writefd) {
+int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 
         char buf[8192];
         int wrp,rdp,plen, cmd;
@@ -283,20 +267,22 @@ int cmd_loop(int readfd, int writefd) {
 	// sync device and server
 	cmd_sync(readfd, writefd);
 
-	cmd_sendxcmd(writefd, buf);
-
+	// tell the device we've reset
+	// (it will answer with FS_RESET, which gives us the chance to send the X commands)
+	cmd_sendreset(writefd, buf);
+	
         /* write and read pointers in the input buffer "buf" */
         wrp = rdp = 0;
 
         for(;;) {
-	      n = read(readfd, buf+wrp, 8192-wrp);
+	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
-	      printf("read %d bytes: ",n);
+	      printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
 	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
 #endif
 
               if(n <= 0) {
-                fprintf(stderr,"fsser: read error %d (%s)\n",errno,strerror(errno));
+                fprintf(stderr,"fsser: read error %d (%s)\n",os_errno(),strerror(os_errno()));
 		fprintf(stderr,"Did you power off your device?\n");
                 return 1;
               }
@@ -325,7 +311,8 @@ int cmd_loop(int readfd, int writefd) {
                 if(wrp-rdp >= plen) {
 		  // did we already receive the full packet?
                   // yes, then execute
-                  do_cmd(buf+rdp, writefd);
+		  //printf("dispatch @rdp=%d [%02x %02x ... ]\n", rdp, buf[rdp], buf[rdp+1]);
+                  cmd_dispatch(buf+rdp, writefd);
                   rdp +=plen;
                 } else {
 		  // no, then break out of the while, to read more data
@@ -336,6 +323,14 @@ int cmd_loop(int readfd, int writefd) {
 
 }
 
+
+char *get_options(char *name, int len) {
+	int l = strlen(name);
+	if ((l + 1) < len) {
+		return name + l + 1;
+	}
+	return NULL;
+}
 
 // ----------------------------------------------------------------------------------
 
@@ -348,11 +343,12 @@ int cmd_loop(int readfd, int writefd) {
  *
  * The return packet is written into the file descriptor fd
  */
-static void do_cmd(char *buf, int fd) {
+static void cmd_dispatch(char *buf, serial_port_t fd) {
 	int tfd, cmd;
 	unsigned int len;
 	char retbuf[200];
 	int rv;
+	char *name2;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -386,12 +382,16 @@ static void do_cmd(char *buf, int fd) {
 
 	// not on FS_TERM
 	tfd = buf[FSP_FD];
-	if (tfd < 0) {
-		printf("Illegal file descriptor: %d\n", tfd);
+	if (tfd < 0 /*&& ((unsigned char) tfd) != FSFD_SETOPT*/) {
+		log_error("Illegal file descriptor: %d\n", tfd);
 		return;
 	}
 
-	buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
+	// this stupidly overwrites the first byte of following commands
+	// in case the new command has already been received (e.g. FS_CHARSET
+	// on reset. This code is commented here as reminder just in case if
+	// some error pops up by removing it
+	//buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
 
 	provider_t *prov = NULL; //&fs_provider;
 	endpoint_t *ep = NULL;
@@ -403,15 +403,20 @@ static void do_cmd(char *buf, int fd) {
 	printf("\n");
 #endif
 	retbuf[FSP_CMD] = FS_REPLY;
-	retbuf[FSP_LEN] = 4;
+	retbuf[FSP_LEN] = FSP_DATA + 1;		// 4 byte default packet
 	retbuf[FSP_FD] = tfd;
-	retbuf[FSP_DATA] = ERROR_FAULT;
+	retbuf[FSP_DATA] = CBM_ERROR_FAULT;
 
-	int eof = 0;
+	int readflag = 0;
 	int outdeleted = 0;
+	int retlen = 0;
 	int sendreply = 1;
 	char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
+	int convlen = len - FSP_DATA-1;
+
+	// options string just in case
+	char *options = NULL;
 
 	switch(cmd) {
 		// file-oriented commands
@@ -421,12 +426,14 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_wr != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
 					prov->name, name);
-				rv = prov->open_wr(ep, tfd, name, cmd == FS_OPEN_OW);
+				rv = prov->open_wr(ep, tfd, name, options, cmd == FS_OPEN_OW);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -441,11 +448,13 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rw != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rw(ep, tfd, name);
+				rv = prov->open_rw(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -462,11 +471,13 @@ static void do_cmd(char *buf, int fd) {
 			prov = (provider_t*) ep->ptype;
 			// not all providers support directory operation
 			if (prov->opendir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->opendir(ep, tfd, name);
+				rv = prov->opendir(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -481,11 +492,13 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_rd != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rd(ep, tfd, name);
+				rv = prov->open_rd(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -500,11 +513,13 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_ap != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
-				rv = prov->open_ap(ep, tfd, name);
+				rv = prov->open_ap(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					set_chan(tfd, ep);
+					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -515,27 +530,37 @@ static void do_cmd(char *buf, int fd) {
 		}
 		break;
 	case FS_READ:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
-			eof = 0;	// default just in case
+			readflag = 0;	// default just in case
 			prov = (provider_t*) ep->ptype;
-			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &eof);
+			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
 			// TODO: handle error (rv<0)
 			if (rv < 0) {
+				// an error is sent as REPLY with error code
+				retbuf[FSP_DATA] = rv;
 				log_rv(-rv);
-			}
-			retbuf[FSP_LEN] = FSP_DATA + rv;
-			if (eof) {
-				log_info("CLOSE_SEND_EOF(%d)\n", tfd);
-				retbuf[FSP_CMD] = FS_EOF;
-				// cleanup when not needed anymore
-				//provider_cleanup(ep);
+			} else {
+				// a WRITE mirrors the READ request when ok 
+				retbuf[FSP_CMD] = FS_WRITE;
+				retbuf[FSP_LEN] = FSP_DATA + rv;
+				if (readflag & READFLAG_EOF) {
+					log_info("SEND_EOF(%d)\n", tfd);
+					retbuf[FSP_CMD] = FS_EOF;
+				}
+				if (readflag & READFLAG_DENTRY) {
+					log_info("SEND DIRENTRY(%d)\n", tfd);
+					provider_convfrom(prov)(retbuf+FSP_DATA+FS_DIR_NAME, 
+								strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
+								retbuf+FSP_DATA+FS_DIR_NAME, 
+								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
+				}
 			}
 		}
 		break;
 	case FS_WRITE:
 	case FS_EOF:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
@@ -547,20 +572,16 @@ static void do_cmd(char *buf, int fd) {
 				log_rv(rv);
 			}
 			retbuf[FSP_DATA] = rv;
-			if (cmd == FS_EOF) {
-				// cleanup when not needed anymore
-				//provider_cleanup(ep);
-			}
 		}
 		break;
 	case FS_CLOSE:
-		ep = chan_to_endpoint(tfd);
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			log_info("CLOSE(%d)\n", tfd);
 			prov->close(ep, tfd);
-			free_chan(tfd);
-			retbuf[FSP_DATA] = ERROR_OK;
+			channel_free(tfd);
+			retbuf[FSP_DATA] = CBM_ERROR_OK;
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
 		}
@@ -572,10 +593,11 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->scratch != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("DELETE(%s)\n", name);
 
 				rv = prov->scratch(ep, name, &outdeleted);
-				if (rv == ERROR_SCRATCHED) {
+				if (rv == CBM_ERROR_SCRATCHED) {
 					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
 					retbuf[FSP_LEN] = FSP_DATA + 2;
 				} else 
@@ -584,7 +606,7 @@ static void do_cmd(char *buf, int fd) {
 				}
 				retbuf[FSP_DATA] = rv;
 			}
-			// cleanup when not needed anymore
+			// cleanup temp ep when not needed anymore
 			provider_cleanup(ep);
 		}
 		break;
@@ -597,6 +619,9 @@ static void do_cmd(char *buf, int fd) {
 				int drivefrom = namefrom[1] & 255;	// from drive after null byte
 				namefrom += 2;				// points to name after drive
 
+				provider_convto(prov)(name, strlen(name), name, strlen(name));
+				provider_convto(prov)(namefrom, strlen(namefrom), namefrom, strlen(namefrom));
+
 				if (drivefrom != drive
 					&& drivefrom != NAMEINFO_UNUSED_DRIVE) {
 					// currently not supported
@@ -604,7 +629,7 @@ static void do_cmd(char *buf, int fd) {
 					// drivefrom is UNUSED, then same as driveto
 					log_warn("Drive spec combination not supported\n");
 
-					rv = ERROR_DRIVE_NOT_READY;
+					rv = CBM_ERROR_DRIVE_NOT_READY;
 				} else {
 				
 					log_info("RENAME(%s -> %s)\n", namefrom, name);
@@ -625,6 +650,7 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("CHDIR(%s)\n", name);
 				rv = prov->cd(ep, name);
 				if (rv != 0) {
@@ -641,6 +667,7 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->mkdir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("MKDIR(%s)\n", name);
 				rv = prov->mkdir(ep, name);
 				if (rv != 0) {
@@ -657,6 +684,7 @@ static void do_cmd(char *buf, int fd) {
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rmdir != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
 				log_info("RMDIR(%s)\n", name);
 				rv = prov->rmdir(ep, name);
 				if (rv != 0) {
@@ -668,8 +696,29 @@ static void do_cmd(char *buf, int fd) {
 			provider_cleanup(ep);
 		}
 		break;
+	case FS_DIRECT:
+		// not file-related, so no file descriptor (tfd)
+		// we only support mapped drives (thus name is NULL)
+		ep = provider_lookup(drive, NULL);
+		if (ep != NULL) {
+			prov = (provider_t*) ep->ptype;
+			if (prov->direct != NULL) {
+				provider_convto(prov)(name, convlen, name, convlen);
+				log_info("DIRECT(%d,...)\n", tfd);
+				rv = prov->direct(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
+				if (rv != 0) {
+					log_rv(rv);
+				}
+				retbuf[FSP_LEN] = FSP_DATA + 1 + retlen;
+				retbuf[FSP_DATA] = rv;
+			}
+			// cleanup when not needed anymore
+			provider_cleanup(ep);
+		}
+		break;
 	case FS_BLOCK:
-		ep = chan_to_endpoint(tfd);
+		// file-related Block commands (e.g. U1/U2)
+		ep = channel_to_endpoint(tfd);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->block != NULL) {
@@ -686,15 +735,21 @@ static void do_cmd(char *buf, int fd) {
 		// assign an endpoint number (i.e. a drive number for the PET)
 		// to a filesystem provider and path
 		// The drive number in buf[FSP_DATA] is the one to assign,
-		// while the rest of the name determines which provider to use
+		// name = buf[FSP_DATA+1] contains the zero-terminated provider name,
+		// followed by a zero-terminated provider parameter.
 		//
 		// A provider can be determined relative to an existing one. In 
 		// this case the provider name is the endpoint (drive) number,
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		log_info("ASSIGN(%d -> %s)\n", drive, name);
-		rv = provider_assign(drive, name);
+		name2 = strchr(name, 0) + 2;
+
+		provider_convto(prov)(name, strlen(name), name, strlen(name));
+		provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+
+		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
+		rv = provider_assign(drive, name, name2);
 		if (rv != 0) {
 			log_rv(rv);
 		}
@@ -707,7 +762,13 @@ static void do_cmd(char *buf, int fd) {
 		// we have already sent everything
 		sendreply = 0;
 		break;
-
+	case FS_CHARSET:
+		log_info("CHARSET: %s\n", buf+FSP_DATA);
+		if (tfd == FSFD_CMD) {
+			provider_set_ext_charset(buf+FSP_DATA);
+			retbuf[FSP_DATA] = CBM_ERROR_OK;
+		}
+		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
 	}
@@ -717,13 +778,13 @@ static void do_cmd(char *buf, int fd) {
 	}
 }
 
-static void write_packet(int fd, char *retbuf) {
+static void write_packet(serial_port_t fd, char *retbuf) {
 
-	int e = write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
+	int e = os_write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
 	if (e < 0) {
 		printf("Error on write: %d\n", errno);
 	}
-#if defined DEBUG_WRITE || defined DEBUG_CMD
+#if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
 	log_debug("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
 	for (int i = 3; i<retbuf[FSP_LEN];i++) log_debug(" %02x", 255&retbuf[i]);

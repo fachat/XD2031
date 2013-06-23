@@ -33,12 +33,15 @@
 #include "errors.h"
 #include "wireformat.h"
 
+#include "charconvert.h"
+
 
 // TODO: this is ... awkward
 extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
 extern provider_t fs_provider;
+extern provider_t di_provider;
 
 //------------------------------------------------------------------------------------
 // Mapping from drive number, which is given on open and commands, to endpoint
@@ -46,6 +49,9 @@ extern provider_t fs_provider;
 
 struct {
         provider_t      *provider;
+	charset_t	native_cset_idx;
+	charconv_t	to_provider;
+	charconv_t	from_provider;
 } providers[MAX_NUMBER_OF_PROVIDERS];
 
 struct {
@@ -56,9 +62,16 @@ struct {
 
 int provider_register(provider_t *provider) {
         int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
+        for(i=0;i<MAX_NUMBER_OF_PROVIDERS;i++) {
           	if (providers[i].provider == NULL) {
 			providers[i].provider = provider;
+			if (provider->native_charset != NULL) {
+				providers[i].native_cset_idx = cconv_getcharset(provider->native_charset);
+			} else {
+				providers[i].native_cset_idx = -1;
+			}
+			providers[i].to_provider = cconv_identity;
+			providers[i].from_provider = cconv_identity;
 			return 0;
 		}
         }
@@ -66,25 +79,74 @@ int provider_register(provider_t *provider) {
 	return -22;
 }
 
+// return the index of the given provider in the providers[] table
+static int provider_index(provider_t *prov) {
+	int i;
+	for (i = 0; i < MAX_NUMBER_OF_PROVIDERS;i++) {
+		if (providers[i].provider == prov) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+//------------------------------------------------------------------------------------
+// character set handling
+
+// set the character set for the external communication (i.e. the wireformat)
+// caches the to_provider and from_provider values in the providers[] table
+void provider_set_ext_charset(char *charsetname) {
+
+	log_info("Setting filename communication charset to '%s'\n", charsetname);
+
+	charset_t ext_cset_idx = cconv_getcharset(charsetname);
+
+	int i;
+	for (i = 0; i < MAX_NUMBER_OF_ENDPOINTS; i++) {
+		if (providers[i].provider != NULL) {
+			providers[i].to_provider = cconv_converter(ext_cset_idx, providers[i].native_cset_idx);
+			providers[i].from_provider = cconv_converter(providers[i].native_cset_idx, ext_cset_idx);
+		}
+	}
+}
+
+charconv_t provider_convto(provider_t *prov) {
+	int idx = provider_index(prov);
+	if (idx >= 0) {
+		return providers[idx].to_provider;
+	} else {
+		log_error("Could not find provider %p\n", prov);
+	}
+	// fallback
+	return cconv_identity;
+}
+
+charconv_t provider_convfrom(provider_t *prov) {
+	int idx = provider_index(prov);
+	if (idx >= 0) {
+		return providers[idx].from_provider;
+	} else {
+		log_error("Could not find provider %p\n", prov);
+	}
+	// fallback
+	return cconv_identity;
+}
+
+
+//------------------------------------------------------------------------------------
 /**
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  */
-int provider_assign(int drive, const char *name) {
+int provider_assign(int drive, const char *name, const char *assign_to) {
 
-	log_info("assign '%s' to drive %d\n", name, drive);
-
-	// find end of name
-	int p = 0;
-	while (name[p] != 0 && name[p] != ':') {
-		p++;
-	}
+	log_info("Assign provider '%s' with '%s' to drive %d\n", name, assign_to, drive);
 
 	endpoint_t *parent = NULL;
 	provider_t *provider = NULL;
 
 	// check if it is a drive
-	if ((isdigit(name[0])) && (p == 1)) {
+	if ((isdigit(name[0])) && (strlen(name) == 1)) {
 		// we have a drive number
 		int drv = name[0] & 0x0f;
 		parent = provider_lookup(drv, NULL);
@@ -102,17 +164,10 @@ int provider_assign(int drive, const char *name) {
 			if (providers[i].provider != NULL) {
 				log_debug("Compare to provider %s\n", providers[i].provider->name);
 				const char *pname = providers[i].provider->name;
-				int j = 0;
-				for (j = 0; j < p; j++) {
-					if (name[j] != pname[j]) {
-						// provider and assign name do not match
-						break;
-					}
-				}
-				if ((j == p) && (pname[p] == 0)) {
+				if (!strcmp(pname, name)) {
 					// got one
 					provider = providers[i].provider;
-					log_info("Found provider named '%s'\n", provider->name);
+					log_debug("Found provider named '%s'\n", provider->name);
 					break;
 				}
 			}
@@ -122,8 +177,12 @@ int provider_assign(int drive, const char *name) {
 	endpoint_t *newep = NULL;
 	if (provider != NULL) {
 		// get new endpoint
-		newep = provider->newep(parent, (name[p] == 0) ? name + p : name + p + 1);
-		newep->is_temporary = 0;
+		newep = provider->newep(parent, assign_to);
+		if (newep) {
+			newep->is_temporary = 0;
+		} else {
+			return CBM_ERROR_FAULT;
+		}
 	}
 
 	if (newep != NULL) {
@@ -148,9 +207,9 @@ int provider_assign(int drive, const char *name) {
 				break;
                 	}
         	}
-		return ERROR_OK;
+		return CBM_ERROR_OK;
 	}
-	return ERROR_FAULT;
+	return CBM_ERROR_FAULT;
 }
 
 void provider_cleanup(endpoint_t *ep) {
@@ -177,8 +236,13 @@ void provider_init() {
         http_provider.init();
 	provider_register(&http_provider);
 
+#ifndef _WIN32
         tcp_provider.init();
 	provider_register(&tcp_provider);
+#endif
+
+        di_provider.init();
+	provider_register(&di_provider);
 
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
@@ -199,6 +263,10 @@ endpoint_t *provider_lookup(int drive, char **name) {
         int i;
 
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		if (name == NULL) {
+			// no name specified, so return NULL (no provider found)
+			return NULL;
+		}
 		// the drive is not specified by number, but by provider name
 		char *p = strchr(*name, ':');
 		if (p == NULL) {

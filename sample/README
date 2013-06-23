@@ -15,3 +15,44 @@ test3a
 	- long file
 	- multiple of transfer block length -> check EOF handling!
 
+blkaf2
+	- test B-A and B-F. The file blkaf2.png shows the correct output
+
+blkrw8
+	- test the U1/U2/B-R/B-W/B-P functionality. The associated png file
+	  shows the expected output, the blkrw8.txt shows the expected output
+	  in the first blocks of a disk image.
+
+len*	
+	- test files with various lengths to check the correctness of the
+	  block display in the directory output
+
+opentest
+	- test various conditions and options on an OPEN
+
+iecburnin
+	- continously read the disk status to check IEC integrity
+
+
+Sample programs
+---------------
+
+cater
+	- Terminal program that can use the TCP connection via XD2031 to
+	  connect to e.g. a telnet server
+
+telnet
+	- small BASIC telnet client to connect to a telnet server
+
+getstatus
+	- get the disk status with INPUT#
+getstatus2
+	- get the disk status with GET#
+
+readdir
+	- read and display a disk directory in BASIC
+
+webcat
+	- display a file from the internet read via HTTP via xd2031
+
+

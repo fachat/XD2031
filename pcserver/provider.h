@@ -28,6 +28,8 @@
 #ifndef PROVIDER_H
 #define PROVIDER_H
 
+#include "charconvert.h"
+
 //
 // Endpoint providers communicate with the outside world with their 
 // own protocol. Examples are local filesystem, or TCP/IP, or HTTP
@@ -43,10 +45,13 @@
 
 #define MAX_NUMBER_OF_PROVIDERS         10              // max 10 different providers
 
+#define MAX_LEN_OF_PROVIDER_NAME	16
+
 typedef struct _endpoint endpoint_t;
 
 typedef struct {
-	const char	*name;			// provider name, used in ASSIGN as ID
+	const char	*name;				// provider name, used in ASSIGN as ID
+	const char	*native_charset;		// name of the native charset for that provider
 	void		(*init)(void);			// initialization routine
 	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	// create a new endpoint instance
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
@@ -54,12 +59,12 @@ typedef struct {
 
 	// file-related	
 	void		(*close)(endpoint_t *ep, int chan);	// close a channel
-        int             (*open_rd)(endpoint_t *ep, int chan, const char *name); // open a file
-        int             (*open_wr)(endpoint_t *ep, int chan, const char *name, const int is_overwrite); // open a file
-        int             (*open_ap)(endpoint_t *ep, int chan, const char *name); // open a file
-        int             (*open_rw)(endpoint_t *ep, int chan, const char *name); // open a file
-	int		(*opendir)(endpoint_t *ep, int chan, const char *name);	// open a directory for reading
-	int		(*readfile)(endpoint_t *ep, int chan, char *retbuf, int len, int *eof);	// read file data
+        int             (*open_rd)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+        int             (*open_wr)(endpoint_t *ep, int chan, const char *name, const char *opts, const int is_overwrite); // open a file
+        int             (*open_ap)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+        int             (*open_rw)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a file
+	int		(*opendir)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a directory for reading
+	int		(*readfile)(endpoint_t *ep, int chan, char *retbuf, int len, int *readflag);	// read file data
 	int		(*writefile)(endpoint_t *ep, int chan, char *buf, int len, int is_eof);	// write a file
 
 	// command channel
@@ -69,14 +74,19 @@ typedef struct {
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 	int		(*block)(endpoint_t *ep, int chan, char *buf);		// U1/U2/B-P/B-R/B-W
+	int		(*direct)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
 } provider_t;
+
+// values to be set in the out parameter readflag for readfile()
+#define	READFLAG_EOF	1
+#define	READFLAG_DENTRY	2
 
 struct _endpoint {
 	provider_t	*ptype;
 	int		is_temporary;
 };
 
-int provider_assign(int drive, const char *name);
+int provider_assign(int drive, const char *name, const char *assign_to);
 
 /**
  * looks up a provider like "tcp:" for "fs:" by drive number.
@@ -106,9 +116,25 @@ endpoint_t* provider_lookup(int drive, char **name);
  */
 void provider_cleanup(endpoint_t *ep);
 
+/*
+ * register a new provider, usually called at startup
+ */
 int provider_register(provider_t *provider);
 
+/*
+ * initialize the provider registry
+ */
 void provider_init(void);
+
+// set the character set for the external communication (i.e. the wireformat)
+// modifies the conversion routines for all the providers
+void provider_set_ext_charset(char *charsetname);
+
+// get the converter TO the provider
+charconv_t provider_convto(provider_t *prov);
+
+// get the converter FROM the provider
+charconv_t provider_convfrom(provider_t *prov);
 
 #endif
 

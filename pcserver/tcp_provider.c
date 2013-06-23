@@ -32,6 +32,7 @@
  * local filesystem.
  */
 
+
 #include "os.h"
 
 #include <errno.h>
@@ -40,14 +41,14 @@
 #include <string.h>
 
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
 #include "fscmd.h"
 
 #include "provider.h"
 #include "errors.h"
 #include "mem.h"
+
+#include "charconvert.h"
 
 #include "log.h"
 
@@ -181,28 +182,28 @@ static int errno_to_error(int err) {
 
 	switch(err) {
 	case EEXIST:
-		return ERROR_FILE_EXISTS;
+		return CBM_ERROR_FILE_EXISTS;
 	case EACCES:
-		return ERROR_NO_PERMISSION;
+		return CBM_ERROR_NO_PERMISSION;
 	case ENAMETOOLONG:
-		return ERROR_FILE_NAME_TOO_LONG;
+		return CBM_ERROR_FILE_NAME_TOO_LONG;
 	case ENOENT:
-		return ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_FILE_NOT_FOUND;
 	case ENOSPC:
-		return ERROR_DISK_FULL;
+		return CBM_ERROR_DISK_FULL;
 	case EROFS:
-		return ERROR_WRITE_PROTECT;
+		return CBM_ERROR_WRITE_PROTECT;
 	case ENOTDIR:	// mkdir, rmdir
 	case EISDIR:	// open, rename
-		return ERROR_FILE_TYPE_MISMATCH;
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	case ENOTEMPTY:
-		return ERROR_DIR_NOT_EMPTY;
+		return CBM_ERROR_DIR_NOT_EMPTY;
 	case EMFILE:
-		return ERROR_NO_CHANNEL;
+		return CBM_ERROR_NO_CHANNEL;
 	case EINVAL:
-		return ERROR_SYNTAX_INVAL;
+		return CBM_ERROR_SYNTAX_INVAL;
 	default:
-		return ERROR_FAULT;
+		return CBM_ERROR_FAULT;
 	}
 }
 
@@ -260,7 +261,7 @@ static void close_fds(endpoint_t *ep, int tfd) {
 // open a socket for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
 	int ern;
-	int er = ERROR_FAULT;
+	int er = CBM_ERROR_FAULT;
 	File *file;
 	struct addrinfo *addr, *ap;
 	struct addrinfo hints;
@@ -316,7 +317,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	if (ern != 0) {
 		log_errno("Could not set to non-blocking!");
 		close(sockfd);
-		er = ERROR_FAULT;
+		er = CBM_ERROR_FAULT;
 		ap = NULL;
 	}
 
@@ -330,11 +331,11 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 
 		if (file) {
 			file->sockfd = sockfd;
-			er = ERROR_OK;
+			er = CBM_ERROR_OK;
 		} else {
 			close(sockfd);
 			log_error("Could not reserve file\n");
-			er = ERROR_FAULT;
+			er = CBM_ERROR_FAULT;
 		}
 	}
 
@@ -354,7 +355,7 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	if (file != NULL) {
 		int sockfd = file->sockfd;
 
-		int rv = ERROR_OK;
+		int rv = CBM_ERROR_OK;
 
 		retbuf[0] = file->lastbyte;
 
@@ -392,13 +393,13 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 		} else
 		if (n == 0) {
 			// got an EOF
-			*eof = 1;
+			*eof = READFLAG_EOF;
 			len = file->has_lastbyte ? 1 : 0;
 			retbuf[0] = file->lastbyte;
 		}
 		return len;
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 // write file data
@@ -428,7 +429,7 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 		}
 		return 0;
 	}
-	return -ERROR_FAULT;
+	return -CBM_ERROR_FAULT;
 }
 
 // ----------------------------------------------------------------------------------
@@ -437,26 +438,32 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+       (void) opts; // silence warning unused parameter
+
        return open_file(ep, tfd, buf, "rb");
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const int is_overwrite) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
        (void) is_overwrite;	// silence unused param warning
+       (void) opts;             // silence unused param warning
        return open_file(ep, tfd, buf, "wb");
 }
 
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+       (void) opts;             // silence unused param warning
        return open_file(ep, tfd, buf, "ab");
 }
 
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf) {
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+       (void) opts;             // silence unused param warning
        return open_file(ep, tfd, buf, "rwb");
 }
 
 
 provider_t tcp_provider = {
 	"tcp",
+	"ASCII",		// not used as we don't do directories, but still
 	tnp_init,
 	tnp_new,
 	tnp_temp,
@@ -474,7 +481,6 @@ provider_t tcp_provider = {
 	NULL,	//fs_cd,
 	NULL,	//fs_mkdir,
 	NULL,	//fs_rmdir
-	NULL	// block
+	NULL,	// block
+	NULL	// direct
 };
-
-

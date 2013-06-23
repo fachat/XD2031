@@ -27,7 +27,6 @@
 #include "os.h"
 
 #include <stdio.h>
-#include <dirent.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/types.h>
@@ -35,58 +34,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <errno.h>
 
 #include "dir.h"
-#include "name.h"
+#include "wildcard.h"
 #include "fscmd.h"
 #include "wireformat.h"
 #include "log.h"
 
+#ifndef min
 #define min(a,b)        (((a)<(b))?(a):(b))
+#endif
 
-
-/**
- * check a path, making sure it's something readable, not a directory
- */
-int path_is_file(const char *name) {
-	struct stat sbuf;
-	int isfile = 1;
-
-	log_debug("checking file with name %s\n",name);
-
-	if (lstat(name, &sbuf) < 0) {
-		log_errno("Error stat'ing file");
-		// note we still return 1, as open may succeed - e.g. for save where the
-		// file does not exist in the first place
-	} else {
-		if (S_ISDIR(sbuf.st_mode)) {
-			isfile = 0;
-			log_error("Error trying to open a directory as file");
-		}
-	}
-	return isfile;
-}
-
-/**
- * check a path, making sure it's a directory
- */
-int path_is_dir(const char *name) {
-	struct stat sbuf;
-	int isfile = 1;
-
-	log_info("checking dir with name %s\n",name);
-
-	if (lstat(name, &sbuf) < 0) {
-		log_errno("Error stat'ing file");
-		isfile = 0;
-	} else {
-		if (!S_ISDIR(sbuf.st_mode)) {
-			isfile = 0;
-			log_error("Error trying to open a directory as file");
-		}
-	}
-	return isfile;
-}
 
 /**
  * traverse a directory and find the first match for the pattern,
@@ -98,7 +57,7 @@ char *find_first_match(const char *dir, const char *pattern, int (*check)(const 
 	struct dirent *de;
 
 	// shortcut - if we don't have wildcards, just open it
-	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+	if (strchr(pattern, '*') == NULL && strchr(pattern, '?') == NULL) {
 		char *namebuf = malloc_path(dir, pattern);
 
 		if (check(namebuf)) {
@@ -140,7 +99,7 @@ char *find_first_match(const char *dir, const char *pattern, int (*check)(const 
 FILE *open_first_match(const char *dir, const char *pattern, const char *options) {
 	FILE *fp = NULL;
 
-	char *name = find_first_match(dir, pattern, path_is_file);
+	char *name = find_first_match(dir, pattern, os_path_is_file);
 	if (name != NULL) {
 		fp = fopen(name, options);
 		if (fp == NULL) {
@@ -166,7 +125,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
 	int onlyone = 0;
 
 	// shortcut - if we don't have wildcards, just open it
-	if (index(pattern, '*') == NULL && index(pattern, '?') == NULL) {
+	if (strchr(pattern, '*') == NULL && strchr(pattern, '?') == NULL) {
 		onlyone = 1;
 	}
 
@@ -265,10 +224,18 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 	char *realname = malloc_path(curpath, de->d_name);
 
         /* TODO: check return value */
+	int writecheck = -EACCES;
 	int rv = stat(realname, &sbuf);
 	if (rv < 0) {
 		log_error("Failed stat'ing entry %s\n", de->d_name);
 		log_errno("Problem stat'ing dir entry");
+	} else {
+		writecheck = access(realname, W_OK);
+		if ((writecheck < 0) && (errno != EACCES)) {
+			writecheck = -errno;
+			log_error("Could not get write access to %s\n", de->d_name);
+			log_errno("Reason");
+		}
 	}
 	free(realname);
 
@@ -285,6 +252,15 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
         dest[FS_DIR_MIN]   = tp->tm_min;
         dest[FS_DIR_SEC]   = tp->tm_sec;
 
+	dest[FS_DIR_ATTR]  = FS_DIR_TYPE_PRG;
+	if (writecheck < 0) {
+		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
+	}
+	// test
+	//if (sbuf.st_size & 1) {
+	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
+	//}
+
         dest[FS_DIR_MODE]  = S_ISDIR(sbuf.st_mode) ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
         // de->d_name is 0-terminated (see readdir man page)
         int l = strlen(de->d_name);
@@ -300,13 +276,28 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 /**
  * fill in the buffer with the final disk info entry
  */
-int dir_fill_disk(char *dest) {
-        dest[FS_DIR_LEN] = 1;
-        dest[FS_DIR_LEN+1] = 0;
-        dest[FS_DIR_LEN+2] = 0;
-        dest[FS_DIR_LEN+3] = 0;
-        dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
-        dest[FS_DIR_NAME] = 0;
+int dir_fill_disk(char *dest, char *curpath) {
+	signed long long total;
+
+	total = os_free_disk_space(curpath);
+	if (total > 0) {
+		if (total > 0xffffffff) {
+			// max in FS_DIR stuff
+			total = 0xffffffff;
+		}
+	        dest[FS_DIR_LEN] = total & 255;
+	        dest[FS_DIR_LEN+1] = (total >> 8) & 255;
+	        dest[FS_DIR_LEN+2] = (total >> 16) & 255;
+	        dest[FS_DIR_LEN+3] = (total >> 24) & 255;
+	} else {
+		log_errno("Could not get free disk space for '%s'\n", curpath);
+	        dest[FS_DIR_LEN] = 1;
+	        dest[FS_DIR_LEN+1] = 0;
+	        dest[FS_DIR_LEN+2] = 0;
+	        dest[FS_DIR_LEN+3] = 0;
+	}
+       	dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
+       	dest[FS_DIR_NAME] = 0;
 	return FS_DIR_NAME + 1;
 }
 
