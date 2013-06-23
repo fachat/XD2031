@@ -45,6 +45,7 @@
 #include "fscmd.h"
 #include "dir.h"
 #include "charconvert.h"
+#include "petscii.h"
 #include "provider.h"
 #include "log.h"
 #include "xcmd.h"
@@ -375,8 +376,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		log_debug("cmd %s :%d bytes @%p : ", nameofcmd(255&buf[FSP_CMD]), n, buf);
-		for(int i=0;i<n;i++) log_debug("%02x ",255&buf[i]); log_debug("\n");
+		log_debug("cmd %s :%d bytes @%p : \n", nameofcmd(255&buf[FSP_CMD]), n, buf);
+		log_hexdump(buf, n, 0);
 	}
 #endif
 
@@ -745,8 +746,14 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		//
 		name2 = strchr(name, 0) + 2;
 
-		provider_convto(prov)(name, strlen(name), name, strlen(name));
-		provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+		//FIXME: prov is still NULL here!
+		//provider_convto(prov)(name, strlen(name), name, strlen(name));
+		//provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+		//FIXME: the following lines always do a PETSCII-->ASCII conversion
+		//       charset for command channel stored anywhere?
+		charconv_t petsciiconv = cconv_converter(CHARSET_PETSCII, CHARSET_ASCII);
+		petsciiconv(name, strlen(name), name, strlen(name));
+		petsciiconv(name2, strlen(name2), name2, strlen(name2));
 
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
 		rv = provider_assign(drive, name, name2);
