@@ -227,6 +227,7 @@ char *os_realpath(const char *path)
 {
   char *return_path = 0;
   char *resolved_path = NULL;
+  char *in_path;
 
   if (path) //Else EINVAL
   {
@@ -240,10 +241,15 @@ char *os_realpath(const char *path)
       return_path = malloc(PATH_MAX);
     }
 
+    // Drop trailing slashes
+    in_path = mem_alloc_str_(path, __FILE__, __LINE__);
+    char *p = in_path + strlen(in_path) -1;
+    while((*p == '/') || (*p == '\\')) *p-- = 0;
+
     if (return_path) //Else EINVAL
     {
       //This is a Win32 API function similar to what realpath() is supposed to do
-      size_t size = GetFullPathNameA(path, PATH_MAX, return_path, 0);
+      size_t size = GetFullPathNameA(in_path, PATH_MAX, return_path, 0);
 
       //GetFullPathNameA() returns a size larger than buffer if buffer is too small
       if (size > PATH_MAX)
@@ -257,7 +263,7 @@ char *os_realpath(const char *path)
 
           if (return_path)
           {
-            new_size = GetFullPathNameA(path, size, return_path, 0); //Try again
+            new_size = GetFullPathNameA(in_path, size, return_path, 0); //Try again
 
             if (new_size > size) //If it's still too large, we have a problem, don't try again
             {
@@ -344,6 +350,7 @@ char *os_realpath(const char *path)
     errno = EINVAL;
   }
   os_patch_dir_separator(return_path);
+  mem_free(in_path);
   return return_path;
 }
 
