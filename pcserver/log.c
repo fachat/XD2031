@@ -26,6 +26,9 @@
 #include <strings.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <inttypes.h>
+
+#include "petscii.h"
 
 static int verbose = 0;
 static int newline = 1;
@@ -139,5 +142,33 @@ void log_debug(const char *msg, ...) {
 	fflush(stdout);
 }
 
+void log_hexdump(char *p, int len, int petscii) {
+	int tot = 0;
+	int line = 0;
+	int x = 0;
 
+	if(len) {
+		while(tot < len) {
+			printf("%04X  ", tot);
+			for(x=0; x<16; x++) {
+				if(line+x < len) {
+					tot++;
+					printf("%02X ", p[line+x]);
+				}
+				else printf("   ");
+				if(x == 7) putchar(' ');
+			}
+			printf(" |");
+			for(x=0; x<16; x++) {
+				if(line+x < len) {
+					int c = p[line+x];
+					if (petscii) c = petscii_to_ascii(c);
+					if(isprint(c)) putchar(c); else putchar(' ');
+				} else putchar(' ');
+			}
+			printf("|\n");
+			line = tot;
+		}
 
+	}
+}
