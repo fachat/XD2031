@@ -1,4 +1,15 @@
 # Compile for Windows on Linux, see doc/README-win32
+#
+# Verbose compilation:
+#
+# 	make -f Makefile-win32 V=1
+
+V1=@
+V2=@echo 
+ifeq ($(V),1)
+	V1=
+	V2=@\#
+endif
 
 DISTDIR=xd2031-win32
 
@@ -39,10 +50,12 @@ CFLAGS+=-DCURL_STATICLIB
 all: $(COMMONC) $(COMMONH) $(FSSER_EXE)
 
 $(FSSER_EXE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS) 
+	$(V2) LINK $@
+	$(V1) $(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS) 
 
 .c.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(V2) CC $<
+	$(V1) $(CC) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f $(FSSER_EXE) curltest.exe $(OBJECTS)
@@ -84,4 +97,4 @@ dist:	distclean $(FSSER_EXE)
 
 
 
-.PHONY: all install uninstall run fsser
+.PHONY: all install uninstall run fsser dist doc
