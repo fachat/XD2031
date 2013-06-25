@@ -164,13 +164,15 @@ const char* os_get_home_dir (void) {
 int os_path_is_file (const char *name) {
 	int isfile = 1;
 
-	log_info("checking file with name %s\n",name);
+	log_info("checking file with name %s (path_is_file)\n",name);
 	uint32_t file_type = GetFileAttributes(name);
 	if (file_type == INVALID_FILE_ATTRIBUTES) {
-		isfile = 0;
+		// note we still return 1, as open may succeed - e.g. for 
+		// save where the file does not exist in the first place
+		isfile = 1;
 		log_error("Unable to GetFileAttributes for %s\n", name);
-	}
-	if ((file_type & FILE_ATTRIBUTE_DEVICE) || (file_type & FILE_ATTRIBUTE_DIRECTORY)) {
+	} else if ((file_type & FILE_ATTRIBUTE_DEVICE) || (file_type & FILE_ATTRIBUTE_DIRECTORY)) {
+		log_debug("FILE_ATTRIBUTE || FILE_ATTRIBUTE_DIRECTORY\n");
 		isfile = 0;
 	}
 	if (!isfile) {
@@ -182,7 +184,7 @@ int os_path_is_file (const char *name) {
 int os_path_is_dir (const char *name) {
 	int isdir;
 
-	log_info("checking dir with name %s\n", name);
+	log_info("checking dir with name %s (path_is_dir)\n", name);
 	uint32_t file_type = GetFileAttributes(name);
 	if (file_type == INVALID_FILE_ATTRIBUTES) {
 		isdir = 0;
