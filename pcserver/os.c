@@ -150,6 +150,8 @@ signed long long os_free_disk_space (char *path) {
 #include <sys/stat.h>
 #include <ctype.h>
 
+#include "mem.h"
+
 const char* os_get_home_dir (void) {
         char* dir = getenv("HOME");
 	log_info("Home path (env): %s\n", dir);
@@ -241,6 +243,48 @@ char *os_realpath(const char *path)
     {
       //Non standard extension that glibc uses
       return_path = malloc(PATH_MAX);
+    }
+
+    // Special handling for root directory with drive
+    if (strlen(path) == 3) {
+      if((isalpha(path[0])) && (path[1] == ':') &&
+         ((path[2] == '/') || (path[2] == '\\'))) {
+        log_debug("os_realpath: root directory with drive: %s\n", path);
+        char *p = mem_alloc_str(path);
+        p[0] = toupper(p[0]);
+        return p;
+      }
+    }
+
+    // Special handling for root directory without drive
+    if ((strlen(path) == 1) && ((path[0] == '/') || (path[0] == '\\'))) {
+      char *current_directory = malloc(PATH_MAX);
+      if(!current_directory) {
+        log_error("malloc failed: %s, line %u\n", __FILE__, __LINE__);
+        return NULL;
+      }
+      DWORD res = GetCurrentDirectory(PATH_MAX, current_directory);
+      if(!res) {
+        log_error("GetCurrentDirectory failed (%d)\n", GetLastError());
+        return NULL;
+      }
+      if(res > PATH_MAX) {
+        free(current_directory);
+        current_directory = malloc(res);
+        if(!current_directory) {
+          log_error("malloc failed: %s, line %u\n", __FILE__, __LINE__);
+          return NULL;
+        }
+	DWORD res2 = GetCurrentDirectory(res, current_directory);
+        if(!res2) {
+          log_error("GetCurrentDirectory failed (%d)\n", GetLastError());
+          return NULL;
+        }
+      }
+      current_directory[2] = '/'; 
+      current_directory[3] = 0; 
+      log_debug("os_realpath: root directory without drive: %s\n", current_directory);
+      return current_directory;
     }
 
     // Drop trailing slashes
