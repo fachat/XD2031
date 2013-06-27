@@ -471,7 +471,10 @@ int di_load_image(di_endpoint_t *diep, const char *filename)
 {
    int filesize;
 
-   if (!(diep->Ip = fopen(filename, "rb+"))) return 0;
+   if (!(diep->Ip = fopen(filename, "rb+"))) {
+     log_error("Unable to open %s\n", filename);
+     return 0;
+   }
    fseek(diep->Ip, 0, SEEK_END);
    filesize = ftell(diep->Ip);
    log_debug("image size = %d\n",filesize);
@@ -1199,6 +1202,11 @@ static void di_process_options(uint8_t *opts, uint8_t *type, uint8_t *reclen) {
 	int reclenw;
 	int n;
 	uint8_t *t;
+
+	if(!opts) {
+		log_debug("di_process_options: opts=NULL\n");
+		return;
+	}
 
 	while (*p != 0) {
 		switch(*(p++)) {
