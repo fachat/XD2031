@@ -1017,7 +1017,9 @@ static provider_t block_provider = {
 	NULL,			// set new charset
 	NULL,			// submit
 	block_submit_call,	// submit_call
-	NULL			// directory_converter
+	NULL,			// directory_converter
+	NULL,			// channel_get
+	NULL			// channel_put
 };
 
 static provider_t relfile_provider = {
@@ -1027,7 +1029,9 @@ static provider_t relfile_provider = {
 	NULL,			// set new charset
 	NULL,			// submit
 	relfile_submit_call,	// submit_call
-	NULL			// directory_converter
+	NULL,			// directory_converter
+	NULL,			// channel_get
+	NULL			// channel_put
 };
 
 static endpoint_t block_endpoint = {

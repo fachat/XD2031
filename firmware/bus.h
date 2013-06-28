@@ -70,7 +70,7 @@ typedef struct {
 // definitions for bus_sendbyte
 #define	BUS_SYNC	PUT_SYNC		// from channel.h
 #define	BUS_FLUSH	PUT_FLUSH		// from channel.h
-#define	BUS_PRELOAD	0x80		
+#define	BUS_PRELOAD	GET_PRELOAD		// from channel.h		
 
 // status word values (similar to commodore status in $90/$96)
 // it is not fully used though

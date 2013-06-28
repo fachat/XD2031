@@ -49,6 +49,14 @@ static void channel_close_int(channel_t *chan, uint8_t force);
 static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forceflush);
 static channel_t* channel_refill(channel_t *chan, uint8_t options);
 
+static inline int8_t channel_last_pull_error(channel_t *chan) {
+        return chan->last_pull_errorno;
+}
+
+static inline int8_t channel_last_push_error(channel_t *chan) {
+        return chan->last_push_errorno;
+}
+
 void channel_init(void) {
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
 		channel_close_int(&channels[i], 1);
@@ -279,11 +287,11 @@ static int8_t channel_preload_int(channel_t *chan, uint8_t wait) {
 /**
  * pre-load data for a read-only channel
  */
-int8_t channel_preloadp(channel_t *chan) {
+static int8_t channel_preloadp(channel_t *chan) {
 	return channel_preload_int(chan, 1);
 }
 
-char channel_current_byte(channel_t *chan, uint8_t *iseof) {
+static char channel_current_byte(channel_t *chan, uint8_t *iseof) {
 	channel_preload_int(chan, 1);
 	*iseof = packet_current_is_eof(&chan->buf[chan->current]);
         return packet_peek_data(&chan->buf[pull_slot(chan)]);
@@ -292,7 +300,7 @@ char channel_current_byte(channel_t *chan, uint8_t *iseof) {
 /**
  * return true (non-zero) when there is still a byte available in the buffer
  */
-uint8_t channel_next(channel_t *chan, uint8_t options) {
+static uint8_t channel_next(channel_t *chan, uint8_t options) {
 
 // commenting this is not necessarily ok, but needed for relative files for now
 //	if (channel_is_eof(chan)) {
@@ -450,9 +458,15 @@ debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
 }
 	
 
-int8_t channel_put(channel_t *chan, char c, uint8_t forceflush) {
+int8_t channel_put(channel_t *chan, uint8_t c, uint8_t forceflush) {
 
 	uint8_t channo = chan->channel_no;
+
+	// provider shortcut where applicable
+	if (chan->endpoint->provider->channel_put != NULL) {
+		return chan->endpoint->provider->channel_put(chan->endpoint->provdata, channo, c, forceflush);
+	}
+
 	packet_t *curpack = &chan->buf[push_slot(chan)];
 
 //debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
@@ -548,4 +562,58 @@ void channel_close_range(uint8_t fromincl, uint8_t toincl) {
 		}
 	}
 }
+
+/*
+ * receives a byte
+ *
+ * data and iseof are out parameters for the received data. 
+ * eof is set when an EOF has been received, cleared otherwise
+ * err is set to the error number when applicable.
+ *
+ * flags is input; currently when <> 0 then the call is synchronous
+ * i.e. it returns when data is available or on error. When == 0 then
+ * returns immediately (after sending FS_READ in the background)
+ *
+ * returns 0 on ok, -1 on error
+ */
+int8_t channel_get(channel_t *chan, uint8_t *data, uint8_t *iseof, int8_t *err, uint8_t preload) {
+#ifdef DEBUG_BUS
+//debug_printf("rx: chan=%p, channo=%d\n", channel, chan->channel_no);
+#endif
+	// provider shortcut where applicable
+	if (chan->endpoint->provider->channel_get != NULL) {
+		return chan->endpoint->provider->channel_get(chan->endpoint->provdata,
+				chan->channel_no, data, iseof, err, preload);
+	}
+
+	*iseof = 0;
+	*err = CBM_ERROR_OK;
+
+        // first fillup the buffers
+        if (channel_preloadp(chan) < 0) {
+
+        	// no data available
+
+#ifdef DEBUG_BUS
+                debug_printf("preload on chan %p (%d) gives no data (st=%04x)", chan,
+                                chan->channel_no, st);
+#endif
+                *err = channel_last_pull_error(chan);
+
+		return -1;
+        } else {
+
+                *data = channel_current_byte(chan, iseof);
+
+                if (!(preload & GET_PRELOAD)) {
+        		// make sure the next call does have a data byte
+                        if (!channel_next(chan, preload & GET_SYNC)) {
+                       		// no further data on channel available
+                                *err = channel_last_pull_error(chan);
+                        }
+                }
+        }
+	return 0;
+}
+
 

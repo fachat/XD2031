@@ -245,7 +245,10 @@ static int16_t cmd_handler (bus_t *bus)
 			                term_printf("DID NOT FIND CHANNEL FOR CHAN=%d TO PRELOAD\n", 
 						channel_no);
 				} else {
-                			channel_preloadp(chan);
+					uint8_t data, iseof;
+					int8_t err;
+					channel_get(chan, &data, &iseof, &err, GET_PRELOAD);
+                			//channel_preloadp(chan);
 				}
 			}
 		}
@@ -329,6 +332,25 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		set_error(&error, CBM_ERROR_FILE_NOT_OPEN);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
+		int8_t err;
+
+		if (channel_get(channel, data, &iseof, &err, preload) < 0) {
+			// could not get any data
+			st |= STAT_RDTIMEOUT;
+#ifdef DEBUG_BUS
+			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
+				channel->channel_no, st);
+#endif
+		} else {
+			// got a data byte
+			if (iseof) {
+				st |= STAT_EOF;
+			}
+		}
+		if (err != CBM_ERROR_OK) {
+			set_error(&error, err);
+		}
+/*
 #ifdef DEBUG_BUS
 		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
 #endif
@@ -366,6 +388,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 				}
 			}
 		}
+*/
 	    }
 	}
 #ifdef DEBUG_BUS_DATA
