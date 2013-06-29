@@ -53,7 +53,7 @@
 
 #include "device.h"
 
-#define	DEBUG_BUS
+#undef	DEBUG_BUS
 #undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
