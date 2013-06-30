@@ -97,6 +97,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <winsock2.h>
+#include <conio.h>	// _kbhit()
 #include "mem.h"
 #endif
 
@@ -273,6 +274,10 @@ static inline int socket_close(int descriptor) {
 	return res;
 }
 
+static inline int os_stdin_has_data(void) {
+	return _kbhit();
+}
+
 #endif // WIN32
 
 
@@ -310,5 +315,7 @@ int os_open_failed(serial_port_t device);
 ssize_t os_read(serial_port_t fd, void *buf, size_t count);
 
 ssize_t os_write(serial_port_t fd, const void *buf, size_t count);
+
+int os_stdin_has_data(void);
 
 #endif // OS_H

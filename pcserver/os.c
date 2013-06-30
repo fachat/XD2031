@@ -25,6 +25,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <sys/time.h>		// select()
 
 /* patch dir separator characters to '/'
  * fs_provider (Linux / OS X), http and ftp require the slash.
@@ -135,6 +136,35 @@ signed long long os_free_disk_space (char *path) {
 		total = -errno;
 	}
 	return total;
+}
+
+
+int os_stdin_has_data(void) {
+	fd_set rfds;
+	struct timeval tv;
+	int res;
+
+	// Watch stdin (fd 0) to see when it has input
+	FD_ZERO(&rfds);
+	FD_SET(0, &rfds);
+
+	// Don't block
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+	res = select(1, &rfds, NULL, NULL, &tv);
+	// Don't rely on the value of tv now!
+
+	if (res == -1) {
+		log_error("select(): (%d) %s\n", os_errno(), os_strerror(os_errno()));
+		return 0;
+	} else if(res) {
+		// data available in stdin
+		return 1;
+	}
+
+	// no data available
+	return 0;
 }
 
 #else
@@ -588,17 +618,15 @@ ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
 	DWORD read_bytes = 0;
 	int success;
 
-	// Read at least 1 Byte
-	while (!read_bytes) {
-		success = ReadFile(fd, buf, count, &read_bytes, NULL);
+	success = ReadFile(fd, buf, count, &read_bytes, NULL);
 
-		if(success && (read_bytes >= 1)) {
-			log_debug("os_read bytes read: %u\n", read_bytes);
-			return read_bytes;
-		}
+	if(!success) return -1;
+
+	if(success && (read_bytes >= 1)) {
+		log_debug("os_read bytes read: %u\n", read_bytes);
 	}
 
-	return -1;
+	return read_bytes;
 }
 
 // Write data to the specified file or input/output device

@@ -50,6 +50,7 @@
 #include "log.h"
 #include "xcmd.h"
 #include "channel.h"
+#include "serial.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -248,6 +249,24 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 	write_packet(writefd, buf);
 }
 
+
+#define INBUF_SIZE 1024
+// reads stdin and returns true, if the main loop should abort
+int cmd_process_stdin(void) {
+	char buf[INBUF_SIZE + 1];
+
+	log_debug("cmd_process_stdin()\n");
+
+	fgets(buf, INBUF_SIZE, stdin);
+
+	log_debug("stdin: %s", buf);
+
+	// we could interpret some fany commands here,
+	// but for now, quitting is the only option
+	log_info("Aborted by user request.\n");
+	return 1;
+}
+
 /**
  * this is the main loop of the program
  *
@@ -257,7 +276,7 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
  *
  * returns
  *   1 if read fails (errno gives more information)
- *   0 if other strange things happened
+ *   0 if user requests to abort the Server
  */
 int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 
@@ -276,13 +295,24 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
         wrp = rdp = 0;
 
         for(;;) {
+	      if(os_stdin_has_data()) if(cmd_process_stdin()) return 0;
+
 	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
-	      printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
-	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
+	      if(n) {
+		printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
+		for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
+              }
 #endif
 
-              if(n <= 0) {
+	      if(!n) {
+		if(!device_still_present()) {
+			log_error("Device lost.\n");
+			return 1;
+                }
+	      }
+
+              if(n < 0) {
                 fprintf(stderr,"fsser: read error %d (%s)\n",os_errno(),strerror(os_errno()));
 		fprintf(stderr,"Did you power off your device?\n");
                 return 1;

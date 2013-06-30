@@ -44,5 +44,8 @@ void guess_device(char** device);
 /* open a device (as returned by guess_device or given on the cmdline */
 serial_port_t device_open(char *name);
 
+
+int device_still_present(void);
+
 #endif
 
