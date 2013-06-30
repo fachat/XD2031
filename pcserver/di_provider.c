@@ -410,6 +410,8 @@ void di_sync_BAM(di_endpoint_t *diep)
 static int di_close_fd(di_endpoint_t *diep, File *f)
 {
   uint8_t t,s;
+  int res;
+
   log_debug("Closing file %p access mode = %d\n", f, f->access_mode);
 
   if (f->access_mode == FS_OPEN_WR ||
@@ -424,8 +426,13 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
      fwrite(&s,1,1,diep->Ip);
      log_debug("Updated chain to (%d/%d)\n",t,s);
      di_write_slot(diep,&f->Slot); // Save new status of directory entry
+     log_debug("Status of directory entry saved\n");
      di_sync_BAM(diep);            // Save BAM status
-     fflush(diep->Ip);
+     log_debug("BAM saved.\n");
+     res = os_fsync(diep->Ip);
+     if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+  } else {
+    log_debug("Closing read only file, no sync required.\n");
   }
   di_init_fp(f);
   return 0;
@@ -770,7 +777,6 @@ static void di_close(endpoint_t *ep, int tfd)
    log_debug("di_close %d\n",tfd);
    File *file = di_find_file((di_endpoint_t *)ep, tfd);
    if (file) di_close_fd((di_endpoint_t *)ep,file);
-   os_sync();
 }
 
 // ************

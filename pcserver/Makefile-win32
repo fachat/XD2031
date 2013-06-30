@@ -13,7 +13,7 @@ endif
 
 DISTDIR=xd2031-win32
 
-CFLAGS=-c -g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common
+CFLAGS=-c -g -W -Wall -std=c99 -funsigned-char -I. -I../common
 CFLAGS+=-DSERVER -DUNPRIVILEGED
 
 CROSS=i686-pc-mingw32-
