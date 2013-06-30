@@ -318,4 +318,6 @@ ssize_t os_write(serial_port_t fd, const void *buf, size_t count);
 
 int os_stdin_has_data(void);
 
+char *drop_crlf(char *s);
+
 #endif // OS_H

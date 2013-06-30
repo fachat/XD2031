@@ -50,6 +50,17 @@ char *os_patch_dir_separator(char *path) {
 	return newpath;
 }
 
+// Remove trailing line end characters
+char *drop_crlf(char *s) {
+	char *p = s + strlen(s) - 1;
+	while(p > s) {
+		if((*p == 10) || (*p == 13)) *p=0; 	// remove CR or LF
+		else break;
+		p--;
+	}
+	return s;
+}
+
 // ========================================================================
 //	POSIX
 // ========================================================================
@@ -575,16 +586,6 @@ void rewinddir(DIR *dir)
     But that said, if there are any problems please get in touch.
 
 */
-
-// helper function for os_strerror
-static char *drop_crlf(char *s) {
-	char *p = s + strlen(s);
-	while(p > s) {
-		if(iscntrl(*p)) *p=0;
-		p--;
-	}
-	return s;
-}
 
 // convert errnum into a string error message
 char *os_strerror(int errnum) {

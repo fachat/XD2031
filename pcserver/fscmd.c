@@ -258,13 +258,19 @@ int cmd_process_stdin(void) {
 	log_debug("cmd_process_stdin()\n");
 
 	fgets(buf, INBUF_SIZE, stdin);
+	drop_crlf(buf);
 
-	log_debug("stdin: %s", buf);
+	log_debug("stdin: %s\n", buf);
 
 	// we could interpret some fany commands here,
 	// but for now, quitting is the only option
-	log_info("Aborted by user request.\n");
-	return 1;
+	if((!strcasecmp(buf, "Q")) || (!strcasecmp(buf, "QUIT"))) {
+		log_info("Aborted by user request.\n");
+		return 1;
+	} else {
+		log_error("Syntax error: '%s'\n", buf);
+	}
+	return 0;
 }
 
 /**
