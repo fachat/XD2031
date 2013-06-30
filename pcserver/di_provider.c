@@ -1606,11 +1606,6 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
    for (i=0 ; i < len ; ++i)
       if (di_write_byte(diep, f, (uint8_t)buf[i])) return -CBM_ERROR_DISK_FULL;
 
-   if (is_eof)
-   {
-      log_debug("Close fd=%d normally on write file received an EOF\n", tfd);
-      di_close(ep, tfd);
-   }
    return CBM_ERROR_OK;
 }
 
