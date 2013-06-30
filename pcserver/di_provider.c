@@ -67,9 +67,9 @@ typedef struct Disk_Image
    uint8_t TracksPerBAM;          // Tracks per BAM
    uint8_t DirInterleave;         // Interleave on directory track
    uint8_t DatInterleave;         // Interleave on data tracks
-   int  Blocks;                // Size in blocks
-   int (*LBA)(int t, int s);   // Logical Block Address calculation
-   uint8_t DirTrack;             // Header and directory track
+   int  Blocks;                   // Size in blocks
+   int (*LBA)(int t, int s);      // Logical Block Address calculation
+   uint8_t DirTrack;              // Header and directory track
 } Disk_Image_t;
 
 /* functions for computing LBA (Logical Block Address) */
@@ -198,9 +198,9 @@ E0 :                8. directory entry
 
 typedef struct
 {
-   int   number;       // current slot number
-   int   pos;          // file position
-   int   size;         // file size in (254 byte) blocks
+   int   number;          // current slot number
+   int   pos;             // file position
+   int   size;            // file size in (254 byte) blocks
    uint8_t  next_track;   // next directory track
    uint8_t  next_sector;  // next directory sector
    uint8_t  filename[20]; // filename (C string zero terminated)
@@ -215,9 +215,9 @@ typedef struct
 
 typedef struct
 {
-   slot_t Slot;        // 
+   slot_t Slot;           // 
    uint8_t  *buf;         // direct channel block buffer
-   int   chan;         // channel for which the File is
+   int   chan;            // channel for which the File is
    uint8_t  CBM_file[20]; // filename with CBM charset
    uint8_t  dirpattern[MAX_BUFFER_SIZE];
    uint8_t  is_first;     // is first directory entry?
@@ -230,21 +230,21 @@ typedef struct
 } File;
 
 typedef struct
-{                                  // derived from endpoint_t
-   endpoint_t    base;             // payload
-   FILE         *Ip;               // Image file pointer
-   char         *curpath;          // malloc'd current path
-   Disk_Image_t  DI;               // mounted disk image
-   uint8_t         *BAM[4];           // Block Availability Maps
-   int           BAMpos[4];        // File position of BAMs
-   uint8_t         *buf[5];           // direct channel block buffer
-   uint8_t          chan[5];          // channel #
-   uint8_t          bp[5];            // buffer pointer
-   uint8_t          CurrentTrack;     // start track for scannning of BAM
-   uint8_t          U2_track;         // track  for U2 command
-   uint8_t          U2_sector;        // sector for U2 command
-   slot_t        Slot;             // directory slot
-   File          files[MAXFILES];  // files inside disk image
+{                                     // derived from endpoint_t
+   endpoint_t    base;                // payload
+   FILE         *Ip;                  // Image file pointer
+   char         *curpath;             // malloc'd current path
+   Disk_Image_t  DI;                  // mounted disk image
+   uint8_t      *BAM[4];              // Block Availability Maps
+   int           BAMpos[4];           // File position of BAMs
+   uint8_t      *buf[5];              // direct channel block buffer
+   uint8_t       chan[5];             // channel #
+   uint8_t       bp[5];               // buffer pointer
+   uint8_t       CurrentTrack;        // start track for scannning of BAM
+   uint8_t       U2_track;            // track  for U2 command
+   uint8_t       U2_sector;           // sector for U2 command
+   slot_t        Slot;                // directory slot
+   File          files[MAXFILES];     // files inside disk image
 }  di_endpoint_t;
 
 extern provider_t di_provider;
@@ -509,9 +509,9 @@ int di_load_image(di_endpoint_t *diep, const char *filename)
    }
    else if (filesize == d80.Blocks * 512)
    {
-      diep->DI       = d80;
-      diep->DI.ID    =  82;
-      diep->DI.Sides =   2;
+      diep->DI           = d80;
+      diep->DI.ID        =  82;
+      diep->DI.Sides     =   2;
       diep->DI.LBA       = LBA82;
       diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
@@ -1257,7 +1257,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    int np,rv;
    File *file;
    uint8_t type = FS_DIR_TYPE_PRG;	// PRG
-   uint8_t reclen = 0;		// REL record length (default 0 means is not set)
+   uint8_t reclen = 0;		        // REL record length (default 0 means is not set)
 
    di_process_options(opts, &type, &reclen);
  
@@ -1436,12 +1436,12 @@ int di_directory_header(char *dest, di_endpoint_t *diep)
 
 int di_blocks_free(char *dest, di_endpoint_t *diep)
 {
-   int   FreeBlocks;
-   int   BAM_Number;     // BAM block for current track
-   int   BAM_Increment;
-   int   Track;
-   int   i;
-   uint8_t *fbl;            // pointer to track free blocks
+   int           FreeBlocks;
+   int           BAM_Number;        // BAM block for current track
+   int           BAM_Increment;
+   int           Track;
+   int           i;
+   uint8_t      *fbl;               // pointer to track free blocks
    Disk_Image_t *di = &diep->DI;
 
    FreeBlocks    = 0; 
