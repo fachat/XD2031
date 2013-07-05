@@ -75,7 +75,7 @@ typedef struct Disk_Image
 /* functions for computing LBA (Logical Block Address) */
 /* return -1 for illegal T/S */
 
-int LBA64(int t, int s)
+static int LBA64(int t, int s)
 {
 
    if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
@@ -87,7 +87,7 @@ int LBA64(int t, int s)
 }
 
 
-int LBA71(int t, int s)
+static int LBA71(int t, int s)
 {
    int lba;
 
@@ -95,7 +95,7 @@ int LBA71(int t, int s)
    return (((lba = LBA64(t-35,s)) < 0) ? -1 : 683 + lba);
 }
 
-int LBA80(int t, int s)
+static int LBA80(int t, int s)
 {
 
    if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
@@ -106,7 +106,7 @@ int LBA80(int t, int s)
    return -1;
 }
 
-int LBA82(int t, int s)
+static int LBA82(int t, int s)
 {
    int lba;
 
@@ -114,7 +114,7 @@ int LBA82(int t, int s)
    return (((lba = LBA80(t-77,s)) < 0) ? -1 : 2083 + lba);
 }
 
-int LBA81(int t, int s)
+static int LBA81(int t, int s)
 {
    if((s < 0) || (s > 39) || (t < 1) || (t > 80)) return -1;
    return s + (t-1) * 40;
@@ -269,7 +269,7 @@ typedef struct
 extern provider_t di_provider;
 
 // prototypes
-uint8_t di_next_track(di_endpoint_t *diep);
+static uint8_t di_next_track(di_endpoint_t *diep);
 static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector);
 static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 
@@ -277,7 +277,7 @@ static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 // di_assert_ts
 // ************
 
-int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
+static int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 {
    if (diep->DI.LBA(track, sector) < 0)
       return CBM_ERROR_ILLEGAL_T_OR_S;
@@ -288,7 +288,7 @@ int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 // di_fseek_tsp
 // ************
 
-void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uint8_t ptr)
+static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uint8_t ptr)
 {
    long seekpos = ptr+256*diep->DI.LBA(track,sector);
    log_debug("seeking to position %ld for t/s/p=%d/%d/%d\n", seekpos, track, sector, ptr);
@@ -299,7 +299,7 @@ void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uint8_t pt
 // di_fseek_pos
 // ************
 
-void di_fseek_pos(di_endpoint_t *diep, int pos)
+static void di_fseek_pos(di_endpoint_t *diep, int pos)
 {
    fseek(diep->Ip,pos,SEEK_SET);
 }
@@ -322,7 +322,7 @@ static void di_init_fp(File *fp)
 // di_print_block
 // **************
 
-void di_print_block(di_endpoint_t *diep, int pos)
+static void di_print_block(di_endpoint_t *diep, int pos)
 {
    uint8_t b[16];
    int i,j;
@@ -346,7 +346,7 @@ void di_print_block(di_endpoint_t *diep, int pos)
 // di_dump_block
 // *************
 
-void di_dump_block(uint8_t *b)
+static void di_dump_block(uint8_t *b)
 {
    int i,j;
    printf("BLOCK:\n");
@@ -367,7 +367,7 @@ void di_dump_block(uint8_t *b)
 // di_print_slot
 // *************
 
-void di_print_slot(slot_t *slot)
+static void di_print_slot(slot_t *slot)
 {
    printf("SLOT  %d\n",slot->number);
    printf("name  %s\n",slot->filename);
@@ -383,7 +383,7 @@ void di_print_slot(slot_t *slot)
 // di_write_slot
 // *************
 
-void di_write_slot(di_endpoint_t *diep, slot_t *slot)
+static void di_write_slot(di_endpoint_t *diep, slot_t *slot)
 {
    uint8_t p[32];
 
@@ -411,7 +411,7 @@ void di_write_slot(di_endpoint_t *diep, slot_t *slot)
 // di_sync_BAM
 // ***********
 
-void di_sync_BAM(di_endpoint_t *diep)
+static void di_sync_BAM(di_endpoint_t *diep)
 {
    int i;
 
@@ -477,7 +477,7 @@ static void di_freeep(endpoint_t *ep)
 // di_read_BAM
 // ***********
 
-void di_read_BAM(di_endpoint_t *diep)
+static void di_read_BAM(di_endpoint_t *diep)
 {
    int i;
 
@@ -493,7 +493,7 @@ void di_read_BAM(di_endpoint_t *diep)
 // di_load_image
 // *************
 
-int di_load_image(di_endpoint_t *diep, const char *filename)
+static int di_load_image(di_endpoint_t *diep, const char *filename)
 {
    int filesize;
 
@@ -643,7 +643,7 @@ static File *di_find_file(di_endpoint_t *diep, int chan)
 // di_alloc_buffer
 // ***************
 
-int di_alloc_buffer(di_endpoint_t *diep)
+static int di_alloc_buffer(di_endpoint_t *diep)
 {
   log_debug("di_alloc_buffer 0\n");
 
@@ -657,7 +657,7 @@ int di_alloc_buffer(di_endpoint_t *diep)
 // di_load_buffer
 // **************
 
-int di_load_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
+static int di_load_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 {
    if (!di_alloc_buffer(diep)) return 0; // OOM
    log_debug("di_load_buffer %p->%p U1(%d/%d)\n",diep,diep->buf[0],track,sector);
@@ -671,7 +671,7 @@ int di_load_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 // di_save_buffer
 // **************
 
-int di_save_buffer(di_endpoint_t *diep)
+static int di_save_buffer(di_endpoint_t *diep)
 {
    log_debug("di_save_buffer U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
    di_fseek_tsp(diep,diep->U2_track,diep->U2_sector,0);
@@ -686,7 +686,7 @@ int di_save_buffer(di_endpoint_t *diep)
 // di_flag_buffer
 // **************
 
-void di_flag_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
+static void di_flag_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 {
    log_debug("di_flag_buffer U2(%d/%d)\n",track,sector);
    diep->U2_track  = track;
@@ -698,7 +698,7 @@ void di_flag_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 // di_read_block
 // *************
 
-int di_read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
+static int di_read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
 {
    log_debug("di_read_block: chan=%d len=%d\n", tfd, len);
 
@@ -723,7 +723,7 @@ int di_read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
 // di_write_block
 // **************
 
-int di_write_block(di_endpoint_t *diep, char *buf, int len)
+static int di_write_block(di_endpoint_t *diep, char *buf, int len)
 {
    log_debug("di_write_block: len=%d at ptr %d\n", len, diep->bp[0]);
 
@@ -742,7 +742,7 @@ int di_write_block(di_endpoint_t *diep, char *buf, int len)
 // di_direct
 // *********
 
-int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
+static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 {
    int rv = CBM_ERROR_OK;
 
@@ -806,7 +806,7 @@ static void di_close(endpoint_t *ep, int tfd)
 // di_read_slot
 // ************
 
-void di_read_slot(di_endpoint_t *diep, slot_t *slot)
+static void di_read_slot(di_endpoint_t *diep, slot_t *slot)
 {
    int i=0;
    uint8_t p[32];
@@ -839,7 +839,7 @@ void di_read_slot(di_endpoint_t *diep, slot_t *slot)
 // di_first_slot
 // *************
 
-void di_first_slot(di_endpoint_t *diep, slot_t *slot)
+static void di_first_slot(di_endpoint_t *diep, slot_t *slot)
 {
    log_debug("di_first_slot\n");
    if (diep->DI.ID == 80 || diep->DI.ID == 82)
@@ -856,7 +856,7 @@ void di_first_slot(di_endpoint_t *diep, slot_t *slot)
 // di_next_slot
 // ************
 
-int di_next_slot(di_endpoint_t *diep,slot_t *slot)
+static int di_next_slot(di_endpoint_t *diep,slot_t *slot)
 {
    if ((++slot->number & 7) == 0) // read next dir block
    {
@@ -876,7 +876,7 @@ int di_next_slot(di_endpoint_t *diep,slot_t *slot)
 // di_match_slot
 // *************
 
-int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name)
+static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name)
 {
    do
    {
@@ -890,7 +890,7 @@ int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name)
 // di_clear_block
 // **************
 
-void di_clear_block(di_endpoint_t *diep, int pos)
+static void di_clear_block(di_endpoint_t *diep, int pos)
 {
    uint8_t p[256];
    
@@ -904,7 +904,7 @@ void di_clear_block(di_endpoint_t *diep, int pos)
 // di_update_dir_chain
 // *******************
 
-void di_update_dir_chain(di_endpoint_t *diep, slot_t *slot, uint8_t sector)
+static void di_update_dir_chain(di_endpoint_t *diep, slot_t *slot, uint8_t sector)
 {
    di_fseek_pos(diep,slot->pos & 0xffff00);
    fwrite(&diep->DI.DirTrack,1,1,diep->Ip);
@@ -1048,7 +1048,7 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
 // di_scan_track
 // *************
 
-int di_scan_track(di_endpoint_t *diep, uint8_t Track)
+static int di_scan_track(di_endpoint_t *diep, uint8_t Track)
 {
    int   Sector;
    int   Interleave;
@@ -1073,7 +1073,7 @@ int di_scan_track(di_endpoint_t *diep, uint8_t Track)
 // di_allocate_new_dir_block
 // *************************
 
-int di_allocate_new_dir_block(di_endpoint_t *diep, slot_t *slot)
+static int di_allocate_new_dir_block(di_endpoint_t *diep, slot_t *slot)
 {
    int sector;
 
@@ -1095,7 +1095,7 @@ int di_allocate_new_dir_block(di_endpoint_t *diep, slot_t *slot)
 // di_find_free_slot
 // *****************
 
-int di_find_free_slot(di_endpoint_t *diep, slot_t *slot)
+static int di_find_free_slot(di_endpoint_t *diep, slot_t *slot)
 {
    di_first_slot(diep,slot);
    do   
@@ -1110,7 +1110,7 @@ int di_find_free_slot(di_endpoint_t *diep, slot_t *slot)
 // di_next_track
 // *************
 
-uint8_t di_next_track(di_endpoint_t *diep)
+static uint8_t di_next_track(di_endpoint_t *diep)
 {
    if (diep->CurrentTrack < diep->DI.DirTrack) // outbound
    {
@@ -1128,7 +1128,7 @@ uint8_t di_next_track(di_endpoint_t *diep)
 // di_find_free_block
 // ******************
 
-int di_find_free_block(di_endpoint_t *diep, File *f)
+static int di_find_free_block(di_endpoint_t *diep, File *f)
 {
    int  StartTrack;     // here begins the scan
    int  Sector;         // sector of next free block
@@ -1158,7 +1158,7 @@ int di_find_free_block(di_endpoint_t *diep, File *f)
 // di_create_entry // TODO: set file type
 // ***************
 
-int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, uint8_t reclen)
+static int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, uint8_t reclen)
 {
    log_debug("di_create_entry(%s)\n",name);
    File *file = di_find_file(diep, tfd);
@@ -1201,7 +1201,7 @@ int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, u
 // di_pos_append
 // *************
 
-void di_pos_append(di_endpoint_t *diep, File *f)
+static void di_pos_append(di_endpoint_t *diep, File *f)
 {
    uint8_t t,s,nt,ns; 
    
@@ -1391,7 +1391,7 @@ char *extension[6] = { "DEL","SEQ","PRG","USR","REL","CBM" };
 // di_fill_entry
 // *************
 
-int di_fill_entry(uint8_t *dest, slot_t *slot)
+static int di_fill_entry(uint8_t *dest, slot_t *slot)
 {
    char *p = (char *)dest + FS_DIR_NAME;
    int sz  = slot->size * 254;
@@ -1419,7 +1419,7 @@ int di_fill_entry(uint8_t *dest, slot_t *slot)
 // di_directory_header
 // *******************
 
-int di_directory_header(char *dest, di_endpoint_t *diep)
+static int di_directory_header(char *dest, di_endpoint_t *diep)
 {
    memset(dest+FS_DIR_LEN,0,4);
    dest[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
@@ -1457,7 +1457,7 @@ int di_directory_header(char *dest, di_endpoint_t *diep)
 // di_blocks_free
 // **************
 
-int di_blocks_free(char *dest, di_endpoint_t *diep)
+static int di_blocks_free(char *dest, di_endpoint_t *diep)
 {
    int           FreeBlocks;
    int           BAM_Number;        // BAM block for current track
@@ -1506,7 +1506,7 @@ int di_blocks_free(char *dest, di_endpoint_t *diep)
 // di_read_dir_entry
 // *****************
 
-int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
+static int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
 {
    int rv = 0;
    File *file = di_find_file(diep, tfd);
@@ -1539,7 +1539,7 @@ int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
 // di_read_byte
 // ************
 
-int di_read_byte(di_endpoint_t *diep, File *f, char *retbuf)
+static int di_read_byte(di_endpoint_t *diep, File *f, char *retbuf)
 {
    if (f->chp > 253)
    {
@@ -1564,7 +1564,7 @@ int di_read_byte(di_endpoint_t *diep, File *f, char *retbuf)
 // di_write_byte
 // *************
 
-int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
+static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 {
    int oldpos;
    int block;
@@ -1663,7 +1663,7 @@ static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector)
 // di_delete_file
 // **************
 
-void di_delete_file(di_endpoint_t *diep, slot_t *slot)
+static void di_delete_file(di_endpoint_t *diep, slot_t *slot)
 {
    uint8_t t,s;
    log_debug("di_delete_file #%d <%s>\n",slot->number,slot->filename);
@@ -1798,7 +1798,7 @@ static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts
 // di_direct_channel
 // *****************
 
-int di_direct_channel(di_endpoint_t *diep, int chan)
+static int di_direct_channel(di_endpoint_t *diep, int chan)
 {
    int i;
 
@@ -1833,7 +1833,7 @@ static int di_readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof
 // di_init
 // *******
 
-void di_init(void)
+static void di_init(void)
 {
    log_debug("di_init\n");
 }
