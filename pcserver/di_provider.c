@@ -318,67 +318,6 @@ static void di_init_fp(File *fp)
   fp->chp = 0;
 }
 
-// **************
-// di_print_block
-// **************
-
-static void di_print_block(di_endpoint_t *diep, int pos)
-{
-   uint8_t b[16];
-   int i,j;
-   di_fseek_pos(diep,pos);
-   printf("BLOCK: %x\n",pos);
-   for (j=0 ; j<256 ; j+=16)
-   {
-      fread(b,1,16,diep->Ip);
-      for (i=0 ; i < 16; ++i) printf(" %2.2x",b[i]);
-      printf("   ");
-      for (i=0 ; i < 16; ++i)
-      {
-        if (b[i] > 31 && b[i] < 96) printf("%c",b[i]);
-        else printf(".");
-      }
-      printf("\n");
-   }
-}
-
-// *************
-// di_dump_block
-// *************
-
-static void di_dump_block(uint8_t *b)
-{
-   int i,j;
-   printf("BLOCK:\n");
-   for (j=0 ; j<256 ; j+=16)
-   {
-      for (i=0 ; i < 16; ++i) printf(" %2.2x",b[i+j]);
-      printf("   ");
-      for (i=0 ; i < 16; ++i)
-      {
-        if (b[i+j] > 31 && b[i+j] < 96) printf("%c",b[i+j]);
-        else printf(".");
-      }
-      printf("\n");
-   }
-}
-
-// *************
-// di_print_slot
-// *************
-
-static void di_print_slot(slot_t *slot)
-{
-   printf("SLOT  %d\n",slot->number);
-   printf("name  %s\n",slot->filename);
-   printf("pos   %6.6x\n",slot->pos);
-   printf("size  %6d\n",slot->size);
-   printf("type  %6d\n",slot->type);
-   printf("eod   %6d\n",slot->eod );
-   printf("next  (%d/%d)\n",slot->next_track,slot->next_sector);
-   printf("start (%d/%d)\n",slot->start_track,slot->start_sector);
-}
-
 // *************
 // di_write_slot
 // *************
@@ -1837,6 +1776,74 @@ static void di_init(void)
 {
    log_debug("di_init\n");
 }
+
+// ----------------------------------------------------------------------------------
+//    Debug code
+
+#if 0
+
+// *************
+// di_dump_block
+// *************
+
+static void di_dump_block(uint8_t *b)
+{
+   int i,j;
+   printf("BLOCK:\n");
+   for (j=0 ; j<256 ; j+=16)
+   {
+      for (i=0 ; i < 16; ++i) printf(" %2.2x",b[i+j]);
+      printf("   ");
+      for (i=0 ; i < 16; ++i)
+      {
+        if (b[i+j] > 31 && b[i+j] < 96) printf("%c",b[i+j]);
+        else printf(".");
+      }
+      printf("\n");
+   }
+}
+
+// *************
+// di_print_slot
+// *************
+
+static void di_print_slot(slot_t *slot)
+{
+   printf("SLOT  %d\n",slot->number);
+   printf("name  %s\n",slot->filename);
+   printf("pos   %6.6x\n",slot->pos);
+   printf("size  %6d\n",slot->size);
+   printf("type  %6d\n",slot->type);
+   printf("eod   %6d\n",slot->eod );
+   printf("next  (%d/%d)\n",slot->next_track,slot->next_sector);
+   printf("start (%d/%d)\n",slot->start_track,slot->start_sector);
+}
+
+// **************
+// di_print_block
+// **************
+
+static void di_print_block(di_endpoint_t *diep, int pos)
+{
+   uint8_t b[16];
+   int i,j;
+   di_fseek_pos(diep,pos);
+   printf("BLOCK: %x\n",pos);
+   for (j=0 ; j<256 ; j+=16)
+   {
+      fread(b,1,16,diep->Ip);
+      for (i=0 ; i < 16; ++i) printf(" %2.2x",b[i]);
+      printf("   ");
+      for (i=0 ; i < 16; ++i)
+      {
+        if (b[i] > 31 && b[i] < 96) printf("%c",b[i]);
+        else printf(".");
+      }
+      printf("\n");
+   }
+}
+
+#endif
 
 // ----------------------------------------------------------------------------------
 
