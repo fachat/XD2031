@@ -25,6 +25,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <sys/time.h>		// select()
 
 /* patch dir separator characters to '/'
  * fs_provider (Linux / OS X), http and ftp require the slash.
@@ -47,6 +48,16 @@ char *os_patch_dir_separator(char *path) {
 	}
 
 	return newpath;
+}
+
+// Remove trailing line end characters
+char *drop_crlf(char *s) {
+	char *p = s + strlen(s) - 1;
+	while(p > s) {
+		if((*p == 10) || (*p == 13)) *p--=0; 	// remove CR or LF
+		else break;
+	}
+	return s;
 }
 
 // ========================================================================
@@ -137,6 +148,35 @@ signed long long os_free_disk_space (char *path) {
 	return total;
 }
 
+
+int os_stdin_has_data(void) {
+	fd_set rfds;
+	struct timeval tv;
+	int res;
+
+	// Watch stdin (fd 0) to see when it has input
+	FD_ZERO(&rfds);
+	FD_SET(0, &rfds);
+
+	// Don't block
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+	res = select(1, &rfds, NULL, NULL, &tv);
+	// Don't rely on the value of tv now!
+
+	if (res == -1) {
+		log_error("select(): (%d) %s\n", os_errno(), os_strerror(os_errno()));
+		return 0;
+	} else if(res) {
+		// data available in stdin
+		return 1;
+	}
+
+	// no data available
+	return 0;
+}
+
 #else
 
 
@@ -149,6 +189,8 @@ signed long long os_free_disk_space (char *path) {
 #include <limits.h>
 #include <sys/stat.h>
 #include <ctype.h>
+
+#include "mem.h"
 
 const char* os_get_home_dir (void) {
         char* dir = getenv("HOME");
@@ -164,13 +206,15 @@ const char* os_get_home_dir (void) {
 int os_path_is_file (const char *name) {
 	int isfile = 1;
 
-	log_info("checking file with name %s\n",name);
+	log_info("checking file with name %s (path_is_file)\n",name);
 	uint32_t file_type = GetFileAttributes(name);
 	if (file_type == INVALID_FILE_ATTRIBUTES) {
-		isfile = 0;
+		// note we still return 1, as open may succeed - e.g. for 
+		// save where the file does not exist in the first place
+		isfile = 1;
 		log_error("Unable to GetFileAttributes for %s\n", name);
-	}
-	if ((file_type & FILE_ATTRIBUTE_DEVICE) || (file_type & FILE_ATTRIBUTE_DIRECTORY)) {
+	} else if ((file_type & FILE_ATTRIBUTE_DEVICE) || (file_type & FILE_ATTRIBUTE_DIRECTORY)) {
+		log_debug("FILE_ATTRIBUTE || FILE_ATTRIBUTE_DIRECTORY\n");
 		isfile = 0;
 	}
 	if (!isfile) {
@@ -182,7 +226,7 @@ int os_path_is_file (const char *name) {
 int os_path_is_dir (const char *name) {
 	int isdir;
 
-	log_info("checking dir with name %s\n", name);
+	log_info("checking dir with name %s (path_is_dir)\n", name);
 	uint32_t file_type = GetFileAttributes(name);
 	if (file_type == INVALID_FILE_ATTRIBUTES) {
 		isdir = 0;
@@ -239,6 +283,48 @@ char *os_realpath(const char *path)
     {
       //Non standard extension that glibc uses
       return_path = malloc(PATH_MAX);
+    }
+
+    // Special handling for root directory with drive
+    if (strlen(path) == 3) {
+      if((isalpha(path[0])) && (path[1] == ':') &&
+         ((path[2] == '/') || (path[2] == '\\'))) {
+        log_debug("os_realpath: root directory with drive: %s\n", path);
+        char *p = mem_alloc_str(path);
+        p[0] = toupper(p[0]);
+        return p;
+      }
+    }
+
+    // Special handling for root directory without drive
+    if ((strlen(path) == 1) && ((path[0] == '/') || (path[0] == '\\'))) {
+      char *current_directory = malloc(PATH_MAX);
+      if(!current_directory) {
+        log_error("malloc failed: %s, line %u\n", __FILE__, __LINE__);
+        return NULL;
+      }
+      DWORD res = GetCurrentDirectory(PATH_MAX, current_directory);
+      if(!res) {
+        log_error("GetCurrentDirectory failed (%d)\n", GetLastError());
+        return NULL;
+      }
+      if(res > PATH_MAX) {
+        free(current_directory);
+        current_directory = malloc(res);
+        if(!current_directory) {
+          log_error("malloc failed: %s, line %u\n", __FILE__, __LINE__);
+          return NULL;
+        }
+	DWORD res2 = GetCurrentDirectory(res, current_directory);
+        if(!res2) {
+          log_error("GetCurrentDirectory failed (%d)\n", GetLastError());
+          return NULL;
+        }
+      }
+      current_directory[2] = '/'; 
+      current_directory[3] = 0; 
+      log_debug("os_realpath: root directory without drive: %s\n", current_directory);
+      return current_directory;
     }
 
     // Drop trailing slashes
@@ -500,16 +586,6 @@ void rewinddir(DIR *dir)
 
 */
 
-// helper function for os_strerror
-static char *drop_crlf(char *s) {
-	char *p = s + strlen(s);
-	while(p > s) {
-		if(iscntrl(*p)) *p=0;
-		p--;
-	}
-	return s;
-}
-
 // convert errnum into a string error message
 char *os_strerror(int errnum) {
 	static char msg[80];
@@ -542,17 +618,15 @@ ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
 	DWORD read_bytes = 0;
 	int success;
 
-	// Read at least 1 Byte
-	while (!read_bytes) {
-		success = ReadFile(fd, buf, count, &read_bytes, NULL);
+	success = ReadFile(fd, buf, count, &read_bytes, NULL);
 
-		if(success && (read_bytes >= 1)) {
-			log_debug("os_read bytes read: %u\n", read_bytes);
-			return read_bytes;
-		}
+	if(!success) return -1;
+
+	if(success && (read_bytes >= 1)) {
+		log_debug("os_read bytes read: %u\n", read_bytes);
 	}
 
-	return -1;
+	return read_bytes;
 }
 
 // Write data to the specified file or input/output device

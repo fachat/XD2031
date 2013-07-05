@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
 		  exit(1);
 		}
 		if(config_ser(fdesc)) {
-		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)",
+		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(1);
 		}

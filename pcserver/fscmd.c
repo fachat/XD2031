@@ -45,10 +45,12 @@
 #include "fscmd.h"
 #include "dir.h"
 #include "charconvert.h"
+#include "petscii.h"
 #include "provider.h"
 #include "log.h"
 #include "xcmd.h"
 #include "channel.h"
+#include "serial.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -247,6 +249,30 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 	write_packet(writefd, buf);
 }
 
+
+#define INBUF_SIZE 1024
+// reads stdin and returns true, if the main loop should abort
+int cmd_process_stdin(void) {
+	char buf[INBUF_SIZE + 1];
+
+	log_debug("cmd_process_stdin()\n");
+
+	fgets(buf, INBUF_SIZE, stdin);
+	drop_crlf(buf);
+
+	log_debug("stdin: %s\n", buf);
+
+	// we could interpret some fany commands here,
+	// but for now, quitting is the only option
+	if((!strcasecmp(buf, "Q")) || (!strcasecmp(buf, "QUIT"))) {
+		log_info("Aborted by user request.\n");
+		return 1;
+	} else {
+		log_error("Syntax error: '%s'\n", buf);
+	}
+	return 0;
+}
+
 /**
  * this is the main loop of the program
  *
@@ -256,7 +282,7 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
  *
  * returns
  *   1 if read fails (errno gives more information)
- *   0 if other strange things happened
+ *   0 if user requests to abort the Server
  */
 int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 
@@ -275,13 +301,24 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
         wrp = rdp = 0;
 
         for(;;) {
+	      if(os_stdin_has_data()) if(cmd_process_stdin()) return 0;
+
 	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
-	      printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
-	      for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
+	      if(n) {
+		printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
+		for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
+              }
 #endif
 
-              if(n <= 0) {
+	      if(!n) {
+		if(!device_still_present()) {
+			log_error("Device lost.\n");
+			return 1;
+                }
+	      }
+
+              if(n < 0) {
                 fprintf(stderr,"fsser: read error %d (%s)\n",os_errno(),strerror(os_errno()));
 		fprintf(stderr,"Did you power off your device?\n");
                 return 1;
@@ -375,8 +412,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		log_debug("cmd %s :%d bytes @%p : ", nameofcmd(255&buf[FSP_CMD]), n, buf);
-		for(int i=0;i<n;i++) log_debug("%02x ",255&buf[i]); log_debug("\n");
+		log_debug("cmd %s :%d bytes @%p : \n", nameofcmd(255&buf[FSP_CMD]), n, buf);
+		log_hexdump(buf, n, 0);
 	}
 #endif
 
@@ -745,8 +782,14 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		//
 		name2 = strchr(name, 0) + 2;
 
-		provider_convto(prov)(name, strlen(name), name, strlen(name));
-		provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+		//FIXME: prov is still NULL here!
+		//provider_convto(prov)(name, strlen(name), name, strlen(name));
+		//provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
+		//FIXME: the following lines always do a PETSCII-->ASCII conversion
+		//       charset for command channel stored anywhere?
+		charconv_t petsciiconv = cconv_converter(CHARSET_PETSCII, CHARSET_ASCII);
+		petsciiconv(name, strlen(name), name, strlen(name));
+		petsciiconv(name2, strlen(name2), name2, strlen(name2));
 
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
 		rv = provider_assign(drive, name, name2);

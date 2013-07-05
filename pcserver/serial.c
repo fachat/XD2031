@@ -44,11 +44,28 @@
 
 #include "serial.h"
 #include "log.h"
+#include "mem.h"
 
-/* open device */
+static char *serial_device_path = NULL;
+
+/* open device
+   Remember the path to the serial device, so that we can check later,
+   if it's still there.
+*/
 int device_open(char *device) {
 	int fdesc = open(device, O_RDWR | O_NOCTTY); // | O_NDELAY);
+	mem_free(serial_device_path);
+	serial_device_path = mem_alloc_str(device);
 	return fdesc;
+}
+
+/* On Linux, read() does not return -1 (error), if the device is lost.
+   It simply returns 0 with 0 bytes read, so we check here, if
+   the device is still present. */
+int device_still_present(void) {
+	struct stat d;
+
+	return (!stat(serial_device_path, &d));
 }
 
 /**
@@ -103,8 +120,8 @@ int config_ser(int fd) {
         // One input byte is enough to return from read()
         // Inter-character timer off
 
-        config.c_cc[VMIN]  = 1;
-        config.c_cc[VTIME] = 0;
+        config.c_cc[VMIN]  = 0;
+        config.c_cc[VTIME] = 1;
 
         // Communication speed (simple version, using the predefined
         // constants)
@@ -255,6 +272,10 @@ void guess_device(char** device) {
 	*device = devicename;
 }
 
+/* just a dummy since Windows read() returns an error, if the device is lost */
+int device_still_present(void) {
+	return 1;
+}
 #endif
 
 #if 0

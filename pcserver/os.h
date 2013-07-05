@@ -23,6 +23,8 @@
 #ifndef OS_H
 #define OS_H
 
+#include "log.h"
+
 /* 
 
   This file contains
@@ -83,6 +85,11 @@
 // ======================================================================= 
 
 #ifdef _WIN32
+// Enable fileno()
+#ifdef __STRICT_ANSI__
+#undef __STRICT_ANSI__
+#endif
+#include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
 #include <io.h>
@@ -90,6 +97,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <winsock2.h>
+#include <conio.h>	// _kbhit()
 #include "mem.h"
 #endif
 
@@ -118,10 +126,6 @@ static inline int os_mkdir(const char *pathname, mode_t mode) {
 	return mkdir(pathname, mode);
 }
 
-static inline void os_sync(void) {
-	sync();
-}
-
 static inline int os_open_failed(serial_port_t device) {
 	return (device < 0);
 }
@@ -141,6 +145,18 @@ static inline int os_errno(void) {
 static inline char *os_strerror(int errnum) {
 	return strerror(errnum);
 }
+
+static inline int os_fsync(FILE *f) {
+	int res;
+
+	res = fflush(f);
+	if(res) log_error("fflush failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+	res = fsync(fileno(f));
+	if(res) log_error("fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+	log_debug("os_fsync completed\n");
+	return res;
+}
+
 
 // -----------------------------------------------------------------------
 //	LINUX
@@ -194,7 +210,11 @@ static inline int os_errno(void) {
 /* Windows doesn't know sync. A cheat to sync all open files
 requires SYSTEM rights. Don't.  If possible, sync() should be
 replaced by syncfs(Linux) / FlushFileBuffers(Win) for a single file */
-static inline void os_sync (void) {}
+static inline int os_fsync (FILE *f) {
+	log_debug("os_fsync\n");
+	fflush(f);
+	return ((FlushFileBuffers ((HANDLE) _get_osfhandle(_fileno(f)))) ? 0 : -1);
+}
 
 
 /* dirent.h */
@@ -254,6 +274,10 @@ static inline int socket_close(int descriptor) {
 	return res;
 }
 
+static inline int os_stdin_has_data(void) {
+	return _kbhit();
+}
+
 #endif // WIN32
 
 
@@ -291,5 +315,9 @@ int os_open_failed(serial_port_t device);
 ssize_t os_read(serial_port_t fd, void *buf, size_t count);
 
 ssize_t os_write(serial_port_t fd, const void *buf, size_t count);
+
+int os_stdin_has_data(void);
+
+char *drop_crlf(char *s);
 
 #endif // OS_H
