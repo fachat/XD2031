@@ -122,7 +122,7 @@ static int LBA81(int t, int s)
 
 //                  ID Tr Se S B Of TB D I Blck      Dir
 Disk_Image_t d64 = {64,35,21,1,1, 4,35,3,9, 683,LBA64,18};
-Disk_Image_t d80 = {80,70,29,1,2, 6,50,3,5,2083,LBA80,39};
+Disk_Image_t d80 = {80,77,29,1,2, 6,50,3,5,2083,LBA80,39};
 Disk_Image_t d81 = {81,80,40,1,2,16,40,1,1,3200,LBA81,40};
 
 /* Commodore Floppy Formats
@@ -470,6 +470,7 @@ static int di_load_image(di_endpoint_t *diep, const char *filename)
       diep->DI           = d80;
       diep->DI.ID        =  82;
       diep->DI.Sides     =   2;
+      diep->DI.BAMBlocks =   4;
       diep->DI.LBA       = LBA82;
       diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
