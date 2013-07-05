@@ -1334,13 +1334,12 @@ char *extension[6] = { "DEL","SEQ","PRG","USR","REL","CBM" };
 static int di_fill_entry(uint8_t *dest, slot_t *slot)
 {
    char *p = (char *)dest + FS_DIR_NAME;
-   int sz  = slot->size * 254;
 
-   log_debug("di_fill_entry(%s)\n",slot->filename);
+   log_debug("di_fill_entry(%s, %d blocks)\n", slot->filename, slot->size);
 
-   dest[FS_DIR_LEN  ] = sz;
-   dest[FS_DIR_LEN+1] = sz >>  8;
-   dest[FS_DIR_LEN+2] = sz >> 16;
+   dest[FS_DIR_LEN  ] = 0;
+   dest[FS_DIR_LEN+1] = slot->size;
+   dest[FS_DIR_LEN+2] = slot->size >> 8;
    dest[FS_DIR_LEN+3] = 0;
    dest[FS_DIR_MODE]  = FS_DIR_MOD_FIL;
    
