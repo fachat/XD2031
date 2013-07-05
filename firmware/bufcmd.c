@@ -73,8 +73,10 @@ typedef struct {
 	uint8_t		recordlen;
 	// the record number for the (first) record in the buffer
 	uint16_t	buf_recordno;		
+	// position of current record in buffer (multiple may be loaded in one read)
+	uint8_t		pos_of_record;
 	// current position in record
-	uint16_t	cur_pos_in_record;
+	uint8_t		cur_pos_in_record;
 	// the actual 256 byte buffer
 	uint8_t		buffer[256];
 
@@ -207,6 +209,11 @@ static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uin
 			ptype = FS_WRITE;
 		}
                 packet_set_filled(&datapack, channel_no, ptype, plen);
+
+for (uint8_t i = 0; i < plen; i++) {
+	debug_printf(" %02x", buffer->buffer[send_nbytes - restlength + i]);
+}
+debug_puts(" < sent\n");
 
 		cbstat = 0;
                 endpoint->provider->submit_call(endpoint->provdata, channel_no, 
@@ -773,6 +780,7 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 debug_printf("Transferred data - got: %d\n", rv); debug_flush();
 
 	buffer->cur_pos_in_record = 0;
+	buffer->pos_of_record = 0;
 	buffer->wptr = 0;
 	buffer->rptr = 0;
 	buffer->pflag |= PFLAG_PRELOAD;
@@ -889,6 +897,7 @@ debug_printf("check n=%d, *p=%d\n", n, *p);
 				// the following record is still in the buffer
 				buffer->rptr ++;
 				buffer->cur_pos_in_record = 0;
+				buffer->pos_of_record += buffer->recordlen;
 			} else {
 				// read it when needed on the next read
 				buffer->pflag &= ~PFLAG_PRELOAD;
@@ -922,6 +931,7 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 			// and as we overwrite it, there is no need to read it first
 			buffer->buf_recordno++;
 			buffer->cur_pos_in_record = 0;
+			buffer->pos_of_record = 0;
 			buffer->rptr = 0;
 			buffer->wptr = 0;
 			buffer->pflag &= ~PFLAG_ISREAD;
@@ -939,7 +949,7 @@ debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", c, buffer->wptr, buf
 		} else {
 			err = CBM_ERROR_OVERFLOW_IN_RECORD;
 debug_printf("-> overflow %d\n", err);
-			return err;
+			//return err;
 		}
 
 		// disable preload
@@ -948,7 +958,8 @@ debug_printf("-> overflow %d\n", err);
 		buffer->rptr = buffer->wptr;
 		buffer->lastvalid = (buffer->wptr == 0) ? 0 : buffer->wptr - 1;
 
-		if (forceflush & PUT_FLUSH) {
+		// PUT_FLUSH means EOF, i.e. end of write
+		if (err == CBM_ERROR_OVERFLOW_IN_RECORD || forceflush & PUT_FLUSH) {
 			// fill up record with zero
 			while (buffer->cur_pos_in_record < buffer->recordlen) {
 				buffer->buffer[buffer->wptr] = 0;
@@ -958,6 +969,7 @@ debug_printf("-> overflow %d\n", err);
 			// write current record
 			bufcmd_rw_record(buffer, 1);
 			buffer->buf_recordno++;
+			buffer->pos_of_record = 0;
 			buffer->pflag = 0;
 		}
 	} else {

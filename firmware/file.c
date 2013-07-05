@@ -288,6 +288,8 @@ debug_printf("-> err=%d\n", err);
 			}
 		}
 
+		// TODO: if provider->channel_* are not NULL, we should probably not allocate a channel
+		// but that would break the FILE OPEN detection here.
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
 			debug_puts("FILE OPEN ERROR");
