@@ -73,31 +73,50 @@ typedef struct Disk_Image
 } Disk_Image_t;
 
 /* functions for computing LBA (Logical Block Address) */
+/* return -1 for illegal T/S */
 
 int LBA64(int t, int s)
 {
-   return s + 21*(t-1) - 2*(t>18)*(t-18) - (t>25)*(t-25) - (t>31)*(t-31);
+
+   if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
+   if(t <= 17) return ((s >= 21) ? -1 : s +                         (t- 1)*21); // 01-17 (17) 21
+   if(t <= 24) return ((s >= 19) ? -1 : s + 17*21 +                 (t-18)*19); // 18-24 ( 7) 19
+   if(t <= 30) return ((s >= 18) ? -1 : s + 17*21 +  7*19 +         (t-25)*18); // 25-30 ( 6) 18
+   if(t <= 35) return ((s >= 17) ? -1 : s + 17*21 +  7*19 +  6*18 + (t-31)*17); // 31-35 ( 5) 17
+   return -1;
 }
+
 
 int LBA71(int t, int s)
 {
+   int lba;
+
    if (t < 36) return LBA64(t,s);
-   return    683 + LBA64(t-35,s);
+   return (((lba = LBA64(t-35,s)) < 0) ? -1 : 683 + lba);
 }
 
 int LBA80(int t, int s)
 {
-   return s + 29*(t-1) - 2*((t>40)*(t-40) + (t>54)*(t-54) + (t>65)*(t-65));
+
+   if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
+   if(t <= 39) return ((s >= 29) ? -1 : s +                         (t- 1)*29); // 01-39 (39) 29
+   if(t <= 53) return ((s >= 27) ? -1 : s + 39*29 +                 (t-40)*27); // 40-53 (14) 27
+   if(t <= 64) return ((s >= 25) ? -1 : s + 39*29 + 14*27 +         (t-54)*25); // 54-64 (11) 25
+   if(t <= 77) return ((s >= 23) ? -1 : s + 39*29 + 14*27 + 11*25 + (t-65)*23); // 65-77 (13) 23
+   return -1;
 }
 
 int LBA82(int t, int s)
 {
+   int lba;
+
    if (t < 78) return LBA80(t,s);
-   return   2083 + LBA80(t-77,s);
+   return (((lba = LBA80(t-77,s)) < 0) ? -1 : 2083 + lba);
 }
 
 int LBA81(int t, int s)
 {
+   if((s < 0) || (s > 39) || (t < 1) || (t > 80)) return -1;
    return s + (t-1) * 40;
 }
 
@@ -260,8 +279,8 @@ static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 
 int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 {
-   if (track < 1 || track > diep->DI.Tracks * diep->DI.Sides ||
-       sector > diep->DI.Sectors) return CBM_ERROR_ILLEGAL_T_OR_S;
+   if (diep->DI.LBA(track, sector) < 0)
+      return CBM_ERROR_ILLEGAL_T_OR_S;
    return CBM_ERROR_OK;
 }
 
@@ -524,7 +543,11 @@ int di_load_image(di_endpoint_t *diep, const char *filename)
       diep->BAMpos[0]    = 256 * diep->DI.LBA(40,1);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(40,2);
    }
-   else return 0; // not an image file
+   else 
+   {
+      log_error("Invalid/unsupported disk image\n");
+      return 0; // not an image file
+   }
 
    di_read_BAM(diep);
    log_debug("di_load_image(%s) as d%d\n",filename,diep->DI.ID);
@@ -1466,6 +1489,7 @@ int di_blocks_free(char *dest, di_endpoint_t *diep)
       ++BAM_Number;
    }
 
+   log_debug("di_blocks_free: %u\n", FreeBlocks);
    FreeBlocks <<= 8;
 
    dest[FS_DIR_ATTR]  = FS_DIR_ATTR_ESTIMATE;
