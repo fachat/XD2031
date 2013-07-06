@@ -861,6 +861,11 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 	*iseof = 1;			// defaults to EOF
 	if (buffer != NULL) {
 		if ((buffer->pflag & PFLAG_PRELOAD) == 0) {
+			// this should only happen on GET_PRELOAD, otherwise
+			// it may cause a timeout error
+			if ((preload & GET_PRELOAD) == 0) {
+				debug_puts("NEEDED TO LOAD BUFFER DURING FETCH");
+			}
 			// position to record and read into buffer
 			bufcmd_rw_record(buffer, 0);
 		} 
@@ -874,37 +879,43 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 		// see DOS 2.7 @ $d885 (getbyt)
 		// mark so write will skip to next record
 		buffer->pflag |= PFLAG_ISREAD;
+debug_printf("cur pos in rec=%d, rptr=%d\n", buffer->cur_pos_in_record, buffer->rptr);
 		if (buffer->cur_pos_in_record < buffer->recordlen) {
-			buffer->cur_pos_in_record++;
-			buffer->rptr ++;
 			// check if the rest of the record is empty
-			uint8_t *p = buffer->buffer + buffer->rptr;
-			uint8_t n = buffer->recordlen - buffer->cur_pos_in_record;
+			uint8_t *p = buffer->buffer + buffer->rptr + 1;
+			uint8_t n = buffer->recordlen - buffer->cur_pos_in_record - 1;
 			while (n) {
-debug_printf("check n=%d, *p=%d\n", n, *p);
-				n--;
-				if (n && *p) {
+debug_printf("check n=%d, *p=%d (%d)\n", n, *p, p-buffer->buffer);
+				if (*p) {
 					*iseof = 0;	// not an EOF
 					break;
 				}
+				n--;
 				p++;
 			}
-		} else {
+
+			if ((preload & GET_PRELOAD) == 0) {
+				buffer->rptr ++;
+				buffer->cur_pos_in_record++;
+			}
+		} 
+
+		if (*iseof && (preload & GET_PRELOAD) == 0) {
 			// defaults to EOF
 			// go to next record (read it when used)
 			buffer->buf_recordno++;
 			if ((buffer->lastvalid - buffer->rptr) > buffer->recordlen) {
 				// the following record is still in the buffer
-				buffer->rptr ++;
 				buffer->cur_pos_in_record = 0;
 				buffer->pos_of_record += buffer->recordlen;
+				buffer->rptr = buffer->pos_of_record;
 			} else {
 				// read it when needed on the next read
 				buffer->pflag &= ~PFLAG_PRELOAD;
 			}
 		}
-debug_printf("read -> %s (%d)(ptr=%d, rec pos=%d, reclen=%d, lastvalid=%d)\n", 
-		(*iseof) ? "EOF" : "WRITE", *err, buffer->rptr, buffer->cur_pos_in_record,
+debug_printf("read -> %s (pload=%d, data=%d, err=%d)(ptr=%d, rec pos=%d, reclen=%d, lastvalid=%d)\n", 
+		(*iseof) ? "EOF" : "WRITE", preload, *data, *err, buffer->rptr, buffer->cur_pos_in_record,
 		buffer->recordlen, buffer->lastvalid);
 	}
 
