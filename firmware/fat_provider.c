@@ -192,6 +192,8 @@ static FRESULT tbl_close_file(uint8_t chan) {
 		FRESULT res = f_close(&tbl[pos].f);
 		debug_printf("f_close (#%d @%d): %d", chan, pos, res); debug_putcrlf();
 		tbl[pos].chan = AVAILABLE;
+	} else {
+		debug_printf("f_close (#%d): nothing to do\n", chan);
 	}
 	return res;
 }
@@ -387,7 +389,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		case FS_CLOSE:
 			/* close a file, ignored when not opened first */
 			debug_printf("FS_CLOSE #%d", channelno); debug_putcrlf();
-			packet_write_char(rxbuf, res);
+			packet_write_char(rxbuf, tbl_close_file(channelno));
 			break;
 
 		case FS_MOVE:
@@ -415,7 +417,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				rxbuf->wp = transferred;
 				if(fp->fptr == fp->fsize) {
 					rxbuf->type = FS_EOF;
-					tbl_close_file(channelno);
 				} else {
 					rxbuf->type = FS_WRITE;
 				}
@@ -433,11 +434,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 					len = txbuf->wp - txbuf->rp;
 					res = f_write(fp, txbuf->buffer, len, &transferred);
 					debug_printf("%d/%d bytes written to #%d, res=%d\n", transferred, len, channelno, res);
-				}
-				if(txbuf->type == ((uint8_t) (FS_EOF & 0xFF))) {
-					res2 = tbl_close_file(channelno);
-					debug_printf("f_close channel %d, res=%d", channelno, res2); debug_putcrlf();
-					if(!res) res=res2; // Return first error if any
 				}
 			} else {
 				debug_printf("No channel found for FS_WRITE/FS_EOF #%d", channelno); debug_putcrlf();
