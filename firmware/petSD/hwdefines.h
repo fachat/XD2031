@@ -85,4 +85,43 @@
 #define ACTIVE_LED_PORT		PORTD
 #define ACTIVE_LED_BIT		PD5
 
+/* ---- SPI --------------------------------------------------------------- */
+#define SPI_PORT 		PORTB /* SPI port */
+#define SPI_DDR 		DDRB
+#define SPI_PIN_SCK 		PB7
+#define SPI_PIN_MISO 		PB6
+#define SPI_PIN_MOSI 		PB5
+
+/* ---- Ethernet ---------------------------------------------------------- */
+#define PORT_ETH_CS 		PORTC /* Ethernet chip select */
+#define DDR_ETH_CS 		DDRC
+#define PIN_ETH_CS 		PC4
+
+#define PORT_ETH_INT 		PORTD /* Ethernet interrupt */
+#define DDR_ETH_INT 		DDRD
+#define PIN_ETH_INT 		PD3
+
+/* ---- SD card ----------------------------------------------------------- */
+
+#define CARD_DETECT_INT_VECT 	PCINT3_vect
+#define MEDIA_CHANGE_HANDLER 	ISR(CARD_DETECT_INT_VECT)
+#define SDCD_PCIF 		PCIF3
+#define SDCD_PCMSK 		PCMSK3
+#define SDCD_PCINT 		PCINT28
+#define SDCD_PCIE 		PCIE3
+
+#define PORT_SD_CS 		PORTB /* SD card select */
+#define DDR_SD_CS 		DDRB
+#define PIN_SD_CS 		PB4
+
+#define INPUT_SD_WP 		PINC /* SD card write protect */
+#define PORT_SD_WP 		PORTC
+#define DDR_SD_WP 		DDRC
+#define PIN_SD_WP 		PC3
+
+#define INPUT_SD_CD 		PIND /* SD card detect */
+#define PORT_SD_CD 		PORTD
+#define DDR_SD_CD 		DDRD
+#define PIN_SD_CD 		PD4
+
 #endif
