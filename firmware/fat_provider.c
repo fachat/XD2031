@@ -399,7 +399,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			fs_delete(path, rxbuf);
 			break;
 
-		case (uint8_t) (FS_READ & 0xFF):
+		case FS_READ:
 			ds = get_dir_state(channelno);
 			if(ds < 0 ) {
 				debug_printf("No channel found for FS_READ #%d", channelno); debug_putcrlf();
@@ -425,8 +425,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			}
 			break;
 
-		case (uint8_t) (FS_WRITE & 0xFF):
-		case (uint8_t) (FS_EOF & 0xFF):
+		case FS_WRITE:
+		case FS_EOF:
 			fp = tbl_find_file(channelno);
 			if(fp) {
 				if(txbuf->rp < txbuf->wp) {
@@ -434,7 +434,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 					res = f_write(fp, txbuf->buffer, len, &transferred);
 					debug_printf("%d/%d bytes written to #%d, res=%d\n", transferred, len, channelno, res);
 				}
-
 				if(txbuf->type == ((uint8_t) (FS_EOF & 0xFF))) {
 					res2 = tbl_close_file(channelno);
 					debug_printf("f_close channel %d, res=%d", channelno, res2); debug_putcrlf();
