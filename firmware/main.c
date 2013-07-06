@@ -106,8 +106,6 @@ void main_delay() {
 int main()
 {
 	// Initializations
-	int8_t er = CBM_ERROR_OK;
-
 	//
 	// first some basic hardware infrastructure
 	
