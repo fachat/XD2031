@@ -34,7 +34,7 @@
 
 #define	DEBUG_USER
 #define	DEBUG_BLOCK
-#define	DEBUG_RELFILE
+#undef	DEBUG_RELFILE
 
 
 // place for command, channel, drive, track sector 
@@ -182,7 +182,8 @@ static void bufcmd_close(uint8_t channel_no, endpoint_t *endpoint) {
 }
 
 
-static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t send_nbytes) {
+static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, 
+		uint8_t start_of_data, uint16_t send_nbytes) {
 
 	uint16_t restlength = send_nbytes;
 
@@ -199,7 +200,7 @@ static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uin
 
 	while (ptype != FS_EOF && restlength != 0 && rv == CBM_ERROR_OK) {
 
-                packet_init(&datapack, DATA_BUFLEN, buffer->buffer + send_nbytes - restlength);
+                packet_init(&datapack, DATA_BUFLEN, buffer->buffer + start_of_data + send_nbytes - restlength);
                 packet_init(&cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
 
 		plen = (restlength > DATA_BUFLEN) ? DATA_BUFLEN : restlength;
@@ -211,7 +212,7 @@ static uint8_t bufcmd_write_buffer(uint8_t channel_no, endpoint_t *endpoint, uin
                 packet_set_filled(&datapack, channel_no, ptype, plen);
 
 for (uint8_t i = 0; i < plen; i++) {
-	debug_printf(" %02x", buffer->buffer[send_nbytes - restlength + i]);
+	debug_printf(" %02x", buffer->buffer[start_of_data + send_nbytes - restlength + i]);
 }
 debug_puts(" < sent\n");
 
@@ -421,7 +422,7 @@ debug_printf("Sent command - got: %d, rptr=%d, wptr=%d\n", rv, buffer->rptr, buf
 					}
 				}
 				// U2
-				rv = bufcmd_write_buffer(channel, endpoint, 256);
+				rv = bufcmd_write_buffer(channel, endpoint, 0, 256);
 			}
 			bufcmd_close(channel, endpoint);
 			if (rv == CBM_ERROR_OK) {
@@ -761,7 +762,8 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 	bufcmd_send_position(buffer, channel);
 
 	if (is_write) {
-		rv = bufcmd_write_buffer(channel, buffer->real_endpoint, buffer->recordlen);
+		rv = bufcmd_write_buffer(channel, buffer->real_endpoint, 
+				buffer->pos_of_record, buffer->recordlen);
 	} else {
 		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
 			uint8_t *b = buffer->buffer;
@@ -777,7 +779,7 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 			}
 		}
 	}
-debug_printf("Transferred data - got: %d\n", rv); debug_flush();
+	//debug_printf("Transferred data - got: %d\n", rv); debug_flush();
 
 	buffer->cur_pos_in_record = 0;
 	buffer->pos_of_record = 0;
@@ -878,14 +880,16 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 		buffer->wptr = buffer->rptr;
 		// see DOS 2.7 @ $d885 (getbyt)
 		// mark so write will skip to next record
-		buffer->pflag |= PFLAG_ISREAD;
-debug_printf("cur pos in rec=%d, rptr=%d\n", buffer->cur_pos_in_record, buffer->rptr);
+		if ((preload & GET_PRELOAD) == 0) {
+			buffer->pflag |= PFLAG_ISREAD;
+		}
+
 		if (buffer->cur_pos_in_record < buffer->recordlen) {
 			// check if the rest of the record is empty
 			uint8_t *p = buffer->buffer + buffer->rptr + 1;
 			uint8_t n = buffer->recordlen - buffer->cur_pos_in_record - 1;
 			while (n) {
-debug_printf("check n=%d, *p=%d (%d)\n", n, *p, p-buffer->buffer);
+				//debug_printf("check n=%d, *p=%d (%d)\n", n, *p, p-buffer->buffer);
 				if (*p) {
 					*iseof = 0;	// not an EOF
 					break;
@@ -904,19 +908,23 @@ debug_printf("check n=%d, *p=%d (%d)\n", n, *p, p-buffer->buffer);
 			// defaults to EOF
 			// go to next record (read it when used)
 			buffer->buf_recordno++;
+			buffer->pflag &= ~PFLAG_ISREAD;
 			if ((buffer->lastvalid - buffer->rptr) > buffer->recordlen) {
 				// the following record is still in the buffer
 				buffer->cur_pos_in_record = 0;
 				buffer->pos_of_record += buffer->recordlen;
 				buffer->rptr = buffer->pos_of_record;
+				buffer->wptr = buffer->pos_of_record;
 			} else {
 				// read it when needed on the next read
 				buffer->pflag &= ~PFLAG_PRELOAD;
 			}
 		}
+#ifdef DEBUG_RELFILE
 debug_printf("read -> %s (pload=%d, data=%d, err=%d)(ptr=%d, rec pos=%d, reclen=%d, lastvalid=%d)\n", 
 		(*iseof) ? "EOF" : "WRITE", preload, *data, *err, buffer->rptr, buffer->cur_pos_in_record,
 		buffer->recordlen, buffer->lastvalid);
+#endif
 	}
 
 	return 0;
@@ -932,10 +940,11 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 
 	cmdbuf_t *buffer = cmdbuf_find(channelno);
 	if (buffer != NULL) {
-
+#ifdef DEBUG_RELFILE
 		debug_printf("wptr=%d, pflag=%02x, 1st data=%d (%02x)\n", 
 					buffer->wptr, 
 					buffer->pflag, c, c);
+#endif
 
 		if (buffer->pflag & PFLAG_ISREAD) {
 			// we need to skip to the beginning of the next record
@@ -950,7 +959,7 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 		err = CBM_ERROR_OK;
 
 		// write single byte
-debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", c, buffer->wptr, buffer->cur_pos_in_record, buffer->recordlen);
+		//debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", c, buffer->wptr, buffer->cur_pos_in_record, buffer->recordlen);
 		if (buffer->cur_pos_in_record < buffer->recordlen) {
 			// not rel file or end of record reached
 			buffer->buffer[buffer->wptr] = c;
@@ -959,7 +968,7 @@ debug_printf("w %0x @ wptr=%d, pos in rec=%d, reclen=%d\n", c, buffer->wptr, buf
 			buffer->cur_pos_in_record++;
 		} else {
 			err = CBM_ERROR_OVERFLOW_IN_RECORD;
-debug_printf("-> overflow %d\n", err);
+			//debug_printf("-> overflow %d\n", err);
 			//return err;
 		}
 

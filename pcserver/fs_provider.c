@@ -95,6 +95,9 @@ static type_t record_type = {
 	sizeof(char[65536])
 };
 
+static int expand_relfile(File *file, long cursize, long curpos);
+static size_t file_get_size(FILE *fp);
+
 void fsp_init() {
 }
 
@@ -596,11 +599,13 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 	}
 	*reclen = recordlen;
 
-	if (type == FS_DIR_TYPE_REL && recordlen == 0) {
-		// not specifying record length means reading it from the file
-		// which we don't support. So let's give 62 FILE NOT FOUND as if
-		// the file weren't there
-		return CBM_ERROR_FILE_NOT_FOUND62;
+	if (type == FS_DIR_TYPE_REL) {
+		if (recordlen == 0) {
+			// not specifying record length means reading it from the file
+			// which we don't support. So let's give 62 FILE NOT FOUND as if
+			// the file weren't there
+			return CBM_ERROR_FILE_NOT_FOUND62;
+		}
 	}
 
 
@@ -692,6 +697,11 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			fclose(fp);
 			log_error("Could not reserve file\n");
 			er = CBM_ERROR_FAULT;
+		}
+		if (recordlen > 0) {
+			// allocate first block
+			long cursize = file_get_size(fp);
+			expand_relfile(file, cursize, 254);
 		}
 	} else {
 
@@ -837,22 +847,8 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	return -CBM_ERROR_FAULT;
 }
 
-// write file data
-static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
-	File *file = find_file(ep, tfd);
-
-	//log_debug("write_file: file=%p\n", file);
-
-	if (file != NULL) {
+static int expand_relfile(File *file, long cursize, long curpos) {
 		FILE *fp = file->fp;
-
-		if (file->recordlen > 0) {
-			long curpos = ftell(fp);
-			long cursize = file_get_size(fp);
-			log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
-			// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
-			// record
-			if ((curpos + file->recordlen) > cursize) {
 				char *buf = mem_alloc(&record_type);
 				size_t n;
 				int nrec;
@@ -889,8 +885,8 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 				// adjust newpos to record boundary (absolute file size)
 				pos = curpos;
 				n = pos % file->recordlen;
-				// partial record used, adjust (add full record if on boundary)
-				pos = pos + file->recordlen - n;
+				// partial record used, adjust (ignore rest)
+				pos = pos - n;
 				// now check for blocks
 				n = pos % 254;	// part used in last drive block
 				if (n > 0) {
@@ -931,6 +927,26 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 					log_errno("Could not write filler record");
 					return -CBM_ERROR_WRITE_ERROR;
 				}
+}
+
+// write file data
+static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
+	File *file = find_file(ep, tfd);
+
+	//log_debug("write_file: file=%p\n", file);
+
+	if (file != NULL) {
+		FILE *fp = file->fp;
+
+		if (file->recordlen > 0) {
+			long curpos = ftell(fp);
+			long cursize = file_get_size(fp);
+			log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
+			// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
+			// record
+			if ((curpos + file->recordlen) > cursize) {
+				// fill up such that currently written record has space
+				expand_relfile(file, cursize, curpos + file->recordlen);
 				// back to original file position
 				fseek(fp, curpos, SEEK_SET);
 			}
