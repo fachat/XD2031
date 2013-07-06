@@ -226,7 +226,7 @@ static void zero_terminate(char *dest, const char *source, uint8_t len) {
 }
 
 static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-	uint8_t (*callback)(int8_t channelno, int8_t errnum))
+	uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet))
 {
 	// submit a request/response packet; call the callback function when the
 	// response is received; If callback returns != 0 then the call is kept open,
@@ -457,7 +457,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			dump_packet(txbuf);
 			break;
 	}
-	callback(channelno, res);
+	callback(channelno, res, rxbuf);
 }
 
 
