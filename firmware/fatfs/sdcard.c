@@ -240,12 +240,12 @@ static inline void update_media_status (void)
 {
     uint8_t s = media_status;
 
-    if (SOCKWP)             /* Write protected */
+    if (sd_card_write_protected())             /* Write protected */
         s |= STA_PROTECT;
     else                    /* Write enabled */
         s &= ~STA_PROTECT;
 
-    if (SOCKINS)            /* Card inserted */
+    if (sd_card_inserted())            /* Card inserted */
         s &= ~STA_NODISK;
     else                    /* Socket empty */
         s |= (STA_NODISK | STA_NOINIT);
