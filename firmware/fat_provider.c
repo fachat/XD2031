@@ -51,28 +51,40 @@
 #include "petscii.h"
 #include "fat_provider.h"
 #include "dir.h"
+#include "dirconverter.h"
+#include "charconvert.h"
 
 
 #define  DEBUG_FAT
 
 /* ----- Glue to firmware -------------------------------------------------------------------- */
 
+static uint8_t current_charset;
+
 static void *prov_assign(const char *name);
 static void prov_free(void *epdata);
 static void fat_submit(void *epdata, packet_t *buf);
 static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
-                uint8_t (*callback)(int8_t channelno, int8_t errnum));
-static int8_t directory_converter(packet_t *p, uint8_t drive);
-static int8_t to_provider(packet_t *p);
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
+
+static charset_t charset(void *epdata) {
+	return current_charset;
+}
+
+static void set_charset(void *epdata, charset_t new_charset) {
+	current_charset = new_charset;
+}
 
 provider_t fat_provider  = {
 	prov_assign,
 	prov_free,
+	charset,
+	set_charset,
 	fat_submit,
 	fat_submit_call,
 	directory_converter,
-	to_provider
 };
+
 
 /* ----- Private provider data --------------------------------------------------------------- */
 
