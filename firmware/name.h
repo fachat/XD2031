@@ -55,7 +55,8 @@ typedef struct {
 	uint8_t	drive2;		// starts from 0 (real zero, not $30 = ASCII "0")
 	uint8_t *name2;		// pointer to the actual name after the '='
 	uint8_t	namelen2;	// length of remaining file name
-	uint16_t recordlen;	// length of record from opening 'L' file (REL)
+	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
+	uint16_t recordno;	// record number from P command
 } nameinfo_t;
 
 // nameinfo option bits

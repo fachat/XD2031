@@ -79,10 +79,10 @@
 #define   FS_SETOPT      21	/* set an option using an X-command string as payload */
 #define   FS_RESET       22	/* device sends this to notify it has reset */
 
-#define   FS_BLOCK       23	/* summary for U1,U2,B-R,B-W */
+#define   FS_BLOCK       23	/* summary for block commands */
 #define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
 
-#define	  FS_DIRECT	 25	/* Non-channel-specific commands similar to FS_BLOCK */ 
+#define	  FS_POSITION	 25	/* position a read/write pointer onto a rel file record */
 
 #define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
 

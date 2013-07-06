@@ -438,25 +438,28 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
        (void) opts; // silence warning unused parameter
-
+       (void) reclen;
        return open_file(ep, tfd, buf, "rb");
 }
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, const int is_overwrite) {
+static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, const int is_overwrite) {
        (void) is_overwrite;	// silence unused param warning
        (void) opts;             // silence unused param warning
+       (void) reclen;
        return open_file(ep, tfd, buf, "wb");
 }
 
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
        (void) opts;             // silence unused param warning
+       (void) reclen;
        return open_file(ep, tfd, buf, "ab");
 }
 
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
        (void) opts;             // silence unused param warning
+       (void) reclen;
        return open_file(ep, tfd, buf, "rwb");
 }
 

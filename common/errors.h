@@ -42,6 +42,7 @@
 typedef enum {
 	CBM_ERROR_OK 			= 0,
 	CBM_ERROR_SCRATCHED		= 1,
+	CBM_ERROR_OPEN_REL		= 2,	// opened a relative file (internal)
 	// in CBM DOS error numbers 20-29 are translated from FDC errors (mostly unused here)
 //	CBM_ERROR_WRITE_VERIFY		= 25,
 	CBM_ERROR_WRITE_PROTECT		= 26,
@@ -65,6 +66,7 @@ typedef enum {
 	// DOS file level problems
 //	CBM_ERROR_WRITE_FILE_OPEN	= 60,
 	CBM_ERROR_FILE_NOT_OPEN		= 61,	
+	CBM_ERROR_FILE_NOT_FOUND62	= 62,
 	CBM_ERROR_FILE_EXISTS		= 63,	// also used for EEXIST
 	CBM_ERROR_FILE_TYPE_MISMATCH	= 64,
 	CBM_ERROR_NO_BLOCK		= 65,	// error for FS_BLOCK_ALLOCATE
