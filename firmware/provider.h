@@ -60,6 +60,12 @@ typedef struct {
 	// return -1 if packet is too small to hold converted value
 	// note: first pointer argument is endpoint_t* (!)
 	int8_t (*directory_converter)(void *ep, packet_t *p, uint8_t);
+	// channel_get shortcut into provider (where applicable)
+	int8_t (*channel_get)(void *pdata, int8_t channelno, 
+				uint8_t *data, uint8_t *iseof, int8_t *err, uint8_t preload);
+	// channel_put shortcut into provider (where applicable)
+	int8_t (*channel_put)(void *pdata, int8_t channelno, 
+				char c, uint8_t forceflush);
 } provider_t;
 
 typedef struct {

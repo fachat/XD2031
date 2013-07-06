@@ -549,8 +549,9 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 	return fp;
 }
 
-static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
 	(void)opts; // silence warning unused parameter
+	(void) reclen;
 
 	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {

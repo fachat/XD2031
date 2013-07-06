@@ -68,6 +68,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	// construct it from the parts at the beginning after parsing it
 	// (because we may need to insert bytes at some places, which would
 	// be difficult)
+	// Note that assembling takes place in assemble_filename_packet below.
 	uint8_t diff = CONFIG_COMMAND_BUFFER_SIZE - len;
 	memmove(in->command_buffer + diff, in->command_buffer, len);
 
@@ -92,6 +93,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	result->name2 = NULL;
 	result->namelen2 = 0;
 	result->recordlen = 0;
+	result->recordno = 0;
 	if (parsehint & PARSEHINT_COMMAND) {
 		state = NAME_COMMAND;
 		result->name = NULL;
@@ -114,6 +116,12 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 			if (result->cmd == CMD_NONE) {
 				if (isalpha(*p)) {
 					result->cmd = command_find(p);
+					if (result->cmd == CMD_POSITION) {
+						// the position command is fully binary
+						result->name = p+1;
+						result->namelen = len - 1;
+						return;
+					}
 					result->namelen = 0;	// just to be sure, until we parsed it
 					state = NAME_CMDDRIVE;
 				} 
@@ -317,7 +325,8 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 		return p - trg;
 	}
 
-	strcpy((char*)p, (char*)nameinfo->name);
+	// those areas may overlap
+	memmove((char*)p, (char*)nameinfo->name, nameinfo->namelen + 1);
 	// let p point to the byte after the null byte
 	p += nameinfo->namelen + 1;
 
@@ -327,7 +336,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 		*p = nameinfo->drive2;
 		p++;
 
-		strcpy((char*)p, (char*)nameinfo->name2);
+		memmove((char*)p, (char*)nameinfo->name2, nameinfo->namelen2 + 1);
 		p += nameinfo->namelen2 + 1;
 	} else 
 	if (nameinfo->type != 0) {

@@ -39,7 +39,7 @@
 #undef DEBUG_FILE
 
 #define	MAX_ACTIVE_OPEN		2
-#define	OPEN_RX_DATA_LEN	2
+#define	OPEN_RX_DATA_LEN	3	// error code, plus optional 8 bit scratched or 16 bit record length
 
 static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket);
 
@@ -275,6 +275,21 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
+		// proxy relative files through the bufcmd layer
+		if (nameinfo.type == 'L') {
+			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
+			int8_t err = bufcmd_open_relative(&endpoint, channel_no, nameinfo.recordlen);
+			provider = endpoint->provider;
+debug_printf("new endpoint=%p\n", endpoint);
+			if (err != CBM_ERROR_OK) {
+debug_printf("-> err=%d\n", err);
+				set_error(errormsg, err);
+				return -1;
+			}
+		}
+
+		// TODO: if provider->channel_* are not NULL, we should probably not allocate a channel
+		// but that would break the FILE OPEN detection here.
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
 			debug_puts("FILE OPEN ERROR");
@@ -312,6 +327,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 }
 
 static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
+
+	debug_puts("file_open_callback\n"); debug_flush();
 
 	// callback to opener
 	// free data structure for next open	

@@ -80,6 +80,9 @@ command_t command_find(uint8_t *input) {
 		// extensions for XD2031
 		return CMD_EXT;
 		break;
+	case 'P':
+		return CMD_POSITION;
+		break;
 	}
         return CMD_SYNTAX;
 }
@@ -127,6 +130,9 @@ const char *command_to_name(command_t cmd) {
 		break;
      	case CMD_OVERWRITE:
 		return "@";
+		break;
+	case CMD_POSITION:
+		return "P";
 		break;
    }
         return "";
@@ -221,6 +227,15 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		debug_puts("CONFIGURATION EXTENSION\n");
 		int8_t rv = rtconfig_set(rtconf, (char*) command->command_buffer);
 		callback(rv, NULL);
+		return 0;
+	}
+	if (nameinfo.cmd == CMD_POSITION) {
+		debug_puts("REL FILE POSITION\n");
+		int8_t rv = bufcmd_position(bus, (char*) nameinfo.name, nameinfo.namelen, errormsg);
+		if (rv >= 0) {
+			callback(rv, NULL);
+			return 0;
+		}
 		return 0;
 	}
 

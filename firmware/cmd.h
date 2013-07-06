@@ -49,6 +49,7 @@ typedef enum {
         CMD_INITIALIZE,
         CMD_RENAME = FS_MOVE,
         CMD_SCRATCH = FS_DELETE,
+	CMD_POSITION,
 	//
         // unsupported
         //

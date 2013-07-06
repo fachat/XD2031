@@ -28,7 +28,7 @@
 // more or less a class definition type
 typedef struct {
 	const char 	*name;
-	int		sizeoftype;
+	unsigned int	sizeoftype;
 } type_t;
 
 typedef int 	bool_t;
