@@ -1,6 +1,10 @@
 # XS-1541 Options
 
 USE_FAT=y                       # Enable optional FAT module?
+# Select one of the following MCUs:
+#MCU=644
+MCU=644p
+#MCU=1284p
 
 #########################################################################
 # Should not be modified
@@ -10,9 +14,9 @@ USE_FAT=y                       # Enable optional FAT module?
 DEVICEOPTS=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM
 
 # MCU name madness
-ARCHDEVICE = -mmcu=atmega644p   # for compiling
-TARGET_MCU = m644p              # for programming with AVRDUDE
-SIZE_MCU   = atmega644p         # for info about memory usage
+ARCHDEVICE = -mmcu=atmega$(MCU)   # for compiling
+TARGET_MCU = m$(MCU)              # for programming with AVRDUDE
+SIZE_MCU   = atmega$(MCU)         # for info about memory usage
 
 # AVR fuses settings
 LFUSE = ff
