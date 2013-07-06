@@ -105,21 +105,21 @@ char *splitpath(char *path, char **dir) {
 }
 
 /* concats path and filename
- * returns ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
- * otherwise returns ERROR_OK
+ * returns CBM_ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
+ * otherwise returns CBM_ERROR_OK
  */
 int8_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
-	if((strlen(dir) + 1 + strlen(name)) > pathmax) return ERROR_FILE_NAME_TOO_LONG;
+	if((strlen(dir) + 1 + strlen(name)) > pathmax) return CBM_ERROR_FILE_NAME_TOO_LONG;
 	strcpy(path, dir);
 	strcat(path, "/");
 	strcat(path, name);
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 // just a dummy action for debug purposes
 int8_t dummy_action(const char *path) {
 	debug_printf("--> '%s'\n", path);
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }
 
 int8_t traverse(
@@ -180,5 +180,5 @@ int8_t traverse(
 			if(res || (*matches == max_matches)) return res;
 		}
 	}
-	return ERROR_OK;
+	return CBM_ERROR_OK;
 }

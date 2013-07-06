@@ -186,7 +186,7 @@ static FIL *tbl_find_file(uint8_t chan) {
 
 static FRESULT tbl_close_file(uint8_t chan) {
 	uint8_t pos;
-	FRESULT res = ERROR_OK;
+	FRESULT res = CBM_ERROR_OK;
 
 	if((pos = tbl_chpos(chan)) != AVAILABLE) {
 		FRESULT res = f_close(&tbl[pos].f);
@@ -234,8 +234,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 	// response is received; If callback returns != 0 then the call is kept open,
 	// and further responses can be received
 
-	int8_t res = ERROR_FAULT;
-	int8_t res2 = ERROR_FAULT;
+	int8_t res = CBM_ERROR_FAULT;
 	UINT transferred = 0;
 	FIL *fp;
 	int8_t ds;
@@ -280,7 +279,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, ERROR_NO_CHANNEL);
+				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
 			}
 			break;
 
@@ -294,7 +293,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, ERROR_NO_CHANNEL);
+				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
 			}
 			break;
 
@@ -308,7 +307,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, ERROR_NO_CHANNEL);
+				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
 			}
 			break;
 
@@ -323,7 +322,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, ERROR_NO_CHANNEL);
+				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
 			}
 			break;
 
@@ -341,7 +340,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, ERROR_NO_CHANNEL);
+				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
 			}
 			break;
 
@@ -379,7 +378,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 			dir_drive = txbuf->buffer[0];
 			if(tbl_ins_dir(channelno)) {
-				res = ERROR_NO_CHANNEL;
+				res = CBM_ERROR_NO_CHANNEL;
 				debug_puts("No channel for FS_OPEN_DR"); debug_putcrlf();
 			}
 			debug_printf("f_opendir: %d", res); debug_putcrlf();
@@ -405,7 +404,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			ds = get_dir_state(channelno);
 			if(ds < 0 ) {
 				debug_printf("No channel found for FS_READ #%d", channelno); debug_putcrlf();
-				res = ERROR_NO_CHANNEL;
+				res = CBM_ERROR_NO_CHANNEL;
 			} else if(ds) {
 				// Read directory
 				res = fs_read_dir(epdata, channelno, rxbuf);
@@ -444,7 +443,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		case FS_FORMAT:
 		case FS_CHKDSK:
 			debug_printf("Command %d unsupported", txbuf->type);
-			packet_write_char(rxbuf, ERROR_SYNTAX_INVAL);
+			packet_write_char(rxbuf, CBM_ERROR_SYNTAX_INVAL);
 			break;
 
 		default:
@@ -468,7 +467,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			/* no channel */
 			debug_puts("fs_read_dir: no channel!"); debug_putcrlf();
 			packet->type = FS_EOF;
-			return -ERROR_NO_CHANNEL;
+			return -CBM_ERROR_NO_CHANNEL;
 			break;
 
 		case DIR_HEAD:
@@ -580,14 +579,14 @@ static int8_t fs_move(char *buf) {
 	/* Rename/move a file or directory
 	 * DO NOT RENAME/MOVE OPEN OBJECTS!
 	 */
-	int8_t er = ERROR_FAULT;
+	int8_t er = CBM_ERROR_FAULT;
 	uint8_t p = 0;
 	char *from, *to;
 	FILINFO fileinfo;
 
 	// first find the two names separated by "="
 	while (buf[p] != 0 && buf[p] != '=') p++;
-	if (!buf[p]) return ERROR_SYNTAX_NONAME;
+	if (!buf[p]) return CBM_ERROR_SYNTAX_NONAME;
 
 	buf[p] = 0;
 	from = buf + p + 1;
@@ -595,7 +594,7 @@ static int8_t fs_move(char *buf) {
 
 	debug_printf("FS_MOVE '%s' to '%s'", from, to); debug_putcrlf();
 
-	if((er = f_stat(to, &fileinfo)) == ERROR_OK) return ERROR_FILE_EXISTS;
+	if((er = f_stat(to, &fileinfo)) == CBM_ERROR_OK) return CBM_ERROR_FILE_EXISTS;
 	if(er != FR_NO_FILE) return er;
 
 	return f_rename(from, to);
@@ -613,7 +612,7 @@ int8_t _scratch(const char *path) {
 
 /* Deletes one or more file masks separated by commas
  * Limits the reported number of scratched files to 99
- * Returns ERROR_SCRATCHED plus number of scratched files 
+ * Returns CBM_ERROR_SCRATCHED plus number of scratched files
  * Returns only the error but not the number of scratched files in case of any errors
  */
 static void fs_delete(char *path, packet_t *packet) {
@@ -636,7 +635,7 @@ static void fs_delete(char *path, packet_t *packet) {
 		path = pnext ? pnext + 1 : NULL;
 	}
 
-	packet_write_char(packet, ERROR_SCRATCHED);
+	packet_write_char(packet, CBM_ERROR_SCRATCHED);
 	packet_write_char(packet, (files_scratched > 99) ? 99 : files_scratched);
 
 }
