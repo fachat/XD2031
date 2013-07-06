@@ -616,7 +616,7 @@ int8_t _scratch(const char *path) {
  * Returns only the error but not the number of scratched files in case of any errors
  */
 static void fs_delete(char *path, packet_t *packet) {
-	int8_t res;
+	int8_t res = CBM_ERROR_OK;
 	uint16_t files_scratched = 0;
 	char *pnext;
 
@@ -632,11 +632,17 @@ static void fs_delete(char *path, packet_t *packet) {
 			AM_DIR | AM_RDO,	// ignore directories and read-only-files
 			_scratch);
 
+		if(res) break;
+
 		path = pnext ? pnext + 1 : NULL;
 	}
 
-	packet_write_char(packet, CBM_ERROR_SCRATCHED);
-	packet_write_char(packet, (files_scratched > 99) ? 99 : files_scratched);
+	if(res) {
+		packet_write_char(packet, res);
+	} else {
+		packet_write_char(packet, CBM_ERROR_SCRATCHED);
+		packet_write_char(packet, (files_scratched > 99) ? 99 : files_scratched);
+	}
 
 }
 
