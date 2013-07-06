@@ -45,4 +45,12 @@ static inline void device_leds_off (void) {
     ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
 }
 
+static inline uint8_t sd_card_write_protected(void) {
+	return (INPUT_SD_WP & _BV(PIN_SD_WP));
+}
+
+static inline uint8_t sd_card_inserted(void) {
+	return (!(INPUT_SD_CD & _BV(PIN_SD_CD)));
+}
+
 #endif

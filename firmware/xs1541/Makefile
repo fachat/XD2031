@@ -1,6 +1,7 @@
 # XS-1541 Options
 
-USE_FAT=y                       # Enable optional FAT module?
+USE_FAT=n                       # Enable optional FAT module?
+
 # Select one of the following MCUs:
 #MCU=644
 MCU=644p

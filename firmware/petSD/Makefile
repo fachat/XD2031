@@ -1,12 +1,14 @@
 # petSD Options
 
 USE_FAT=y                       # Enable optional FAT module?
+USE_RTC=n			# Enable optional real time clock?
 
 #########################################################################
 # Should not be modified
 
 # specific switches for this device
-DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM -DHAS_RTC
+#DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM -DHAS_RTC
+DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM
 
 # MCU name madness
 ARCHDEVICE = -mmcu=atmega1284p  # for compiling
@@ -31,12 +33,14 @@ ifeq ($(strip $(USE_FAT)),y)
 	DEVICEDEPS+=avr/spi.h               # SPI routines
 	DEVICEFILES+=fatfs/sdcard.c         # SD card low level routines
 	DEVICEDEPS+=rtc/rtc.h               # Real time clock defs and prototypes
+	DEVICEFILES+=fat_provider.c         # FAT provider
+	DEVICEDEPS+=fat_provider.h
+endif
+ifeq ($(strip $(USE_RTC)),y)
 	DEVICEFILES+=rtc/ds1307.c           # DS1307 Real time clock routines
 	DEVICEDEPS+=i2c/i2c.h               # I2C prototypes
 	DEVICEFILES+=i2c/i2c.c              # I2C high level routines
 	DEVICEFILES+=i2c/i2c-bb.c           # I2C bit banging routines
-	DEVICEFILES+=fat_provider.c         # FAT provider
-	DEVICEDEPS+=fat_provider.h
 endif
 
 ## Assembler files

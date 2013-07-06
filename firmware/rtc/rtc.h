@@ -18,17 +18,19 @@ int8_t rtc_init (void);			/* Initialize RTC */
 uint8_t RTC_OK;				/* Nonzero if RTC available and valid */
 int8_t rtc_gettime (RTC*);		/* Get time */
 int8_t rtc_settime (const RTC*);	/* Set time */
-#endif
 
-/* -------------------------------------------------------------------------- */
+#else
 
-#ifndef HAS_RTC
-  static int8_t rtc_init(void) { return 0; }
-  static uint8_t RTC_OK=0;			/* RTC not available */
+static uint8_t RTC_OK=0;			/* RTC not available */
 
-  static int8_t rtc_gettime (RTC* x) {		/* Get time */	
+static inline int8_t rtc_init(void) {
+    RTC_OK = 0;
+    return 0;
+}
+
+static inline int8_t rtc_gettime (RTC* x) {	/* Get time */
     return 0;					/* TODO: insert default timestamp here */
-  }					
+}					
 
 #endif
 

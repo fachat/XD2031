@@ -104,4 +104,33 @@
 #define LED_PORT		PORTC
 #define LED_BIT			PC0
 
+// SPI
+#define SPI_PORT 		PORTB
+#define SPI_DDR 		DDRB
+#define SPI_PIN_SCK 		PB7
+#define SPI_PIN_MISO 		PB6
+#define SPI_PIN_MOSI 		PB5
+
+// SD card select
+#define PORT_SD_CS 		PORTB
+#define DDR_SD_CS 		DDRB
+#define PIN_SD_CS 		PB4
+
+// HW has no SD card detect switch, hence defined as normal function:
+#define MEDIA_CHANGE_HANDLER 	void dummy_media_change_handler(void)
+
+#if 0
+// SD card write protect switch
+#define INPUT_SD_WP 		PINC
+#define PORT_SD_WP 		PORTC
+#define DDR_SD_WP 		DDRC
+#define PIN_SD_WP 		PC3
+
+// SD card detect switch
+#define INPUT_SD_CD 		PIND
+#define PORT_SD_CD 		PORTD
+#define DDR_SD_CD 		DDRD
+#define PIN_SD_CD 		PD4
+#endif
+
 #endif
