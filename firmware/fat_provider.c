@@ -348,7 +348,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			/* open a directory for reading */
 			debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
 			char *b, *d;
-			if (txbuf->len > 1) {
+			if (txbuf->len > 2) { // 2 bytes: drive number and zero terminator
 				debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
 				// If path is a directory, list its contents
 				if(f_stat(path, &Finfo) == FR_OK) {
