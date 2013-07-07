@@ -85,7 +85,8 @@ provider_t fat_provider  = {
 	directory_converter,
 };
 
-
+#define FALSE 0
+#define TRUE -1
 /* ----- Private provider data --------------------------------------------------------------- */
 
 static FATFS Fatfs[_VOLUMES];	/* File system object for each logical drive */
@@ -115,7 +116,6 @@ static FILINFO Finfo;
 static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
 static int8_t fs_move(char *buf);
 static void fs_delete(char *path, packet_t *p);
-
 
 /* ----- File / Channel table ---------------------------------------------------------------- */
 
@@ -233,6 +233,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 	// and further responses can be received
 
 	int8_t res = CBM_ERROR_FAULT;
+	int8_t reply_as_usual = TRUE;
 	UINT transferred = 0;
 	FIL *fp;
 	int8_t ds;
@@ -247,24 +248,22 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		char open_name[17];
 #	endif
 
+
 	switch(txbuf->type) {
 		case FS_CHDIR:
 			debug_printf("CHDIR into '%s'\n", path);
 			res = f_chdir(path);
-			packet_write_char(rxbuf, res);
 			break;
 
 		case FS_MKDIR:
 			debug_printf("MKDIR '%s'\n", path);
 			res = f_mkdir(path);
-			packet_write_char(rxbuf, res);
 			break;
 
 		case FS_RMDIR:
 			// will unlink files as well. Should I test first, if "path" is really a directory?
 			debug_printf("RMDIR '%s'\n", path);
 			res = f_unlink(path);
-			packet_write_char(rxbuf, res);
 			break;
 
 		case FS_OPEN_RD:
@@ -274,10 +273,9 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				zero_terminate(open_name, path, len);
 				res = f_open(fp, open_name, FA_READ | FA_OPEN_EXISTING);
 				debug_printf("FS_OPEN_RD '%s' #%d, res=%d\n", open_name, channelno, res);
-				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
+				res = CBM_ERROR_NO_CHANNEL;
 			}
 			break;
 
@@ -288,10 +286,9 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				zero_terminate(open_name, path, len);
 				res = f_open(fp, open_name, FA_WRITE | FA_CREATE_NEW);
 				debug_printf("FS_OPEN_WR '%s' #%d, res=%d\n", open_name, channelno, res);
-				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
+				res = CBM_ERROR_NO_CHANNEL;
 			}
 			break;
 
@@ -302,10 +299,9 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				zero_terminate(open_name, path, len);
 				res = f_open(fp, open_name, FA_READ | FA_WRITE);
 				debug_printf("FS_OPEN_RW '%s' #%d, res=%d\n", open_name, channelno, res);
-				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
+				res = CBM_ERROR_NO_CHANNEL;
 			}
 			break;
 
@@ -317,10 +313,9 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				zero_terminate(open_name, path, len);
 				res = f_open(fp, open_name, FA_WRITE | FA_CREATE_ALWAYS);
 				debug_printf("FS_OPEN_OW '%s' #%d, res=%d\n", open_name, channelno, res);
-				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
+				res = CBM_ERROR_NO_CHANNEL;
 			}
 			break;
 
@@ -335,14 +330,13 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				/* move to end of file to append data */
 				res = f_lseek(fp, f_size(fp));
 				debug_printf("Move to EOF to append data: %d\n", res);
-				packet_write_char(rxbuf, res);
 			} else {
 				// too many files!
-				packet_write_char(rxbuf, CBM_ERROR_NO_CHANNEL);
+				res = CBM_ERROR_NO_CHANNEL;
 			}
 			break;
 
-		case FS_OPEN_DR:
+		case FS_OPEN_DR: // TODO: check res return values
 			/* open a directory for reading */
 			debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
 			char *b, *d;
@@ -386,23 +380,26 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		case FS_CLOSE:
 			/* close a file, ignored when not opened first */
 			debug_printf("FS_CLOSE #%d", channelno); debug_putcrlf();
-			packet_write_char(rxbuf, tbl_close_file(channelno));
+			res = tbl_close_file(channelno);
 			break;
 
 		case FS_MOVE:
 			/* rename / move a file */
-			packet_write_char(rxbuf, fs_move(path));
+			res = fs_move(path);
 			break;
 
 		case FS_DELETE:
-			fs_delete(path, rxbuf);
+			reply_as_usual = FALSE;
+			fs_delete(path, rxbuf); // replies via rxbuf
 			break;
 
 		case FS_READ:
+			reply_as_usual = FALSE;
+			debug_puts("FS_READ\n");
 			ds = get_dir_state(channelno);
 			if(ds < 0 ) {
 				debug_printf("No channel found for FS_READ #%d", channelno); debug_putcrlf();
-				res = CBM_ERROR_NO_CHANNEL;
+				res = CBM_ERROR_FILE_NOT_OPEN;
 			} else if(ds) {
 				// Read directory
 				res = fs_read_dir(epdata, channelno, rxbuf);
@@ -411,16 +408,24 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				fp = tbl_find_file(channelno);
 				res = f_read(fp, rxbuf->buffer, rxbuf->len, &transferred);
 				debug_printf("%d/%d bytes read from #%d, res=%d\n", transferred, rxbuf->len, channelno, res);
-				rxbuf->wp = transferred;
-				if(fp->fptr == fp->fsize) {
-					rxbuf->type = FS_EOF;
-				} else {
-					rxbuf->type = FS_WRITE;
+				if(res) {
+					// an error is sent as REPLY with error code
+					rxbuf->type = FS_REPLY;
+					packet_write_char(rxbuf, -res);
 				}
 
-				if(res) rxbuf->type = FS_EOF;
-				// TODO: add FS_REPLY when allowed (not yet)
+				if(!res) {
+					// a WRITE mirrors the READ request when ok
+					rxbuf->wp = transferred;
+					if(fp->fptr == fp->fsize) {
+						rxbuf->type = FS_EOF;
+					} else {
+						rxbuf->type = FS_WRITE;
+					}
+				}
 			}
+
+
 			break;
 
 		case FS_WRITE:
@@ -434,6 +439,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				}
 			} else {
 				debug_printf("No channel found for FS_WRITE/FS_EOF #%d", channelno); debug_putcrlf();
+				res = CBM_ERROR_FILE_NOT_OPEN;
 			}
 
 			break;
@@ -441,13 +447,19 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		case FS_FORMAT:
 		case FS_CHKDSK:
 			debug_printf("Command %d unsupported", txbuf->type);
-			packet_write_char(rxbuf, CBM_ERROR_SYNTAX_INVAL);
+			res = CBM_ERROR_SYNTAX_INVAL;
 			break;
 
 		default:
 			debug_puts("### UNKNOWN CMD ###"); debug_putcrlf();
 			debug_dump_packet(txbuf);
 			break;
+	}
+
+	if(reply_as_usual) {
+		debug_printf("rp as usual with res=%d", res); debug_putcrlf();
+		rxbuf->type = FS_REPLY;	// return error code with FS_REPLY
+		packet_write_char(rxbuf, res);
 	}
 	callback(channelno, res, rxbuf);
 }
@@ -465,7 +477,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			/* no channel */
 			debug_puts("fs_read_dir: no channel!"); debug_putcrlf();
 			packet->type = FS_EOF;
-			return -CBM_ERROR_NO_CHANNEL;
+			return CBM_ERROR_FILE_NOT_OPEN;
 			break;
 
 		case DIR_HEAD:
