@@ -30,7 +30,11 @@ static inline int8_t rtc_init(void) {
 
 static inline int8_t rtc_gettime (RTC* x) {	/* Get time */
     return 0;					/* TODO: insert default timestamp here */
-}					
+}
+
+static inline int8_t rtc_settime(const RTC* x) {
+    return -1;
+}
 
 #endif
 
