@@ -479,11 +479,16 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			p[FS_DIR_LEN+3] = 0;
 			// TODO: add date
 			p[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
+			memset(p + FS_DIR_NAME, ' ', 16); // init headline with 16 spaces
 			strncpy(p+FS_DIR_NAME, dir_headline, 16);
+			// replace zero terminator with space to get a 16 characters long name
+			for(char *ptr = p + FS_DIR_NAME; ptr < p + FS_DIR_NAME + 16; ptr++) {
+				if(!*ptr) *ptr = ' ';
+			}
 			p[FS_DIR_NAME + 16] = 0;
 
 			tbl[tblpos].dir_state = DIR_FILES;
-			packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
+			packet_update_wp(packet, FS_DIR_NAME + 17);
 			return 0;
 
 		case DIR_FILES:
@@ -530,7 +535,16 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			p[FS_DIR_HOUR] = Finfo.ftime >> 11;
 			p[FS_DIR_MIN] = (Finfo.ftime >> 5) & 63;
 
-			p[FS_DIR_MODE] = Finfo.fattrib & AM_DIR ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
+			if(Finfo.fattrib & AM_DIR) {
+				p[FS_DIR_MODE] = FS_DIR_MOD_DIR;	// DIR
+			} else {
+				p[FS_DIR_MODE] = FS_DIR_MOD_FIL;
+				p[FS_DIR_ATTR] = FS_DIR_TYPE_PRG;	// PRG for all files
+			}
+
+			// write protected?
+			if(Finfo.fattrib & AM_RDO) p[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
+
 
 #			ifdef _USE_LFN
 				if((strlen(Lfname) > 16 ) || (!Lfname[0])) {
