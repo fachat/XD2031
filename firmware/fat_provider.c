@@ -116,8 +116,6 @@ static int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
 static int8_t fs_move(char *buf);
 static void fs_delete(char *path, packet_t *p);
 
-// debug functions
-static void dump_packet(packet_t *p);
 
 /* ----- File / Channel table ---------------------------------------------------------------- */
 
@@ -448,7 +446,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 		default:
 			debug_puts("### UNKNOWN CMD ###"); debug_putcrlf();
-			dump_packet(txbuf);
+			debug_dump_packet(txbuf);
 			break;
 	}
 	callback(channelno, res, rxbuf);
@@ -658,45 +656,4 @@ static void fs_delete(char *path, packet_t *packet) {
 		packet_write_char(packet, (files_scratched > 99) ? 99 : files_scratched);
 	}
 
-}
-
-/* ----- Debug routines ---------------------------------------------------------------------- */
-
-static void dump_packet(packet_t *p)
-{
-	uint16_t tot = 0;
-	uint8_t line = 0;
-	uint8_t x = 0;
-
-	debug_puts("--- dump packet ---"); debug_putcrlf();
-	debug_printf("ptr: %p ", p);
-	debug_printf("type: %d ", p->type);
-	debug_printf("chan: %d   ", p->chan);
-	debug_printf("rp: %d wp: %d len: %d ", p->rp, p->wp, p->len);
-	debug_putcrlf();
-	if(p->len) {
-		while(tot < p->len) {
-			debug_printf("%04X  ", tot);
-			for(x=0; x<16; x++) {
-				if(line+x < p->len) {
-					tot++;
-					debug_printf("%02X ", p->buffer[line+x]);
-				}
-				else debug_puts("   ");
-				if(x == 7) debug_putc(' ');
-			}
-			debug_puts(" |");
-			for(x=0; x<16; x++) {
-				if(line+x < p->len) {
-					uint8_t c = p->buffer[line+x];
-					if(isprint(c)) debug_putc(c); else debug_putc(' ');
-				} else debug_putc(' ');
-			}
-			debug_putc('|');
-			debug_putcrlf();
-			line = tot;
-		}
-
-	}
-	debug_puts("--- end of dump ---"); debug_putcrlf();
 }

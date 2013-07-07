@@ -29,6 +29,7 @@
 
 #include "debug.h"
 #include "petscii.h"
+#include "packet.h"
 
 #if DEBUG
 
@@ -62,6 +63,18 @@ void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
 		}
 
 	}
+}
+
+
+void debug_dump_packet(packet_t *p) {
+	debug_puts("--- dump packet ---"); debug_putcrlf();
+	debug_printf("ptr: %p ", p);
+	debug_printf("type: %d ", p->type);
+	debug_printf("chan: %d   ", p->chan);
+	debug_printf("rp: %d wp: %d len: %d ", p->rp, p->wp, p->len);
+	debug_putcrlf();
+	if(p->len) debug_hexdump(p->buffer, p->len, 0);
+	debug_puts("--- end of dump ---"); debug_putcrlf();
 }
 
 #endif
