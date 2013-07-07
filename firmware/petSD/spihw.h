@@ -37,10 +37,15 @@ static inline __attribute__((always_inline)) void slow_spi_clk(void) {
 }
 
 static inline __attribute__((always_inline)) void fast_spi_clk(void) {
+#if 0
     /* Set SPI clock to 18.432 kHz / 8 = 2.304 MHz after card init */
     SPSR = _BV(SPI2X);
     SPCR &= ~_BV(SPR1);
     SPCR |= _BV(SPR0);
+#endif
+     /* Set SPI clock to 18.432 kHz / 2 = 9.216 MHz after card init */
+    SPSR = _BV(SPI2X);
+    SPCR &= ~( _BV(SPR0) | _BV(SPR0) );
 }
 
 static inline __attribute__((always_inline)) void spi_init (void) {                                     
