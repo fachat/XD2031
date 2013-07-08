@@ -67,6 +67,7 @@ void usage(void) {
 		"               -Xiec:U=9\n"
 		"   -d <device>	define serial device to use\n"
 		"   -d auto     auto-detect serial device\n"
+		"   -D          run as daemon, disable user interface\n"
 		"   -v          enable debug log output\n"
 		"   -?          gives you this help text\n"
 	);
@@ -111,6 +112,9 @@ int main(int argc, char *argv[]) {
 		break;
 	    case 'v':
 		verbose = 1;
+		break;
+	    case 'D':
+		disable_user_interface();
 		break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);
