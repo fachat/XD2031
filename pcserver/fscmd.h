@@ -43,5 +43,7 @@ int cmd_loop(serial_port_t readfs, serial_port_t writefd);
 
 //void do_cmd(char *buf, int fs);
 
+void disable_user_interface(void);
+
 #endif
 

@@ -62,6 +62,7 @@
 static void cmd_dispatch(char *buf, serial_port_t fs);
 static void write_packet(serial_port_t fd, char *retbuf);
 
+static int user_interface_enabled = TRUE;
 
 //------------------------------------------------------------------------------------
 // debug log helper
@@ -249,6 +250,10 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 	write_packet(writefd, buf);
 }
 
+void disable_user_interface(void) {
+	user_interface_enabled = FALSE;
+	log_warn("User interface disabled. Abort with Ctrl-C / sudo service fsser stop\n");
+}
 
 #define INBUF_SIZE 1024
 // reads stdin and returns true, if the main loop should abort
@@ -301,7 +306,9 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
         wrp = rdp = 0;
 
         for(;;) {
-	      if(os_stdin_has_data()) if(cmd_process_stdin()) return 0;
+	      if(user_interface_enabled) {
+		if(os_stdin_has_data()) if(cmd_process_stdin()) return 0;
+	      }
 
 	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
