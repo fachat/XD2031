@@ -146,7 +146,7 @@ dmg:
 	echo "read -p \"Press ENTER to continue...\"" >> dmg/XD-2031-uninstall
 	chmod +x dmg/XD-2031-uninstall
 	# Create dmg image from dmg/ directory
-	hdiutil create -srcfolder dmg -volname "XD-2031" xd2031.dmg
+	hdiutil create -srcfolder dmg -volname "XD-2031" xd2031-osx-$$(date +%Y-%m-%d).dmg
 	# Clean again
 	rm -rf fauxroot dmg
 
