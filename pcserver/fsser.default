@@ -1,1 +1,1 @@
-DAEMON_ARGS="-d /dev/ttyUSB0 -A0=fs:/usr/local/xd2031/sample -A1=fs:/usr/local/xd2031/tools ."
+DAEMON_ARGS="-d /dev/ttyUSB0 -A0:fs=/usr/local/xd2031/sample -A1:fs=/usr/local/xd2031/tools ."
