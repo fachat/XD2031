@@ -31,7 +31,10 @@
 #include "petscii.h"
 
 static int verbose = 0;
-static int newline = 1;
+
+static enum lastlog {
+	lastlog_anything, lastlog_warn, lastlog_error, lastlog_info, lastlog_debug
+} newline = lastlog_anything;
 
 void set_verbose() {
 	verbose = 1;
@@ -84,12 +87,12 @@ void log_warn(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-	if (newline != 1) {
+	if (newline != lastlog_warn) {
        		printf("WRN:");
 	}
-	newline = 0;
+	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
-		newline = 1;
+		newline = lastlog_warn;
 	}
         vprintf(msg, args);
 	fflush(stdout);
@@ -99,12 +102,12 @@ void log_error(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-	if (newline != 2) {
+	if (newline != lastlog_error) {
        		printf("ERR:");
 	}
-	newline = 0;
+	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
-		newline = 2;
+		newline = lastlog_error;
 	}
         vprintf(msg, args);
 	fflush(stdout);
@@ -114,12 +117,12 @@ void log_info(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
-       	if (newline != 3) {
+	if (newline != lastlog_info) {
 		printf("INF:");
 	}
-	newline = 0;
+	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
-		newline = 3;
+		newline = lastlog_info;
 	}
         vprintf(msg, args);
 	fflush(stdout);
@@ -130,12 +133,12 @@ void log_debug(const char *msg, ...) {
        		va_list args;
        		va_start(args, msg);
 
-       		if (newline != 4) {
+			if (newline != lastlog_debug) {
 			printf("DBG:");
 		}
-		newline = 0;
+		newline = lastlog_debug;
 		if (msg[strlen(msg)-1]!='\n') {
-			newline = 4;
+			newline = lastlog_debug;
 		}
         	vprintf(msg, args);
 	}
@@ -146,6 +149,8 @@ void log_hexdump(char *p, int len, int petscii) {
 	int tot = 0;
 	int line = 0;
 	int x = 0;
+
+	newline = lastlog_anything;
 
 	if(len) {
 		while(tot < len) {
