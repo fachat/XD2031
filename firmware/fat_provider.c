@@ -436,6 +436,10 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 					len = txbuf->wp - txbuf->rp;
 					res = f_write(fp, txbuf->buffer, len, &transferred);
 					debug_printf("%d/%d bytes written to #%d, res=%d\n", transferred, len, channelno, res);
+					if(!res) {
+						txbuf->type = FS_READ; // a READ mirrors the WRITE request when ok
+						reply_as_usual = FALSE;
+					}
 				}
 			} else {
 				debug_printf("No channel found for FS_WRITE/FS_EOF #%d", channelno); debug_putcrlf();
