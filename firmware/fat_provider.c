@@ -26,6 +26,7 @@
 ****************************************************************************/
 
 /* TODO:
+ * - zero_terminate() still necessary?
  * - directory listing aborts sometimes. Why?
  * - fix directory stuff for multiple assigns
  * - skip or skip not hidden files
@@ -374,7 +375,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				debug_puts("No channel for FS_OPEN_DR"); debug_putcrlf();
 			}
 			debug_printf("f_opendir: %d", res); debug_putcrlf();
-			packet_write_char(rxbuf, res);
 			break;
 
 		case FS_CLOSE:
