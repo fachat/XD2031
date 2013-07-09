@@ -45,6 +45,13 @@
 #define	NAME_NAME2	8
 #define	NAME_RELPAR	9
 
+#ifdef DEBUG_NAME
+static const char name_state[][9] PROGMEM = {
+	"DRIVE", "NAME", "OPTS", "-?- ", "COMMAND", "CMDDRIVE", "FILE",
+	"DRIVE2", "NAME2", "RELPAR"
+};
+#endif
+
 // shared global variable to be used in parse_filename, as long as it's threadsafe
 nameinfo_t nameinfo;
 
@@ -108,7 +115,12 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	while (len > 0) {
 		ch = *p;
 #ifdef DEBUG_NAME
-		debug_printf("len=%d, curr=%c, state=%d\n", len, *p, state);
+		debug_printf("len=%d, curr=%c, state=", len, *p);
+		if(state == 3 || state > 9) {
+			term_rom_puts(name_state[3]);
+			debug_printf("%02X", state);
+		} else term_rom_puts(name_state[state]);
+		debug_putcrlf();
 #endif
 		switch(state) {
 		case NAME_COMMAND:
