@@ -26,7 +26,6 @@
 ****************************************************************************/
 
 /* TODO:
- * - zero_terminate() still necessary?
  * - directory listing aborts sometimes. Why?
  * - fix directory stuff for multiple assigns
  * - skip or skip not hidden files
@@ -213,11 +212,6 @@ static void fat_submit(void *epdata, packet_t *buf) {
 	// not applicable for storage ==> dummy
 }
 
-static void zero_terminate(char *dest, const char *source, uint8_t len) {
-	strncpy(dest, source, len);
-	dest[len] = 0;
-}
-
 static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 	uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet))
 {
@@ -263,9 +257,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			/* open file for reading (only) */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
-				zero_terminate(open_name, path, len);
-				res = f_open(fp, open_name, FA_READ | FA_OPEN_EXISTING);
-				debug_printf("FS_OPEN_RD '%s' #%d, res=%d\n", open_name, channelno, res);
+				res = f_open(fp, path, FA_READ | FA_OPEN_EXISTING);
+				debug_printf("FS_OPEN_RD '%s' #%d, res=%d\n", path, channelno, res);
 			} else {
 				// too many files!
 				res = CBM_ERROR_NO_CHANNEL;
@@ -276,9 +269,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			/* open file for writing (only); error if file exists */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
-				zero_terminate(open_name, path, len);
-				res = f_open(fp, open_name, FA_WRITE | FA_CREATE_NEW);
-				debug_printf("FS_OPEN_WR '%s' #%d, res=%d\n", open_name, channelno, res);
+				res = f_open(fp, path, FA_WRITE | FA_CREATE_NEW);
+				debug_printf("FS_OPEN_WR '%s' #%d, res=%d\n", path, channelno, res);
 			} else {
 				// too many files!
 				res = CBM_ERROR_NO_CHANNEL;
@@ -289,9 +281,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			/* open file for read/write access */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
-				zero_terminate(open_name, path, len);
-				res = f_open(fp, open_name, FA_READ | FA_WRITE);
-				debug_printf("FS_OPEN_RW '%s' #%d, res=%d\n", open_name, channelno, res);
+				res = f_open(fp, path, FA_READ | FA_WRITE);
+				debug_printf("FS_OPEN_RW '%s' #%d, res=%d\n", path, channelno, res);
 			} else {
 				// too many files!
 				res = CBM_ERROR_NO_CHANNEL;
@@ -303,9 +294,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			 * and writing starts at the beginning. If it does not exist, create the file */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
-				zero_terminate(open_name, path, len);
-				res = f_open(fp, open_name, FA_WRITE | FA_CREATE_ALWAYS);
-				debug_printf("FS_OPEN_OW '%s' #%d, res=%d\n", open_name, channelno, res);
+				res = f_open(fp, path, FA_WRITE | FA_CREATE_ALWAYS);
+				debug_printf("FS_OPEN_OW '%s' #%d, res=%d\n", path, channelno, res);
 			} else {
 				// too many files!
 				res = CBM_ERROR_NO_CHANNEL;
@@ -317,9 +307,8 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			 * does not exist */
 			fp = tbl_ins_file(channelno);
 			if(fp) {
-				zero_terminate(open_name, path, len);
-				res = f_open(fp, open_name, FA_WRITE | FA_OPEN_EXISTING);
-				debug_printf("FS_OPEN_AP '%s' #%d, res=%d\n", open_name, channelno, res);
+				res = f_open(fp, path, FA_WRITE | FA_OPEN_EXISTING);
+				debug_printf("FS_OPEN_AP '%s' #%d, res=%d\n", path, channelno, res);
 				/* move to end of file to append data */
 				res = f_lseek(fp, f_size(fp));
 				debug_printf("Move to EOF to append data: %d\n", res);
