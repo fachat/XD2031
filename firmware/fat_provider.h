@@ -33,9 +33,5 @@
 
 extern provider_t fat_provider;
 
-#if _USE_LFN
-	char Lfname[_MAX_LFN+1];
-#endif
-
 #endif // FAT_PROVIDER_H
 

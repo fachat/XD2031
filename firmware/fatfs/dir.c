@@ -135,12 +135,14 @@ int8_t traverse(
 	char *filename;
         char action_path[_MAX_LFN+1];
 	DIR dir; 
-	FILINFO Finfo;
-#       ifdef _USE_LFN
-                Finfo.lfname = Lfname;
-                Finfo.lfsize = sizeof Lfname;
-#       endif
- 
+	FILINFO Finfo;		// holds file information returned by f_readdir() / f_stat()
+				// the long file name *lfname must be stored externally:
+#	ifdef _USE_LFN
+		char Lfname[_MAX_LFN+1];
+		Finfo.lfname = Lfname;
+		Finfo.lfsize = sizeof Lfname;
+#	endif
+
 	debug_printf("traverse called with '%s'\n", path);
 	b = splitpath(path, &d);
 	debug_printf("DIR: %s NAME: %s\n", d, b);

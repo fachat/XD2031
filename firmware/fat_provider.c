@@ -100,7 +100,6 @@ static DIR dir;
 static uint8_t dir_drive;
 static char dir_mask[_MAX_LFN+1];
 static char dir_headline[_MAX_LFN+1];
-static FILINFO Finfo;
 
 /* ----- Prototypes -------------------------------------------------------------------------- */
 
@@ -227,12 +226,12 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 	char *path = (char *) (txbuf->buffer + 1);
 	uint8_t len = txbuf->len - 1;
 
+	FILINFO Finfo;		// holds file information returned by f_readdir() / f_stat()
+				// the long file name *lfname must be stored externally:
 #	ifdef _USE_LFN
+		char Lfname[_MAX_LFN+1];
 		Finfo.lfname = Lfname;
 		Finfo.lfsize = sizeof Lfname;
-		char *open_name = Lfname;	// zero-terminated filename for FS_OPEN
-#	else
-		char open_name[17];
 #	endif
 
 
@@ -456,6 +455,13 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 	int8_t res;
 	int8_t tblpos = tbl_chpos(channelno);
 	char *p = (char *) packet->buffer;
+	FILINFO Finfo;		// holds file information returned by f_readdir() / f_stat()
+				// the long file name *lfname must be stored externally:
+#	ifdef _USE_LFN
+		char Lfname[_MAX_LFN+1];
+		Finfo.lfname = Lfname;
+		Finfo.lfsize = sizeof Lfname;
+#	endif
 
 	switch(get_dir_state(channelno)) {
 		case -1:
