@@ -300,10 +300,10 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	debug_printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' : 
 				(result->drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive + 0x30));
-	debug_printf("NAME='%s' (%d)\n", result->name, result->namelen);
+	debug_printf("NAME='%s' (%d)\n", result->name ? (char*)result->name : nullstring, result->namelen);
 	debug_puts("ACCESS="); debug_putc(result->access); debug_putcrlf();
 	debug_puts("TYPE="); debug_putc(result->type); debug_putcrlf();
-	debug_printf("NAME2='%s' (%d)\n", result->name2 == NULL ? "" : (char*)result->name2, result->namelen2);
+	debug_printf("NAME2='%s' (%d)\n", result->name2 ? (char*)result->name2 : nullstring, result->namelen2);
 	debug_printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' : 
 				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive2 + 0x30));
