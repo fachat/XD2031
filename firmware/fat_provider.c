@@ -36,24 +36,16 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
-#include "version.h"
 #include "packet.h"
-#include "provider.h"
 #include "wireformat.h"
-#include "petscii.h"
-#include "main.h"
-#include "debug.h"
-#include "led.h"
-#include "fatfs/integer.h"
-#include "fatfs/ff.h"
-#include "sdcard.h"
-#include "petscii.h"
-#include "fat_provider.h"
-#include "dir.h"
 #include "dirconverter.h"
 #include "charconvert.h"
+#include "debug.h"
+#include "fatfs/ff.h"
+#include "sdcard.h"
+#include "fat_provider.h"
+#include "dir.h"
 
 
 #define  DEBUG_FAT
