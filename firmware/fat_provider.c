@@ -79,27 +79,33 @@ provider_t fat_provider  = {
 
 #define FALSE 0
 #define TRUE -1
+
 /* ----- Private provider data --------------------------------------------------------------- */
 
 static FATFS Fatfs[_VOLUMES];	/* File system object for each logical drive */
 
 #define AVAILABLE -1
 enum enum_dir_state { DIR_INACTIVE, DIR_HEAD, DIR_FILES, DIR_FOOTER };
-struct {
-	int8_t chan;		// entry used by channel # or AVAILABLE
-	int8_t dir_state;	// DIR_INACTIVE for files or DIR_* when reading directories
-	FIL f;			// file data
+
+// Channel table (holds dir state/file data)
+static struct {
+	int8_t chan;			// entry used by channel # or AVAILABLE
+	int8_t dir_state;		// DIR_INACTIVE for files or DIR_* when reading directories
+	FIL    f;			// file data
 } tbl[FAT_MAX_FILES];
 
 #ifndef FAT_MAX_ASSIGNS
 #	define FAT_MAX_ASSIGNS 2	/* Each drive has a current directory */
 #endif
-uint8_t no_of_assigns = 0;		/* Number of assigns/drives */
 
-static DIR dir;
-static uint8_t dir_drive;
-static char dir_mask[_MAX_LFN+1];
-static char dir_headline[_MAX_LFN+1];
+// Used by fat_submit_call/FS_OPEN_DR to pass values to fs_read_dir()
+// Don't try to read several directories at once
+static struct {
+	DIR 	D;			// work area for f_opendir() / f_readdir()
+	uint8_t drive;			// CBM drive number
+	char	mask[_MAX_LFN + 1];	// search mask for files
+	char	headline[16 + 1];	// headline of directory listing
+} dir;
 
 /* ----- Prototypes -------------------------------------------------------------------------- */
 
@@ -142,7 +148,7 @@ static FIL *tbl_ins_file(uint8_t chan) {
 			return &tbl[i].f;
 		}
 	}
-	debug_printf("tbl_ins_file: out of memory", chan); debug_putcrlf();
+	debug_printf("tbl_ins_file: out of mem #%d", chan); debug_putcrlf();
 	return NULL;
 }
 
@@ -151,16 +157,18 @@ static int8_t tbl_ins_dir(int8_t chan) {
 		if(tbl[i].chan == chan) {
 			debug_printf("dir_state #%d := DIR_HEAD", i); debug_putcrlf();
 			tbl[i].dir_state = DIR_HEAD;
-			return 0;
+			return CBM_ERROR_OK;
 		}
 		if(tbl[i].chan == AVAILABLE) {
 			debug_printf("@%d initialized with DIR_HEAD", i); debug_putcrlf();
 			tbl[i].chan = chan;
 			tbl[i].dir_state = DIR_HEAD;
-			return 0;
+			return CBM_ERROR_OK;
 		}
 	}
-	return 1;
+	debug_printf("tbl_ins_dir: out of mem #%d", chan); debug_putcrlf();
+	return CBM_ERROR_NO_CHANNEL;
+
 }
 static FIL *tbl_find_file(uint8_t chan) {
 	uint8_t pos;
@@ -317,44 +325,48 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 			}
 			break;
 
-		case FS_OPEN_DR: // TODO: check res return values
-			/* open a directory for reading */
+		case FS_OPEN_DR:
+			/* open a directory for reading, 3 scenarios:
+			   - dirmask given, is a subdirectory  --> show its contents
+			   - dirmask given, is not a directory --> show matching files
+			   - no dirmask given                  --> show files in current directory
+			*/
 			debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
 			char *b, *d;
 			if (txbuf->len > 2) { // 2 bytes: drive number and zero terminator
 				debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
 				// If path is a directory, list its contents
-				if(f_stat(path, &Finfo) == FR_OK) {
-					if(Finfo.fattrib & AM_DIR) {
-						debug_printf("'%s' is a directory\n", path);
-						res = f_opendir(&dir, path);
-						b = splitpath(path, &d);
-						strcpy(dir_headline, b);
-						strcpy(dir_mask, "*");
-					}
+				if(f_stat(path, &Finfo) == FR_OK && Finfo.fattrib & AM_DIR) {
+					debug_printf("'%s' is a directory\n", path);
+					if((res = f_opendir(&dir.D, path))) break;
+					b = splitpath(path, &d);
+					strcpy(dir.mask, "*");
 				} else {
 					b = splitpath(path, &d);
-					strcpy(dir_headline, b);
 					debug_printf("DIR: %s NAME: %s\n", d, b);
-					res = f_opendir(&dir, d);
-					strncpy(dir_mask, b, _MAX_LFN);
-					dir_mask[_MAX_LFN] = 0;
+					if((res = f_opendir(&dir.D, d))) break;
+					strncpy(dir.mask, b, sizeof dir.mask);
+					dir.mask[sizeof(dir.mask) -1] = 0;
 				}
+				// If the path is too long, show the last 16 characters
+				strncpy(dir.headline, b + ((strlen(b) > 16) ? strlen(b) - 16 : 0), 16);
+				dir.headline[sizeof(dir.headline) - 1] = 0;
 			} else {
 				debug_puts("no dirmask\n");
-				strcpy(dir_mask, "*");
-				f_getcwd(dir_headline, sizeof(dir_headline));
-				// Remove drive string "0:"
-				memmove(dir_headline, dir_headline + 2, sizeof(dir_headline) - 2);
-				res = f_opendir(&dir, ".");
+				// FIXME: use current directory of assigned drive instead of ".":
+				if((res = f_opendir(&dir.D, "."))) break;
+				// Use dir.mask as temporary storage for current directory
+				// because it is much larger than dir.headline
+				f_getcwd(dir.mask, sizeof dir.mask);
+				// Remove FATFS drive string "0:"
+				memmove(dir.mask, dir.mask + 2, sizeof(dir.mask) - 2);
+				// If the path is too long, show the last 16 characters
+				strncpy(dir.headline, dir.mask + ((strlen(dir.mask) > 16) ? strlen(dir.mask) - 16 : 0), 16);
+				dir.headline[sizeof(dir.headline) - 1] = 0;
+				strcpy(dir.mask, "*");
 			}
-
-			dir_drive = txbuf->buffer[0];
-			if(tbl_ins_dir(channelno)) {
-				res = CBM_ERROR_NO_CHANNEL;
-				debug_puts("No channel for FS_OPEN_DR"); debug_putcrlf();
-			}
-			debug_printf("f_opendir: %d", res); debug_putcrlf();
+			dir.drive = txbuf->buffer[0];
+			res = tbl_ins_dir(channelno);
 			break;
 
 		case FS_CLOSE:
@@ -474,14 +486,14 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 		case DIR_HEAD:
 			/* Disk name */
 			debug_puts("fs_read_dir/DIR_HEAD"); debug_putcrlf();
-			p[FS_DIR_LEN+0] = dir_drive;
+			p[FS_DIR_LEN+0] = dir.drive;
 			p[FS_DIR_LEN+1] = 0;
 			p[FS_DIR_LEN+2] = 0;
 			p[FS_DIR_LEN+3] = 0;
 			// TODO: add date
 			p[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
 			memset(p + FS_DIR_NAME, ' ', 16); // init headline with 16 spaces
-			strncpy(p+FS_DIR_NAME, dir_headline, 16);
+			strncpy(p+FS_DIR_NAME, dir.headline, 16);
 			// replace zero terminator with space to get a 16 characters long name
 			for(char *ptr = p + FS_DIR_NAME; ptr < p + FS_DIR_NAME + 16; ptr++) {
 				if(!*ptr) *ptr = ' ';
@@ -496,7 +508,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 			/* Files and directories */
 			debug_puts("fs_read_dir/DIR_FILES"); debug_putcrlf();
 			for(;;) {
-				res = f_readdir(&dir, &Finfo);
+				res = f_readdir(&dir.D, &Finfo);
 				if(res != FR_OK || !Finfo.fname[0]) {
 					tbl[tblpos].dir_state = DIR_FOOTER;
 					return 0;
