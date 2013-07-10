@@ -36,6 +36,9 @@
 // max. opened files for FAT provider (SD card)
 #define FAT_MAX_FILES                   4
 
+// max. drives for the FAT provider (each holds a current directory)
+#define FAT_MAX_ASSIGNS			10
+
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46

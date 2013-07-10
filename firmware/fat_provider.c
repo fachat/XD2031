@@ -27,7 +27,6 @@
 
 /* TODO:
  * - directory listing aborts sometimes. Why?
- * - fix directory stuff for multiple assigns
  * - skip or skip not hidden files
  * - allow wildcards for OPEN ("LOAD *")
  * - allow wildcards for CD/RM etc.
@@ -45,6 +44,7 @@
 #include "sdcard.h"
 #include "fat_provider.h"
 #include "dir.h"
+#include "config.h"
 
 
 #define  DEBUG_FAT
@@ -53,7 +53,7 @@
 
 static uint8_t current_charset;
 
-static void *prov_assign(const char *name);
+static void *prov_assign(uint8_t drive, const char *parameter);
 static void prov_free(void *epdata);
 static void fat_submit(void *epdata, packet_t *buf);
 static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
@@ -82,6 +82,8 @@ provider_t fat_provider  = {
 
 /* ----- Private provider data --------------------------------------------------------------- */
 
+static uint8_t fat_provider_initialized = FALSE; // fat_provider_init() called at first assign
+
 static FATFS Fatfs[_VOLUMES];	/* File system object for each logical drive */
 
 #define AVAILABLE -1
@@ -97,6 +99,13 @@ static struct {
 #ifndef FAT_MAX_ASSIGNS
 #	define FAT_MAX_ASSIGNS 2	/* Each drive has a current directory */
 #endif
+typedef struct {
+	int8_t drive;			// AVAILABLE when not assigned
+	TCHAR cwd[_MAX_LFN + 1];	// current working directory for this drive
+} fat_assign_t;
+static fat_assign_t fat_assign[FAT_MAX_ASSIGNS];
+static void* last_epdata = NULL;	// Used to detect if f_chdir needed, points to
+					// an entry in fat_assign[]
 
 // Used by fat_submit_call/FS_OPEN_DR to pass values to fs_read_dir()
 // Don't try to read several directories at once
@@ -197,21 +206,59 @@ static FRESULT tbl_close_file(uint8_t chan) {
 
 /* ----- Provider routines ------------------------------------------------------------------- */
 
-static void *prov_assign(const char *name) {
-	/* name = FAT:<parameter> */
+static void fat_provider_init(void) {
+	debug_puts("fat_provider_init()\n");
+	for(uint8_t i=0; i < FAT_MAX_ASSIGNS; i++) {
+		fat_assign[i].drive = AVAILABLE;
+		fat_assign[i].cwd[0] = 0;
+	}
+	disk_initialize(0);
+	f_mount(0, &Fatfs[0]);
+	tbl_init();
+	fat_provider_initialized = TRUE;
+}
 
-	debug_printf("fat_prov_assign name=%s\n", name);
-	/* mount (but don't remount) volume, this will always succeed regardless of the drive status */
-	if(disk_status(0) & STA_NOINIT) f_mount(0, &Fatfs[0]);
+static void *prov_assign(uint8_t drive, const char *parameter) {
+	int8_t res;
+	TCHAR cwd[_MAX_LFN + 1];
 
-	tbl_init();			// TODO: move this to fat_provider_init();
-
+	if(!fat_provider_initialized) fat_provider_init();
+	debug_printf("fat_prov_assign: drv=%u par=%s\n", drive, parameter);
+	for(uint8_t i=0; i < FAT_MAX_ASSIGNS; i++) {
+		if(fat_assign[i].drive == AVAILABLE || fat_assign[i].drive == drive) {
+			// Check if parameter is something CHDIRable
+			if((res = f_getcwd(cwd, sizeof(cwd) - 1))) {
+				// Save current directory first
+				debug_printf("f_getcwd: %d\n", res);
+				return NULL;
+			}
+			if((res = f_chdir(parameter))) {
+				debug_printf("f_chdir(%s): %d\n", parameter, res);
+				return NULL;
+			} else {
+				// CHDIR success, restore current directory
+				if((res = f_chdir(cwd))) {
+					debug_printf("f_chdir(%s): %d\n", cwd, res);
+					return NULL;
+				}
+			}
+			strncpy(fat_assign[i].cwd, parameter, sizeof(fat_assign[i].cwd) - 1);
+			fat_assign[i].cwd[sizeof(fat_assign[i].cwd) - 1] = 0;
+			fat_assign[i].drive = drive;
+			debug_printf("fat_assign at %u p=%p\n", i, &fat_assign[i]);
+			return &fat_assign[i];
+		}
+	}
+	debug_puts("out of assign slots!\n");
 	return NULL;
 }
 
 static void prov_free(void *epdata) {
+	debug_printf("prov_free(%p)\n", epdata);
 	// free the ASSIGN-related data structure
-	// dummy
+	fat_assign_t* p = (fat_assign_t*) epdata;
+	p->drive = AVAILABLE;
+	p->cwd[0] = 0;
 }
 
 static void fat_submit(void *epdata, packet_t *buf) {
@@ -234,6 +281,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 	char *path = (char *) (txbuf->buffer + 1);
 	uint8_t len = txbuf->len - 1;
 
+
 	FILINFO Finfo;		// holds file information returned by f_readdir() / f_stat()
 				// the long file name *lfname must be stored externally:
 #	ifdef _USE_LFN
@@ -242,6 +290,24 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 		Finfo.lfsize = sizeof Lfname;
 #	endif
 
+	debug_printf("fat_submit_call epdata=%p\n", epdata);
+
+	if(epdata != last_epdata) {
+		if(last_epdata) {
+			fat_assign_t* cur_epd = (fat_assign_t*) epdata;
+			fat_assign_t* old_epd = (fat_assign_t*) last_epdata;
+			// Save current directory for last used assign
+			if((res = f_getcwd(old_epd->cwd, sizeof(old_epd->cwd)))) {
+				debug_printf("f_getcwd: %d\n", res);
+			} else debug_printf("cwd '%s' saved\n", old_epd->cwd);
+			// Change into current directory for this assign
+			debug_printf("restoring cwd '%s'\n", cur_epd->cwd);
+			if((res = f_chdir(cur_epd->cwd))) {
+				debug_printf("f_chdir: %d\n", res);
+			} else debug_printf("cwd '%s' restored\n", cur_epd->cwd);
+		} else debug_puts("last_epdata == NULL\n");
+		last_epdata = epdata;
+	} else debug_puts("Same drive again.\n");
 
 	switch(txbuf->type) {
 		case FS_CHDIR:

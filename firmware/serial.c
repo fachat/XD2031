@@ -78,7 +78,7 @@ void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_
                 uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 // dummy
-static void *prov_assign(const char *name) {
+static void *prov_assign(uint8_t drive, const char *parameter) {
 	return NULL;
 }
 

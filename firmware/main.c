@@ -125,7 +125,7 @@ int main()
 	// now prepare for terminal etc
 	// (note: in the future the assign parameter could be used
 	// to distinguish different UARTs for example)
-	void *epdata = serial->prov_assign(NULL);
+	void *epdata = serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL);
 	term_endpoint.provider = serial;
 	term_endpoint.provdata = epdata;
 
@@ -168,7 +168,8 @@ int main()
 #ifdef USE_FAT
 	// register fat provider
 	provider_register("FAT", &fat_provider);
-	provider_assign(9, "FAT", "/");
+	provider_assign(0, "FAT", "/");		// might be overwritten when fetching X-commands
+	provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
 #endif
 
 	// show our version...
