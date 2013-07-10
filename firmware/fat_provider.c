@@ -335,7 +335,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
          if(fp) {
             res = f_open(fp, path, FA_READ | FA_OPEN_EXISTING);
             debug_printf("FS_OPEN_RD '%s' #%d, res=%d\n",
- i                                  path, channelno, res);
+                                    path, channelno, res);
          } else {
             // too many files!
             res = CBM_ERROR_NO_CHANNEL;
