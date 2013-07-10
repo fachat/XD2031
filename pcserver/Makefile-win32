@@ -93,7 +93,7 @@ dist:	distclean $(FSSER_EXE)
 	cp COPYING $(DISTDIR)/COPYING.txt
 	cp StartServer.bat $(DISTDIR)
 	find $(DISTDIR) \( -iname *.txt -o -iname *.bat \) -exec unix2dos {} \;
-	zip -r $(DISTDIR).zip $(DISTDIR)
+	zip -r $(DISTDIR)-$$(date +%Y-%m-%d).zip $(DISTDIR)
 
 
 

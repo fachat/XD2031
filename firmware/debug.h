@@ -38,6 +38,8 @@
 #include "term.h"
 #include "mem.h"
 
+extern const char nullstring[7];
+
 static inline void debug_putc(char c) { term_putc(c); }
 static inline void debug_putcrlf() {  term_putcrlf(); term_flush(); }
 

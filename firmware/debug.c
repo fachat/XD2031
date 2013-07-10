@@ -33,6 +33,9 @@
 
 #if DEBUG
 
+// This string is intentionally not in FLASH space on AVR
+const char nullstring[7] = "<NULL>";
+
 void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
 	uint16_t tot = 0;
 	uint8_t line = 0;
