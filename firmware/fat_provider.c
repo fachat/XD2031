@@ -506,7 +506,7 @@ int8_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 #				if _USE_LFN
 					if(Lfname[0]) filename = Lfname;
 #				endif
-				if(compare_pattern(filename, dir_mask)) break;
+				if(compare_pattern(filename, dir.mask)) break;
 			}
 
 			// TODO: skip or skip not hidden files
@@ -640,7 +640,7 @@ static void fs_delete(char *path, packet_t *packet) {
 		if(pnext) *pnext = 0;
 		debug_printf("Scratching '%s'...\n", path);
 
-		res = traverse(path, 
+		res = traverse(path,
 			0, 			// don't limit number of files to scratch
 			&files_scratched, 	// counts matches
 			0, 			// no special file attributes required
