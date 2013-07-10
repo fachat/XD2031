@@ -301,7 +301,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 				debug_printf("f_getcwd: %d\n", res);
 			} else debug_printf("cwd '%s' saved\n", old_epd->cwd);
 			// Change into current directory for this assign
-			debug_printf("restoring cwd '%s'\n", cur_epd->cwd);
 			if((res = f_chdir(cur_epd->cwd))) {
 				debug_printf("f_chdir: %d\n", res);
 			} else debug_printf("cwd '%s' restored\n", cur_epd->cwd);
