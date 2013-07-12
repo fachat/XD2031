@@ -57,3 +57,22 @@ record number and byte within the record starts with one (1).
 after that goes to the following record (if not re-positioned).
 Reading after a write to a record reads the following record.
 
+
+
+Implementation Notes
+--------------------
+
+The implementation of these peculiarities is all done in the firmware. The
+firmware reads the appropriate record (it even accepts multiple records as
+long as there is no buffer overflow) and handles the IEC/IEEE communication
+from its internal buffer.
+
+When a buffer is modified, it is written back to the file as a whole record.
+
+To position the file cursor to the correct record number, the FS_POSITION 
+wireformat command is being used. The position within the record is of course
+handled within the firmware.
+
+This makes the implementation in the provider much more simple.
+
+
