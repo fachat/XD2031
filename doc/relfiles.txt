@@ -1,0 +1,59 @@
+
+Handling of Commodore REL files
+-------------------------------
+
+This text describes the handling of CBM REL files.
+
+REL files are a peculiar thing. They are record-oriented and allow random
+access to the file data - most of at least. Record-oriented means that the file
+is separated into records of a fixed length, that can be addressed by the
+record number. This is done using the "P" command. After that the record data
+can be read or written.
+
+If it were that simple.
+
+Here is a list of peculiarities:
+
+- You can open the REL file with a record length. If it does not exist, it is
+created. If it exists, and has the correct record length, it is opened. If it
+has the wrong record length, it returns an error. Being able to open the file 
+without record length creates a problem for a simulator like XD2031, as it has
+to use a file format that "knows" the record length so it can be used.
+
+- When created, the the first data block is created with all records in it.
+In fact even the last record is created, if only partially. Each record is 
+filled with a 255 byte at the start and then filled with zeros.
+
+- When the "P" command is used to position to a record that does not yet exist,
+an error is returned. If, however, then data is written to that record, the file
+is expanded to include this and all previous records. In fact it even includes
+records after the addressed one, if they are in the same disk block.
+
+- The record data is not always the full length of the record. The disk drive
+interprets trailing zeros as non-existing. I.e. once you read a record with 
+trailing zero bytes in it, you get the 64 status value (EOF) before the full
+number of bytes for a record is read. 
+
+- Reading over the EOF (ST=64) returns the data of the next record. However, you
+cannot easily use this to dump the REL file into SEQ file for example, as trailing
+zero bytes are skipped in each record.
+
+- When writing a record, each PRINT# BASIC command ends up in a new record.
+I.e. after each EOF on the IEEE bus (that indicates the last valid byte of the
+PRINT) the record is closed, filled with zeros to the end and prepared to be
+written to disk.
+
+- The "P" command can position the file cursor in the middle of a record. 
+If you write to that position, the data before that position is kept. The data
+at and after that position is overwritten with the data written (possibly filled
+with zeros to the end of the record).  That makes handling partial records
+a pain.
+
+- Speaking of positioning: a "0" (zero) and "1" (one) are handled the same
+in record number and position in the record. So for the record, counting for
+record number and byte within the record starts with one (1).
+
+- When reading a partial record, and then writing to it is ignored. The write
+after that goes to the following record (if not re-positioned).
+Reading after a write to a record reads the following record.
+
