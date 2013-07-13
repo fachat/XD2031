@@ -51,6 +51,7 @@
 #include "xcmd.h"
 #include "channel.h"
 #include "serial.h"
+#include "handler.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -110,9 +111,13 @@ const char *nameofcmd(int cmdno) {
 
 
 void cmd_init() {
+	handler_init();
 	provider_init();
 	channel_init();
 	xcmd_init();
+
+	// init P00/S00/R00/... file handler
+	x00_handler_init();
 
 	// default
 	provider_set_ext_charset("PETSCII");

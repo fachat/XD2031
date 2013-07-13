@@ -929,6 +929,7 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 					log_errno("Could not write filler record");
 					return -CBM_ERROR_WRITE_ERROR;
 				}
+	return CBM_ERROR_OK;
 }
 
 // write file data
