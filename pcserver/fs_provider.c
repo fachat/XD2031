@@ -47,6 +47,7 @@
 #include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
+#include "handler.h"
 #include "errors.h"
 #include "mem.h"
 #include "wireformat.h"
@@ -442,6 +443,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 
 	log_debug("DIRECT cmd: %d, tr=%d, se=%d, chan=%d\n", cmd, track, sector, channel);
 
+	file_t *fp = NULL;
 	File *file = NULL;
 
 	// (bogus) check validity of parameters, otherwise fall through to error
@@ -461,7 +463,9 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 				file->block[i] = i;
 			}
 
-			channel_set(channel, ep);
+			handler_resolve_block(ep, channel, &fp);
+
+			channel_set(channel, fp);
 		
 			return CBM_ERROR_OK;
 		case FS_BLOCK_U2:
@@ -471,7 +475,9 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			file = reserve_file(ep, channel);
 			open_block_channel(file);
 
-			channel_set(channel, ep);
+			handler_resolve_block(ep, channel, &fp);
+
+			channel_set(channel, fp);
 		
 			return CBM_ERROR_OK;
 		}

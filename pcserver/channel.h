@@ -27,15 +27,16 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
+#include "handler.h"
 
 //------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
 // These are set when the channel is opened
 
 void channel_init();
-endpoint_t *channel_to_endpoint(int chan);
+file_t *channel_to_file(int chan);
 void channel_free(int channo);
-void channel_set(int channo, endpoint_t *ep);
+void channel_set(int channo, file_t *fp);
 
 #endif
 

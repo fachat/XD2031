@@ -26,6 +26,9 @@
 #include "handler.h"
 #include "errors.h"
 #include "log.h"
+#include "mem.h"
+#include "provider.h"
+#include "wireformat.h"
 
 // This file defines the file type handler interface. This is used
 // to "wrap" files so that for example x00 (like P00, R00, ...) files 
@@ -73,5 +76,184 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 
 	return newfile;
 }
+
+
+//----------------------------------------------------------------------------
+// handler that wraps the operations to an endpoint
+
+static handler_t ep_handler;
+
+typedef struct {
+	file_t 		file;		// embedded
+	endpoint_t	*endpoint;
+	int		channel;	// for the endpoint
+	uint16_t	recordlen;
+} ep_file_t;
+
+static type_t ep_file_type = {
+	"ep_file",
+	sizeof(ep_file_t)
+};
+
+
+/*
+ * open a file
+ */
+
+int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *name, const char *opts) {
+
+	int reclen = 0;
+	int err = CBM_ERROR_FAULT;
+
+	// assuming infile is NULL
+
+	switch(type) {
+		case FS_OPEN_RD:
+			err = ep->ptype->open_rd(ep, chan, name, opts, &reclen);
+			break;
+		case FS_OPEN_WR:
+			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 0);
+			break;
+		case FS_OPEN_AP:
+			err = ep->ptype->open_ap(ep, chan, name, opts, &reclen);
+			break;
+		case FS_OPEN_OW:
+			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 1);
+			break;
+		case FS_OPEN_RW:
+			err = ep->ptype->open_rw(ep, chan, name, opts, &reclen);
+			break;
+		case FS_OPEN_DR:
+			err = ep->ptype->opendir(ep, chan, name, opts);
+			break;
+	}
+
+	if (err != CBM_ERROR_OK) {
+		return err;
+	}
+
+	ep_file_t *file = mem_alloc(&ep_file_type);
+
+	file->file.handler = &ep_handler;
+	file->file.parent = NULL;
+
+	file->endpoint = ep;
+	file->channel = chan;
+	file->recordlen = reclen;
+
+	*outfile = (file_t*) file;
+
+	return CBM_ERROR_OK;
+}
+
+/*
+ * resolve a file_t from an endpoint, for a block operation
+ */
+int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile) {
+
+	ep_file_t *file = mem_alloc(&ep_file_type);
+
+	file->file.handler = &ep_handler;
+	file->file.parent = NULL;
+
+	file->endpoint = ep;
+	file->channel = chan;
+	file->recordlen = 0;
+
+	*outfile = (file_t*) file;
+
+	return CBM_ERROR_OK;
+}
+
+
+
+
+static void ep_close(file_t *file) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+        // no resources to clean here, so just forward the close
+        xfile->endpoint->ptype->close(xfile->endpoint, xfile->channel);
+
+	// cleanup provider when not needed anymore
+	provider_cleanup(xfile->endpoint);
+
+        // and then free the file struct memory
+        mem_free(xfile);
+}
+
+static uint16_t ep_recordlen(file_t *file) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+        return xfile->recordlen;
+}
+
+static uint8_t ep_filetype(file_t *file) {
+	(void)file;	// silence unused param warning
+
+        return FS_DIR_TYPE_PRG;		// default fallback
+}
+
+static int ep_seek(file_t *file, long pos) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+        // add header offset, that's all
+	// TODO: kludge!
+        return xfile->endpoint->ptype->position(xfile->endpoint, xfile->channel, pos / xfile->recordlen);
+}
+
+static int ep_read(file_t *file, char *buf, int len, int *readflg) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+        return xfile->endpoint->ptype->readfile(xfile->endpoint, xfile->channel, buf, len, readflg );
+}
+
+static int ep_write(file_t *file, char *buf, int len, int writeflg) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+        return xfile->endpoint->ptype->writefile(xfile->endpoint, xfile->channel, buf, len, writeflg );
+}
+
+static charconv_t ep_convfrom(file_t *file, const char *tocharset) {
+        ep_file_t *xfile = (ep_file_t*)file;
+
+	// TODO kludge
+	return provider_convfrom(xfile->endpoint->ptype);
+}
+
+
+
+static handler_t ep_handler = {
+        "EPH",          //const char    *name;                  // handler name, for debugging
+        "ASCII",        //const char    *native_charset;        // get name of the native charset for that handler
+        NULL,	    	// root handler has no resolve
+			//int           (*resolve)(file_t *infile, file_t **outfile, 
+                        //              uint8_t type, const char *name, const char *opts); 
+
+        ep_close,      //void          (*close)(file_t *fp);   // close the file
+
+        NULL,           //int           (*open)(file_t *fp);    // open a file
+
+        // -------------------------
+			// get converter to convert DIR entries
+	ep_convfrom,
+
+        // -------------------------
+
+        ep_seek,       // position the file
+                        //int           (*seek)(file_t *fp, long abs_position);
+
+        ep_read,       // read file data
+                        //int           (*readfile)(file_t *fp, char *retbuf, int len, int *readflag);  
+
+        ep_write,      // write file data
+                        //int           (*writefile)(file_t *fp, char *buf, int len, int is_eof);       
+
+        // -------------------------
+
+        ep_recordlen,  //uint16_t      (*recordlen)(file_t *fp);       // return the record length for file
+
+        ep_filetype    //uint8_t       (*filetype)(file_t *fp);        // return the type of the file as FS_DIR_TYPE_*
+
+};
 
 

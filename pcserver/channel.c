@@ -27,7 +27,7 @@
 #include <stddef.h>
 
 #include "log.h"
-#include "provider.h"
+#include "handler.h"
 
 
 //------------------------------------------------------------------------------------
@@ -35,8 +35,8 @@
 // These are set when the channel is opened
 
 typedef struct {
-       int             channo;
-       endpoint_t      *ep;
+       int             	channo;
+       file_t      	*fp;
 } chan_t;
 
 chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
@@ -49,15 +49,15 @@ void channel_init() {
         }
 }
 
-endpoint_t *channel_to_endpoint(int chan) {
+file_t *channel_to_file(int chan) {
 
        int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                if (chantable[i].channo == chan) {
-                       return chantable[i].ep;
+                       return chantable[i].fp;
                }
         }
-       log_info("Did not find ep for channel %d\n", chan);
+       log_info("Did not find open file for channel %d\n", chan);
        return NULL;
 }
 
@@ -66,19 +66,25 @@ void channel_free(int channo) {
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                if (chantable[i].channo == channo) {
                        chantable[i].channo = -1;
-                       chantable[i].ep = NULL;
+                       chantable[i].fp = NULL;
                }
         }
 }
 
-void channel_set(int channo, endpoint_t *ep) {
+void channel_set(int channo, file_t *fp) {
        int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                // we overwrite existing entries, to "heal" leftover cruft
                // just in case...
-               if ((chantable[i].channo == -1) || (chantable[i].channo == channo)) {
+		if (chantable[i].channo == channo) {
+			log_error("Closing leftover file for channel %d\n", channo);
+			chantable[i].fp->handler->close(chantable[i].fp);
+			chantable[i].fp = NULL;
+			chantable[i].channo = -1;
+		}
+               if ((chantable[i].channo == -1)) {
                        chantable[i].channo = channo;
-                       chantable[i].ep = ep;
+                       chantable[i].fp = fp;
                        return;
                }
         }

@@ -93,11 +93,20 @@ static int provider_index(provider_t *prov) {
 //------------------------------------------------------------------------------------
 // character set handling
 
+static char *ext_charset_name = "ASCII";
+
+// get the character set for the external communication (i.e. the wireformat)
+const char *provider_get_ext_charset() {
+	return ext_charset_name;
+}
+
 // set the character set for the external communication (i.e. the wireformat)
 // caches the to_provider and from_provider values in the providers[] table
 void provider_set_ext_charset(char *charsetname) {
 
 	log_info("Setting filename communication charset to '%s'\n", charsetname);
+
+	ext_charset_name = charsetname;
 
 	charset_t ext_cset_idx = cconv_getcharset(charsetname);
 

@@ -24,6 +24,8 @@
 
 #include <inttypes.h>
 
+#include "provider.h"
+
 // This file defines the file type handler interface. This is used
 // to "wrap" files so that for example x00 (like P00, R00, ...) files 
 // or compressed files can be handled.
@@ -36,8 +38,7 @@ typedef struct _file file_t;
 
 typedef struct {
 	const char	*name;				// handler name, for debugging
-	void		(*init)(void);			// initialization routine
-	char		(*native_charset)();		// get name of the native charset for that handler
+	const char	*native_charset;		// get name of the native charset for that handler
 
 							// used internally by a recursive resolve
 							// starting from an endpoint and continuing until
@@ -54,6 +55,10 @@ typedef struct {
 	void		(*close)(file_t *fp);		// close the file
 
 	int		(*open)(file_t *fp); 		// open a file
+
+	// -------------------------
+							// get the converter FROM the file
+	charconv_t 	(*convfrom)(file_t *prov, const char *tocharset);
 
 	// -------------------------
 							// position the file
@@ -98,9 +103,22 @@ void handler_init(void);
 file_t *handler_find(file_t *parent, uint8_t type, const char *name, const char *opts);
 
 /*
+ * resolve a file_t from an endpoint, i.e. being a root file_t for further resolves into
+ * subdirs
+ */
+int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *name, const char *opts);
+
+
+/*
+ * resolve a file_t from an endpoint, for a block operation
+ */
+int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile);
+
+/*
  * not really nice, but here's the list of existing handlers (before we do an own
  * header file for each one separately...
  */
+
 
 // handles P00, S00, ... files
 void x00_handler_init();

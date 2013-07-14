@@ -47,6 +47,7 @@
 #include "charconvert.h"
 #include "petscii.h"
 #include "provider.h"
+#include "handler.h"
 #include "log.h"
 #include "xcmd.h"
 #include "channel.h"
@@ -444,6 +445,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 
 	provider_t *prov = NULL; //&fs_provider;
 	endpoint_t *ep = NULL;
+	file_t *fp = NULL;
 
 #if 0
 	printf("got cmd=%d, fd=%d, name=%s",cmd,tfd,
@@ -470,53 +472,35 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 
 	switch(cmd) {
 		// file-oriented commands
+	case FS_OPEN_RD:
+	case FS_OPEN_AP:
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
+	case FS_OPEN_RW:
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->open_wr != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
+				log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 					prov->name, name);
-				rv = prov->open_wr(ep, tfd, name, options, &record, cmd == FS_OPEN_OW);
+				rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == CBM_ERROR_OPEN_REL) {
+					record = fp->handler->recordlen(fp);
 					retbuf[FSP_DATA+1] = record & 0xff;
 					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
 					retbuf[FSP_LEN] = FSP_DATA + 3;	
 				}
 				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
+					channel_set(tfd, fp);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
-	case FS_OPEN_RW:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_rw != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rw(ep, tfd, name, options, &record);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
+					if (fp != NULL) {
+						fp->handler->close(fp);
+						fp = NULL;
+					}
 					log_rv(rv);
 				}
 			}
@@ -534,62 +518,10 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->opendir(ep, tfd, name, options);
+				rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
-	case FS_OPEN_RD:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_rd != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rd(ep, tfd, name, options, &record);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
-	case FS_OPEN_AP:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_ap != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
-				rv = prov->open_ap(ep, tfd, name, options, &record);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
+					channel_set(tfd, fp);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					log_rv(rv);
@@ -600,11 +532,10 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_READ:
-		ep = channel_to_endpoint(tfd);
-		if (ep != NULL) {
+		fp = channel_to_file(tfd);
+		if (fp != NULL) {
 			readflag = 0;	// default just in case
-			prov = (provider_t*) ep->ptype;
-			rv = prov->readfile(ep, tfd, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
+			rv = fp->handler->readfile(fp, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
 			// TODO: handle error (rv<0)
 			if (rv < 0) {
 				// an error is sent as REPLY with error code
@@ -620,7 +551,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				}
 				if (readflag & READFLAG_DENTRY) {
 					log_info("SEND DIRENTRY(%d)\n", tfd);
-					provider_convfrom(prov)(retbuf+FSP_DATA+FS_DIR_NAME, 
+					fp->handler->convfrom(fp, provider_get_ext_charset())
+							(retbuf+FSP_DATA+FS_DIR_NAME, 
 								strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
 								retbuf+FSP_DATA+FS_DIR_NAME, 
 								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
@@ -630,14 +562,13 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		break;
 	case FS_WRITE:
 	case FS_EOF:
-		ep = channel_to_endpoint(tfd);
+		fp = channel_to_file(tfd);
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
+		if (fp != NULL) {
 			if (cmd == FS_EOF) {
 				log_info("CLOSE_BY_EOF(%d)\n", tfd);
 			}
-			rv = prov->writefile(ep, tfd, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
+			rv = fp->handler->writefile(fp, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
 			if (rv != 0) {
 				log_rv(rv);
 			}
@@ -646,12 +577,11 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		break;
 	case FS_POSITION:
 		// position the read/write cursor into a file
-		ep = channel_to_endpoint(tfd);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
+		fp = channel_to_file(tfd);
+		if (fp != NULL) {
 			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
 			printf("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
-			rv = prov->position(ep, tfd, record);
+			rv = fp->handler->seek(fp, record * fp->handler->recordlen(fp));
 			if (rv != 0) {
 				log_rv(rv);
 			}
@@ -659,15 +589,12 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_CLOSE:
-		ep = channel_to_endpoint(tfd);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
+		fp = channel_to_file(tfd);
+		if (fp != NULL) {
 			log_info("CLOSE(%d)\n", tfd);
-			prov->close(ep, tfd);
+			fp->handler->close(fp);
 			channel_free(tfd);
 			retbuf[FSP_DATA] = CBM_ERROR_OK;
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
 		}
 		break;
 

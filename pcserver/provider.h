@@ -130,11 +130,16 @@ void provider_init(void);
 // modifies the conversion routines for all the providers
 void provider_set_ext_charset(char *charsetname);
 
+// get the character set for the external communication (i.e. the wireformat)
+// modifies the conversion routines for all the providers
+const char* provider_get_ext_charset();
+
 // get the converter TO the provider
 charconv_t provider_convto(provider_t *prov);
 
 // get the converter FROM the provider
 charconv_t provider_convfrom(provider_t *prov);
+
 
 #endif
 

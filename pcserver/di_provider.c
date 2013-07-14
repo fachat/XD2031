@@ -43,6 +43,7 @@
 #include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
+#include "handler.h"
 #include "errors.h"
 #include "mem.h"
 #include "wireformat.h"
@@ -688,6 +689,7 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    int rv = CBM_ERROR_OK;
 
    di_endpoint_t *diep = (di_endpoint_t *)ep;
+   file_t *fp = NULL;
 
    uint8_t cmd    = (uint8_t)buf[FS_BLOCK_PAR_CMD    -1];
    uint8_t track  = (uint8_t)buf[FS_BLOCK_PAR_TRACK  -1];	// ignoring high byte
@@ -704,7 +706,10 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
       case FS_BLOCK_U1: 
 	di_load_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
-   	channel_set(chan,ep);
+
+        handler_resolve_block(ep, chan, &fp);
+
+        channel_set(chan, fp);
 	break;
       case FS_BLOCK_BW:
       case FS_BLOCK_U2: 
@@ -713,7 +718,9 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 	}
 	di_flag_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
-   	channel_set(chan,ep);
+        handler_resolve_block(ep, chan, &fp);
+
+        channel_set(chan, fp);
       case FS_BLOCK_BA:
 	rv = di_block_alloc(diep, &track, &sector);
 	break;

@@ -55,6 +55,8 @@ static type_t x00_file_type = {
  */
 static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts) {
 
+	(void) type;
+
 	// must be at least one character, plus "." plus "x00" ending
 	if (name == NULL || strlen(name) < 5) {
 		return CBM_ERROR_FILE_NOT_FOUND;
@@ -189,15 +191,18 @@ static int x00_write(file_t *file, char *buf, int len, int writeflg) {
 
 
 static handler_t x00_handler = {
-	"X00", 		//const char	*name;				// handler name, for debugging
-	NULL, 		//void		(*init)(void);			// initialization routine
-	NULL, 		//char		(*native_charset)();		// get name of the native charset for that handler
+	"X00", 		//const char	*name;			// handler name, for debugging
+	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
 
-	x00_close, 	//void		(*close)(file_t *fp);		// close the file
+	x00_close, 	//void		(*close)(file_t *fp);	// close the file
 
-	NULL,		//int		(*open)(file_t *fp); 		// open a file
+	NULL,		//int		(*open)(file_t *fp); 	// open a file
+
+	// -------------------------
+			// get converter for DIR entries
+	NULL,
 
 	// -------------------------
 	
