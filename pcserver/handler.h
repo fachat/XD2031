@@ -49,7 +49,7 @@ typedef struct {
 							// may return non-null but with error (e.g.
 							// write open on read-only endpoint). Error can
 							// be read on file_t
-	int		(*resolve)(file_t *infile, file_t **outfile, 
+	int		(*resolve)(const file_t *infile, file_t **outfile, 
 					uint8_t type, const char *name, const char *opts); 
 
 	void		(*close)(file_t *fp);		// close the file

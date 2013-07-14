@@ -53,7 +53,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts) {
+static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts) {
 
 	(void) type;
 
@@ -82,15 +82,19 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 
 	switch(typechar) {
 	case 'P':
+	case 'p':
 		ftype = FS_DIR_TYPE_PRG;
 		break;
 	case 'S':
+	case 's':
 		ftype = FS_DIR_TYPE_SEQ;
 		break;
 	case 'U':
+	case 'u':
 		ftype = FS_DIR_TYPE_USR;
 		break;
 	case 'R':
+	case 'r':
 		ftype = FS_DIR_TYPE_REL;
 		break;
 	default:
@@ -128,10 +132,11 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	openpars_process_options((uint8_t*) opts, &open_ftype, &open_reclen);
 	
 	if (open_ftype != 0 && open_ftype != ftype) {
+		log_debug("Expected file type %d, found file type %d\n", open_ftype, ftype);
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	}
 
-	if (open_reclen != x00_buf[0x19]) {
+	if (ftype == FS_DIR_TYPE_REL && open_reclen != x00_buf[0x19]) {
 		return CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 

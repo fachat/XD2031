@@ -141,9 +141,40 @@ int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t typ
 	file->channel = chan;
 	file->recordlen = reclen;
 
-	*outfile = (file_t*) file;
 
-	return CBM_ERROR_OK;
+	// now wrap into handler for file types
+	file_t *oldfile = (file_t*) file;
+	file_t *newfile = NULL;
+	int i = 0;
+	err = CBM_ERROR_FILE_NOT_FOUND;
+	do {
+		handler_t *handler = reg_get(&handlers, i);
+		if (handler == NULL) {
+			break;
+		}
+		err = handler->resolve(oldfile, &newfile, type, name, opts);
+		i++;
+	} while (err == CBM_ERROR_FILE_NOT_FOUND);
+
+log_info("resolved file to %p, with err=%d\n", newfile, err);
+
+	if (err == CBM_ERROR_OK) {
+		*outfile = newfile;
+	} else
+	if (err == CBM_ERROR_FILE_NOT_FOUND) {
+		// no handler found, stay with original
+		*outfile = oldfile;
+		err = CBM_ERROR_OK;
+	} else {
+		// file found, but serious error, so close and be done
+		oldfile->handler->close(oldfile);
+	}
+
+	// TODO: here would be the check if the current file would be a container
+	// (directory) and if the file name contained more parts to recursively 
+	// traverse
+
+	return err;
 }
 
 /*
@@ -198,7 +229,8 @@ static int ep_seek(file_t *file, long pos) {
 
         // add header offset, that's all
 	// TODO: kludge!
-        return xfile->endpoint->ptype->position(xfile->endpoint, xfile->channel, pos / xfile->recordlen);
+        return xfile->endpoint->ptype->position(xfile->endpoint, xfile->channel, 
+			(pos == 0) ? pos : pos / xfile->recordlen);
 }
 
 static int ep_read(file_t *file, char *buf, int len, int *readflg) {
