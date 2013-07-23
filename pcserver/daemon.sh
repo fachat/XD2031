@@ -9,5 +9,4 @@ else
 	install -m 755 fsser.default /etc/default/fsser
 fi
 update-rc.d fsser defaults
-service fsser stop
-service fsser start
+service fsser restart
