@@ -1,1 +1,4 @@
 DAEMON_ARGS="-d /dev/ttyUSB0 -A0:fs=/usr/local/xd2031/sample -A1:fs=/usr/local/xd2031/tools ."
+
+# This user will run the Server. Affects home directory and permissions.
+RUN_AS_USER=""

@@ -18,9 +18,14 @@
 # Read configuration variable file if it is present
 # DAEMON_ARGS -- what it says
 # RUN_AS_USER -- this user will run the server
-# If it is undefined, it will run with root rights
+# If RUN_AS_USER is undefined, abort
 #
 [ -r /etc/default/fsser ] && . /etc/default/fsser
+
+if [ -z $RUN_AS_USER ] ; then
+  echo "/etc/default/fsser: RUN_AS_USER undefined!"
+  exit 1
+fi
 
 case "$1" in
 start)
@@ -28,7 +33,7 @@ if pidof fsser > /dev/null ; then
   echo "Server already running."
 else
   echo "Starting XD-2031 Server..."
-  PREFIX/BINDIR/fsser -D $DAEMON_ARGS >> /var/log/fsser &
+  su - $RUN_AS_USER -c "PREFIX/BINDIR/fsser -D $DAEMON_ARGS >> /var/log/fsser &"
 fi
 ;;
 stop)
@@ -48,7 +53,7 @@ if pidof fsser > /dev/null ; then
 else
   echo "No running server found, starting now."
 fi
-PREFIX/BINDIR/fsser -D $DAEMON_ARGS >> /var/log/fsser &
+su - $RUN_AS_USER -c "PREFIX/BINDIR/fsser -D $DAEMON_ARGS >> /var/log/fsser &"
 ;;
 *)
 echo "Usage: /etc/init.d/fsser {start|stop|restart}"
