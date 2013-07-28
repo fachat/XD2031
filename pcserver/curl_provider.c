@@ -549,9 +549,13 @@ static File *open_file(endpoint_t *ep, int tfd, const char *buf, int is_dir) {
 	return fp;
 }
 
-static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+static int open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int type) {
 	(void)opts; // silence warning unused parameter
 	(void) reclen;
+
+	if (type != FS_OPEN_RD) {
+		return CBM_ERROR_FAULT;
+	}
 
 	File *fp = open_file(ep, tfd, buf, 0);
 	if (fp != NULL) {
@@ -887,9 +891,6 @@ provider_t ftp_provider = {
 
 	close_fds,
 	open_rd,
-	NULL, //open_ftp_wr,
-	NULL, //open_ftp_ap,
-	NULL, //open_ftp_rw,
 	open_dr,
 	read_file,
 	NULL, // write_file,
@@ -912,9 +913,6 @@ provider_t http_provider = {
 
 	close_fds,
 	open_rd,
-	NULL, //open_ftp_wr,
-	NULL, //open_ftp_ap,
-	NULL, //open_ftp_rw,
 	NULL, //open_dr,
 	read_file,
 	NULL, // write_file,
