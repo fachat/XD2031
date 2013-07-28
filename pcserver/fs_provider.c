@@ -87,12 +87,14 @@ typedef struct {
 
 static type_t block_type = {
 	"direct_buffer",
-	sizeof(char[256])
+	sizeof(char[256]),
+	NULL
 };
 
 static type_t record_type = {
 	"record_buffer",
-	sizeof(char[65536])
+	sizeof(char[65536]),
+	NULL
 };
 
 static int expand_relfile(File *file, long cursize, long curpos);
