@@ -53,7 +53,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts) {
+static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts, char **outname) {
 
 	(void) type;
 
@@ -145,6 +145,7 @@ static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, con
 
 	x00_file_t *file = mem_alloc(&x00_file_type);
 
+	file->file.isdir = 0;
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
@@ -219,6 +220,8 @@ static handler_t x00_handler = {
 
 	x00_write,	// write file data
 			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
+
+	NULL,		// direntry
 
 	// -------------------------
 

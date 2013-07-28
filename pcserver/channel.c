@@ -78,7 +78,7 @@ void channel_set(int channo, file_t *fp) {
                // just in case...
 		if (chantable[i].channo == channo) {
 			log_error("Closing leftover file for channel %d\n", channo);
-			chantable[i].fp->handler->close(chantable[i].fp);
+			chantable[i].fp->handler->close(chantable[i].fp, 1);
 			chantable[i].fp = NULL;
 			chantable[i].channo = -1;
 		}

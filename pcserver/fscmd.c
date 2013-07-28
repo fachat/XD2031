@@ -498,7 +498,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 					break; // out of switch() to escape provider_cleanup()
 				} else {
 					if (fp != NULL) {
-						fp->handler->close(fp);
+						fp->handler->close(fp, 1);
 						fp = NULL;
 					}
 					log_rv(rv);
@@ -592,7 +592,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		fp = channel_to_file(tfd);
 		if (fp != NULL) {
 			log_info("CLOSE(%d)\n", tfd);
-			fp->handler->close(fp);
+			fp->handler->close(fp, 1);
 			channel_free(tfd);
 			retbuf[FSP_DATA] = CBM_ERROR_OK;
 		}

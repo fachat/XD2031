@@ -49,10 +49,18 @@ typedef struct {
 							// may return non-null but with error (e.g.
 							// write open on read-only endpoint). Error can
 							// be read on file_t
+							// The outname contains the start of the next 
+							// path part, or NULL if the file found was
+							// the last part of the given name. outname
+							// can directly be given into the next 
+							// (child) resolve method (i.e. path separators
+							// are filtered out). 
 	int		(*resolve)(const file_t *infile, file_t **outfile, 
-					uint8_t type, const char *name, const char *opts); 
+					uint8_t type, const char *name, const char *opts, char **outname); 
 
-	void		(*close)(file_t *fp);		// close the file
+							// close the file; do so recursively by closing
+							// parents if recurse is set
+	void		(*close)(file_t *fp, int recurse);	
 
 	int		(*open)(file_t *fp); 		// open a file
 
@@ -70,6 +78,9 @@ typedef struct {
 							// write file data
 	int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
+							// get the next directory entry (NULL if end)
+	file_t*		(*direntry)(file_t *fp);
+
 	// -------------------------
 
 	uint16_t	(*recordlen)(file_t *fp);	// return the record length for file
@@ -82,9 +93,19 @@ typedef struct {
 #define	READFLAG_EOF	1
 #define	READFLAG_DENTRY	2
 
+// base struct for a file. Is extended in the separate handlers with handler-specific
+// information.
+//
+// The endpoint is recorded for each file and contains the "uppermost" endpoint. A d64 file
+// in a zip file in a file system file has three stacked endpoints, one for the file system,
+// one for th zip file, and one for the d64. When FS_MOVEing a file, the endpoints of source
+// and target are compared, and if identical, the move is forwarded to the endpoint, otherwise
+// the file is copied.
 struct _file {
 	handler_t	*handler;
+	endpoint_t	*endpoint;	// endpoint for that file
 	file_t		*parent;	// for resolving ".."
+	int		isdir;		// when set, is directory
 };
 
 /*

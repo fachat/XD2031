@@ -29,6 +29,12 @@
 #include "mem.h"
 #include "provider.h"
 #include "wireformat.h"
+#include "wildcard.h"
+
+// prototypes
+static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
+                                        const char *name, char **outname);
+
 
 // This file defines the file type handler interface. This is used
 // to "wrap" files so that for example x00 (like P00, R00, ...) files 
@@ -57,7 +63,8 @@ void handler_init(void) {
 }
 
 
-file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts) {
+// unused as of now
+file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, char **outname) {
 
 	file_t *newfile = NULL;
 
@@ -67,7 +74,7 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 			// not found
 			return NULL;
 		}
-		int err = handler->resolve(parent, &newfile, type, name, opts);
+		int err = handler->resolve(parent, &newfile, type, name, opts, outname);
 		if (err != CBM_ERROR_OK) {
 			log_error("Got %d as error\n", err);
 			return NULL;
@@ -85,7 +92,6 @@ static handler_t ep_handler;
 
 typedef struct {
 	file_t 		file;		// embedded
-	endpoint_t	*endpoint;
 	int		channel;	// for the endpoint
 	uint16_t	recordlen;
 } ep_file_t;
@@ -98,84 +104,156 @@ static type_t ep_file_type = {
 
 /*
  * open a file
+ *
+ * This function takes the file name from an OPEN, and the endpoint defined for the 
+ * drive as given in the OPEN, and recursively walks the path parts of that file name.
+ *
+ * Each path part is checked against the list of handlers for a match
  */
 
-int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *name, const char *opts) {
+int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *inname, const char *opts) {
 
-	int reclen = 0;
+	char *outname = NULL;
 	int err = CBM_ERROR_FAULT;
+	file_t *file = NULL;
+	file_t *direntry = NULL;
 
-	// assuming infile is NULL
-
-	switch(type) {
-		case FS_OPEN_RD:
-			err = ep->ptype->open_rd(ep, chan, name, opts, &reclen);
-			break;
-		case FS_OPEN_WR:
-			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 0);
-			break;
-		case FS_OPEN_AP:
-			err = ep->ptype->open_ap(ep, chan, name, opts, &reclen);
-			break;
-		case FS_OPEN_OW:
-			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 1);
-			break;
-		case FS_OPEN_RW:
-			err = ep->ptype->open_rw(ep, chan, name, opts, &reclen);
-			break;
-		case FS_OPEN_DR:
-			err = ep->ptype->opendir(ep, chan, name, opts);
-			break;
-	}
+	// initial file struct
+	err = ep_create(ep, chan, outfile, inname, &outname):
 
 	if (err != CBM_ERROR_OK) {
 		return err;
 	}
+	name = outname;
 
-	ep_file_t *file = mem_alloc(&ep_file_type);
+	while (outfile != NULL && name != NULL && *name != 0) {
 
-	file->file.handler = &ep_handler;
-	file->file.parent = NULL;
+		file = *outfile;
 
-	file->endpoint = ep;
-	file->channel = chan;
-	file->recordlen = reclen;
+		// loop over directory entries
+		while ((direntry = file->handler->direntry(file)) != NULL) {
 
+			// test each dir entry against the different handlers
+			*outfile = NULL;
+			*outname = strchr(name, '/');	// determine end of name
 
-	// now wrap into handler for file types
-	file_t *oldfile = (file_t*) file;
-	file_t *newfile = NULL;
-	int i = 0;
-	err = CBM_ERROR_FILE_NOT_FOUND;
-	do {
-		handler_t *handler = reg_get(&handlers, i);
-		if (handler == NULL) {
-			break;
+			for (int i = 0; ; i++) {
+				handler_t *handler = reg_get(&handlers, i);
+				if (handler == NULL) {
+					// no handler found
+					break;
+				}
+				err = handler->resolve(direntry, outfile, type, name, opts, outname);
+				if (err != CBM_ERROR_OK) {
+					log_error("Got %d as error from handler %s\n", err, handler->name);
+				} else {
+					// found a handler
+					break;
+				}
+			}
+			
+			if (*outfile != NULL) {
+				file = *outfile;
+			}
+
+			// end of file name = end of path pattern
+			*outname = 0;
+
+			// now that we found an entry, match with the search path
+			const char *filename = file->handler->getname(file);
+
+			const char *pattern = name;
+
+			if (compare_pattern(filename, pattern)) {
+				// found entry
+				// next search path
+				name = outname + 1;
+
+			} else {
+				// file does not match name
+			}
 		}
-		err = handler->resolve(oldfile, &newfile, type, name, opts);
-		i++;
-	} while (err == CBM_ERROR_FILE_NOT_FOUND);
 
-log_info("resolved file to %p, with err=%d\n", newfile, err);
 
-	if (err == CBM_ERROR_OK) {
-		*outfile = newfile;
-	} else
-	if (err == CBM_ERROR_FILE_NOT_FOUND) {
-		// no handler found, stay with original
-		*outfile = oldfile;
-		err = CBM_ERROR_OK;
-	} else {
-		// file found, but serious error, so close and be done
-		oldfile->handler->close(oldfile);
 	}
 
-	// TODO: here would be the check if the current file would be a container
-	// (directory) and if the file name contained more parts to recursively 
-	// traverse
-
 	return err;
-}
+
+	
+//	int reclen = 0;
+//	int err = CBM_ERROR_FAULT;
+//
+//	// assuming infile is NULL
+//
+//	switch(type) {
+//		case FS_OPEN_RD:
+//			err = ep->ptype->open_rd(ep, chan, name, opts, &reclen);
+//			break;
+//		case FS_OPEN_WR:
+//			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 0);
+//			break;
+//		case FS_OPEN_AP:
+//			err = ep->ptype->open_ap(ep, chan, name, opts, &reclen);
+//			break;
+//		case FS_OPEN_OW:
+//			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 1);
+//			break;
+//		case FS_OPEN_RW:
+//			err = ep->ptype->open_rw(ep, chan, name, opts, &reclen);
+//			break;
+//		case FS_OPEN_DR:
+//			err = ep->ptype->opendir(ep, chan, name, opts);
+//			break;
+//	}
+//
+//	if (err != CBM_ERROR_OK) {
+//		return err;
+//	}
+//
+//	ep_file_t *file = mem_alloc(&ep_file_type);
+//
+//	file->file.handler = &ep_handler;
+//	file->file.parent = NULL;
+//
+//	file->endpoint = ep;
+//	file->channel = chan;
+//	file->recordlen = reclen;
+//
+//
+//	// now wrap into handler for file types
+//	file_t *oldfile = (file_t*) file;
+//	file_t *newfile = NULL;
+//	int i = 0;
+//	err = CBM_ERROR_FILE_NOT_FOUND;
+//	do {
+//		handler_t *handler = reg_get(&handlers, i);
+//		if (handler == NULL) {
+//			break;
+//		}
+//		err = handler->resolve(oldfile, &newfile, type, name, opts);
+//		i++;
+//	} while (err == CBM_ERROR_FILE_NOT_FOUND);
+//
+//log_info("resolved file to %p, with err=%d\n", newfile, err);
+//
+//	if (err == CBM_ERROR_OK) {
+//		*outfile = newfile;
+//	} else
+//	if (err == CBM_ERROR_FILE_NOT_FOUND) {
+//		// no handler found, stay with original
+//		*outfile = oldfile;
+//		err = CBM_ERROR_OK;
+//	} else {
+//		// file found, but serious error, so close and be done
+//		oldfile->handler->close(oldfile);
+//	}
+//
+//	// TODO: here would be the check if the current file would be a container
+//	// (directory) and if the file name contained more parts to recursively 
+//	// traverse
+//
+//	return err;
+//}
 
 /*
  * resolve a file_t from an endpoint, for a block operation
@@ -197,16 +275,76 @@ int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile) {
 }
 
 
+// -----------------------------------------------------------------------------------------
+
+// TODO: belongs into endpoint
+static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
+                                        const char *name, char **outname) {
+
+	const char *dirname = "/";
+
+	*outname = NULL;
+
+	int err = ep->ptype->opendir(ep, chan, dirname, opts);
+
+	if (err == CBM_ERROR_OK) {
+		
+		ep_file_t *file = mem_alloc(&ep_file_type);
+
+		file->file.endpoint = ep;
+		file->file.parent = NULL;
+		file->file.handler = &ep_handler;
+		file->isdir = 1;
+		file->channel = chan;
+
+		// remove root directory indicator
+		char *p = name;
+		while (*p == '/') {
+			p++;
+		}
+		if (*p) {
+			*outname = p;
+		}
+
+	}
+
+	return err;	
+}
+
+// used internally by a recursive resolve
+// starting from an endpoint and continuing until
+// all name parts are used
+// Actually called by the handler registry in turn
+// until one handler returns non-null
+// type is the FS_OPEN_* command as parameter
+// may return non-null but with error (e.g.
+// write open on read-only endpoint). Error can
+// be read on file_t
+// The outname contains the start of the next 
+// path part, or NULL if the file found was
+// the last part of the given name. outname
+// can directly be given into the next 
+// (child) resolve method (i.e. path separators
+// are filtered out). 
+//
+// The endpoint-file resolve() method opens the top level path (actually "." or "/") as
+// directory, so that lower paths can be examined by the resolver
+// 
+int ep_resolve(const file_t *infile, file_t **outfile,
+                                        uint8_t type, const char *name, const char *opts, char **outname) {
+}
 
 
-static void ep_close(file_t *file) {
+static void ep_close(file_t *file, int recurse) {
+	(void) recurse;
+
         ep_file_t *xfile = (ep_file_t*)file;
 
         // no resources to clean here, so just forward the close
-        xfile->endpoint->ptype->close(xfile->endpoint, xfile->channel);
+        xfile->file.endpoint->ptype->close(xfile->file.endpoint, xfile->channel);
 
 	// cleanup provider when not needed anymore
-	provider_cleanup(xfile->endpoint);
+	provider_cleanup(xfile->file.endpoint);
 
         // and then free the file struct memory
         mem_free(xfile);
@@ -229,27 +367,27 @@ static int ep_seek(file_t *file, long pos) {
 
         // add header offset, that's all
 	// TODO: kludge!
-        return xfile->endpoint->ptype->position(xfile->endpoint, xfile->channel, 
+        return xfile->file.endpoint->ptype->position(xfile->file.endpoint, xfile->channel, 
 			(pos == 0) ? pos : pos / xfile->recordlen);
 }
 
 static int ep_read(file_t *file, char *buf, int len, int *readflg) {
         ep_file_t *xfile = (ep_file_t*)file;
 
-        return xfile->endpoint->ptype->readfile(xfile->endpoint, xfile->channel, buf, len, readflg );
+        return xfile->file.endpoint->ptype->readfile(xfile->file.endpoint, xfile->channel, buf, len, readflg );
 }
 
 static int ep_write(file_t *file, char *buf, int len, int writeflg) {
         ep_file_t *xfile = (ep_file_t*)file;
 
-        return xfile->endpoint->ptype->writefile(xfile->endpoint, xfile->channel, buf, len, writeflg );
+        return xfile->file.endpoint->ptype->writefile(xfile->file.endpoint, xfile->channel, buf, len, writeflg );
 }
 
 static charconv_t ep_convfrom(file_t *file, const char *tocharset) {
         ep_file_t *xfile = (ep_file_t*)file;
 
 	// TODO kludge
-	return provider_convfrom(xfile->endpoint->ptype);
+	return provider_convfrom(xfile->file.endpoint->ptype);
 }
 
 
@@ -257,11 +395,11 @@ static charconv_t ep_convfrom(file_t *file, const char *tocharset) {
 static handler_t ep_handler = {
         "EPH",          //const char    *name;                  // handler name, for debugging
         "ASCII",        //const char    *native_charset;        // get name of the native charset for that handler
-        NULL,	    	// root handler has no resolve
+        ep_resolve,    	// root handler has no resolve
 			//int           (*resolve)(file_t *infile, file_t **outfile, 
-                        //              uint8_t type, const char *name, const char *opts); 
+                        //              uint8_t type, const char *name, const char *opts, char *outname); 
 
-        ep_close,      //void          (*close)(file_t *fp);   // close the file
+        ep_close,      //void          (*close)(file_t *fp, int recurse);   // close the file
 
         NULL,           //int           (*open)(file_t *fp);    // open a file
 
