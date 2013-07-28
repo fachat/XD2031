@@ -1658,43 +1658,13 @@ static int di_cd(endpoint_t *ep, char *buf)
 
 
 //***********
-// di_open_rd
+// di_open
 //***********
 
-static int di_open_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
+static int di_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int type)
 {
-   return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_RD);
+   return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, type);
 }
-
-//***********
-// di_open_wr
-//***********
-
-static int di_open_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen,
-                        const int is_overwrite)
-{
-  if (is_overwrite) return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_OW);
-  else              return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_WR);
-}
-
-//***********
-// di_open_ap
-//***********
-
-static int di_open_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
-{
-       return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_AP);
-}
-
-// **********
-// di_open_rw
-// **********
-
-static int di_open_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen)
-{
-       return di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, FS_OPEN_RW);
-}
-
 
 // *****************
 // di_direct_channel
@@ -1819,10 +1789,7 @@ provider_t di_provider =
    di_tempep,       // endpoint_t* (*tempep   )(char **par); 
    di_freeep,       // void        (*freeep   )(endpoint_t *ep); 
    di_close,        // void        (*close    )(endpoint_t *ep, int chan);
-   di_open_rd,      // int         (*open_rd  )(endpoint_t *ep, int chan, ...
-   di_open_wr,      // int         (*open_wr  )(endpoint_t *ep, int chan, ...
-   di_open_ap,      // int         (*open_ap  )(endpoint_t *ep, int chan, ...
-   di_open_rw,      // int         (*open_rw  )(endpoint_t *ep, int chan, ...
+   di_open,         // int         (*open_rd  )(endpoint_t *ep, int chan, ...
    di_opendir,      // int         (*opendir  )(endpoint_t *ep, int chan, ...
    di_readfile,     // int         (*readfile )(endpoint_t *ep, int chan, ...
    di_writefile,    // int         (*writefile)(endpoint_t *ep, int chan, ...

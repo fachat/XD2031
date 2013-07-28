@@ -35,7 +35,8 @@
 
 static type_t mem_type = {
 	"x-option-string-pointer",
-	sizeof(const char *)
+	sizeof(const char *),
+	NULL
 };
 
 // array of pointers to option strings

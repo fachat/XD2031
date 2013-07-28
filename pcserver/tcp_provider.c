@@ -49,6 +49,7 @@
 #include "mem.h"
 
 #include "charconvert.h"
+#include "wireformat.h"
 
 #include "log.h"
 
@@ -438,29 +439,23 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
+static int tcp_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int type) {
        (void) opts; // silence warning unused parameter
        (void) reclen;
-       return open_file(ep, tfd, buf, "rb");
-}
 
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, const int is_overwrite) {
-       (void) is_overwrite;	// silence unused param warning
-       (void) opts;             // silence unused param warning
-       (void) reclen;
-       return open_file(ep, tfd, buf, "wb");
-}
-
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
-       (void) opts;             // silence unused param warning
-       (void) reclen;
-       return open_file(ep, tfd, buf, "ab");
-}
-
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
-       (void) opts;             // silence unused param warning
-       (void) reclen;
-       return open_file(ep, tfd, buf, "rwb");
+	switch (type) {
+		case FS_OPEN_RD:
+       			return open_file(ep, tfd, buf, "rb");
+		case FS_OPEN_WR:
+		case FS_OPEN_OW:
+       			return open_file(ep, tfd, buf, "wb");
+		case FS_OPEN_AP:
+       			return open_file(ep, tfd, buf, "ab");
+		case FS_OPEN_RW:
+       			return open_file(ep, tfd, buf, "rwb");
+		default:
+			return CBM_ERROR_FAULT;
+	}
 }
 
 
@@ -472,10 +467,7 @@ provider_t tcp_provider = {
 	tnp_temp,
 	tnp_free,
 	close_fds,
-	open_file_rd,
-	open_file_wr,
-	open_file_ap,
-	open_file_rw,
+	tcp_open,
 	NULL,	//open_dr,
 	read_file,
 	write_file,

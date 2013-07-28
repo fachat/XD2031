@@ -480,7 +480,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			if (prov->open_wr != NULL) {
+			if (prov->open != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
 				log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 

@@ -24,12 +24,14 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+typedef struct _type type_t;
 
 // more or less a class definition type
-typedef struct {
+struct _type {
 	const char 	*name;
 	unsigned int	sizeoftype;
-} type_t;
+	void		(*constructor)(const type_t *type, void *obj);
+};
 
 typedef int 	bool_t;
 
