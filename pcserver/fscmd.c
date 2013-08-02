@@ -252,7 +252,7 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 
 void disable_user_interface(void) {
 	user_interface_enabled = FALSE;
-	log_warn("User interface disabled. Abort with Ctrl-C / sudo service fsser stop\n");
+	log_warn("User interface disabled. Abort with \"service fsser stop\".\n");
 }
 
 #define INBUF_SIZE 1024

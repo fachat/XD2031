@@ -54,7 +54,7 @@
 #define FALSE 0
 #define TRUE 1
 
-void usage(void) {
+void usage(int rv) {
 	printf("Usage: fsser [options] run_directory\n"
 		" options=\n"
                 "   -A<drv>:<provider-string>\n"
@@ -71,7 +71,7 @@ void usage(void) {
 		"   -v          enable debug log output\n"
 		"   -?          gives you this help text\n"
 	);
-	exit(1);
+	exit(rv);
 }
 
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 	while(i<argc && argv[i][0]=='-') {
 	  switch(argv[i][1]) {
 	    case '?':
-		usage();	/* usage() exits already */
+		usage(EXIT_SUCCESS);	/* usage() exits already */
 		break;
 	    case 'd':
 	    	parameter_d_given = TRUE;
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 		break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);
-		usage();
+		usage(EXIT_RESPAWN_NEVER);
 		break;
 	  }
 	  i++;
@@ -135,10 +135,10 @@ int main(int argc, char *argv[]) {
 		dir = ".";
 	} else if (i == argc) {
 		log_error("Missing run_directory\n");
-		usage();
+		usage(EXIT_RESPAWN_NEVER);
 	} else if (argc > i+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage();
+		usage(EXIT_RESPAWN_NEVER);
 	} else dir = argv[i];
 
 	log_info("dir=%s\n", dir);
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
 	if(chdir(dir)<0) { 
 	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
-	  exit(1);
+	  exit(EXIT_RESPAWN_NEVER);
 	}
 
 	if (device != NULL) {
@@ -155,12 +155,12 @@ int main(int argc, char *argv[]) {
 		  /* error */
 		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
 			device, os_errno(), os_strerror(os_errno()));
-		  exit(1);
+		  exit(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
 		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
-		  exit(1);
+		  exit(EXIT_RESPAWN_NEVER);
 		}
 		readfd = fdesc;
 		writefd = readfd;
@@ -187,10 +187,12 @@ int main(int argc, char *argv[]) {
 		device_close(fdesc);
 	}
 
+	// If the device is lost, the daemon should always restart the server
+	// when it is available again
 	if(res) {
-		// could try to restart to open the device again
-	}	
-
-	return 0;	
+		exit(EXIT_RESPAWN_ALWAYS);
+	} else {
+		exit(EXIT_SUCCESS);
+	}
 }
 

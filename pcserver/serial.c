@@ -144,7 +144,7 @@ int config_ser(int fd) {
 void guess_device(char** device) {
 /* search /dev for a (virtual) serial port 
    Change "device" to it, if exactly one found
-   If none found or more than one, exit(1) with error msg.
+   If none found or more than one, exit() with error msg.
    FT232 (XS-1541, petSD) connects as ttyUSB0 (ttyUSB1 ...) on Linux,
    and as cu.usbserial-<SERIAL NUMBER> on OS X.
    ttyAMA0 is Raspberry Pi's serial port (3.1541) */
@@ -172,14 +172,14 @@ void guess_device(char** device) {
   switch(candidates) {
     case 0:
       fprintf(stderr, "Could not auto-detect device: none found\n");
-      exit(1);
+      exit(EXIT_FAILURE);
     case 1:
       log_info("Serial device %s auto-detected\n", *device);
       break;
     default:
       fprintf(stderr, "Unable to decide which serial device it is. "
                       "Please pick one.\n");
-      exit(1);
+      exit(EXIT_RESPAWN_NEVER);
       break;
   }
 }
@@ -289,11 +289,11 @@ int main(void)
 	serial_port = device_open(devicename);
 	if(os_open_failed(serial_port)) {
 		log_error("Unable to open serial device: %s\n", os_strerror(os_errno()));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	if(config_ser(serial_port)) {
 		log_error("Unable to configure serial port: %s\n", os_strerror(os_errno()));
-		exit(1);
+		exit(EXIT_RESPAWN_NEVER);
 	}
 	device_close(serial_port);
 
