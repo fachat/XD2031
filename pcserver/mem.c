@@ -91,6 +91,10 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 
 	check_alloc(ptr, file, line);
 
+	if (type->constructor != NULL) {
+		type->constructor(type, ptr);
+	}
+
 	return ptr;
 }
 

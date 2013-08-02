@@ -467,41 +467,17 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		// file-oriented commands
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_wr != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_%s(%d->%s:%s)\n", (cmd==FS_OPEN_OW)?"OW":"WR", tfd, 
-					prov->name, name);
-				rv = prov->open_wr(ep, tfd, name, options, &record, cmd == FS_OPEN_OW);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
+	case FS_OPEN_RD:
 	case FS_OPEN_RW:
+	case FS_OPEN_AP:
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			if (prov->open_rw != NULL) {
+			if (prov->open != NULL) {
 				provider_convto(prov)(name, convlen, name, convlen);
 				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_RW(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rw(ep, tfd, name, options, &record);
+				log_info("OPEN_%d(%d->%s:%s)\n", cmd, tfd, prov->name, name);
+				rv = prov->open(ep, tfd, name, options, &record, cmd);
 				retbuf[FSP_DATA] = rv;
 				if (rv == CBM_ERROR_OPEN_REL) {
 					retbuf[FSP_DATA+1] = record & 0xff;
@@ -532,58 +508,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				rv = prov->opendir(ep, tfd, name, options);
 				retbuf[FSP_DATA] = rv;
 				if (rv == 0) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
-	case FS_OPEN_RD:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_rd != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_RD(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = prov->open_rd(ep, tfd, name, options, &record);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, ep);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
-		break;
-	case FS_OPEN_AP:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->open_ap != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_AP(%d->%s:%s\n", tfd, prov->name, name);
-				rv = prov->open_ap(ep, tfd, name, options, &record);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
-				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 					channel_set(tfd, ep);
 					break; // out of switch() to escape provider_cleanup()
 				} else {
