@@ -265,6 +265,7 @@ typedef struct
    uint8_t  chp;          // chain pointer
    uint8_t  access_mode;
    uint16_t lastpos;	  // last P record number, to expand to on write
+   uint16_t maxrecord;	  // the last record number available in the file
 } File;
 
 typedef struct
@@ -291,6 +292,7 @@ extern provider_t di_provider;
 static uint8_t di_next_track(di_endpoint_t *diep);
 static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector);
 static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
+static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 
 // ************
 // di_assert_ts
@@ -1274,7 +1276,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
       rv = di_create_entry(diep, tfd, filename, type, reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
-   if (di_cmd == FS_OPEN_AP) di_pos_append(diep,file);
+   // store number of actual records in file
+   file->maxrecord = di_rel_record_max(diep, file);
+
+   if (di_cmd == FS_OPEN_AP) {
+	di_pos_append(diep,file);
+   }
    return CBM_ERROR_OK;
 }
 
@@ -1515,6 +1522,8 @@ static int di_read_seq(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof)
    log_debug("di_read_seq(chan %d, len=%d)\n",tfd,len);
    File *file = di_find_file(diep, tfd);
 
+   di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
+
    for (i=0 ; i < len ; ++i)
    {
       *eof = di_read_byte(diep, file, retbuf+i);
@@ -1541,8 +1550,11 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
 
    File *f = di_find_file(diep, tfd);
    di_fseek_tsp(diep,f->cht,f->chs,2+f->chp);
-   for (i=0 ; i < len ; ++i)
-      if (di_write_byte(diep, f, (uint8_t)buf[i])) return -CBM_ERROR_DISK_FULL;
+   for (i=0 ; i < len ; ++i) {
+      if (di_write_byte(diep, f, (uint8_t)buf[i])) {
+	return -CBM_ERROR_DISK_FULL;
+      }
+   }
 
    return CBM_ERROR_OK;
 }
