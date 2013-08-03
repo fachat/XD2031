@@ -44,7 +44,7 @@ static void check_alloc_(void *ptr, char *file, int line) {
 	if(!ptr) {
 		fprintf(stderr, "Could not allocate memory, "
 		"file: %s line: %d\n", file, line);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -90,6 +90,10 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 	void *ptr = malloc(type->sizeoftype);
 
 	check_alloc(ptr, file, line);
+
+	if (type->constructor != NULL) {
+		type->constructor(type, ptr);
+	}
 
 	return ptr;
 }

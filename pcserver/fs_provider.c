@@ -87,12 +87,14 @@ typedef struct {
 
 static type_t block_type = {
 	"direct_buffer",
-	sizeof(char[256])
+	sizeof(char[256]),
+	NULL
 };
 
 static type_t record_type = {
 	"record_buffer",
-	sizeof(char[65536])
+	sizeof(char[65536]),
+	NULL
 };
 
 static int expand_relfile(File *file, long cursize, long curpos);
@@ -566,7 +568,7 @@ static void close_fds(endpoint_t *ep, int tfd) {
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int fs_cmd) {
 	int er = CBM_ERROR_FAULT;
 	File *file;
-	
+
 	uint16_t recordlen = 0;
 	uint8_t type;
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
@@ -929,6 +931,7 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 					log_errno("Could not write filler record");
 					return -CBM_ERROR_WRITE_ERROR;
 				}
+	return CBM_ERROR_OK;
 }
 
 // write file data
@@ -1237,26 +1240,6 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 // ----------------------------------------------------------------------------------
 
-static int open_file_rd(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
-       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_RD);
-}
-
-static int open_file_wr(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, const int is_overwrite) {
-	if (is_overwrite) {
-       		return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_OW);
-	} else {
-       		return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_WR);
-	}
-}
-
-static int open_file_ap(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
-       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_AP);
-}
-
-static int open_file_rw(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen) {
-       return open_file(ep, tfd, buf, opts, reclen, FS_OPEN_RW);
-}
-
 
 static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
 
@@ -1311,10 +1294,7 @@ provider_t fs_provider = {
 	fsp_temp,
 	fsp_free,
 	close_fds,
-	open_file_rd,
-	open_file_wr,
-	open_file_ap,
-	open_file_rw,
+	open_file,
 	open_dr,
 	readfile,
 	writefile,
