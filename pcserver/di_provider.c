@@ -57,6 +57,9 @@
 
 #define  MAX_BUFFER_SIZE  64
 
+#define SIDE_SECTORS_MAX 6
+#define SIDE_INDEX_MAX   120
+
 typedef struct Disk_Image
 {
    uint8_t ID;                    // Image type (64,71,80,81,82)
@@ -68,6 +71,7 @@ typedef struct Disk_Image
    uint8_t TracksPerBAM;          // Tracks per BAM
    uint8_t DirInterleave;         // Interleave on directory track
    uint8_t DatInterleave;         // Interleave on data tracks
+   uint8_t HasSSB;		  // when set disk has super side blocks in REL files
    int  Blocks;                   // Size in blocks
    int (*LBA)(int t, int s);      // Logical Block Address calculation
    uint8_t DirTrack;              // Header and directory track
@@ -121,10 +125,10 @@ static int LBA81(int t, int s)
    return s + (t-1) * 40;
 }
 
-//                  ID Tr Se S B Of TB D I Blck      Dir
-Disk_Image_t d64 = {64,35,21,1,1, 4,35,3,9, 683,LBA64,18};
-Disk_Image_t d80 = {80,77,29,1,2, 6,50,3,5,2083,LBA80,39};
-Disk_Image_t d81 = {81,80,40,1,2,16,40,1,1,3200,LBA81,40};
+//                   ID  Tr  Se  S  B  Of  TB  D  I SS  Blck        Dir
+Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 9, 0,  683, LBA64, 18 };
+Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 5, 0, 2083, LBA80, 39 };
+Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 1, 0, 3200, LBA81, 40 };
 
 /* Commodore Floppy Formats
 
@@ -247,6 +251,7 @@ typedef struct
    uint8_t  chs;          // chain sector
    uint8_t  chp;          // chain pointer
    uint8_t  access_mode;
+   uint16_t lastpos;	  // last P record number, to expand to on write
 } File;
 
 typedef struct
@@ -473,6 +478,7 @@ static int di_load_image(di_endpoint_t *diep, const char *filename)
       diep->DI.Sides     =   2;
       diep->DI.BAMBlocks =   4;
       diep->DI.LBA       = LBA82;
+      diep->DI.HasSSB    = 1;		// in contrast to D80 the D82 format has SSB
       diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
       diep->BAMpos[2]    = 256 * diep->DI.LBA(38,6);
@@ -1096,7 +1102,7 @@ static int di_find_free_block(di_endpoint_t *diep, File *f)
 }
 
 // ***************
-// di_create_entry // TODO: set file type
+// di_create_entry 
 // ***************
 
 static int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, uint8_t reclen)
@@ -1651,6 +1657,113 @@ static int di_cd(endpoint_t *ep, char *buf)
 
 
 //***********
+// di_position
+//***********
+//
+// Note: algorithm partially taken from VICE's vdrive_rel_track_sector()
+
+static int di_position(endpoint_t *ep, int tfd, int recordno) {
+
+   uint8_t sidesector[256];
+   uint8_t reclen = 0;
+ 
+   unsigned int rec_long;	// absolute offset in file
+   unsigned int rec_start;	// start of record in block
+   unsigned int super, side;	// super side sector index, side sector index
+   unsigned int offset;		// temp for the number of file bytes pointed to by blocks in a sss or ss
+
+   di_endpoint_t *diep = (di_endpoint_t*) ep;
+
+   File *f = di_find_file(diep, tfd);
+   if (f != NULL) {
+	// store position for write 
+	f->lastpos = recordno;
+
+	// find the block number in file from the record number
+	reclen = f->Slot.recordlen;
+
+	// total byte offset	
+	rec_long = (recordno * reclen);
+
+	// offset in block
+	rec_start = rec_long % 254;
+
+	// compute super side sector index (0-125)
+	offset = (254 * SIDE_INDEX_MAX * SIDE_SECTORS_MAX);
+	super = rec_long / offset;
+	rec_long = rec_long % offset;
+
+	// compute side sector index value (0-5)
+	offset = (254 * SIDE_INDEX_MAX);
+	side = rec_long / offset;
+	rec_long = rec_long % offset;
+
+	// block number in side sector
+	offset = rec_long / 254;
+
+	// -----------------------------------------
+	// find the position pointed to in the image
+	uint8_t ss_track = f->Slot.ss_track;
+	uint8_t ss_sector = f->Slot.ss_track;
+
+	if (ss_track == 0) {
+		// not a REL file
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+	// read the first side sector
+      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+      	fread(sidesector,1,256,diep->Ip);
+ 	
+	if (sidesector[2] == 0xfe) {
+		// sector is a super side sector
+		// read the address of the first block of the correct side sector chain
+		ss_track = sidesector[3 + (super << 1)];
+		ss_sector = sidesector[4 + (super << 1)];
+	
+		if (ss_track == 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+ 	} else {
+		if (super > 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	}
+	// here we have the first side sector of the correct side sector chain in the buffer.
+	if (side > 0) {
+		// need to read the correct side sector first
+		// read side sector number
+		ss_track = sidesector[4 + (side << 1)];
+		ss_sector = sidesector[5 + (side << 1)];
+		if (ss_track == 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+	}
+	// here we have the correct side sector in the buffer.
+	ss_track = sidesector[16 + (offset << 1)];
+	ss_sector = sidesector[17 + (offset << 1)];
+	if (ss_track == 0) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
+	
+	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
+	// record as given in the parameter
+	di_fseek_tsp(diep, ss_track, ss_sector, 0);
+	f->cht = ss_track;
+	f->chs = ss_sector;
+      	fread(&f->next_track ,1,1,diep->Ip);
+      	fread(&f->next_sector,1,1,diep->Ip);
+	di_fseek_tsp(diep, ss_track, ss_sector, rec_start);
+
+	return CBM_ERROR_OK;
+   }
+   return CBM_ERROR_FAULT;
+}
+
+//***********
 // di_open
 //***********
 
@@ -1791,7 +1904,7 @@ provider_t di_provider =
    di_cd,           // int         (*cd       )(endpoint_t *ep, char *name); 
    NULL,            // int         (*mkdir    )(endpoint_t *ep, char *name); 
    NULL,            // int         (*rmdir    )(endpoint_t *ep, char *name);
-   NULL,            // int         (*block    )(endpoint_t *ep, int chan, char *buf);
+   di_position,     // int         (*position )(endpoint_t *ep, int chan, int recordno);
    di_direct        // int         (*direct   )(endpoint_t *ep, char *buf, ...
 };
 
