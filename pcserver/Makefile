@@ -63,14 +63,14 @@ run:
 
 runv:
 	# I'm lazy...
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools .
+	MALLOC_CHECK_=1 ./fsser -D -v -d auto -A0:fs=../sample -A1:fs=../tools .
 
 runv2:
 	# I'm lazy...
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . 
+	MALLOC_CHECK_=1 ./fsser -D -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . 
 
 runv2d:
-	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . " ./fsser
+	MALLOC_CHECK_=1 sudo gdb -ex "run -D -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . " ./fsser
 
 rungdb:
 	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser
