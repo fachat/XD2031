@@ -55,6 +55,7 @@ static const uint8_t IN_ROM tokens[] = {
 static const uint8_t IN_ROM messages[] = {
 	H(CBM_ERROR_OK),			' ','O','K',
 	H(CBM_ERROR_SCRATCHED), 		2,'S',' ','S','C','R','A','T','C','H','E','D',
+	H(CBM_ERROR_READ),			'R','E','A','D',' ',1,
 	H(CBM_ERROR_WRITE_PROTECT),		3,'P','R','O','T','E','C','T',' ',1,
 	H(CBM_ERROR_WRITE_ERROR),		3,1,		// WRITE ERROR
 	H(CBM_ERROR_SYNTAX_UNKNOWN),

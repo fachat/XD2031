@@ -44,6 +44,7 @@ typedef enum {
 	CBM_ERROR_SCRATCHED		= 1,
 	CBM_ERROR_OPEN_REL		= 2,	// opened a relative file (internal)
 	// in CBM DOS error numbers 20-29 are translated from FDC errors (mostly unused here)
+	CBM_ERROR_READ			= 20,
 //	CBM_ERROR_WRITE_VERIFY		= 25,
 	CBM_ERROR_WRITE_PROTECT		= 26,
 	CBM_ERROR_WRITE_ERROR		= 28,
