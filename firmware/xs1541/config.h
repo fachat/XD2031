@@ -35,4 +35,7 @@
 // max. opened files for FAT provider (SD card provider)
 #define FAT_MAX_FILES			4
 
+// max. drives for the FAT provider (each holds a current directory)
+#define FAT_MAX_ASSIGNS                 10
+
 #endif
