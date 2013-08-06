@@ -30,7 +30,7 @@ ASMFLAGS=
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I. -I../common -DFIRMWARE
 
-clean: archclean deviceclean
+clean: archclean deviceclean testclean
 
 distclean: clean
 	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex

@@ -1,7 +1,7 @@
 # petSD-II Options
 
 USE_FAT=y                       # Enable optional FAT module?
-USE_RTC=n			# Enable optional real time clock?
+USE_RTC=y			# Enable optional real time clock?
 
 #########################################################################
 # Should not be modified
@@ -33,6 +33,9 @@ ifeq ($(strip $(USE_FAT)),y)
 	DEVICEDEPS+=fat_provider.h
 endif
 ifeq ($(strip $(USE_RTC)),y)
+	DEVICEOPTS+=-DHAS_RTC               # Define HAS_RTC
+	DEVICEFILES+=rtc/rtc.c              # T commands
+	DEVICEDEPS+=rtc/rtc.h               # Real time clock defs and prototypes
 	DEVICEFILES+=rtc/ds1307.c           # DS1307 Real time clock routines
 	DEVICEDEPS+=i2c/i2c.h               # I2C prototypes
 	DEVICEFILES+=i2c/i2c.c              # I2C high level routines

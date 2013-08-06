@@ -58,7 +58,7 @@ typedef enum {
         // CMD_DUPLICATE,
         // CMD_NEW,
         CMD_BLOCK = FS_BLOCK,
-        CMD_UX,
+        CMD_UX = FS_SYNC, // makes no sense but doesn't conflict
         // CMD_MEM_READ,
         // CMD_MEM_WRITE,
         // CMD_MEM_EXEC,
@@ -70,7 +70,9 @@ typedef enum {
         CMD_RMDIR = FS_RMDIR,
         CMD_ASSIGN = FS_ASSIGN,
 	// configuration extension
-	CMD_EXT
+	CMD_EXT,
+	// date/time commands
+	CMD_TIME = FS_GETDATIM
 } command_t;
 
 typedef struct {

@@ -1,7 +1,7 @@
 /*
     XD-2031 - Serial line filesystem server for CBMs 
-    Copyright (C) 2012  Andre Fachat (afachat@gmx.de)
-    Copyright (C) 2012 Nils Eilers (nils.eilers@gmx.de)
+    Copyright (C) 2013  Andre Fachat (afachat@gmx.de)
+    Copyright (C) 2013 Nils Eilers (nils.eilers@gmx.de)
 
     petSD specific device initialization
 
@@ -55,14 +55,9 @@ static void sdcard_init(void) {
 
 void device_init(void) {
 	i2c_init();                     // I2C bus
+        rtc_init();                     // real time clock
+        sdcard_init();                  // SD card
 
-        // IEEE488 bus
-        ieeehw_init();                  // hardware
+        ieeehw_init();                  // IEEE-488 hardware
         ieee_init(8);                   // hardware-independent part; registers as bus
-
-	// Real time clock
-	rtc_init();
-
-	// SD card
-	sdcard_init();
 }

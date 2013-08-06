@@ -50,6 +50,9 @@ doc:
 rootclean:
 	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 
+testclean:
+	rm -f rtc/rtc
+
 BAR="======================================================================\\n"
 zoo:			   # Compile everything
 	rm -f $(BINDIR)/*

@@ -1,7 +1,7 @@
 /*
     XD-2031 - Serial line filesystem server for CBMs 
-    Copyright (C) 2012  Andre Fachat (afachat@gmx.de)
-    Copyright (C) 2012 Nils Eilers (nils.eilers@gmx.de)
+    Copyright (C) 2013  Andre Fachat (afachat@gmx.de)
+    Copyright (C) 2013 Nils Eilers (nils.eilers@gmx.de)
 
     petSD specific device initialization
 
@@ -25,6 +25,11 @@
 #include "device.h"
 #include "ieeehw.h"
 #include "ieee.h"
+#include "rtc.h"
+#include "diskio.h"
+#include "sdcard.h"
+#include "debug.h"
+
 static void i2c_init(void) {
 	DDR_SDA &= ~_BV(PIN_SDA);	// SDA as input
 	DDR_SCL &= ~_BV(PIN_SCL);	// SCL as input
@@ -32,9 +37,27 @@ static void i2c_init(void) {
 	PORT_SCL &= ~_BV(PIN_SCL);	// disable internal pull-up, output 0
 }
 
+static void sdcard_init(void) {
+
+	DDR_SD_CD &= ~_BV(PIN_SD_CD);	// SD CD as input
+	PORT_SD_CD |= _BV(PIN_SD_CD);	// enable pull-up
+
+	DDR_SD_WP &= ~_BV(PIN_SD_WP);	// SD WP as input
+	PORT_SD_WP |= _BV(PIN_SD_WP);	// enable pull-up
+
+	// enable pin change interrupt for SD card detect
+	PCIFR |= _BV(SDCD_PCIF);	// clear interrupt flag
+	SDCD_PCMSK |= _BV(SDCD_PCINT);	// enable SD CD in pin change enable mask
+	PCICR |= _BV(SDCD_PCIE);	// enable pin change interrupt
+
+	// Don't init SPI here since it's done by f_mount -> disk_initalize -> spi_init
+}
 
 void device_init(void) {
 	i2c_init();                     // I2C bus
-    ieeehw_init();       // hardware
-    ieee_init(8);        // hardware-independent part; registers as bus
+        rtc_init();                     // real time clock
+        sdcard_init();                  // SD card
+
+        ieeehw_init();                  // IEEE-488 hardware
+        ieee_init(8);                   // hardware-independent part; registers as bus
 }

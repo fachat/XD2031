@@ -246,7 +246,7 @@ int main (void)
     DWORD ofs, sect = 0;
     FATFS *fs;
     DIR dir;
-    RTC rtc;
+    RTC_t rtc;
 
 
     ioinit();               /* Initialize port settings and start system timer process */
@@ -256,8 +256,7 @@ int main (void)
     xputs(_USE_LFN ? PSTR("LFN Enabled") : PSTR("LFN Disabled"));
     xprintf(PSTR(", Code page: %u\n"), _CODE_PAGE);
 
-    if (rtc_init() && rtc_gettime(&rtc)) {      /* Initialize RTC */
-        RTC_OK = 1;
+    if (!(res = rtc_init())) {      /* Initialize RTC */
         xprintf(PSTR("Current time: %u/%u/%u %02u:%02u:%02u\n"), rtc.year, rtc.month, rtc.mday, rtc.hour, rtc.min, rtc.sec);
     } else {
         xputs(PSTR("RTC is not supported.\n"));
@@ -619,7 +618,6 @@ int main (void)
             break;
 #endif
         case 't' :  /* t [<year> <mon> <mday> <hour> <min> <sec>] */
-            if (!RTC_OK) break;
             if (xatoi(&ptr, &p1)) {
                 rtc.year = (WORD)p1;
                 xatoi(&ptr, &p1); rtc.month = (BYTE)p1;
@@ -631,7 +629,7 @@ int main (void)
                 rtc_settime(&rtc);
             }
             memset(&rtc, 0, sizeof rtc);
-            if(rtc_gettime(&rtc) < 0) xprintf(PSTR("Reading RTC failed.\n"));
+            if(rtc_gettime(&rtc)) xprintf(PSTR("Reading RTC failed.\n"));
             else xprintf(PSTR("%u/%u/%u %02u:%02u:%02u\n"), rtc.year, rtc.month, rtc.mday,
                                                             rtc.hour, rtc.min, rtc.sec);
             break;

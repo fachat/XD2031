@@ -104,14 +104,11 @@
 #if _FS_READONLY
 # define get_fattime() 0
 #else
-#include "rtc/rtc.h"    /* RTC only needed for write access / time stamps */
+#include "rtc.h"        /* RTC only needed for write access / time stamps */
 
 DWORD get_fattime (void)
 {
-    RTC rtc;
-
-
-    if (!RTC_OK) return 0;      /* your default date here */
+    RTC_t rtc;
 
     /* Get local time */
     rtc_gettime(&rtc);
