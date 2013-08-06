@@ -1,8 +1,8 @@
 /****************************************************************************
 
     Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
-    Copyright (C) 2012 Nils Eilers
+    Copyright (C) 2013 Andre Fachat
+    Copyright (C) 2013 Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -33,53 +33,14 @@
 #include "debug.h"
 #include "config.h"
 #include "device.h"
-
-/**
- * cbm_compare_pattern compares the given name to the given pattern
- * and returns true if it matches.
- * Both names are null-terminated
- *
- * This implementation is roughly based on the Commodore semantics
- * of "*" and "?":
- * Commodore:
- * 	"*" - only works as the last pattern char and matches everything
- * 	      further chars in the pattern are ignored
- * 	"?" - single character is ignored
- * Adapted from pcserver/name.c.
- */
-uint8_t compare_pattern(const char *name, const char *pattern) {
-
-	uint8_t p = 0;		// current position
-
-	do {
-		if (pattern[p] == '*') {
-			// For Commodore, we are basically done here - anything else does not count
-			return 1;
-		} else
-		if (pattern[p] != '?') {
-			if (pattern[p] != name[p]) {
-				// not equal
-				return 0;
-			}
-		}
-	} while (name[p] && pattern[p++]);
-
-	if(name[p] == 0 && pattern[p] == 0) {
-		// both, name and pattern are finished, and
-		// not exited so far, so both match
-		return 1;
-	}
-
-	// no match
-	return 0;
-}
+#include "wildcard.h"
 
 uint8_t is_path_separator(char c) {
 	if(c == '/' || c =='\\') return 1;
 	return 0;
 }
 
-/* splitpath 
+/* splitpath
  * returns the base filename
  * dir points to the directory path
  */
@@ -100,7 +61,7 @@ char *splitpath(char *path, char **dir) {
 		if(is_path_separator(*p)) *dir = "/";
 		else *dir = ".";
 	}
-		
+
 	return (p + 1);
 }
 
@@ -134,7 +95,7 @@ int8_t traverse(
 	char *b, *d;
 	char *filename;
         char action_path[_MAX_LFN+1];
-	DIR dir; 
+	DIR dir;
 	FILINFO Finfo;		// holds file information returned by f_readdir() / f_stat()
 				// the long file name *lfname must be stored externally:
 #	ifdef _USE_LFN
@@ -153,8 +114,7 @@ int8_t traverse(
 		return res;
 	}
 
-	for(;;)
-	{
+	while (1) {
 		res = f_readdir(&dir, &Finfo);
 		if(res || !Finfo.fname[0]) break;
 
