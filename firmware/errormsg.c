@@ -80,6 +80,7 @@ static const uint8_t IN_ROM messages[] = {
 					'O','R',' ','S','E','C','T','O','R',
 	H(CBM_ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
 	H(CBM_ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
+	H(CBM_ERROR_TOO_LARGE),		2,' ','T','O','O',' ','L','A','R','G','E', 
 	0
 };
 

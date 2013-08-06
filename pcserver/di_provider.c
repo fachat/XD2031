@@ -57,6 +57,22 @@
 
 #define  MAX_BUFFER_SIZE  64
 
+#define	OFFSET_NEXT_TRACK	0
+#define	OFFSET_NEXT_SECTOR	1
+
+#define SIDE_SECTORS_MAX 	6	/* max number of side sectors in side sector group */
+#define SIDE_INDEX_MAX   	120	/* max number of blocks in a side sector */
+
+#define OFFSET_SUPER_254   	2	/* flag when set to 254 it is a super side sector */
+#define OFFSET_SUPER_POINTER   	3	/* start of sector group addresses in sss */
+#define SIDE_SUPER_MAX   	126	/* max number of super side sector blocks */
+
+#define	OFFSET_SECTOR_NUM	2	/* side sector number field in side sector */
+#define	OFFSET_RECORD_LEN	3	/* record length field in side sector */
+#define	OFFSET_SIDE_SECTOR	4	/* start of side sector addresses in current side sector group */
+#define	OFFSET_POINTER		16	/* start of sector addresses in ss */
+
+
 typedef struct Disk_Image
 {
    uint8_t ID;                    // Image type (64,71,80,81,82)
@@ -68,7 +84,9 @@ typedef struct Disk_Image
    uint8_t TracksPerBAM;          // Tracks per BAM
    uint8_t DirInterleave;         // Interleave on directory track
    uint8_t DatInterleave;         // Interleave on data tracks
+   uint8_t HasSSB;		  // when set disk has super side blocks in REL files
    int  Blocks;                   // Size in blocks
+   int  RelBlocks;                // Max REL file size in blocks
    int (*LBA)(int t, int s);      // Logical Block Address calculation
    uint8_t DirTrack;              // Header and directory track
 } Disk_Image_t;
@@ -121,10 +139,26 @@ static int LBA81(int t, int s)
    return s + (t-1) * 40;
 }
 
-//                  ID Tr Se S B Of TB D I Blck      Dir
-Disk_Image_t d64 = {64,35,21,1,1, 4,35,3,9, 683,LBA64,18};
-Disk_Image_t d80 = {80,77,29,1,2, 6,50,3,5,2083,LBA80,39};
-Disk_Image_t d81 = {81,80,40,1,2,16,40,1,1,3200,LBA81,40};
+// Disk image definitions
+// D64: 
+        /* 700 blocks + 6 side sectors */
+// D81: 
+        /* 3000 blocks + 4 side sector groups + 1 side sector + super side
+           sector */
+// D80:
+        /* 720 blocks + 6 side sectors */
+// D82:
+        /* SFD1001: 4089 blocks + 5 side sector groups + 5 side sector +
+           super side sector */
+        /* 8250: 4090 blocks + 5 side sector groups + 5 side sector +
+           super side sector */
+        /* The SFD cannot create a file with REL 4090 blocks, but it can
+           read it.  We will therefore use 4090 as our limit. */
+//                   ID  Tr  Se  S  B  Of  TB  D  I SS  Blck   Rel        Dir
+Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 9, 0,  683,  706, LBA64, 18 };
+Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 1, 1, 3200, 3026, LBA81, 40 };
+Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 5, 0, 2083,  726, LBA82, 39 };
+Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 5, 1, 4166, 4126, LBA80, 39 };
 
 /* Commodore Floppy Formats
 
@@ -247,6 +281,8 @@ typedef struct
    uint8_t  chs;          // chain sector
    uint8_t  chp;          // chain pointer
    uint8_t  access_mode;
+   uint16_t lastpos;	  // last P record number, to expand to on write
+   uint16_t maxrecord;	  // the last record number available in the file
 } File;
 
 typedef struct
@@ -273,6 +309,7 @@ extern provider_t di_provider;
 static uint8_t di_next_track(di_endpoint_t *diep);
 static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector);
 static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
+static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 
 // ************
 // di_assert_ts
@@ -466,13 +503,9 @@ static int di_load_image(di_endpoint_t *diep, const char *filename)
       diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
    }
-   else if (filesize == d80.Blocks * 512)
+   else if (filesize == d82.Blocks * 256)
    {
-      diep->DI           = d80;
-      diep->DI.ID        =  82;
-      diep->DI.Sides     =   2;
-      diep->DI.BAMBlocks =   4;
-      diep->DI.LBA       = LBA82;
+      diep->DI           = d82;
       diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
       diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
       diep->BAMpos[2]    = 256 * diep->DI.LBA(38,6);
@@ -1096,7 +1129,7 @@ static int di_find_free_block(di_endpoint_t *diep, File *f)
 }
 
 // ***************
-// di_create_entry // TODO: set file type
+// di_create_entry 
 // ***************
 
 static int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, uint8_t reclen)
@@ -1255,7 +1288,13 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
       rv = di_create_entry(diep, tfd, filename, type, reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
-   if (di_cmd == FS_OPEN_AP) di_pos_append(diep,file);
+   // store number of actual records in file
+   file->maxrecord = di_rel_record_max(diep, file);
+   log_debug("Setting maxrecord to %d\n", file->maxrecord);
+
+   if (di_cmd == FS_OPEN_AP) {
+	di_pos_append(diep,file);
+   }
    return CBM_ERROR_OK;
 }
 
@@ -1496,6 +1535,8 @@ static int di_read_seq(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof)
    log_debug("di_read_seq(chan %d, len=%d)\n",tfd,len);
    File *file = di_find_file(diep, tfd);
 
+   di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
+
    for (i=0 ; i < len ; ++i)
    {
       *eof = di_read_byte(diep, file, retbuf+i);
@@ -1522,8 +1563,11 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
 
    File *f = di_find_file(diep, tfd);
    di_fseek_tsp(diep,f->cht,f->chs,2+f->chp);
-   for (i=0 ; i < len ; ++i)
-      if (di_write_byte(diep, f, (uint8_t)buf[i])) return -CBM_ERROR_DISK_FULL;
+   for (i=0 ; i < len ; ++i) {
+      if (di_write_byte(diep, f, (uint8_t)buf[i])) {
+	return -CBM_ERROR_DISK_FULL;
+      }
+   }
 
    return CBM_ERROR_OK;
 }
@@ -1649,6 +1693,598 @@ static int di_cd(endpoint_t *ep, char *buf)
    return CBM_ERROR_OK;
 }
 
+
+//***********
+// di_rel_record_max
+//***********
+//
+// find the record_max value to know when we have to expand a REL file
+// Called from di_open, so it has the correct value
+// modelled after VICE's vdrive_rel_record_max
+
+static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f) {
+
+   	uint8_t sidesector[256];
+
+	unsigned int super, side;
+   	unsigned int j, k, l, o;
+
+   	// find the number of side sector groups
+  
+   	// read first side sector
+	uint8_t ss_track = f->Slot.ss_track;
+	uint8_t ss_sector = f->Slot.ss_track;
+
+	if (ss_track == 0) {
+		// not a REL file
+		return 0;
+	}
+	// read the first side sector
+      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+      	fread(sidesector,1,256,diep->Ip);
+ 
+	super = 0;
+	// number of side sector groups
+	if (sidesector[OFFSET_SUPER_254] == 0xfe) {
+		// sector is a super side sector
+		// count how many side sector groups are used -> side
+		o = OFFSET_SUPER_POINTER;
+		for (super = 0; super < SIDE_SUPER_MAX && sidesector[o] != 0; super++, o+=2);
+
+		if (super == 0) {
+			return 0;
+		}
+		super--;
+
+		// last side sector group 
+		ss_track = sidesector[OFFSET_SUPER_POINTER + (super << 1)];
+		ss_sector = sidesector[OFFSET_SUPER_POINTER + (super << 1) + 1];
+	
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+	}
+
+	// now sidesector contains the first block of the last side sector group
+	// find last sector in side sector group (guaranteed to find)
+	o = OFFSET_SIDE_SECTOR;
+	for (side = 0; side < SIDE_SECTORS_MAX && sidesector[o] != 0; side++, o+=2);
+	
+	side--;
+	if (side > 0) {	
+		// not the first one (which is already in the buffer)
+		ss_track = sidesector[OFFSET_SIDE_SECTOR + (side << 1)];
+		ss_sector = sidesector[OFFSET_SIDE_SECTOR + (side << 1) + 1];
+	
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+	}
+
+	// here we have the last side sector of the last side sector chain in the buffer.
+    	// obtain the last byte of the sector according to the index 
+    	j = ( sidesector[ OFFSET_NEXT_SECTOR ] + 1 - OFFSET_POINTER ) / 2;
+	// now get the track and sector of the last block
+    	j--;
+	o = OFFSET_POINTER + 2 * j;
+    	ss_track = sidesector[o];
+    	ss_sector = sidesector[o + 1];
+
+	// read the last sector of the file
+      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+      	fread(sidesector,1,256,diep->Ip);
+
+	// number of bytes in this last sector
+	o = sidesector[OFFSET_NEXT_SECTOR] - 1;
+
+    	/* calculate the total bytes based on the number of super side, side
+           sectors, and last byte index */
+	k = super * SIDE_SECTORS_MAX + side;	// side sector
+	k *= SIDE_INDEX_MAX;			// times numbers of sectors per side sector
+	k += j;					// plus sector in the side sector
+	k *= 254;				// times bytes per sector
+	k += o;					// plus bytes in last sector
+
+    	/* divide by the record length, and get the maximum records */
+    	l = k / f->Slot.recordlen;
+
+    	return l;
+}
+
+// flush all dirty side sectors in the given group
+static void di_flush_sidesectors(di_endpoint_t *diep, uint8_t *sidesectorgroup, 
+		uint8_t *ssg_track, uint8_t *ssg_sector, uint8_t *ssg_dirty) {
+
+	for (int i = 0; i < SIDE_SECTORS_MAX; i++) {
+		if (ssg_dirty[i]) {
+			di_fseek_tsp(diep, ssg_track[i], ssg_sector[i], 0);
+			fwrite(sidesectorgroup + (i*256), 1, 256, diep->Ip);
+			ssg_dirty[i] = 0;
+		}
+	}
+}
+
+// flush dirty super side sectors in the given group
+static void di_flush_supersector(di_endpoint_t *diep, uint8_t *supersector, 
+		uint8_t sss_track, uint8_t sss_sector, uint8_t sss_dirty) {
+
+	if (sss_dirty) {
+		di_fseek_tsp(diep, sss_track, sss_sector, 0);
+		fwrite(supersector, 1, 256, diep->Ip);
+	}
+}
+
+// read side sector blocks 2 to 6 (as given with the first side sector that is not read)
+static void di_read_sidesector_group(di_endpoint_t *diep, uint8_t *sidesectorgroup, 
+		uint8_t *ssg_track, uint8_t *ssg_sector, uint8_t *ssg_dirty) {
+
+	uint8_t track, sector;
+
+	for (int i = 1; i < SIDE_SECTORS_MAX; i++) {
+		track = sidesectorgroup[OFFSET_SIDE_SECTOR + (i << 1)];
+		sector = sidesectorgroup[OFFSET_SIDE_SECTOR + (i << 1) + 1];
+		// read sectors, but keep if already in buffer (to not overwrite dirty ones)
+		if (track > 0 && (track != ssg_track[i] || sector != ssg_sector[i])) {
+			di_fseek_tsp(diep, track, sector, 0);
+			fread(sidesectorgroup + (i*256), 1, 256, diep->Ip);
+			ssg_dirty[i] = 0;
+		}
+		ssg_track[i] = track;
+		ssg_sector[i] = sector;
+	}
+}
+
+
+//***********
+// di_rel_add_sectors
+//***********
+//
+// add one or more sectors (up to the given nrecords) to an existing 
+// REL file. Updates the BAM while allocating.
+// Also updates f->maxrecord
+// (TODO: update the file entry?)
+//
+// Note: loosely based on VICE's vdrive_rel_add_sector()
+//
+int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
+
+	unsigned int i;
+
+	// find the total number of blocks this file uses
+	i = f->Slot.size;
+
+	// compare with maximum for disk image
+	if ((i + nrecords) >= diep->DI.RelBlocks) {
+		int n= diep->DI.RelBlocks - i;
+		if (n <= 0) {
+			return CBM_ERROR_TOO_LARGE;
+		}
+	}
+	
+   	uint8_t supersector[256];
+   	uint8_t sidesectorgroup[256 * SIDE_SECTORS_MAX];
+   	uint8_t datasector[256];
+	uint8_t sss_track, sss_sector, sss_dirty;
+	uint8_t ssg_track[SIDE_SECTORS_MAX], ssg_sector[SIDE_SECTORS_MAX], ssg_dirty[SIDE_SECTORS_MAX];
+	uint8_t slot_dirty;
+	uint8_t last_track, last_sector;	// T/S of last REL block
+	uint8_t new_track, new_sector;	// T/S of last REL block
+
+	unsigned int super, side;
+   	unsigned int j, k, m, o;
+
+	slot_dirty = 0;
+	sss_track = 0;
+	sss_dirty = 0;
+	for (i = 0; i < SIDE_SECTORS_MAX; i++) {
+		ssg_track[i] = 0;
+		ssg_dirty[i] = 0;
+	}
+
+	// -----------------------------------------------
+   	// find the first non-empty side sector group
+  
+   	// read first side sector
+	uint8_t track = f->Slot.ss_track;
+	uint8_t sector = f->Slot.ss_track;
+
+	// do we have a super side sector?
+	if (diep->DI.HasSSB) {
+		if (track == 0) {
+			// create super side sector block
+			if (di_find_free_block(diep, f) < 0) {
+				return CBM_ERROR_DISK_FULL;
+			}
+			sss_track = f->cht;
+			sss_sector = f->chs;
+
+			memset(supersector, 0, 256);
+			supersector[OFFSET_SUPER_254] = 254;
+			// fill in t/s of first side sector block at offset 0/1 and 3/4 later
+			sss_dirty = 1;
+
+			f->Slot.ss_track = f->cht;
+			f->Slot.ss_sector = f->chs;
+			slot_dirty = 1;
+		} else {
+			sss_track = track;
+			sss_sector = sector;
+			// read the super side sector
+			di_fseek_tsp(diep, track, sector, 0);
+			fread(supersector, 1, 256, diep->Ip);
+		}	
+
+		// let's find the last side sector group and check if it's empty
+					
+		o = OFFSET_SUPER_POINTER;
+		for (super = 0; super < SIDE_SUPER_MAX && supersector[o] != 0; super++, o+=2);
+
+	}
+
+	// sss and no group in sss found, or non-sss and no side sector in slot
+	// note: we do as if we always have a sss, because on write we ignore it when
+	// non-sss image
+	if ((diep->DI.HasSSB && super == 0) || ((!diep->DI.HasSSB) && track == 0)) {
+		// no side sector group so far, create the first one
+		// create super side sector block
+		if (di_find_free_block(diep, f) < 0) {
+			return CBM_ERROR_DISK_FULL;
+		}
+		ssg_track[0] = f->cht;
+		ssg_sector[0] = f->chs;
+
+		memset(sidesectorgroup, 0, 256);
+		sidesectorgroup[OFFSET_NEXT_SECTOR] = OFFSET_POINTER - 1;	// no pointer in file
+		sidesectorgroup[OFFSET_RECORD_LEN] = f->Slot.recordlen;
+		sidesectorgroup[OFFSET_SIDE_SECTOR] = ssg_track[0];
+		sidesectorgroup[OFFSET_SIDE_SECTOR + 1] = ssg_sector[0];
+
+		supersector[OFFSET_NEXT_TRACK] = ssg_track[0];
+		supersector[OFFSET_NEXT_SECTOR] = ssg_sector[0];
+		supersector[OFFSET_SUPER_POINTER] = ssg_track[0];
+		supersector[OFFSET_SUPER_POINTER + 1] = ssg_sector[0];
+
+		sss_dirty = 1;
+		ssg_dirty[0] = 1;
+
+		if (!diep->DI.HasSSB) {
+			f->Slot.ss_track = f->cht;
+			f->Slot.ss_sector = f->chs;
+			slot_dirty = 1;
+		}
+	} else {
+		if (diep->DI.HasSSB) {
+			super--;
+			
+			track = supersector[OFFSET_SUPER_POINTER + (super << 1)];
+			sector = supersector[OFFSET_SUPER_POINTER + (super << 1) + 1];
+		}
+
+		ssg_track[0] = track;
+		ssg_sector[0] = sector;
+
+		// read the side sector
+		di_fseek_tsp(diep, track, sector, 0);
+		fread(supersector, 1, 256, diep->Ip);
+	}
+
+	// now sidesectorgroup contains the first block of the last side sector group
+	// find last sector in side sector group (guaranteed to find)
+	o = OFFSET_SIDE_SECTOR;
+	for (side = 0; side < SIDE_SECTORS_MAX && sidesectorgroup[o] != 0; side++, o+=2);
+	
+	side--;
+	if (side > 0) {	
+		// not the first one (which is already in the buffer)
+		track = sidesectorgroup[OFFSET_SIDE_SECTOR + (side << 1)];
+		sector = sidesectorgroup[OFFSET_SIDE_SECTOR + (side << 1) + 1];
+	
+	      	di_fseek_tsp(diep,track,sector,0);
+	      	fread(sidesectorgroup + (side * 256),1,256,diep->Ip);
+
+		ssg_track[side] = track;
+		ssg_sector[side] = sector;
+	}
+
+	// here we have the last side sector of the last side sector group in the buffer.
+    	// Obtain the number of last used entry in the sector table according to the 
+	// last valid byte index in the next sector field at offset 1
+    	j = ( sidesectorgroup[ (side * 256) + OFFSET_NEXT_SECTOR ] + 1 - OFFSET_POINTER ) / 2;
+
+	// now get the track and sector of the last block
+	o = (side * 256) + OFFSET_POINTER + 2 * (j-1);
+    	last_track = sidesectorgroup[o];
+    	last_sector = sidesectorgroup[o + 1];
+
+	// read the last sector of the file
+      	di_fseek_tsp(diep,last_track,last_sector,0);
+      	fread(datasector,1,256,diep->Ip);
+
+	// number of bytes in this last sector
+	//o = sidesector[OFFSET_NEXT_SECTOR] - 1;
+
+	// allocate new data block
+	if (di_find_free_block(diep, f) < 0) {
+		return CBM_ERROR_DISK_FULL;
+	}
+	new_track = f->cht;
+	new_sector = f->chs;
+
+    	/* Check if this side sector is full */
+	if ( j == SIDE_INDEX_MAX) {
+		// allocate a new block for a side sector
+		if (di_find_free_block(diep, f) < 0) {
+			return CBM_ERROR_DISK_FULL;
+		}
+		track = f->cht;
+		sector = f->chs;
+
+		// is a new side sector group needed?
+		// i.e. is this the last side sector in a group (and it's full)?
+		if (side == SIDE_SECTORS_MAX - 1) {
+			// yes, create a new group
+			
+			side++;
+
+			di_flush_sidesectors(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
+
+			ssg_track[0] = track;
+			ssg_sector[0] = sector;
+			ssg_dirty[0] = 1;
+
+			memset(sidesectorgroup, 0, 256);
+			sidesectorgroup[OFFSET_SECTOR_NUM] = 0;
+			sidesectorgroup[OFFSET_SIDE_SECTOR] = track;
+			sidesectorgroup[OFFSET_SIDE_SECTOR + 1] = sector;
+
+			// update super side sector
+			o = OFFSET_SUPER_POINTER + side * 2;
+			supersector[o] = track;
+			supersector[o + 1] = sector;
+			sss_dirty = 1;
+
+			// setup reference for the first side sector
+			o = 0;
+		} else {
+			// no, sector group is not full, update old group
+			// "side" contains the number of the new side sector in this group
+			
+			di_read_sidesector_group(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
+
+			// update side sector indices
+			for (k = 0; k < SIDE_SECTORS_MAX; k++) {
+				if (ssg_track[k]) {
+					sidesectorgroup[(k * 256) + OFFSET_SIDE_SECTOR + (side << 1)] = track;
+					sidesectorgroup[(k * 256) + OFFSET_SIDE_SECTOR + (side << 1) + 1] = sector;
+					ssg_dirty[k] = 1;
+				}
+			}
+			// update new sector
+			sidesectorgroup[(side*256) + OFFSET_SECTOR_NUM] = side;
+			// copy side sector track and sector list from first side sector
+			for (k = 0; k < SIDE_SECTORS_MAX * 2; k++) {
+				sidesectorgroup[(side*256) + OFFSET_SIDE_SECTOR + k] =
+					sidesectorgroup[OFFSET_SIDE_SECTOR + k];
+			}
+			// setup reference to side sector
+			o = (side * 256);
+
+			// set dirty
+			ssg_dirty[side] = 1;
+		}
+
+		// update side sector contents
+		sidesectorgroup[o + OFFSET_NEXT_TRACK] = 0;
+		sidesectorgroup[o + OFFSET_NEXT_SECTOR] = OFFSET_POINTER + 1;
+		sidesectorgroup[o + OFFSET_RECORD_LEN] = f->Slot.recordlen;
+		sidesectorgroup[o + OFFSET_POINTER] = new_track;
+		sidesectorgroup[o + OFFSET_POINTER + 1] = new_sector;
+	} else {
+		// last side sector is not full
+		// just update with new data
+	
+		o = (side * 256);	
+		// track and sector of data block
+		sidesectorgroup[o + OFFSET_POINTER + 2 * j] = new_track;
+		sidesectorgroup[o + OFFSET_POINTER + 2 * j + 1] = new_sector;
+		
+		sidesectorgroup[o + OFFSET_NEXT_SECTOR] = OFFSET_POINTER + 2 * j + 1;
+
+		ssg_dirty[side] = 1;
+	}
+
+	di_flush_sidesectors(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
+	if (diep->DI.HasSSB) {
+		di_flush_supersector(diep, supersector, sss_track, sss_sector, sss_dirty);
+	}
+	if (slot_dirty) {
+		di_write_slot(diep, &f->Slot);
+	}
+
+	// now fill up the last data block in datasector / last_track / last_sector
+	// Note: as I'm not using Position to seek the record, but traverse the 
+	// side sectors, I know that I really am in the last sector
+	
+	// start of next sector
+	o = datasector[OFFSET_NEXT_SECTOR] + 1;
+	// file link
+	datasector[OFFSET_NEXT_TRACK] = new_track;
+	datasector[OFFSET_NEXT_SECTOR] = new_sector;
+
+        /* Fill the new records up with the default 0xff 0x00 ... */
+	k = 0;
+        while (o < 256)
+        {
+            if (k==0) datasector[o] = 0xff;
+            else datasector[o] = 0x00;
+            k = ( k + 1 ) % m;
+            /* increment the maximum records each time we complete a full
+                record. */
+            if (k==0) f->maxrecord++;
+            o++;
+        }
+	// write back data sector
+	di_fseek_tsp(diep, last_track, last_sector, 0);
+	fwrite(datasector, 1, 256, diep->Ip);
+
+    	/* Fill new sector with maximum records */
+    	o = 2;
+    	while (o < 256)
+    	{
+        	if (k==0) datasector[o] = 0xff;
+        	else datasector[o] = 0x00;
+        	k = ( k + 1 ) % m;
+        	/* increment the maximum records each time we complete a full
+            	   record. */
+	        if (k==0) f->maxrecord++;
+        	o++;
+    	}
+
+    	/* set as last sector in REL file */
+    	datasector[OFFSET_NEXT_TRACK] = 0;
+
+    	/* Update the last byte based on how much of the last record we
+           filled. */
+    	datasector[OFFSET_NEXT_SECTOR] = 255 - k;
+
+	// write back data sector
+	di_fseek_tsp(diep, new_track, new_sector, 0);
+	fwrite(datasector, 1, 256, diep->Ip);
+	
+	return CBM_ERROR_OK;	
+}
+
+//***********
+// di_expand_rel
+//***********
+//
+// internal function to expand a REL file to the given record (so that the record given exists)
+// algorithm partly taken from the VICE vdrive_rel_grow() function.
+// The algorithm adds a sector to the rel file until we meet the required records
+
+static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno) {
+
+	int err = CBM_ERROR_OK;
+
+	while (err == CBM_ERROR_OK && recordno > f->maxrecord) {
+		// each step adds one (or more) sectors to the REL file
+		err = di_rel_add_sectors(diep, f, recordno - f->maxrecord);
+	}
+
+	return err;
+}
+
+//***********
+// di_position
+//***********
+//
+// Note: algorithm partially taken from VICE's vdrive_rel_track_sector()
+//
+// Note: record numbers start with 0 (not with 1 as with DOS, this is taken care
+// of by the firmware). record 0 does always exist - it is created when the file
+// is created. That is why f->lastpos >0 can be used as flag to fill up the file
+
+static int di_position(endpoint_t *ep, int tfd, int recordno) {
+
+   uint8_t sidesector[256];
+   uint8_t reclen = 0;
+ 
+   unsigned int rec_long;	// absolute offset in file
+   unsigned int rec_start;	// start of record in block
+   unsigned int super, side;	// super side sector index, side sector index
+   unsigned int offset;		// temp for the number of file bytes pointed to by blocks in a sss or ss
+
+   di_endpoint_t *diep = (di_endpoint_t*) ep;
+
+   File *f = di_find_file(diep, tfd);
+   if (f != NULL) {
+	// store position for write in case we exit with error.
+	// (will be cleared on success, so also used as flag; note: recordno 0 is treated as 1)
+	f->lastpos = recordno;
+
+	// find the block number in file from the record number
+	reclen = f->Slot.recordlen;
+
+	// total byte offset (record number starts with 1)
+	rec_long = (recordno * reclen);
+
+	// offset in block
+	rec_start = rec_long % 254;
+
+	// compute super side sector index (0-125)
+	offset = (254 * SIDE_INDEX_MAX * SIDE_SECTORS_MAX);
+	super = rec_long / offset;
+	rec_long = rec_long % offset;
+
+	// compute side sector index value (0-5)
+	offset = (254 * SIDE_INDEX_MAX);
+	side = rec_long / offset;
+	rec_long = rec_long % offset;
+
+	// block number in side sector
+	offset = rec_long / 254;
+
+	// -----------------------------------------
+	// find the position pointed to in the image
+	uint8_t ss_track = f->Slot.ss_track;
+	uint8_t ss_sector = f->Slot.ss_track;
+
+	if (ss_track == 0) {
+		// not a REL file
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+	// read the first side sector
+      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+      	fread(sidesector,1,256,diep->Ip);
+ 	
+	if (sidesector[OFFSET_SUPER_254] == 0xfe) {
+		// sector is a super side sector
+		// read the address of the first block of the correct side sector chain
+		ss_track = sidesector[OFFSET_SUPER_POINTER + (super << 1)];
+		ss_sector = sidesector[OFFSET_SUPER_POINTER + 1 + (super << 1)];
+	
+		if (ss_track == 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+ 	} else {
+		if (super > 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	}
+	// here we have the first side sector of the correct side sector chain in the buffer.
+	if (side > 0) {
+		// need to read the correct side sector first
+		// read side sector number
+		ss_track = sidesector[OFFSET_SIDE_SECTOR + (side << 1)];
+		ss_sector = sidesector[OFFSET_SIDE_SECTOR + 1 + (side << 1)];
+		if (ss_track == 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
+	      	fread(sidesector,1,256,diep->Ip);
+	}
+	// here we have the correct side sector in the buffer.
+	ss_track = sidesector[OFFSET_POINTER + (offset << 1)];
+	ss_sector = sidesector[OFFSET_POINTER + 1 + (offset << 1)];
+	if (ss_track == 0) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
+	
+	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
+	// record as given in the parameter
+	di_fseek_tsp(diep, ss_track, ss_sector, 0);
+	f->cht = ss_track;
+	f->chs = ss_sector;
+      	fread(&f->next_track ,1,1,diep->Ip);
+      	fread(&f->next_sector,1,1,diep->Ip);
+	di_fseek_tsp(diep, ss_track, ss_sector, rec_start);
+	// clean up the "expand me" flag
+	f->lastpos = 0;
+
+	return CBM_ERROR_OK;
+   }
+   return CBM_ERROR_FAULT;
+}
 
 //***********
 // di_open
@@ -1791,7 +2427,7 @@ provider_t di_provider =
    di_cd,           // int         (*cd       )(endpoint_t *ep, char *name); 
    NULL,            // int         (*mkdir    )(endpoint_t *ep, char *name); 
    NULL,            // int         (*rmdir    )(endpoint_t *ep, char *name);
-   NULL,            // int         (*block    )(endpoint_t *ep, int chan, char *buf);
+   di_position,     // int         (*position )(endpoint_t *ep, int chan, int recordno);
    di_direct        // int         (*direct   )(endpoint_t *ep, char *buf, ...
 };
 
