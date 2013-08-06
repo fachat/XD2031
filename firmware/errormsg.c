@@ -177,3 +177,9 @@ debug_printf("Set status to: %s\n", err->error_buffer);
 #endif
 }
 
+void set_status(errormsg_t *err, char* s) {
+	strncpy( (char*) err->error_buffer, s, CONFIG_ERROR_BUFFER_SIZE - 1);
+	err->error_buffer[CONFIG_ERROR_BUFFER_SIZE - 1] = 0;
+	err->readp = 0;
+	err->errorno = 0;
+}
