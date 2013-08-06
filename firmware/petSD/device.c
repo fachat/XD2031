@@ -30,6 +30,13 @@
 #include "sdcard.h"
 #include "debug.h"
 
+static void i2c_init(void) {
+	DDR_SDA &= ~_BV(PIN_SDA);	// SDA as input
+	DDR_SCL &= ~_BV(PIN_SCL);	// SCL as input
+	PORT_SDA &= ~_BV(PIN_SDA);	// disable internal pull-up, output 0
+	PORT_SCL &= ~_BV(PIN_SCL);	// disable internal pull-up, output 0
+}
+
 static void sdcard_init(void) {
 
 	DDR_SD_CD &= ~_BV(PIN_SD_CD);	// SD CD as input
@@ -47,6 +54,7 @@ static void sdcard_init(void) {
 }
 
 void device_init(void) {
+	i2c_init();                     // I2C bus
 
         // IEEE488 bus
         ieeehw_init();                  // hardware

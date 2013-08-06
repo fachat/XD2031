@@ -1,95 +1,111 @@
-/*-------------------------------------------------*/
-/* I2C bus protocol - bit banging version          */
+// I2C bus protocol - bit banging version
 
-#include "delay.h"
-#include "integer.h"
+#include "delayhw.h"
+// delay.h does not work with avr-gcc 4.7.2 / avr-libc 1.8.0 because
+// the double wrapped function parameter is not recognized as integer
+// constant. Couldn't figure out, why this works in iec.c and doesn't here.
+
 #include "config.h"	// I2C speed
-#include "device.h"	// I2C ports
+#include "hwdefines.h"	// I2C ports
 
-#define i2c_delay() delayus(I2C_BB_DELAY_US)
+// longest delay in NXP's UM10204 I2C-bus specification
+// and user manual (Rev. 5--9 October 2012) is 4.7uS
+#ifndef I2C_DELAY_US
+#define I2C_DELAY_US 5
+#endif
 
-/* Generate start condition on the IIC bus */
-void i2c_start (void)
-{
-    SDA_HIGH();
-    i2c_delay();
-    SCL_HIGH();
-    i2c_delay();
-    SDA_LOW();
-    i2c_delay();
-    SCL_LOW();
-    i2c_delay();
+// Get status of SDA line
+static inline uint8_t i2c_sda(void) {
+    return (INPUT_SDA & _BV(PIN_SDA));
+}
+
+// Get status of SCL line
+static inline uint8_t i2c_scl(void) {
+    return (INPUT_SCL & _BV(PIN_SCL));
+}
+
+// External pull-ups are required, internal pull-ups
+// are deactivated here
+
+static inline void i2c_set_sda(uint8_t x) {
+    if(x) {
+        // define as input, external pull-up will pull high
+        DDR_SDA &= ~_BV(PIN_SDA);
+    } else {
+        DDR_SDA |= _BV(PIN_SDA); // define as output, output 0
+    }
+    delayhw_us(I2C_DELAY_US);
+}
+
+static inline void i2c_set_scl(uint8_t x) {
+    if(x) {
+        // define as input, external pull-up will pull high
+        DDR_SCL &= ~_BV(PIN_SCL);
+        delayhw_us(I2C_DELAY_US);
+        while(!i2c_scl());       // Clock stretching
+    } else {
+        DDR_SCL |= _BV(PIN_SCL); // define as output, output 0
+        delayhw_us(I2C_DELAY_US);
+    }
+}
+
+// Generate start condition on the I2C bus
+void i2c_start (void) {
+    i2c_set_sda(1);
+    i2c_set_scl(1);
+    i2c_set_sda(0);
+    i2c_set_scl(0);
 }
 
 
-/* Generate stop condition on the IIC bus */
-void i2c_stop (void)
-{
-    SDA_LOW();
-    i2c_delay();
-    SCL_HIGH();
-    i2c_delay();
-    SDA_HIGH();
-    i2c_delay();
+// Generate stop condition on the I2C bus
+void i2c_stop (void) {
+    i2c_set_sda(0);
+    i2c_set_scl(1);
+    i2c_set_sda(1);
 }
 
 
-/* Send a byte to the IIC bus */
-int i2c_send (BYTE dat)
-{
-    BYTE b = 0x80;
+// Send a byte to the I2C bus
+int i2c_send (uint8_t dat) {
+    uint8_t b = 0x80;
     int ack;
 
     do {
-        if (dat & b)     {  /* SDA = Z/L */
-            SDA_HIGH();
+        if (dat & b)     {  	// SDA = Z/L
+            i2c_set_sda(1);
         } else {
-            SDA_LOW();
+            i2c_set_sda(0);
         }
-        i2c_delay();
-        SCL_HIGH();
-        i2c_delay();
-        SCL_LOW();
-        i2c_delay();
+        i2c_set_scl(1);
+        i2c_set_scl(0);
     } while (b >>= 1);
-    SDA_HIGH();
-    i2c_delay();
-    SCL_HIGH();
-    ack = SDA_VAL ? 0 : 1;  /* Sample ACK */
-    i2c_delay();
-    SCL_LOW();
-    i2c_delay();
+    i2c_set_sda(1);
+    i2c_set_scl(1);
+    ack = i2c_sda() ? 0 : 1;	// Sample ACK
+    i2c_set_scl(0);
     return ack;
 }
 
 
-/* Receive a byte from the IIC bus */
-BYTE i2c_rcvr (int ack)
-{
-    UINT d = 1;
-
+// Receive a byte from the I2C bus
+uint8_t i2c_rcvr (int ack) {
+    uint16_t d = 1;
 
     do {
         d <<= 1;
-        SCL_HIGH();
-        if (SDA_VAL) d++;
-        i2c_delay();
-        SCL_LOW();
-        i2c_delay();
+        i2c_set_scl(1);
+        if (i2c_sda()) d++;
+        i2c_set_scl(0);
     } while (d < 0x100);
-    if (ack) {      /* SDA = ACK */
-        SDA_LOW();
+    if (ack) {     		// SDA = ACK
+        i2c_set_sda(0);
     } else {
-        SDA_HIGH();
+        i2c_set_sda(1);
     }
-    i2c_delay();
-    SCL_HIGH();
-    i2c_delay();
-    SCL_LOW();
-    SDA_HIGH();
-    i2c_delay();
+    i2c_set_scl(1);
+    i2c_set_scl(0);
+    i2c_set_sda(1);
 
-    return (BYTE)d;
+    return (uint8_t)d;
 }
-
-

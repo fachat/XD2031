@@ -115,4 +115,14 @@
 #define DDR_SD_CD 		DDRD
 #define PIN_SD_CD 		PD4
 
+// I2C bit banging ports
+#define INPUT_SDA               PINC
+#define DDR_SDA                 DDRC
+#define PORT_SDA                PORTC
+#define PIN_SDA                 PC1
+#define INPUT_SCL               PINC
+#define PORT_SCL                PORTC
+#define DDR_SCL                 DDRC
+#define PIN_SCL                 PC0
+
 #endif

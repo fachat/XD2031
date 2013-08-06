@@ -25,8 +25,16 @@
 #include "device.h"
 #include "ieeehw.h"
 #include "ieee.h"
+static void i2c_init(void) {
+	DDR_SDA &= ~_BV(PIN_SDA);	// SDA as input
+	DDR_SCL &= ~_BV(PIN_SCL);	// SCL as input
+	PORT_SDA &= ~_BV(PIN_SDA);	// disable internal pull-up, output 0
+	PORT_SCL &= ~_BV(PIN_SCL);	// disable internal pull-up, output 0
+}
+
 
 void device_init(void) {
+	i2c_init();                     // I2C bus
     ieeehw_init();       // hardware
     ieee_init(8);        // hardware-independent part; registers as bus
 }
