@@ -69,6 +69,8 @@
 #include "led.h"
 
 
+static FILE term_stdout = FDEV_SETUP_STREAM(term_putchar, NULL, _FDEV_SETUP_WRITE);
+
 //---------------------------
 // LIST XD-2031 VERSIONSTRING
 void ListVersion()
@@ -117,6 +119,7 @@ int main()
 
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
+	stdout = &term_stdout;          // redirect stdout
 
 	// server communication
 	uarthw_init();			// first hardware

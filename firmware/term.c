@@ -82,6 +82,12 @@ void term_putc(char c) {
 	}
 }
 
+// stdout redirects to term_putchar:
+int term_putchar(char c, FILE *stream) {
+	term_putc(c);
+	return 0;
+}
+
 void term_putcrlf() {
 	term_putc('\r');
 	term_putc('\n');
@@ -182,5 +188,6 @@ void term_init() {
 	nchars = 0;
 
 	packet_init(&termpack, TERM_BUFFER_LENGTH, (uint8_t*)buf);
+
 }
 
