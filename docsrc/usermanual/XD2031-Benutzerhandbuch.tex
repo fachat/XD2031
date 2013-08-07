@@ -1406,6 +1406,111 @@ Beispiel:
 @RD:EXPERIMENT2
 \end{verbatim}
 
+\subsection{T / TI -- Uhr abfragen und stellen}
+\index{T}
+\index{TI}
+\index{Uhrenbefehle}
+\index{Echtzeituhr}
+
+
+\texttt{T}
+\Big[ \textit{<Wochentag>} \Big]
+\Big[ <Datum> \Big]
+\Big[ \texttt{T} \textit{<Uhrzeit>} \Big]
+
+\texttt{TI}
+\Big[ \textit{<Uhrzeit>} \Big]
+
+
+\renewcommand{\arraystretch}{2.2}
+\begin{tabular}[c]{l l}
+\toprule
+\textit{<Wochentag>:} & \Big(
+\texttt{MON} \Big|
+\texttt{TUE} \Big|
+\texttt{WED} \Big|
+\texttt{THU} \Big|
+\texttt{FRI} \Big|
+\texttt{SAT} \Big|
+\texttt{SUN} \Big) \\
+
+\textit{<Datum>:} & \texttt{JJJJ}\Big[-\Big]\texttt{MM}\Big[-\Big]\texttt{TT} \\
+
+\textit{<Uhrzeit>:} & \texttt{SS}\Big[:\Big]\texttt{mm}\Big[[:]\texttt{ss}\Big] \\
+\bottomrule
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+
+Das Abfragen der Uhr erfolgt durch Aufruf ohne Parameter.
+Die Ausgabe erfolgt über den Status-Kanal \#15.
+
+Zum Stellen der Uhr werden entsprechende Parameter übergeben,
+die wenigstens rudimentärer Prüfung unterzogen werden. Bei
+Angabe eines Datums wird der Wochentag automatisch errechnet.
+
+Ist eine Echtzeituhr zwar vorhanden, die enthaltene Uhrzeit aber ungültig,
+wird \texttt{20,READ ERROR} geliefert.
+Kann dagegen gar kein Uhrenchip entdeckt werden, wird \texttt{74,DRIVE NOT READY} gemeldet.
+
+Bei Adaptern, die keine Echtzeituhrenunterstützung haben, wird
+immer (also auch bei völlig richtiger Syntax) \texttt{30,SYNTAX ERROR}
+zurück gegeben. Da der T-Befehl außer Speicherplatz belegen nichts
+anstellen könnte, wurde er deaktiviert und wird damit auch unbekannt.
+
+Beim Stellen des Datums kann die Angabe des Wochentages entfallen,
+da dieser automatisch berechnet wird. Wird er jedoch angegeben,
+muss er aus genau drei Buchstaben ohne eingefügte Leerzeichen bestehen.
+
+\texttt{T} orientiert sich bei der Schreibweise an ISO 8601.
+Jahresangaben müssen immer vierstellig erfolgen. Bei Uhrzeitangaben
+kann die Angabe der Sekunden entfallen.
+
+Numerische Parameter können zur besseren Lesbarkeit neben Leerzeichen
+auch andere Trennzeichen enthalten, die aber nicht erforderlich sind.
+Lediglich das 'T' bei Verwendung des gleichnamigen Befehls wird
+benötigt, um eine folgende Uhrzeitangabe zu kennzeichnen.
+Als Trennzeichen werden für Datumsangaben das Minuszeichen '-' und für
+Zeitangaben der Doppelpunkt ':' empfohlen, aber auch andere Sonderzeichen
+mit einem Wert PETSCII-Wert zwischen 1 und 64 werden akzeptiert,
+wie etwa Leerzeichen, Punkte und Schrägstriche.
+
+Die Ausgabe von \texttt{TI}
+erfolgt in einer Form, die bei Verwendung von BASIC 4.0 direkt
+der eingebauten Uhrenvariablen ti\$ zugewiesen werden kann:
+
+\begin{verbatim}
+OPEN 1,8,15,"TI" : TI$=DS$ : CLOSE 1
+\end{verbatim}
+
+Beispiele für das Abfragen von Uhrzeit und Datum:
+
+\begin{verbatim}
+@TI
+183720
+
+@T
+WED 2013-08-07T18:37:20
+\end{verbatim}
+
+Beispiele für Stellen von Datum und Uhrzeit:
+
+\begin{verbatim}
+
+@T 2013-08-07  T 18:37:20
+
+@TI 18:40
+
+@TT 18:40
+
+@T20130921
+
+@T20130921T183745
+\end{verbatim}
+
+
+
+
 
 % ----------------------------------------------------------------
 \label{xcommands}
@@ -1480,7 +1585,6 @@ Letztes Laufwerk	& XD= & 0 \\
 \bottomrule
 \end{tabular}
 
-\clearpage %MANFF
 \subsection{XW -- Write configuration -- Konfiguration schreiben}
 
 \texttt{XW}

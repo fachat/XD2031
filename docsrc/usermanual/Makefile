@@ -1,5 +1,5 @@
 # List LaTeX files files here:
-TEX_EN = gpl-2.0.tex
+TEX_EN = # gpl-2.0.tex
 TEX_DE = XD2031-Benutzerhandbuch.tex
 
 # Specify main document here without extension:
