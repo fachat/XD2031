@@ -394,6 +394,7 @@ damit er der Änderungen gewahr wird.
 sudo vi /etc/default/fsser
 service fsser restart
 \end{verbatim}
+\index{/etc/default/fsser}
 
 Meldungen des Servers werden in \texttt{/var/log/fsser}
 abgelegt. Sie können wie folgt live mitgelesen werden:
@@ -411,9 +412,11 @@ und nur bei Bedarf zu Rate ziehen.
 \subsubsection*{Init-Skript, Daemon und Server}
 \index{Init-Skript}
 \index{/etc/default/fsser}
+\index{/etc/init.d/fsser}
+\index{/usr/local/bin/fsserd}
 \index{/usr/local/bin/fsser}
+\index{/var/log/fsser}
 \index{Daemon}
-\index{service (Befehl)}
 Der selbst-startende Server besteht aus insgesamt fünf Elementen:
 \begin{enumerate}
 \item Konfigurations-Datei \texttt{/etc/default/fsser}
@@ -494,6 +497,7 @@ wird im folgenden Kapitel beschrieben.
 \subsubsection*{Manuelle Aufrufe des Init-Skripts}
 \index{Init-Skript}
 \index{Server!Neustart}
+\index{service fsser}
 Neustart des Servers:
 
 \begin{verbatim}
