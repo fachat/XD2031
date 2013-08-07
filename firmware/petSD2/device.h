@@ -4,8 +4,8 @@
 
     This file is part of XD-2031 -- Serial line filesystem server for CBMs
 
-    Copyright (C) 2012 Andre Fachat <afachat@gmx.de>
-    Copyrifht (C) 2012 Nils Eilers  <nils.eilers@gmx.de>
+    Copyright (C) 2013 Andre Fachat <afachat@gmx.de>
+    Copyrifht (C) 2013 Nils Eilers  <nils.eilers@gmx.de>
 
     XD-2031 is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -43,6 +43,14 @@ static inline void device_active_led_on (void) {
 static inline void device_leds_off (void) {
     LED_PORT |= _BV(LED_BIT);
     ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+}
+
+static inline uint8_t sd_card_write_protected(void) {
+    return (INPUT_SD_WP & _BV(PIN_SD_WP));
+}
+
+static inline uint8_t sd_card_inserted(void) {
+    return (!(INPUT_SD_CD & _BV(PIN_SD_CD)));
 }
 
 #endif

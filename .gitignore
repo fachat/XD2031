@@ -4,4 +4,6 @@ docsrc/doxygen/*
 *.dSYM/
 .AppleDouble
 .metadata
+.project
+.cproject
 .settings

@@ -47,7 +47,15 @@ static inline uint8_t timer_is_timed_out() {
 	return timerhw_has_timed_out();
 }
 
+// start timer to count down to zero within the given number of us
+// resolution 10 ms
+static inline void timer2_set_ms(uint16_t ms) {
+	timerhw2_set_ms(ms);
+}
 
+static inline uint8_t timer2_is_timed_out(void) {
+	return timer2hw_has_timed_out();
+}
 
 #endif
 

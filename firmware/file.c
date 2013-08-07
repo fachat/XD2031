@@ -106,7 +106,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
 			&& nameinfo.access != 'A' && nameinfo.access != 'X') {
-		debug_puts("UNKOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
+		debug_puts("UNKNOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
 		// not set, or set as not read, write, or append, or r/w ('X')
 		set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
 		return -1;

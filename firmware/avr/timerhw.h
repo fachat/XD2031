@@ -29,8 +29,9 @@
 #define TIMERHW_H
 
 #include <avr/io.h>
+#include <util/atomic.h>
 
-#include "debug.h"
+uint16_t timer10ms;
 
 void timerhw_init(void);
 
@@ -47,4 +48,15 @@ static inline uint8_t timerhw_has_timed_out() {
 	//return TIFR0 & _BV(TOV0);
 }
 
+static inline void timerhw2_set_ms(uint16_t ms) {
+	// resolution is 10 ms, thus divide by 10 to get counter value
+	ATOMIC_BLOCK(ATOMIC_FORCEON)
+	{
+		timer10ms = ms / 10;
+	}
+}
+
+static inline uint8_t timer2hw_has_timed_out (void) {
+	return (timer10ms ? 0 : 1);
+}
 #endif

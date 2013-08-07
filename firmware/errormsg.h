@@ -50,6 +50,8 @@ typedef struct {
 
 void set_error_ts(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector);
 
+void set_status(errormsg_t *err, char* s);
+
 static inline void set_error(errormsg_t *error, uint8_t errornum) {
 	// note: ignores possible changes in T&S
 	if (error->errorno != errornum || error->readp != 0) {

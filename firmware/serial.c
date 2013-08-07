@@ -78,7 +78,7 @@ void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_
                 uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 // dummy
-static void *prov_assign(const char *name) {
+static void *prov_assign(uint8_t drive, const char *parameter) {
 	return NULL;
 }
 
@@ -95,7 +95,7 @@ static charset_t charset(void *epdata) {
  * set the character set used on the wire. This is determined/changed
  * by a packet call from the main code, and then updated here
  */
-void set_charset(void *epdata, charset_t new_charset) {
+static void set_charset(void *epdata, charset_t new_charset) {
 	current_charset = new_charset;
 }
 

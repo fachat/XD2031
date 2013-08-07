@@ -103,7 +103,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 		}
 		newprov = ep->provider;
 		// currently a relative assignment is not supported
-		provdata = newprov->prov_assign(name);
+		provdata = newprov->prov_assign(drive, name);
 	}
 
 	if (newprov == NULL) {
@@ -116,7 +116,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 				debug_printf("Found new provider: %s in slot %d\n", name, i);
 				newprov = provs[i].provider;
 				// new get the runtime data
-				provdata = newprov->prov_assign(assign_to);
+				provdata = newprov->prov_assign(drive, assign_to);
 				break;
 			}
 		}

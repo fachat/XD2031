@@ -28,9 +28,16 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-//#define DEV_ADDR	9	// default device address
+#define F_CPU                           18432000UL
 
-#define F_CPU		18432000UL
+// compile time default device address
+#define DEV_ADDR                        8
+
+// max. opened files for FAT provider (SD card)
+#define FAT_MAX_FILES                   4
+
+// max. drives for the FAT provider (each holds a current directory)
+#define FAT_MAX_ASSIGNS			10
 
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
@@ -41,3 +48,4 @@
 
 
 #endif
+

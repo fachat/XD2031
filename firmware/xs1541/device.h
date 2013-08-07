@@ -40,4 +40,20 @@ static inline void device_leds_off (void) {
     LED_PORT &= ~_BV(LED_BIT);
 }
 
+static inline uint8_t sd_card_write_protected(void) {
+#ifdef INPUT_SD_WP
+	return (INPUT_SD_WP & _BV(PIN_SD_WP));
+#else
+	return 0;	// assume never write protected
+#endif
+}
+
+static inline uint8_t sd_card_inserted(void) {
+#ifdef INPUT_SD_CD
+	return (!(INPUT_SD_CD & _BV(PIN_SD_CD)));
+#else
+	return 1;	// assume card always present
+#endif
+}
+
 #endif

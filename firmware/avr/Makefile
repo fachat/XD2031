@@ -25,14 +25,14 @@ ASMFLAGS=
 # That is where the "-Wl,-u,vfprintf -lprintf_flt" option comes from...
 CFLAGS=-Wall -gdwarf-2 -std=gnu99 -O1 -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -Wl,-u,vfprintf -lprintf_flt  $(ARCHINCLUDE) $(ARCHDEVICE) $(DEVICEOPTS) -I$(DEVICE) -I. -I../common -DFIRMWARE
 
-clean: archclean deviceclean
+clean: archclean deviceclean testclean
 
 distclean: clean
 	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 	
 $(BINDIR)/$(TARGET).elf: $(FILES) $(DEPS) $(ARCHDEPS) $(ARCHFILES) $(DEVICEDEPS) $(DEVICEFILES)
 	mkdir -p $(BINDIR)
-	$(CC) $(CFLAGS) -o $(BINDIR)/$(TARGET).elf $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
+	$(CC) $(CFLAGS) $(DEVICE_CFLAGS) -o $(BINDIR)/$(TARGET).elf $(ARCHASMOBJ) $(DEVICEASMOBJ) $(FILES) $(ARCHFILES) $(DEVICEFILES)
 
 
 $(BINDIR)/$(TARGET).hex : $(BINDIR)/$(TARGET).elf
@@ -46,12 +46,12 @@ load:
 	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # ISP programming 
-flash: all
-	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
+flash:	all
+	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(TARGET_MCU) -U flash:w:$(BINDIR)/$(TARGET).hex:i
 
 # Fuse programming
 fuses:
-	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
+	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(TARGET_MCU) $(DUDE_SPEED) -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 # 
 
 # Info about memory usage, give only supported options
