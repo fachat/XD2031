@@ -19,8 +19,18 @@ if [ -z $XD2031_USER ] ; then
 fi
 echo "/etc/default/fsser: the server will run as user $XD2031_USER"
 
-# Install server
+# Stop the server
+service fsser stop
+
+# Install daemon
+install -m 755 fsserd.localized $1/fsserd
+# Remove temorary localized file
+rm fsserd.localized
+
+# Install init script
 install -m 755 fsser.init.d.localized /etc/init.d/fsser
+# Remove temporary localized file
+rm fsser.init.d.localized
 
 # If a personal configuration already exists, don't overwrite it
 if [ -f /etc/default/fsser ] ; then
@@ -45,5 +55,10 @@ chgrp $XD2031_USER $LOGFILE
 # Update runlevel links
 update-rc.d fsser defaults
 
-# (Re)start daemon/server
-service fsser restart
+# We're done
+echo ""
+echo "Type"
+echo "      service fsser start"
+echo ""
+echo "if you want to start the daemon now."
+echo ""

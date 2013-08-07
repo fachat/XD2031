@@ -386,11 +386,13 @@ Bei der Installation wird eine Beispiel-Konfiguration abgelegt, die Sie
 mit Root-Rechten nach Ihrem Gusto bearbeiten können, wozu Sie bitte
 Einzelheiten zu den Parametern des Server-Starts ab Seite \pageref{serverconf}
 dem Kapitel \glqq\ref{serverconf} \nameref{serverconf}\grqq\
-entnehmen.
+entnehmen. Nach jeder Änderung muss der Server neu gestartet werden,
+damit er der Änderungen gewahr wird.
 
 
 \begin{verbatim}
 sudo vi /etc/default/fsser
+service fsser restart
 \end{verbatim}
 
 Meldungen des Servers werden in \texttt{/var/log/fsser}
@@ -405,28 +407,46 @@ tail -f /var/log/fsser
 Den Rest dieses Kapitels werden Sie wahrscheinlich überspringen können
 und nur bei Bedarf zu Rate ziehen.
 
-\subsubsection*{Init-Skript und Server}
+\clearpage
+\subsubsection*{Init-Skript, Daemon und Server}
 \index{Init-Skript}
 \index{/etc/default/fsser}
 \index{/usr/local/bin/fsser}
-Der selbst-startende Server besteht aus zwei Einheiten:
+\index{Daemon}
+\index{service (Befehl)}
+Der selbst-startende Server besteht aus insgesamt fünf Elementen:
 \begin{enumerate}
+\item Konfigurations-Datei \texttt{/etc/default/fsser}
 \item Init-Skript \texttt{/etc/init.d/fsser}
+\item Daemon \texttt{/usr/local/bin/fsserd}
 \item Server \texttt{/usr/local/bin/fsser}
+\item Log-Datei \texttt{/var/log/fsser}
 \end{enumerate}
 
-Das Init-Skript wird beim Systemstart automatisch aufgerufen. Es bleibt
-aktiv und überwacht regelmäßig die Verfügbarkeit der zugewiesenen
-Geräteschnittstelle und prüft, ob der Server noch läuft. Wenn der Server
-beendet wird, prüft das Skript nach gewissen Regeln, ob und wann der
-Server neu gestartet werden soll.
+Das Init-Skript wird beim Systemstart automatisch mit Root-Rechten
+aufgerufen. Zunächst liest die Konfigurations-Datei, die später
+auch vom Daemon verwendet wird. Es stellt sicher, dass
+die Log-Datei \texttt{/var/log/fsser} verfügbar ist und durch
+den zugewiesenen Benutzer beschreibbar ist. Zuletzt wird der
+Daemon unter den Rechten des zugewiesenen Benutzers gestartet.
+
+Der Daemon bleibt aktiv und überwacht regelmäßig die Verfügbarkeit der zugewiesenen
+Geräteschnittstelle. Sobald diese verfügbar wird, startet der Daemon einen
+Server, der die eigentliche Arbeit leistet und die Dateien für
+den CBM bereit stellt.
+Weiterhin überwacht der Daemon, ob der Server noch läuft.
+Falls dies nicht mehr der Fall sein sollte, prüft der Daemon nach gewissen Regeln,
+ob und wann der Server neu gestartet werden soll.
 
 \subsubsection*{Konfiguration des Init-Skripts}
 Über die Datei \texttt{/etc/default/fsser} wird das Init-Skript
-konfiguriert. Zum Bearbeiten dieser Datei sind Root-Rechte erforderlich:
+konfiguriert. Zum Bearbeiten dieser Datei sind Root-Rechte erforderlich.
+Nach jeder Bearbeitung muss der Server neu gestartet werden, damit die
+aktualisierte Datei eingelesen wird:
 
 \begin{verbatim}
 sudo vi /etc/default/fsser
+service fsser restart
 \end{verbatim}
 
 \texttt{DAEMON\_ARGS} \index{DAEMON\_ARGS} sind beinahe beliebige Parameter,
@@ -480,14 +500,14 @@ Neustart des Servers:
 service fsser restart
 \end{verbatim}
 
-Abfrage des Status des Servers und des überwachenden Init-Skripts:
+Abfrage des Status von Server und Daemon:
 \index{Server!Status}
 
 \begin{verbatim}
 service fsser status
 \end{verbatim}
 
-Manueller Start/Stopp des Servers und des überwachenden Init-Skripts:
+Manueller Start/Stopp von Server und Daemon:
 
 \begin{verbatim}
 service fsser start
@@ -496,18 +516,26 @@ service fsser stop
 
 \subsubsection*{Automatischen Start deaktivieren}
 Wenn Sie den Mechanismus des automatischen Starts entfernen möchten,
-wenden Sie die folgenden Befehle an:
+und den Quelltext noch zur Hand haben, wenden Sie folgende Befehlszeilen an:
+
+\begin{verbatim}
+cd XD2031/pcserver
+sudo make exorcism
+\end{verbatim}
+
+Manuell kann der Autostart wie folgt entfernt werden:
 
 \begin{verbatim}
 service fsser stop
 sudo rm /etc/init.d/fsser
+sudo rm /usr/local/install/fsserd
 sudo rm /etc/default/fsser
 sudo update-rc.d fsser remove
 \end{verbatim}
 
 Dabei werden zunächst eventuell laufende Server und überwachende Init-Skripte
-beendet. Anschließend wird das Init-Skript, die persönliche Konfiguration
-des Init-Skripts und schließlich die Links der verschiedenen Run-Level
+beendet. Anschließend wird das Init-Skript, der Daemon, die persönliche Konfiguration
+und schließlich die Links der verschiedenen Run-Level
 auf das Init-Skript entfernt.
 
 \subsection{Installation der Server-Software (OS X)}

@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# This is the XD-2031 daemon
+#
+# Whenever the device defined in /etc/default/fsser is
+# available, it will start a XD-2031 server and respawn
+# it if desired and useful.
+#
+# This script should be called by /etc/init.d/fsser only,
+# which should be called by the user only via service fsser, e.g.
+#
+# service fsser restart
+#
+
+LOGFILE=/var/log/fsser
+ME=$0
+
+# Read configuration variable file if it is present
+# DAEMON_ARGS -- what it says
+# RUN_AS_USER -- this user will run the server
+# If RUN_AS_USER is undefined, abort
+#
+[ -r /etc/default/fsser ] && . /etc/default/fsser
+
+if [ -z $RUN_AS_USER ] ; then
+  echo "/etc/default/fsser: RUN_AS_USER undefined!"
+  exit 1
+fi
+
+# Check if current user is RUN_AS_USER
+if [ `whoami` != $RUN_AS_USER ] ; then
+  echo $0 must be called as user $RUN_AS_USER, aborting
+fi
+
+if [ -z $RESPAWN ] ; then
+  RESPAWN=false
+fi
+
+# Auto-detect serial device:
+# If we're running on Raspberry Pi and a device with FT232 chip (XS-1541 / petSD)
+# is already connected, use it. Otherwise spy for a 3.1541 or similiar connected
+# to the Raspberry Pi's serial port /dev/ttyAMA0.
+# If there is no /dev/ttyAMA0, the server obviously does not run on a Raspberry Pi
+# and /dev/ttyUSB0 is always used
+if [ -z $DEVICE ] ; then
+  DEVICE="auto"
+fi
+if [ "$DEVICE" = "auto" ] ; then
+  if [ -c "/dev/ttyAMA0" ] ; then
+    DEVICE="/dev/ttyAMA0"
+  else
+    DEVICE="/dev/ttyUSB0"
+  fi
+fi
+
+while true; do
+    if [ ! -c $DEVICE ] ; then
+        echo $ME: Waiting for $DEVICE to appear... >> $LOGFILE
+    fi
+    while [ ! -c $DEVICE ]; do
+        sleep 1
+    done
+    echo "$ME: Starting PREFIX/BINDIR/fsser as user $RUN_AS_USER" >> $LOGFILE
+    echo "$ME: fsser -D -d $DEVICE $DAEMON_ARGS" >> $LOGFILE
+    PREFIX/BINDIR/fsser -D -d $DEVICE $DAEMON_ARGS >> $LOGFILE
+    res=$?
+    case $res in
+      0)
+          echo $ME: server returned successfully, daemon stopped. >> $LOGFILE
+          exit 0
+      ;;
+      2)
+          echo $ME: server returned EXIT_RESPAWN_ALWAYS >> $LOGFILE
+      ;;
+      3)
+          echo $ME: server returned EXIT_RESPAWN_NEVER >> $LOGFILE
+          exit $res
+      ;;
+      143)
+          # Return value 143 = 128 + 15 (SIGTERM)
+          echo $ME: server stopped by SIGTERM, daemon stopped. >> $LOGFILE
+          exit 0
+      ;;
+      *)
+          echo $ME: Server returned with $res >> $LOGFILE
+          if [ "$RESPAWN" = "1" ] ; then
+              echo "RESPAWN=1 --> restarting server" >> $LOGFILE
+          else
+              echo "RESPAWN is not equal to 1 --> daemon stopped" >> $LOGFILE
+              exit $res
+          fi
+    esac
+    sleep 1
+done

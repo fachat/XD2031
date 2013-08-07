@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copy this file to /etc/init.d/fsser
 #
@@ -16,97 +16,41 @@
 # Author: Nils Eilers <nils.eilers@gmx.de>
 
 LOGFILE=/var/log/fsser
-ME=`readlink -f ${BASH_SOURCE[0]}`
+ME=$0
 
-daemon_loop() {
-  while true; do
-    if [ ! -c $DEVICE ] ; then
-      echo $ME: Waiting for $DEVICE to appear... >> $LOGFILE
-    fi
-    while [ ! -c $DEVICE ]; do
-      sleep 1
-    done
-    echo "$ME: Starting PREFIX/BINDIR/fsser as user $RUN_AS_USER" >> $LOGFILE
-    echo "$ME: fsser -D -d $DEVICE $DAEMON_ARGS" >> $LOGFILE
+start_daemon() {
     if [ $RUN_AS_USER = `whoami` ] ; then
-      PREFIX/BINDIR/fsser -D -d $DEVICE $DAEMON_ARGS &>> $LOGFILE
+        PREFIX/BINDIR/fsserd &>> $LOGFILE
     else
-      su - $RUN_AS_USER -c "PREFIX/BINDIR/fsser -D -d $DEVICE $DAEMON_ARGS &>> $LOGFILE ; exit \$?" &>> $LOGFILE
+        su - $RUN_AS_USER -c "PREFIX/BINDIR/fsserd &>> $LOGFILE" &>> $LOGFILE
     fi
-    res=$?
-    case $res in
-      0)
-        echo $ME: server returned successfully, daemon stopped. >> $LOGFILE
-        exit 0
-      ;;
-      2)
-        echo $ME: server returned EXIT_RESPAWN_ALWAYS >> $LOGFILE
-      ;;
-      3)
-        echo $ME: server returned EXIT_RESPAWN_NEVER >> $LOGFILE
-        exit $res
-      ;;
-      143)
-        # Return value 143 = 128 + 15 (SIGTERM)
-        echo $ME: server stopped by SIGTERM, daemon stopped. >> $LOGFILE
-        exit 0
-      ;;
-      *)
-        echo $ME: Server returned with $res >> $LOGFILE
-        if [ "$RESPAWN" = "1" ] ; then
-          echo "RESPAWN=1 --> restarting server" >> $LOGFILE
-        else
-          echo "RESPAWN is not equal to 1 --> daemon stopped" >> $LOGFILE
-          exit $res
-        fi
-    esac
-    sleep 1
-  done
 }
 
 # Read configuration variable file if it is present
-# DAEMON_ARGS -- what it says
-# RUN_AS_USER -- this user will run the server
+# RUN_AS_USER -- this user will run the server and the daemon
 # If RUN_AS_USER is undefined, abort
 #
 [ -r /etc/default/fsser ] && . /etc/default/fsser
-
 if [ -z $RUN_AS_USER ] ; then
   echo "/etc/default/fsser: RUN_AS_USER undefined!"
   exit 1
 fi
 
-if [ -z $RESPAWN ] ; then
-  RESPAWN=false
-fi
-
-# Auto-detect serial device:
-# If we're running on Raspberry Pi and a device with FT232 chip (XS-1541 / petSD)
-# is already connected, use it. Otherwise spy for a 3.1541 or similiar connected
-# to the Raspberry Pi's serial port /dev/ttyAMA0.
-# If there is no /dev/ttyAMA0, the server obviously does not run on a Raspberry Pi
-# and /dev/ttyUSB0 is always used
-if [ -z $DEVICE ] ; then
-  DEVICE="auto"
-fi
-if [ "$DEVICE" = "auto" ] ; then
-  if [ -c "/dev/ttyAMA0" ] ; then
-    DEVICE="/dev/ttyAMA0"
-  else
-    DEVICE="/dev/ttyUSB0"
-  fi
-fi
+# Make sure, the logfile exists and the user can access it
+touch $LOGFILE
+chown $RUN_AS_USER $LOGFILE
+chgrp $RUN_AS_USER $LOGFILE
 
 case "$1" in
 start)
 if pidof PREFIX/BINDIR/fsser > /dev/null ; then
   echo "Server already running."
 else
-  if [ `pgrep -c -f "/bin/bash $ME"` -gt 1 ] ; then
-    echo "Daemon will start the server when $DEVICE appears"
+  if [ `pgrep -c .*fsserd` -gt 1 ] ; then
+    echo "Daemon already running, will start the server when the configured device is available."
   else
     echo "Starting XD-2031 daemon..."
-    daemon_loop &
+    start_daemon
   fi
 fi
 ;;
@@ -119,9 +63,8 @@ else
   echo "No running server found."
 fi
 # Kill all daemons, start with the oldest.
-# Exiting this script will terminate the last one.
-while [ `pgrep -c -f "/bin/bash $ME"` -gt 1 ] ; do
-  kill `pgrep -o -f "/bin/bash $ME"`
+while [ `pgrep -c .*fsserd` -gt 0 ] ; do
+  kill `pgrep -o .*fsserd`
 done
 echo Daemon stopped
 ;;
@@ -136,11 +79,11 @@ fi
 # and probably has a bad configuration.
 # That's why old daemons are killed as well to force
 # re-reading the configuration
-while [ `pgrep -c -f "/bin/bash $ME"` -gt 1 ] ; do
-  kill `pgrep -o -f "/bin/bash $ME"`
+while [ `pgrep -c .*fsserd` -gt 0 ] ; do
+  kill `pgrep -o .*fsserd`
 done
 echo "Starting XD-2031 daemon..."
-daemon_loop &
+start_daemon
 ;;
 status)
 if pidof PREFIX/BINDIR/fsser > /dev/null ; then
@@ -148,8 +91,8 @@ if pidof PREFIX/BINDIR/fsser > /dev/null ; then
 else
   echo Server not running
 fi
-if [ `pgrep -c -f "/bin/bash $ME"` -gt 1 ] ; then
-  echo Daemon running: PID `pgrep -o -f "/bin/bash $ME"`
+if [ `pgrep -c .*fsserd` -gt 0 ] ; then
+  echo Daemon running: PID `pgrep -o .*fsserd`
 else
   echo Daemon stopped
 fi

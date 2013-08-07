@@ -91,6 +91,7 @@ doc:
 	doxygen Doxyfile
 
 install:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	test -d $(PREFIX) || mkdir -p $(PREFIX)
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
 	install -m 0755 fsser $(PREFIX)/$(BINDIR)
@@ -107,6 +108,7 @@ endif
 	@$(ADD_AVRDUDE_CONF)
 
 uninstall:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	rm -f $(PREFIX)/$(BINDIR)/fsser
 	rm -f $(PREFIX)/$(DOCDIR)/*
 	rmdir $(PREFIX)/$(DOCDIR) 2>/dev/null | exit 0
@@ -153,9 +155,22 @@ dmg:
 	# Clean again
 	rm -rf fauxroot dmg
 
-daemon: install
+daemon:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	sed -e 's|PREFIX|'$(PREFIX)'|g' fsser.init.d > fsser.init.d.localized
 	sed -i -e 's|BINDIR|'$(BINDIR)'|g' fsser.init.d.localized
-	./daemon.sh
+	sed -e 's|PREFIX|'$(PREFIX)'|g' fsserd > fsserd.localized
+	sed -i -e 's|BINDIR|'$(BINDIR)'|g' fsserd.localized
+	./daemon.sh $(PREFIX)/$(BINDIR)
+
+exorcism:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
+	service fsser stop
+	rm -f /etc/init.d/fsser
+	rm -f $(PREFIX)/$(BINDIR)/fsserd
+	update-rc.d fsser remove
+	@echo "Personal files preserved:"
+	@echo "- /etc/default/fsser"
+	@echo "- /var/log/fsser"
 
 .PHONY: all install uninstall run dmg fsser
