@@ -97,10 +97,6 @@ int8_t rtc_time(char *p, errormsg_t* errormsg) {
     uint8_t called_as_ti = 0;
 
     RTC_t datim;
-    int8_t res = rtc_gettime(&datim);
-    if(res == 1) return CBM_ERROR_READ;       // RTC found but invalid
-    if(res) return CBM_ERROR_DRIVE_NOT_READY; // RTC not found
-
     char buf[32]; // buffer for formatted date/time output
 
     p++; // Skip 'T'
@@ -200,8 +196,13 @@ int8_t rtc_time(char *p, errormsg_t* errormsg) {
         }
     }
 
+    int8_t res = rtc_gettime(&datim);
+    if(res == RTC_ABSENT) return CBM_ERROR_DRIVE_NOT_READY; // RTC not found
+
     // If no parameters were given, output date/time
     if(!(day_of_week_given || date_given || time_given)) {
+        if(res == RTC_INVALID) return CBM_ERROR_READ;       // RTC found but invalid
+
         if(called_as_ti) {
             sprintf(buf, "%02u%02u%02u",
                 datim.hour, datim.min, datim.sec);

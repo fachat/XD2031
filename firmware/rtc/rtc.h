@@ -3,6 +3,8 @@
 
 #include <inttypes.h>
 
+enum { RTC_OK, RTC_INVALID, RTC_ABSENT };
+
 #ifdef PCTEST
     typedef char* errormsg_t;
     enum { CBM_ERROR_OK, CBM_ERROR_READ, CBM_ERROR_DRIVE_NOT_READY,

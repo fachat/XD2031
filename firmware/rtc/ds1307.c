@@ -9,9 +9,9 @@
 #include "debug.h"
 
 // Get time from real time clock
-// 0: OK, valid time
-// 1: RTC present, but time unset, delivers default date
-// 2: No RTC found
+// RTC_OK: valid time
+// RTC_INVALID: RTC present, but time unset, delivers default date
+// RTC_ABSENT: No RTC found
 int8_t rtc_gettime (RTC_t *rtc) {
   uint8_t buf[10];
 
