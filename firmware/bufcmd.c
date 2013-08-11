@@ -123,6 +123,7 @@ static cmdbuf_t *cmdbuf_reserve_buf(int8_t channel_no, uint8_t bufno) {
 
 static cmdbuf_t *cmdbuf_find(int8_t channel_no) {
 	// find a direct buffer for a channel
+	
 	uint8_t i;
 	for (i = 0; i < CONFIG_NUM_DIRECT_BUFFERS; i++) {
 		if (buffers[i].channel_no == channel_no) {
@@ -1012,6 +1013,10 @@ int8_t bufcmd_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *e
 	uint8_t channel = (uint8_t)cmdpars[0];
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
 	uint8_t position = (namelen == 3) ? 0 : ((uint8_t)(cmdpars[3]));
+
+	// nasty DOS bug - RECORD# adds 96 to the actual secondary channel number,
+	// so we need to mask that away!
+	channel &= 0x1f;
 
 debug_printf("position: chan=%d, recordno=%d, in record=%d\n", channel, recordno, position);
 
