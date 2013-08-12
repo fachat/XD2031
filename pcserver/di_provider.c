@@ -1869,6 +1869,9 @@ static void di_read_sidesector_group(di_endpoint_t *diep, uint8_t *sidesectorgro
 //
 // Note: loosely based on VICE's vdrive_rel_add_sector()
 //
+// Note: Disk full errors are not handled gracefully.
+// May or may not leave residue in form of unlinked, but marked allocated sectors
+//
 int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 	unsigned int i;
@@ -2092,6 +2095,8 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		if (side == SIDE_SECTORS_MAX - 1) {
 			// yes, create a new group
 			
+			log_debug(" - need to start a new side sector group\n");
+
 			side++;
 
 			di_flush_sidesectors(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
@@ -2106,7 +2111,11 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 			sidesectorgroup[OFFSET_SIDE_SECTOR + 1] = sector;
 
 			// update super side sector
-			o = OFFSET_SUPER_POINTER + side * 2;
+			super++;
+			if (super >= SIDE_SUPER_MAX) {
+				return CBM_ERROR_DISK_FULL;
+			}
+			o = OFFSET_SUPER_POINTER + super * 2;
 			supersector[o] = track;
 			supersector[o + 1] = sector;
 			sss_dirty = 1;
