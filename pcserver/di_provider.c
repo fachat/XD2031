@@ -1856,6 +1856,11 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
     	// Check if this side sector is full, allocate a new one if necessary
 	// then update side sector with new data block
+	//
+	// note: the side sector groups actually form a continous file
+	// comprising of all side sectors. So if a new side sector group
+	// is needed, the last sector in the previous side sector group must
+	// get the correct block link as well.
 	if ( j == SSB_INDEX_SECTOR_MAX) {
 
 		log_debug(" - allocate new side sector block\n");
@@ -1877,7 +1882,10 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 			
 			log_debug(" - need to start a new side sector group\n");
 
-			side++;
+			// update pointers in last block of preceeding side sector group
+			sidesectorgroup[side*256 + BLK_OFFSET_NEXT_TRACK] = track;
+			sidesectorgroup[side*256 + BLK_OFFSET_NEXT_SECTOR] = sector;
+			ssg_dirty[side] = 1;
 
 			di_flush_sidesectors(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
 
