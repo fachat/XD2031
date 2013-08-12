@@ -613,6 +613,7 @@ static void di_read_slot(di_endpoint_t *diep, slot_t *slot)
 // di_first_slot
 // *************
 
+// TODO: check consistency with real images, resp. DirSector in the disk image definitions
 static void di_first_slot(di_endpoint_t *diep, slot_t *slot)
 {
    log_debug("di_first_slot\n");

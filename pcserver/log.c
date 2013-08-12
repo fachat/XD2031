@@ -159,7 +159,7 @@ void log_hexdump(char *p, int len, int petscii) {
 			for(x=0; x<16; x++) {
 				if(line+x < len) {
 					tot++;
-					printf("%02X ", p[line+x]);
+					printf("%02X ", 255&p[line+x]);
 				}
 				else printf("   ");
 				if(x == 7) putchar(' ');

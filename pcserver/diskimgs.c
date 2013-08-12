@@ -97,12 +97,12 @@ static int LBA81(int t, int s)
            read it.  We will therefore use 4090 as our limit. */
 // Data interleave is taken from VICE's vdrive_bam_get_interleave() method
 // plus one, for a change in algorithm
-//                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel   map  Dir  BAM blocks
-static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA64, 18, { 18, 0,  0, 0,  0, 0,  0, 0 } };
-static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LBA71, 18, { 18, 0, 53, 0,  0, 0,  0, 0 } };
-static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LBA81, 40, { 40, 1, 40, 2,  0, 0,  0, 0 } };
-static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 7,  0, 2083,  726, LBA80, 39, { 38, 0, 38, 3,  0, 0,  0, 0 } };
-static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 8,  1, 4166, 4126, LBA82, 39, { 38, 0, 38, 3, 38, 6, 38, 9 } };
+//                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel   map  Dir_T/S  BAM blocks
+static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA64, 18, 1, { 18, 0,  0, 0,  0, 0,  0, 0 } };
+static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 } };
+static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LBA81, 40, 3, { 40, 1, 40, 2,  0, 0,  0, 0 } };
+static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 7,  0, 2083,  726, LBA80, 39, 1, { 38, 0, 38, 3,  0, 0,  0, 0 } };
+static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 8,  1, 4166, 4126, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 } };
 
 
 int diskimg_identify(Disk_Image_t *di, unsigned int filesize) {
