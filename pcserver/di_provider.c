@@ -50,205 +50,13 @@
 #include "wildcard.h"
 #include "openpars.h"
 
+#include "diskimgs.h"
+
 #include "log.h"
 
 #undef DEBUG_READ
 #define DEBUG_CMD
 
-#define  MAX_BUFFER_SIZE  64
-
-#define	OFFSET_NEXT_TRACK	0
-#define	OFFSET_NEXT_SECTOR	1
-
-#define SIDE_SECTORS_MAX 	6	/* max number of side sectors in side sector group */
-#define SIDE_INDEX_MAX   	120	/* max number of blocks in a side sector */
-
-#define OFFSET_SUPER_254   	2	/* flag when set to 254 it is a super side sector */
-#define OFFSET_SUPER_POINTER   	3	/* start of sector group addresses in sss */
-#define SIDE_SUPER_MAX   	126	/* max number of super side sector blocks */
-
-#define	OFFSET_SECTOR_NUM	2	/* side sector number field in side sector */
-#define	OFFSET_RECORD_LEN	3	/* record length field in side sector */
-#define	OFFSET_SIDE_SECTOR	4	/* start of side sector addresses in current side sector group */
-#define	OFFSET_POINTER		16	/* start of sector addresses in ss */
-
-
-typedef struct Disk_Image
-{
-   uint8_t ID;                    // Image type (64,71,80,81,82)
-   uint8_t Tracks;                // Tracks per side
-   uint8_t Sectors;               // Max. sectors per track
-   uint8_t Sides;                 // Sides (2 for D71 and D82)
-   uint8_t BAMBlocks;             // Number of BAM blocks
-   uint8_t BAMOffset;             // Start of BAM in block
-   uint8_t TracksPerBAM;          // Tracks per BAM
-   uint8_t DirInterleave;         // Interleave on directory track
-   uint8_t DatInterleave;         // Interleave on data tracks
-   uint8_t HasSSB;		  // when set disk has super side blocks in REL files
-   unsigned int  Blocks;          // Size in blocks
-   unsigned int  RelBlocks;       // Max REL file size in blocks
-   int (*LBA)(int t, int s);      // Logical Block Address calculation
-   uint8_t DirTrack;              // Header and directory track
-} Disk_Image_t;
-
-/* functions for computing LBA (Logical Block Address) */
-/* return -1 for illegal T/S */
-
-static int LBA64(int t, int s)
-{
-
-   if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
-   if(t <= 17) return ((s >= 21) ? -1 : s +                         (t- 1)*21); // 01-17 (17) 21
-   if(t <= 24) return ((s >= 19) ? -1 : s + 17*21 +                 (t-18)*19); // 18-24 ( 7) 19
-   if(t <= 30) return ((s >= 18) ? -1 : s + 17*21 +  7*19 +         (t-25)*18); // 25-30 ( 6) 18
-   if(t <= 35) return ((s >= 17) ? -1 : s + 17*21 +  7*19 +  6*18 + (t-31)*17); // 31-35 ( 5) 17
-   return -1;
-}
-
-
-static int LBA71(int t, int s)
-{
-   int lba;
-
-   if (t < 36) return LBA64(t,s);
-   return (((lba = LBA64(t-35,s)) < 0) ? -1 : 683 + lba);
-}
-
-static int LBA80(int t, int s)
-{
-
-   if((s < 0) || (t < 1)) return -1;                                            // T      #T  S/T
-   if(t <= 39) return ((s >= 29) ? -1 : s +                         (t- 1)*29); // 01-39 (39) 29
-   if(t <= 53) return ((s >= 27) ? -1 : s + 39*29 +                 (t-40)*27); // 40-53 (14) 27
-   if(t <= 64) return ((s >= 25) ? -1 : s + 39*29 + 14*27 +         (t-54)*25); // 54-64 (11) 25
-   if(t <= 77) return ((s >= 23) ? -1 : s + 39*29 + 14*27 + 11*25 + (t-65)*23); // 65-77 (13) 23
-   return -1;
-}
-
-static int LBA82(int t, int s)
-{
-   int lba;
-
-   if (t < 78) return LBA80(t,s);
-   return (((lba = LBA80(t-77,s)) < 0) ? -1 : 2083 + lba);
-}
-
-static int LBA81(int t, int s)
-{
-   if((s < 0) || (s > 39) || (t < 1) || (t > 80)) return -1;
-   return s + (t-1) * 40;
-}
-
-// Disk image definitions
-// D64: 
-        /* 700 blocks + 6 side sectors */
-// D81: 
-        /* 3000 blocks + 4 side sector groups + 1 side sector + super side
-           sector */
-// D80:
-        /* 720 blocks + 6 side sectors */
-// D82:
-        /* SFD1001: 4089 blocks + 5 side sector groups + 5 side sector +
-           super side sector */
-        /* 8250: 4090 blocks + 5 side sector groups + 5 side sector +
-           super side sector */
-        /* The SFD cannot create a file with REL 4090 blocks, but it can
-           read it.  We will therefore use 4090 as our limit. */
-// Data interleave is taken from VICE's vdrive_bam_get_interleave() method
-// plus one, for a change in algorithm
-//                   ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel        Dir
-Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA64, 18 };
-Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LBA81, 40 };
-Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 7,  0, 2083,  726, LBA82, 39 };
-Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 8,  1, 4166, 4126, LBA80, 39 };
-
-/* Commodore Floppy Formats
-
-     D64 / D71                  D80 / D82                      D81
-
-S  Track  #S  Bl.          S  Track   #S   Bl.          S  Track  #S   Bl.
------------------------    -------------------          ------------------
-0   1-17  21  357          0   1- 39  29  1131          0   1-40  40  1600
-0  18-24  19  133          0  40- 53  27   378
-0  25-30  18  108          0  54- 64  25   275
-0  31-35  17   85   683    0  65- 77  23   299  2083                
------------------------    -------------------------    ------------------
-1  36-52  21  357          1  78-116  29  1131          1  41-80  40  1600
-1  53-59  19  133          1 117-130  27   378
-1  60-65  18  108          1 131-141  25   275
-1  66-70  17   85  1366    1 142-154  23   299  4166                  3200
-=======================    =========================   ===================
-
-
-BAM Block for D64 & D71 (track 18 / sector 0)
-
----+----+----+----+----+--------------------------------------
-00 : 12 | 01 | 41 | 00 | Link to directory block / DOS version
----+----+----+----+----+--------------------------------------
-04 : 15 | FF | FF | 1f | track  1: free blocks and BAM
----+----+----+----+----+--------------------------------------
-08 : 15 | FF | FF | 1f | track  2: free blocks and BAM
----+----+----+----+----+--------------------------------------
-.. : .. | .. | .. | .. | track  n: free blocks and BAM
----+----+----+----+----+--------------------------------------
-88 : 11 | FF | FF | 01 | track 34: free blocks and BAM
----+----+----+----+----+--------------------------------------
-8C : 11 | FF | FF | 01 | track 35: free blocks and BAM
----+-------------------+--------------------------------------
-90 : DISK NAME         | 16 bytes padded with (A0)
----+-------------------+--------------------------------------
-A0 : A0 | A0 | ID | ID | Disk ID (A2/A3)
----+----+----+----+----+--------------------------------------
-A4 : A0 | 32 | 41 | A0 | DOS version "2A" (A5/A6)
----+----+----+----+----+--------------------------------------
-.. : A0 | A0 | A0 | A0 | unused space filled with A0
----+----+----+----+----+--------------------------------------
-DC : A0 | 15 | 15 | 15 | D71: free blocks (track 36-38)
----+----+----+----+----+--------------------------------------
-E0 : 15 | 15 | 15 | 15 | D71: free blocks (track 39-42)
----+----+----+----+----+--------------------------------------
-.. : .. | .. | .. | .. | D71: free blocks
----+----+----+----+----+--------------------------------------
-E8 : 12 | 12 | 12 | 11 | D71: free blocks (track 63-66)
----+----+----+----+----+--------------------------------------
-EC : 11 | 11 | 11 | 11 | D71: free blocks (track 67-70)
---------------------------------------------------------------
-
-CBM File types:
--------------------------------------
-0  DEL  Deleted file            
-1  SEQ  Sequential file
-2  PRG  Program file
-3  USR  User file
-4  REL  Random Access (relative) file
-5  CBM  D81 directory 
-
-OR'ed with 80: CLOSED   (0: "*" in display)
-OR'ed with 40: LOCKED   (1: "<" in display)
-
-Directory block
-
---------------------------------------------------------------
-00 : TR | SE |      chain link to next directory block         
----+----+----+----+-------------------------------------------
-02 : TY | BT | BS | file type & track/sector of 1st. block
----+----+----+----+-------------------------------------------
-05 : FILE NAME    | filename (16 bytes padded with A0)
----+----+----+----+-------------------------------------------
-15 : ST | SS | RS | REL files: side sector t&s, record length
----+----+----+----+-------------------------------------------
-18 : -- | -- | -- | unused
----+----+----+---------+--------------------------------------
-1C : @T | @S |      Track/Sector for replacement file (@)
----+----+----+---------+--------------------------------------
-1E : Lo | Hi |      File size in blocks of 254 bytes
---------------------------------------------------------------
-20 :                2. directory entry
---------------------------------------------------------------
-E0 :                8. directory entry
---------------------------------------------------------------
-
-*/
 
 // structure for directory slot handling
 
@@ -503,40 +311,11 @@ static int di_load_image(di_endpoint_t *diep, const char *filename)
    filesize = ftell(diep->Ip);
    log_debug("image size = %d\n",filesize);
 
-   if (filesize == d64.Blocks * 256)
-   {
-      diep->DI = d64;
-      diep->BAMpos[0] = 256 * diep->DI.LBA(18,0);
-   }
-   else if (filesize == d64.Blocks * 512)
-   {
-      diep->DI           = d64;
-      diep->DI.ID        =  71;
-      diep->DI.Sides     =   2;
-      diep->DI.BAMBlocks =   2;
-      diep->DI.LBA       = LBA71;
-      diep->BAMpos[0]    = 256 * diep->DI.LBA(18,0);
-      diep->BAMpos[1]    = 256 * diep->DI.LBA(53,0);
-   }
-   else if (filesize == d80.Blocks * 256)
-   {
-      diep->DI = d80;
-      diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
-      diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
-   }
-   else if (filesize == d82.Blocks * 256)
-   {
-      diep->DI           = d82;
-      diep->BAMpos[0]    = 256 * diep->DI.LBA(38,0);
-      diep->BAMpos[1]    = 256 * diep->DI.LBA(38,3);
-      diep->BAMpos[2]    = 256 * diep->DI.LBA(38,6);
-      diep->BAMpos[3]    = 256 * diep->DI.LBA(38,9);
-   }
-   else if (filesize == d81.Blocks * 256)
-   {
-      diep->DI = d81;
-      diep->BAMpos[0]    = 256 * diep->DI.LBA(40,1);
-      diep->BAMpos[1]    = 256 * diep->DI.LBA(40,2);
+   if (diskimg_identify(&(diep->DI), filesize)) {
+	int numbamblocks = diep->DI.BAMBlocks;
+	for (int i = 0; i < numbamblocks; i++) {
+		diep->BAMpos[i] = 256 * diep->DI.LBA(diep->DI.bamts[(i<<1)], diep->DI.bamts[(i<<1)+1]);
+	}
    }
    else 
    {
