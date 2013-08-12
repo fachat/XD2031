@@ -82,7 +82,7 @@
 #define   FS_BLOCK       23	/* summary for block commands */
 #define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
 
-#define	  FS_POSITION	 25	/* position a read/write pointer onto a rel file record */
+#define	  FS_POSITION	 25	/* position a read/write pointer onto a rel file record; zero-based */
 
 #define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
 
