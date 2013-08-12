@@ -1909,6 +1909,9 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	if (di_find_free_block(diep, f) < 0) {
 		return CBM_ERROR_DISK_FULL;
 	}
+	f->Slot.size++;
+	slot_dirty = 1;
+
 	new_track = f->cht;
 	new_sector = f->chs;
 
@@ -1933,6 +1936,9 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 			if (di_find_free_block(diep, f) < 0) {
 				return CBM_ERROR_DISK_FULL;
 			}
+			f->Slot.size++;
+			slot_dirty = 1;
+
 			sss_track = f->cht;
 			sss_sector = f->chs;
 
@@ -1971,6 +1977,9 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		if (di_find_free_block(diep, f) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
+		f->Slot.size++;
+		slot_dirty = 1;
+
 		ssg_track[0] = f->cht;
 		ssg_sector[0] = f->chs;
 
@@ -2065,10 +2074,16 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
     	// Check if this side sector is full, allocate a new one if necessary
 	// then update side sector with new data block
 	if ( j == SIDE_INDEX_MAX) {
+
+		log_debug(" - allocate new side sector block\n");
+
 		// allocate a new block for a side sector
 		if (di_find_free_block(diep, f) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
+		f->Slot.size++;
+		slot_dirty = 1;
+
 		track = f->cht;
 		sector = f->chs;
 
@@ -2101,10 +2116,11 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		} else {
 			// no, sector group is not full, update old group
 			// "side" contains the number of the new side sector in this group
-			
+			side++;
+	
 			di_read_sidesector_group(diep, sidesectorgroup, ssg_track, ssg_sector, ssg_dirty);
 
-			// update side sector indices
+			// update current side sector indices
 			for (k = 0; k < SIDE_SECTORS_MAX; k++) {
 				if (ssg_track[k]) {
 					sidesectorgroup[(k * 256) + OFFSET_SIDE_SECTOR + (side << 1)] = track;
@@ -2112,6 +2128,12 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 					ssg_dirty[k] = 1;
 				}
 			}
+
+			// update pointers in last block
+			sidesectorgroup[(side-1)*256 + OFFSET_NEXT_TRACK] = track;
+			sidesectorgroup[(side-1)*256 + OFFSET_NEXT_SECTOR] = sector;
+			ssg_dirty[side-1] = 1;
+
 			// update new sector
 			sidesectorgroup[(side*256) + OFFSET_SECTOR_NUM] = side;
 			// copy side sector track and sector list from first side sector
@@ -2124,6 +2146,8 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 			// set dirty
 			ssg_dirty[side] = 1;
+			ssg_track[side] = track;
+			ssg_sector[side] = sector;
 		}
 
 		// update side sector contents
