@@ -32,20 +32,20 @@
 
 #define  MAX_BUFFER_SIZE  64
 
-#define	OFFSET_NEXT_TRACK	0
-#define	OFFSET_NEXT_SECTOR	1
+#define	BLK_OFFSET_NEXT_TRACK	0
+#define	BLK_OFFSET_NEXT_SECTOR	1
 
-#define SIDE_SECTORS_MAX 	6	/* max number of side sectors in side sector group */
-#define SIDE_INDEX_MAX   	120	/* max number of blocks in a side sector */
+#define SSG_SIDE_SECTORS_MAX 	6	/* max number of side sectors in side sector group */
+#define SSB_INDEX_SECTOR_MAX   	120	/* max number of blocks in a side sector */
 
-#define OFFSET_SUPER_254   	2	/* flag when set to 254 it is a super side sector */
-#define OFFSET_SUPER_POINTER   	3	/* start of sector group addresses in sss */
-#define SIDE_SUPER_MAX   	126	/* max number of super side sector blocks */
+#define SSB_OFFSET_SUPER_254   	2	/* flag when set to 254 it is a super side sector */
+#define SSS_OFFSET_SSB_POINTER  3	/* start of sector group addresses in sss */
+#define SSS_INDEX_SSB_MAX   	126	/* max number of super side sector blocks */
 
-#define	OFFSET_SECTOR_NUM	2	/* side sector number field in side sector */
-#define	OFFSET_RECORD_LEN	3	/* record length field in side sector */
-#define	OFFSET_SIDE_SECTOR	4	/* start of side sector addresses in current side sector group */
-#define	OFFSET_POINTER		16	/* start of sector addresses in ss */
+#define	SSB_OFFSET_SECTOR_NUM	2	/* side sector number field in side sector */
+#define	SSB_OFFSET_RECORD_LEN	3	/* record length field in side sector */
+#define	SSB_OFFSET_SSG		4	/* start of side sector addresses in current side sector group */
+#define	SSB_OFFSET_SECTOR	16	/* start of sector addresses in ss */
 
 
 typedef struct Disk_Image
