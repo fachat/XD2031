@@ -19,6 +19,9 @@ LFUSE = f7
 HFUSE = d2
 EFUSE = ff
 
+# SCK period
+DUDE_SPEED=-B 1.3
+
 DEVICEFILES=petSD2/ieeehw.c petSD2/device.c
 DEVICEDEPS=petSD2/device.h petSD2/config.h petSD2/atn.o petSD2/ieeehw.h petSD2/device.h
 
