@@ -808,6 +808,7 @@ debug_flush();
 	cmdbuf_t *buffer = NULL;
 
 	switch(txbuf->type) {
+/*
 	case FS_OPEN_RD:
 	case FS_OPEN_WR:
 	case FS_OPEN_RW:
@@ -838,6 +839,7 @@ debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_fl
                         }
 		}
 		break;
+*/
 	case FS_CLOSE:
 		buffer = cmdbuf_find(channelno);
 		if (buffer != NULL && buffer->real_endpoint != NULL) {
@@ -1091,6 +1093,7 @@ endpoint_t *bufcmd_provider(void) {
 	return &block_endpoint;
 }
 
+/*
 // proxies a relative file through the bufcmd layer
 int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen) {
 
@@ -1109,6 +1112,7 @@ int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen
 	}
 	return err;
 }
+*/
 
 // wraps the opened channel on the original real_endpoint through the
 // relative file provider, when an "CBM_ERROR_OPEN_REL" is received from the 

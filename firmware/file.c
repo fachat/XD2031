@@ -284,7 +284,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
-
+/*
 		// proxy relative files through the bufcmd layer
 		if (nameinfo.type == 'L') {
 			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
@@ -297,7 +297,7 @@ debug_printf("-> err=%d\n", err);
 				return -1;
 			}
 		}
-
+*/
 		// TODO: if provider->channel_* are not NULL, we should probably not allocate a channel
 		// but that would break the FILE OPEN detection here.
 		channel_t *channel = channel_find(channel_no);
