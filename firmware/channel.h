@@ -123,6 +123,11 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov,
 		int8_t (*dirconverter)(void *ep, packet_t *, uint8_t drive),
 		uint8_t drive);
 
+/*
+ * re-open a file to wrap the channel for a relative file
+ */
+int8_t channel_reopen(int8_t chan, uint8_t writetype, endpoint_t *prov);
+
 channel_t* channel_find(int8_t chan);
 
 /**

@@ -170,6 +170,7 @@
 #define	  FS_DIR_TYPE_PRG	2
 #define	  FS_DIR_TYPE_USR	3
 #define	  FS_DIR_TYPE_REL	4
+#define	  FS_DIR_TYPE_UNKNOWN	255
 
 #endif
 

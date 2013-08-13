@@ -1110,4 +1110,37 @@ int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen
 	return err;
 }
 
+// wraps the opened channel on the original real_endpoint through the
+// relative file provider, when an "CBM_ERROR_OPEN_REL" is received from the 
+// server.
+int8_t bufcmd_relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t reclen) {
+
+	int8_t err = CBM_ERROR_NO_CHANNEL;
+
+	if (reclen > 254) {
+		return CBM_ERROR_OVERFLOW_IN_RECORD;
+	}
+
+	cmdbuf_t *buffer = cmdbuf_reserve(channel_no);
+	if (buffer != NULL) {
+		buffer->real_endpoint = real_endpoint;
+
+		buffer->recordlen = reclen & 0xff;
+		buffer->buf_recordno = 0;	// not loaded
+		buffer->cur_pos_in_record = 0;	// not loaded
+                buf[0] = CBM_ERROR_OK;
+		buffer->pflag = 0;
+
+		err = channel_reopen(channel_no, WTYPE_READWRITE, &relfile_endpoint);
+		if (err != CBM_ERROR_OK) {
+			cmdbuf_free(channel_no);
+		}
+	}
+
+	if (err != CBM_ERROR_OK) {
+		bufcmd_close(channel_no, real_endpoint);
+	}
+	return err;
+}
+
 

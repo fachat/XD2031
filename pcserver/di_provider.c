@@ -651,12 +651,16 @@ static int di_next_slot(di_endpoint_t *diep,slot_t *slot)
 // di_match_slot
 // *************
 
-static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name)
+static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name, uint8_t type)
 {
    do
    {
       di_read_slot(diep,slot);
-      if (slot->type && compare_pattern((char*)slot->filename,(char*)name)) return 1; // found
+      if (slot->type 
+		&& ((type == FS_DIR_TYPE_UNKNOWN) || ((slot->type & FS_DIR_ATTR_TYPEMASK) == type))
+		&& compare_pattern((char*)slot->filename,(char*)name)) {
+		return 1; // found
+      }
    }  while (di_next_slot(diep,slot));
    return 0; // not found
 }
@@ -997,12 +1001,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 {
    int np,rv;
    File *file;
-   uint8_t type = FS_DIR_TYPE_PRG;	// PRG
+   uint8_t type = FS_DIR_TYPE_UNKNOWN;	// unknown
 
    *reclen = 0;		// not set
 
    openpars_process_options(opts, &type, reclen);
-
+ 
    log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, type + 0x30, *reclen);
 
    if (*reclen > 254) {
@@ -1042,10 +1046,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 	np=1;
    } else {
    	di_first_slot(diep,&file->Slot);
-   	np  = di_match_slot(diep,&file->Slot,filename);
+   	np  = di_match_slot(diep,&file->Slot,filename, type);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
-	if (type == FS_DIR_TYPE_REL) {
+	if ((type == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+		type = FS_DIR_TYPE_REL;
+		file->access_mode = FS_OPEN_RW;
 		// check record length
 		if (!np) {
 			// does not exist yet
@@ -1087,7 +1093,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    if (di_cmd == FS_OPEN_AP) {
 	di_pos_append(diep,file);
    }
-   return CBM_ERROR_OK;
+   return (type == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 
 // **********
@@ -1250,7 +1256,7 @@ static int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eo
       return rv;
    }
 
-   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->dirpattern))
+   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->dirpattern, FS_DIR_TYPE_UNKNOWN))
    {    
       rv = di_fill_entry((uint8_t *)retbuf,&diep->Slot);
       di_next_slot(diep,&diep->Slot);
@@ -1441,7 +1447,7 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
    di_first_slot(diep,&slot);
    do
    {
-      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf)))
+      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf, FS_DIR_TYPE_UNKNOWN)))
       {
          di_delete_file(diep,&slot);
          ++(*outdeleted);
@@ -1468,13 +1474,13 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    // check if target exists
 
    di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto)))
+   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)))
    {
       return CBM_ERROR_FILE_EXISTS;
    }
 
    di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom)))
+   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom, FS_DIR_TYPE_UNKNOWN)))
    {
       n = strlen(nameto);
       if (n > 16) n = 16;
