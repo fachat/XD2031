@@ -26,7 +26,6 @@
 ***************************************************************************/
 
 // TODO:
-// - directory listing aborts sometimes. Why?
 // - skip or skip not hidden files
 // - allow wildcards for OPEN ("LOAD *")
 // - allow wildcards for CD/RM etc.

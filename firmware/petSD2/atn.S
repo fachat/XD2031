@@ -39,22 +39,25 @@ INT0_vect:
         in      r2, _SFR_IO_ADDR(SREG); Save status register            1
         push    r16                   ; Save working register           2
 
+        clr     r16                   ; switch data lines to input      1
+        out     1, r16                ; DDRA = 0                        1
+
         ; ATN acknowledge
         ; pull NRFD (PC7) + NDAC (PC6) low
         ; make sure, bus drivers are in listen mode (TE (PC3) = 0)
-        lds     r16, PORTC            ;                                 2
+        in      r16, 8                ; PORTC                           1
         andi    r16, 255 - _BV(PC7) - _BV(PC6) - _BV(PC3) ;             1
-        sts     PORTC, r16            ;                                 2
+        out     8, r16                ;                                 1
 
-        lds     r16, DDRC             ; NDFD + NDAC as outputs          2
+        in      r16, 7                ; DDRC: NDFD + NDAC as outputs    1
         ori     r16, _BV(PC7) | _BV(PC6);                               1
-        ; Prerequistes for possible change of flow direction if 
+        ; Prerequistes for possible change of flow direction if
         ; ATN came when device was talker
         andi    r16, 255 - _BV(PC5) - _BV(PC4) ; DAV  + EOI as input    1
-        sts     DDRC, r16             ;                                 2
+        out     7, r16                ;                                 1
 
                                       ;                               ===
-                                      ;                                16 
+                                      ;                                14
 
         ; End of interrupt routine, restore registers
         pop     r16

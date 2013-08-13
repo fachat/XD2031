@@ -42,29 +42,25 @@ INT0_vect:
         in      r2, _SFR_IO_ADDR(SREG); Save status register            1
         push    r16                   ; Save working register           2
 
-        ; ATN acknowledge
-        lds     r16, PORTC            ; PC6: NDAC, PC7: NRFD            2
+        clr     r16                   ; switch data lines to input      1
+        out     1, r16                ; DDRA = 0                        1
+
+        in      r16, 8                ;                                 1
         andi    r16, 255 - _BV(PC6) - _BV(PC7);                         1
-        sts     PORTC, r16            ; NDAC low, NRFD low              2
-        
-        lds     r16, DDRC             ; NDAC + NRFD as outputs          2
+        out     8, r16                ; NDAC low, NRFD low              1
+
+        in      r16, 7                ; NDAC + NRFD as outputs          1
         ori     r16, _BV(PC6) | _BV(PC7);                               1
-        sts     DDRC, r16             ;                                 2
+        out     7, r16                ;                                 1
 
-        ; Prerequistes for possible change of flow direction if 
-        ; ATN came when device was talker
-        lds     r16, DDRB             ; DAV as input                    2
-        andi    r16, 255 - _BV(PB2)   ;                                 1
-        sts     DDRB, r16             ;                                 2
-        lds     r16, DDRD             ; EOI as input                    2
-        andi    r16, 255 - _BV(PD7)   ;                                 1
-        sts     DDRD, r16             ;                                 2
+        cbi     4, 2                  ; DAV->input (clear DDB2)         2
+        cbi     10, 7                 ; EOI->input (clear DDD7)         2
 
-        lds     r16, PORTB            ; Make sure, bus drivers are in   2
-        andi    r16, 255 -  _BV(PB0)  ; TE=0 listen mode                1
-        sts     PORTB, r16            ;                                 2
+        ; Switch bus drivers to listen mode
+        cbi     5, 0                  ; TE->0 (clear PORTB0)            2
+
                                       ;                               ===
-                                      ;                                30 
+                                      ;                                19
 
         ; End of interrupt routine, restore registers
         pop     r16
