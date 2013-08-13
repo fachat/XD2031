@@ -1300,10 +1300,20 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 {
    int oldpos;
    int block;
+   uint8_t t = 0, s = 0;
    uint8_t zero = 0;
    // log_debug("di_write_byte %2.2x\n",ch);
    if (f->chp > 253)
    {
+    	if (f->access_mode == FS_OPEN_RW) {
+		// to make sure we're not in the middle of a file
+		// check the link track number
+     		di_fseek_tsp(diep,f->cht,f->chs,0);
+     		fread(&t,1,1,diep->Ip);
+     		fread(&s,1,1,diep->Ip);
+	}
+	if (t == 0) {
+		// only update link chain if we're not in the middle of a file
       f->chp = 0;
       oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
       block = di_find_free_block(diep,f);
@@ -1316,6 +1326,13 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
       fwrite(&zero,1,1,diep->Ip); // new link sector
       ++f->Slot.size; // increment filesize
       // log_debug("next block: (%d/%d)\n",f->cht,f->chs);
+	} else {
+		// position at next (existing) block
+      		f->chp = 0;
+		f->cht = t;
+		f->chs = s;
+      		di_fseek_tsp(diep,t,s,2);
+	}
    }
    fwrite(&ch,1,1,diep->Ip);
    ++f->chp;
@@ -2008,6 +2025,9 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
             		o++;
         	}
 
+		log_debug("writing back previous last file sector to %d/%d with link to %d/%d\n",
+			last_track, last_sector, new_track, new_sector);
+
 		// write back data sector
 		di_fseek_tsp(diep, last_track, last_sector, 0);
 		fwrite(datasector, 1, 256, diep->Ip);
@@ -2084,6 +2104,8 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
    unsigned int rec_start;	// start of record in block
    unsigned int super, side;	// super side sector index, side sector index
    unsigned int offset;		// temp for the number of file bytes pointed to by blocks in a sss or ss
+
+   uint8_t next_track, next_sector;
 
    di_endpoint_t *diep = (di_endpoint_t*) ep;
 
@@ -2173,12 +2195,20 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
 	// record as given in the parameter
 	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-      	fread(&f->next_track ,1,1,diep->Ip);
-      	fread(&f->next_sector,1,1,diep->Ip);
+      	fread(&next_track ,1,1,diep->Ip);
+      	fread(&next_sector,1,1,diep->Ip);
+
+	// is there enough space on the last block?
+	if (next_track == 0 && next_sector < (rec_start + reclen + 1)) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
 
 	f->cht = ss_track;
 	f->chs = ss_sector;
 	f->chp = rec_start;
+	f->next_track = next_track;
+	f->next_sector = next_sector;
+
 	// clean up the "expand me" flag
 	f->lastpos = 0;
 
