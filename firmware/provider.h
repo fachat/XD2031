@@ -41,7 +41,7 @@
 
 typedef struct {
 	// get a new void data pointer to be given to submit() for each ASSIGN
-	void *(*prov_assign)(const char *name);
+	void *(*prov_assign)(uint8_t drive, const char *parameter);
 	// free the ASSIGN-related data structure
 	void (*prov_free)(void *);
 	// get the (currently used) character set for name conversion

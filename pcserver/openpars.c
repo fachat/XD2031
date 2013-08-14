@@ -39,7 +39,8 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
         uint8_t *t;
 
 	if (p == NULL) {
-		*type = FS_DIR_TYPE_PRG;
+		// no type given, so any may match
+		*type = FS_DIR_TYPE_UNKNOWN;
 		reclen = 0;
 		return;
 	}
@@ -49,12 +50,17 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
         while (*p != 0) {
                 switch(*(p++)) {
                 case 't':
+                case 'T':
                         if (*(p++) == '=') {
                                 typechar = *(p++);
                                 switch(typechar) {
-                                case 'u':       *type = FS_DIR_TYPE_USR; break;
+                                case 'u':
+                                case 'U':       *type = FS_DIR_TYPE_USR; break;
+                                case 'P':
                                 case 'p':       *type = FS_DIR_TYPE_PRG; break;
+                                case 'S':
                                 case 's':       *type = FS_DIR_TYPE_SEQ; break;
+                                case 'L':
                                 case 'l':
                                         *type = FS_DIR_TYPE_REL;
                                         n=sscanf((char*)p, "%d", &reclenw);

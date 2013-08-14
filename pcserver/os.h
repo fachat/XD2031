@@ -285,6 +285,13 @@ static inline int os_stdin_has_data(void) {
 //	COMMON FOR ALL OPERATING SYSTEMS
 // =======================================================================
 
+// EXIT_SUCCESS is always defined as 0. The daemon should never respawn.
+// EXIT_FAILURE is defined as 1 on Linux. If the daemon should respawn,
+// is user defined
+#define EXIT_RESPAWN		1 // user defined
+#define EXIT_RESPAWN_ALWAYS	2
+#define EXIT_RESPAWN_NEVER	3
+
 // return a const char pointer to the home directory of the user 
 const char *os_get_home_dir(void);
 

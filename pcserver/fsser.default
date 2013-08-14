@@ -1,1 +1,10 @@
-DAEMON_ARGS="-d /dev/ttyUSB0 -A0:fs=/usr/local/xd2031/sample -A1:fs=/usr/local/xd2031/tools ."
+DAEMON_ARGS="-A0:fs=/usr/local/xd2031/sample -A1:fs=/usr/local/xd2031/tools ."
+
+# If RESPAWN is set to "1", the server will restart on recoverable errors
+RESPAWN=1
+
+# Do not give a device in DAEMON_ARGS, it will confuse the daemon.
+# If undefined, it will default to "auto". Otherwise uncomment and
+# define the device here:
+#
+# DEVICE="/dev/yourdevice"

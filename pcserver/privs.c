@@ -24,6 +24,8 @@
 
 ****************************************************************************/
 
+#include "os.h"
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>	// printf
@@ -67,14 +69,14 @@ static void drop_to_uid(uid_t ruid) {
 
 	if (e < 0) {
 		fprintf(stderr, "Problem dropping privileges %d!\n", errno);
-		exit(-1);
+		exit(EXIT_RESPAWN_NEVER);
 	}
 
 	uid_t new_ruid = getuid();
 
 	if (ruid != new_ruid) {
 		fprintf(stderr, "Problem dropping privileges - new ruid not set: %d!\n", new_ruid);
-		exit(-1);
+		exit(EXIT_RESPAWN_NEVER);
 	}
 
 	log_info("New effective user ID=%d\n", new_ruid);
@@ -84,7 +86,7 @@ static void drop_to_uid(uid_t ruid) {
 	if (e == 0) {
 		fprintf(stderr, "Detected problem: was able to regain privileges to uid=%d, euid=%d!\n", 
 			getuid(), geteuid());
-		exit(-1);
+		exit(EXIT_RESPAWN_NEVER);
 	}
 
 }

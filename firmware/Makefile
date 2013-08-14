@@ -29,13 +29,18 @@ DUDE_PORT = usb
 TARGET=XD2031-$(DEVICE)
 BINDIR=bin
 
-FILES=ieee.c bus.c main.c errormsg.c cmd.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c dirconverter.c debug.c ../common/charconvert.c
-DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h debug.h cmd.h cmd2.h term.h packet.h name.h provider.h ../common/petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h dirconverter.h ../common/charconvert.h
+FILES=ieee.c bus.c main.c errormsg.c cmd.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c dirconverter.c debug.c ../common/charconvert.c ../common/wildcard.c
+DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h debug.h cmd.h cmd2.h term.h packet.h name.h provider.h ../common/petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h dirconverter.h ../common/charconvert.h ../common/wildcard.h
 
 all:	$(BINDIR)/$(TARGET).hex size
 
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
+
+# Include optional modules?
+ifeq ($(strip $(USE_FAT)),y)
+	include fatfs/Makefile
+endif
 
 doc:
 	mkdir -p ../docsrc/doxygen
@@ -45,6 +50,9 @@ doc:
 rootclean:
 	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
 
+testclean:
+	rm -f rtc/rtc
+
 BAR="======================================================================\\n"
 zoo:			   # Compile everything
 	rm -f $(BINDIR)/*
@@ -53,6 +61,7 @@ zoo:			   # Compile everything
 	  echo "\n$(BAR)   Compiling $$d\n$(BAR)" ;\
 	  make DEVICE=$$d clean; \
 	  make DEVICE=$$d ;\
+	  make DEVICE=$$d clean; \
 	done
 	# Copy firmware updater scripts
 	cp xs1541/xs1541up.sh $(BINDIR)

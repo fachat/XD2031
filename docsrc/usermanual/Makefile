@@ -1,5 +1,5 @@
 # List LaTeX files files here:
-TEX_EN = gpl-2.0.tex
+TEX_EN = # gpl-2.0.tex
 TEX_DE = XD2031-Benutzerhandbuch.tex
 
 # Specify main document here without extension:
@@ -33,7 +33,7 @@ endif
 
 all:    $(TEX_EN) $(MAINDOC).tex
 	pdflatex $(MAINDOC).tex
-	$(MAKEINDEX) $(MAINDOC).idx
+	$(MAKEINDEX) -s din.ist $(MAINDOC).idx
 	pdflatex $(MAINDOC).tex
 	# Move generated PDF to doc/
 	mv $(MAINDOC).pdf ../../doc/$(MAINDOC).pdf

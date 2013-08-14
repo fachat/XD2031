@@ -123,6 +123,7 @@ static cmdbuf_t *cmdbuf_reserve_buf(int8_t channel_no, uint8_t bufno) {
 
 static cmdbuf_t *cmdbuf_find(int8_t channel_no) {
 	// find a direct buffer for a channel
+	
 	uint8_t i;
 	for (i = 0; i < CONFIG_NUM_DIRECT_BUFFERS; i++) {
 		if (buffers[i].channel_no == channel_no) {
@@ -807,36 +808,6 @@ debug_flush();
 	cmdbuf_t *buffer = NULL;
 
 	switch(txbuf->type) {
-	case FS_OPEN_RD:
-	case FS_OPEN_WR:
-	case FS_OPEN_RW:
-		// proxy the open call for relative files
-		buffer = cmdbuf_find(channelno);
-		if (buffer != NULL && buffer->real_endpoint != NULL) {
-			cbstat = 0;
-debug_printf("opened file with: rxplen=%d\n", packet_get_capacity(rxbuf)); debug_flush();
-			buffer->real_endpoint->provider->submit_call(buffer->real_endpoint->provdata,
-				channelno, txbuf, rxbuf, cmd_callback);
-
-			cmd_wait_cb();
-			plen = packet_get_contentlen(rxbuf);
-                        uint8_t *buf = packet_get_buffer(rxbuf);
-                        uint16_t reclen = 0;
-debug_printf("opened file to get: plen=%d, buf[0]=%d\n", plen, buf[0]); debug_flush();
-                        // store record length if given
-                        if (plen == 3 && buf[0] == CBM_ERROR_OPEN_REL) {
-                                reclen = (buf[1] & 0xff) | ((buf[2] & 0xff) << 8);
-				// this should always be ok, as we only request valid record lengths
-				// and the provider should only positively ack this when everything
-				// is ok with this record length
-				buffer->recordlen = reclen & 0xff;
-				buffer->buf_recordno = 0;	// not loaded
-				buffer->cur_pos_in_record = 0;	// not loaded
-                                buf[0] = CBM_ERROR_OK;
-				buffer->pflag = 0;
-                        }
-		}
-		break;
 	case FS_CLOSE:
 		buffer = cmdbuf_find(channelno);
 		if (buffer != NULL && buffer->real_endpoint != NULL) {
@@ -1013,6 +984,10 @@ int8_t bufcmd_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *e
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
 	uint8_t position = (namelen == 3) ? 0 : ((uint8_t)(cmdpars[3]));
 
+	// nasty DOS bug - RECORD# adds 96 to the actual secondary channel number,
+	// so we need to mask that away!
+	channel &= 0x1f;
+
 debug_printf("position: chan=%d, recordno=%d, in record=%d\n", channel, recordno, position);
 
 	cmdbuf_t *buffer = cmdbuf_find(channel);
@@ -1086,8 +1061,11 @@ endpoint_t *bufcmd_provider(void) {
 	return &block_endpoint;
 }
 
-// proxies a relative file through the bufcmd layer
-int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen) {
+
+// wraps the opened channel on the original real_endpoint through the
+// relative file provider, when an "CBM_ERROR_OPEN_REL" is received from the 
+// server.
+int8_t bufcmd_relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t reclen) {
 
 	int8_t err = CBM_ERROR_NO_CHANNEL;
 
@@ -1097,10 +1075,22 @@ int8_t bufcmd_open_relative(endpoint_t **ep, uint8_t channel_no, uint16_t reclen
 
 	cmdbuf_t *buffer = cmdbuf_reserve(channel_no);
 	if (buffer != NULL) {
-		buffer->real_endpoint = *ep;
-		buffer->recordlen = reclen;
-		*ep = &relfile_endpoint;
-		err = CBM_ERROR_OK;
+		buffer->real_endpoint = real_endpoint;
+
+		buffer->recordlen = reclen & 0xff;
+		buffer->buf_recordno = 0;	// not loaded
+		buffer->cur_pos_in_record = 0;	// not loaded
+                buf[0] = CBM_ERROR_OK;
+		buffer->pflag = 0;
+
+		err = channel_reopen(channel_no, WTYPE_READWRITE, &relfile_endpoint);
+		if (err != CBM_ERROR_OK) {
+			cmdbuf_free(channel_no);
+		}
+	}
+
+	if (err != CBM_ERROR_OK) {
+		bufcmd_close(channel_no, real_endpoint);
 	}
 	return err;
 }

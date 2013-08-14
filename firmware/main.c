@@ -54,6 +54,10 @@
 #include "ieee.h"
 #endif
 
+#ifdef USE_FAT
+#include "fat_provider.h"
+#endif
+
 #include "term.h"
 #include "file.h"
 #include "channel.h"
@@ -64,6 +68,8 @@
 #include "timer.h"
 #include "led.h"
 
+
+static FILE term_stdout = FDEV_SETUP_STREAM(term_putchar, NULL, _FDEV_SETUP_WRITE);
 
 //---------------------------
 // LIST XD-2031 VERSIONSTRING
@@ -101,9 +107,7 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 int main()
 {
-	int8_t er = CBM_ERROR_OK;
-
-	// Initialisierungen
+	// Initializations
 	//
 	// first some basic hardware infrastructure
 	
@@ -115,6 +119,7 @@ int main()
 
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
+	stdout = &term_stdout;          // redirect stdout
 
 	// server communication
 	uarthw_init();			// first hardware
@@ -123,7 +128,7 @@ int main()
 	// now prepare for terminal etc
 	// (note: in the future the assign parameter could be used
 	// to distinguish different UARTs for example)
-	void *epdata = serial->prov_assign(NULL);
+	void *epdata = serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL);
 	term_endpoint.provider = serial;
 	term_endpoint.provdata = epdata;
 
@@ -162,6 +167,13 @@ int main()
 	// pull in command line config options from server
 	// also send directory charset
 	rtconfig_pullconfig();
+
+#ifdef USE_FAT
+	// register fat provider
+	provider_register("FAT", &fat_provider);
+	provider_assign(0, "FAT", "/");		// might be overwritten when fetching X-commands
+	provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
+#endif
 
 	// show our version...
   	ListVersion();

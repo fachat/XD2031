@@ -44,7 +44,7 @@ static void check_alloc_(void *ptr, char *file, int line) {
 	if(!ptr) {
 		fprintf(stderr, "Could not allocate memory, "
 		"file: %s line: %d\n", file, line);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 }
 

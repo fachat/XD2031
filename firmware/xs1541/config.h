@@ -23,7 +23,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define F_CPU                 14745600UL
+#define F_CPU                 		14745600UL
 
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
@@ -31,5 +31,11 @@
 
 // number of direct buffers (for U1/U2/B-* commands)
 #define	CONFIG_NUM_DIRECT_BUFFERS	2
+
+// max. opened files for FAT provider (SD card provider)
+#define FAT_MAX_FILES			4
+
+// max. drives for the FAT provider (each holds a current directory)
+#define FAT_MAX_ASSIGNS                 10
 
 #endif

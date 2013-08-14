@@ -28,6 +28,8 @@
 
 #include "config.h"
 
+volatile uint16_t timer10ms = 0;	// decremented by timer 1 if nonzero
+
 void timerhw_init(void) {
 	// timer configuration derived from
 	// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=viewtopic&t=50106

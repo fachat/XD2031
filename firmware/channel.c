@@ -146,7 +146,8 @@ debug_printf("pull: chan=%p, channo=%d (ep=%p)\n", c, c->channel_no, (void*)c->e
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*dirconv)(void *ep, packet_t *, uint8_t drive), 
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, 
+	int8_t (*dirconv)(void *ep, packet_t *, uint8_t drive), 
 	uint8_t drive) {
 
 //debug_printf("channel_open: chan=%d\n", chan);
@@ -173,6 +174,24 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, int8_t (*d
 	}
 	return -1;
 }
+
+/*
+ * re-open a file to wrap the channel for a relative file
+ */
+int8_t channel_reopen(int8_t chan, uint8_t writetype, endpoint_t *prov) {
+	
+	channel_t *channel = channel_find(chan);
+	if (channel != NULL) {
+		channel->endpoint = prov;
+		channel->writetype = writetype & WTYPE_MASK;
+		channel->options = writetype & ~WTYPE_MASK;
+	} else {
+		return CBM_ERROR_NO_CHANNEL;
+	}
+	
+	return CBM_ERROR_OK;
+}
+
 
 channel_t* channel_find(int8_t chan) {
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {

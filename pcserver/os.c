@@ -82,7 +82,7 @@ const char* os_get_home_dir (void) {
 	}
 	if (!dir) {
 		fprintf(stderr, "Unable to determine home directory.\n");
-                exit(1);
+                exit(EXIT_RESPAWN_NEVER);
         }
         return dir;
 }
@@ -197,7 +197,7 @@ const char* os_get_home_dir (void) {
 	log_info("Home path (env): %s\n", dir);
 	if (!dir) {
 		fprintf(stderr, "Unable to determine home directory.\n");
-                exit(1);
+                exit(EXIT_RESPAWN_NEVER);
         }
         return dir;
 }

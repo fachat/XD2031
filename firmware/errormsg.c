@@ -55,6 +55,7 @@ static const uint8_t IN_ROM tokens[] = {
 static const uint8_t IN_ROM messages[] = {
 	H(CBM_ERROR_OK),			' ','O','K',
 	H(CBM_ERROR_SCRATCHED), 		2,'S',' ','S','C','R','A','T','C','H','E','D',
+	H(CBM_ERROR_READ),			'R','E','A','D',' ',1,
 	H(CBM_ERROR_WRITE_PROTECT),		3,'P','R','O','T','E','C','T',' ',1,
 	H(CBM_ERROR_WRITE_ERROR),		3,1,		// WRITE ERROR
 	H(CBM_ERROR_SYNTAX_UNKNOWN),
@@ -79,6 +80,7 @@ static const uint8_t IN_ROM messages[] = {
 					'O','R',' ','S','E','C','T','O','R',
 	H(CBM_ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
 	H(CBM_ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
+	H(CBM_ERROR_TOO_LARGE),		2,' ','T','O','O',' ','L','A','R','G','E', 
 	0
 };
 
@@ -176,3 +178,9 @@ debug_printf("Set status to: %s\n", err->error_buffer);
 #endif
 }
 
+void set_status(errormsg_t *err, char* s) {
+	strncpy( (char*) err->error_buffer, s, CONFIG_ERROR_BUFFER_SIZE - 1);
+	err->error_buffer[CONFIG_ERROR_BUFFER_SIZE - 1] = 0;
+	err->readp = 0;
+	err->errorno = 0;
+}

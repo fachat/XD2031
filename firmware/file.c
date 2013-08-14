@@ -47,6 +47,7 @@ typedef struct {
 	int8_t 		channel_no;
 	packet_t	txbuf;
 	packet_t	rxbuf;
+	endpoint_t	*endpoint;	// so we can proxy it with 
 	uint8_t		rxdata[OPEN_RX_DATA_LEN];
 	void		(*callback)(int8_t errnum, uint8_t *rxdata);
 } open_t;
@@ -106,7 +107,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
 			&& nameinfo.access != 'A' && nameinfo.access != 'X') {
-		debug_puts("UNKOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
+		debug_puts("UNKNOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
 		// not set, or set as not read, write, or append, or r/w ('X')
 		set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
 		return -1;
@@ -136,8 +137,12 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 	// either ",W" or secondary address is one, i.e. save
-	if ((nameinfo.access == 'W') || (openflag & OPENFLAG_SAVE)) type = FS_OPEN_WR;
-	if (nameinfo.access == 'A') type = FS_OPEN_AP;
+	if ((nameinfo.access == 'W') || (openflag & OPENFLAG_SAVE)) {
+		type = FS_OPEN_WR;
+	}
+	if (nameinfo.access == 'A') {
+		type = FS_OPEN_AP;
+	}
 	if (nameinfo.cmd == CMD_DIR) {
 		if (openflag & OPENFLAG_LOAD) {
 			type = FS_OPEN_DR;
@@ -145,7 +150,9 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			type = FS_OPEN_RD;
 		}
 	} else
-	if (nameinfo.cmd == CMD_OVERWRITE) type = FS_OPEN_OW;
+	if (nameinfo.cmd == CMD_OVERWRITE) {
+		type = FS_OPEN_OW;
+	}
 
 #ifdef DEBUG_FILE
 	debug_printf("NAME='%s' (%d)\n", nameinfo.name, nameinfo.namelen);
@@ -248,6 +255,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		return -1;
 	}
 
+	activeslot->endpoint = endpoint;
+
         uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
 #ifdef DEBUG_FILE
 	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
@@ -275,18 +284,6 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t (*converter)(void *, packet_t*, uint8_t) = 
 				(type == FS_OPEN_DR) ? (provider->directory_converter) : NULL;
 
-		// proxy relative files through the bufcmd layer
-		if (nameinfo.type == 'L') {
-			debug_printf("Open REL file with record len %d\n", nameinfo.recordlen);
-			int8_t err = bufcmd_open_relative(&endpoint, channel_no, nameinfo.recordlen);
-			provider = endpoint->provider;
-debug_printf("new endpoint=%p\n", endpoint);
-			if (err != CBM_ERROR_OK) {
-debug_printf("-> err=%d\n", err);
-				set_error(errormsg, err);
-				return -1;
-			}
-		}
 
 		// TODO: if provider->channel_* are not NULL, we should probably not allocate a channel
 		// but that would break the FILE OPEN detection here.
@@ -343,7 +340,22 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rx
 				// byte of reply packet is the error number
 				// Note that the reply packet already sends an official errors.h 
 				// error code, so no translation needed
-				active[i].callback(active[i].rxdata[0], active[i].rxdata);
+				uint8_t err = active[i].rxdata[0];
+
+				if (err == CBM_ERROR_OPEN_REL) {
+					// when a REL file is opened, we need to proxy the
+					// communication through the bufcmd layer
+
+					// recordlen
+					uint16_t reclen = (active[i].rxdata[1] & 255) 
+								| (active[i].rxdata[2] << 8);
+
+					// note: automatically closes the original file (on the server)
+					// on error (i.e. err != CBM_ERROR_OK)
+					err = bufcmd_relfile_proxy(channelno, active[i].endpoint, reclen);
+				}	
+
+				active[i].callback(err, active[i].rxdata);
 			}
 			active[i].channel_no = -1;
 			break;

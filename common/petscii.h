@@ -70,4 +70,3 @@ static inline void str_petscii_to_ascii(uint8_t *a, uint8_t *b) {
 
 
 #endif
-

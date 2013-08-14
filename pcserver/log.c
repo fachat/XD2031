@@ -80,6 +80,7 @@ void log_errno(const char *msg, ...) {
 		msg = buffer;
 	}
         printf("ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
+	newline = lastlog_anything;
 	fflush(stdout);
 }
 
@@ -133,10 +134,10 @@ void log_debug(const char *msg, ...) {
        		va_list args;
        		va_start(args, msg);
 
-			if (newline != lastlog_debug) {
+		if (newline != lastlog_debug) {
 			printf("DBG:");
 		}
-		newline = lastlog_debug;
+		newline = lastlog_anything;
 		if (msg[strlen(msg)-1]!='\n') {
 			newline = lastlog_debug;
 		}
@@ -158,7 +159,7 @@ void log_hexdump(char *p, int len, int petscii) {
 			for(x=0; x<16; x++) {
 				if(line+x < len) {
 					tot++;
-					printf("%02X ", p[line+x]);
+					printf("%02X ", 255&p[line+x]);
 				}
 				else printf("   ");
 				if(x == 7) putchar(' ');
@@ -177,3 +178,36 @@ void log_hexdump(char *p, int len, int petscii) {
 
 	}
 }
+
+#if 0
+void test_log(void) {
+	log_term("log_term ");
+	log_term("without CR\n");
+	log_term("log_term with CR\n");
+	log_term("log_term with CR\n");
+
+	log_info("log_info ");
+	log_info("without CR\n");
+	log_info("log_info with CR\n");
+	log_info("log_info with CR\n");
+
+	log_warn("log_warn ");
+	log_warn("without CR\n");
+	log_warn("log_warn with CR\n");
+	log_warn("log_warn with CR\n");
+
+	log_error("log_error ");
+	log_error("without CR\n");
+	log_error("log_error with CR\n");
+	log_error("log_error with CR\n");
+
+	// log_errno supports only single lines without CR
+	log_errno("log_errno without CR");
+
+	printf("--> log_debug() messages appear only with -v option set\n");
+	log_debug("log_debug ");
+	log_debug("without CR\n");
+	log_debug("log_debug with CR\n");
+	log_debug("log_debug with CR\n");
+}
+#endif

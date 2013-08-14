@@ -3,6 +3,7 @@
 \parindent 0pt
 \usepackage{makeidx}					% Stichwortverzeichnis
 \makeindex
+\usepackage[totoc]{idxlayout}
 % \makeglossary
 \usepackage[utf8]{inputenc}				% Umlaute in Quelldatei UTF8-kodiert
 \usepackage[T1]{fontenc}
@@ -14,12 +15,15 @@
 \usepackage{numprint}
 \usepackage{booktabs}
 \usepackage{amssymb}					% $\checkmark$
-\usepackage[colorlinks,
+\usepackage[colorlinks=true,
+urlcolor=blue,
 pdfpagelabels,
 pdfstartview = FitH,
+pdftitle={XD-2031 Benutzerhandbuch},
+pdfauthor={Nils Eilers},
 bookmarksopen = true,
 bookmarksnumbered = true,
-linkcolor = black,
+linkcolor = blue,
 plainpages = false,
 hypertexnames = false,
 citecolor = black] {hyperref}
@@ -51,6 +55,13 @@ citecolor = black] {hyperref}
 %\usepackage{luximono}
 \usepackage{beramono}
 
+\makeatletter
+\def\url@foostyle{%
+  \@ifundefined{selectfont}{\def\UrlFont{\sf}}{\def\UrlFont{\small\ttfamily}}}
+\makeatother
+
+\urlstyle{foo}
+
 \newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
 \newcommand{\sfend}[1]{\end{addmargin}}
 
@@ -71,9 +82,8 @@ citecolor = black] {hyperref}
 \section{Allgemeines}
 
 \subsection{Verwendungszweck dieser Software}
-\index{Verwendungszweck}
 XD-2031 ist Software, die einen modernen Mikrocontroller für einen
-historischen Commodore-Computer wie ein Diskettenlaufwerk erscheinen läßt.
+historischen Commodore-Computer wie ein Diskettenlaufwerk erscheinen lässt
 
 Sie dient dem Datenaustausch zwischen alten und modernen Computern, der
 ohne weiteres nicht mehr möglich ist. 
@@ -93,10 +103,9 @@ Damit kann man beispielsweise...
 
 Dabei sind hier ausschließlich die 8-Bit Commodore-Computer gemeint, die 
 über einen parallelen IEEE-488-Bus \index{IEEE-488-Bus} oder seriellen
-	\index{IEC-Bus} \index{CBM-Bus} IEC-Bus\footnote
+	\index{IEC-Bus} \index{CBM-Bus|see{IEC-Bus}} IEC-Bus\footnote
 	{Diese proprietäre serielle Variante des IEEE-488-Busses wird
-	in deutschsprachiger Literatur auch als CBM-Bus bezeichnet,
-	da er \textit{nicht} durch die
+	auch als CBM-Bus bezeichnet, da er tatsächlich \textit{nicht} durch die
 	\textit{International Electrotechnical Commission} standardisiert
 	wurde.}
 verfügen:
@@ -106,6 +115,7 @@ verfügen:
 PET 2001\footnote{
 	Nur mit BASIC 2, erkennbar an der Einschaltmeldung 
 	\texttt{\#\#\# COMMODORE BASIC \#\#\#}}
+\index{PET 2001}
 \item CBM 4032, CBM 8032, CBM 8096, CBM 8296 
 \item CBM 610, CBM 710
 \end{itemize}
@@ -131,7 +141,7 @@ ist allerdings möglich.
 
 \subsection{Unterstützte Adapter}
 \index{Adapter}
-\index{Geraet@Ger""at}
+\index{Ger\"at}
 Derzeit läuft die Firmware auf folgenden Geräten:
 
 \begin{tabular}[c]{l l}
@@ -143,13 +153,16 @@ Raspberry Pi mit 3.1541 & -- \\
 petSD	& \url{http://petsd.net} \\
 \bottomrule
 \end{tabular}
+\index{XS-1541!Homepage}
+\index{3.1541!Homepage}
+\index{petSD!Homepage}
 
 Für nähere Beschreibungen dieser Geräte sei auf deren Internetseiten
 verwiesen.
 
 \subsection*{Leistungsmerkmale nach Adapter}
-\index{Leistungsmerkmale}
-\index{Features}
+\index{Leistungsmerkmale der Adapter}
+\index{Features der Adapter}
 
 \begin{tabular}[c]{l l l l}
 \toprule
@@ -165,15 +178,23 @@ SD-Karte (FAT)		& --		& --	       & $\checkmark$	\\
 
 \subsection{Unterstützte Betriebssysteme}
 \index{Betriebssysteme}
-\begin{tabular}[c]{c c c}
+\begin{tabular}[c]{l c c c}
 \toprule
-Linux & OS X & Windows \\
-$\checkmark$ & $\checkmark$ & -- \\
+& Linux & OS X & Windows \\
+fs-Provider (Dateisystem) & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+di-Provider (Disk Images) & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+ftp-Provider (nur lesend) & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+http-Provider (nur lesend) & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+tcp-Provider (Telnet) & $\checkmark$ & $\checkmark$ & -- \\
+Automatischer Serverstart & $\checkmark$ & -- & -- \\
 \bottomrule
 \end{tabular}
 
 \section{Installation}
 \subsection{USB-Treiber}
+\index{USB-Treiber}
+\index{Treiber}
+\index{FT232}
 Unter Linux ist der Treiber schon seit einiger Zeit direkt im Kernel
 enthalten, so dass keine separate Installation erfolgen muss.
 
@@ -182,6 +203,9 @@ Herstellerseite \url{http://www.ftdichip.com/Drivers/VCP.htm}
 herunter und installieren ihn wie auf Ihrem System üblich.
 
 \subsection{Raspberry Pi unter Raspbian mit 3.1541}
+\index{Raspberry Pi!Server einrichten}
+\index{3.1541!Server einrichten}
+\index{Server!Installation!Raspberry Pi mit 3.1541}
 Das 3.1541 wird direkt an den UART des Raspberry Pi angeschlossen.
 Die gängigen Linux-Systeme verwenden diesen UART allerdings von
 Hause aus als Konsole um unter anderem Kernel-Meldungen auszugeben. 
@@ -238,7 +262,7 @@ T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 Dieser Eintrag erlaubt es, sich über die serielle Schnittstelle
 \texttt{/dev/ttyAMA0} mittels eines Terminals anzumelden.
 Damit der Datenverkehr vom 3.1541 nicht als Benutzername und Passwort
-mißverstanden wird, wird dieser Eintrag durch das Voranstellen einer Raute 
+missverstanden wird, wird dieser Eintrag durch das Voranstellen einer Raute
 auskommentiert:
 
 \begin{verbatim}
@@ -252,6 +276,8 @@ sudo shutdown -r now
 \end{verbatim}
 
 \subsubsection*{Installation von Wiring Pi}
+\index{Wiring Pi}
+\index{Raspberry Pi!Wiring Pi}
 Falls bei Ihrer Linux-Distribution \textit{Wiring Pi}\footnote{\url{http://wiringpi.com/}} 
 noch nicht enthalten ist, muss es noch installiert werden:
 
@@ -266,12 +292,18 @@ cd wiringPi
 
 Die weitere Installation erfolgt wie bei jedem anderen Debian/Ubuntu-artigem Linux.
 
-\subsection{Installation der Server-Software}
 \label{serverinst}
-\subsubsection{Installation der Server-Software unter Linux}
+\subsection{Installation der Server-Software (Linux)}
+\index{Server!Installation!Linux}
 Für Linux stehen leider noch keine Binärpakete zur Verfügung,
 so dass Sie hier aus dem Quelltext selbst compilieren müssen.
 Das ist allerdings leichter, als es klingt.
+
+\subsubsection{Voraussetzungen}
+Bevor der Server aufgespielt werden kann, müssen erst alle
+benötigten Programmpakete installiert werden. Dieser Schritt ist nur
+einmalig erforderlich und entfällt bei späteren Aktualisierungen
+der Server-Software.
 
 Alle für die weitere Installation benötigten Pakete sollten
 sich durch einen Klick auf diesen 
@@ -290,7 +322,10 @@ bestimme Release-Version verwenden möchten. Ein Entwicklerstand
 enthält die aktuelle Fassung und enthält die neuesten Features,
 Fehlerbehebungen und möglicherweise auch neue Fehler.
 
-\subsubsection*{Installation aus dem Entwicklerstand}
+\subsubsection{Installation aus dem Entwicklerstand}
+\index{Quelltext}
+\index{Entwicklerstand}
+\index{github.com}
 
 \begin{verbatim}
 git clone https://github.com/fachat/XD2031
@@ -310,8 +345,9 @@ make
 sudo make install
 \end{verbatim}
 
-\subsubsection*{Installation einer Release-Version}
+\subsubsection{Installation einer Release-Version}
 Laden Sie von \srcdownloads{}  den Quelltext her"-unter und
+\index{Quelltext}
 entpacken Sie ihn. Wechseln Sie in das Quelltextverzeichnis
 und führen die folgenden Befehle aus:
 
@@ -321,32 +357,201 @@ make
 sudo make install
 \end{lstlisting}
 
-\subsubsection*{Automatischer Start des Servers}
-Wenn Sie den Server beim Hochfahren des Rechners automatisch mit starten 
-soll\footnote{Bislang nur für Raspbian auf dem Raspberry Pi getestet!},
-führen Sie noch den folgenden Befehl aus:
+\subsubsection{Automatischer Start des Servers}
+\index{Automatischer Serverstart!Linux}
+Es bietet sich an, den Server beim Hochfahren automatisch
+starten zu lassen. Ihre zugewiesenen Inhalte stehen dann sofort
+bereit, wenn Sie sie brauchen. Da der Server nur aktiv wird,
+wenn Daten ausgetauscht werden, kostet Sie das bei Nichtbenutzung praktisch
+keine Rechenleistung.
+
+Bei Geräten, die mittels USB angeschlossen werden,
+können Sie diese auch ab- und anstecken, wobei der Server direkt bereit sein
+wird. Bei manuellem Start ist dies nicht möglich, ein Abstecken wird den
+Server beenden.
+
+Der verwendete Autostart-Mechanismus basiert auf den klassischen SysV-Style,
+sollte aber auch von neueren Systemen unterstützt werden, die systemd oder
+Upstart verwenden.
+
+Wenn Sie den Server beim Hochfahren des Rechners automatisch mit starten
+soll, führen Sie nach \texttt{sudo make install} noch den folgenden Befehl aus:
 
 \begin{verbatim}
 sudo make daemon
 \end{verbatim}
 
-Um den Server manuell zu starten oder zu beenden:
+Bei der Installation wird eine Beispiel-Konfiguration abgelegt, die Sie
+\index{Server!Konfiguration}
+mit Root-Rechten nach Ihrem Gusto bearbeiten können, wozu Sie bitte
+Einzelheiten zu den Parametern des Server-Starts ab Seite \pageref{serverconf}
+dem Kapitel \glqq\ref{serverconf} \nameref{serverconf}\grqq\
+entnehmen. Nach jeder Änderung muss der Server neu gestartet werden,
+damit er der Änderungen gewahr wird.
+
 
 \begin{verbatim}
-sudo service fsser start
-sudo service fsser stop
+sudo vi /etc/default/fsser
+service fsser restart
 \end{verbatim}
+\index{/etc/default/fsser}
 
-Meldungen des Servers werden in \texttt{/var/log/fsser} 
+Meldungen des Servers werden in \texttt{/var/log/fsser}
 abgelegt. Sie können wie folgt live mitgelesen werden:
+\index{Server!Meldungen}
+\index{/var/log/fsser}
 
 \begin{verbatim}
 tail -f /var/log/fsser
 \end{verbatim}
 
-\subsubsection{Installation der Server-Software unter OS X}
+Den Rest dieses Kapitels werden Sie wahrscheinlich überspringen können
+und nur bei Bedarf zu Rate ziehen.
+
+\clearpage
+\subsubsection*{Init-Skript, Daemon und Server}
+\index{Init-Skript}
+\index{/etc/default/fsser}
+\index{/etc/init.d/fsser}
+\index{/usr/local/bin/fsserd}
+\index{/usr/local/bin/fsser}
+\index{/var/log/fsser}
+\index{Daemon}
+Der selbst-startende Server besteht aus insgesamt fünf Elementen:
+\begin{enumerate}
+\item Konfigurations-Datei \texttt{/etc/default/fsser}
+\item Init-Skript \texttt{/etc/init.d/fsser}
+\item Daemon \texttt{/usr/local/bin/fsserd}
+\item Server \texttt{/usr/local/bin/fsser}
+\item Log-Datei \texttt{/var/log/fsser}
+\end{enumerate}
+
+Das Init-Skript wird beim Systemstart automatisch mit Root-Rechten
+aufgerufen. Zunächst liest die Konfigurations-Datei, die später
+auch vom Daemon verwendet wird. Es stellt sicher, dass
+die Log-Datei \texttt{/var/log/fsser} verfügbar ist und durch
+den zugewiesenen Benutzer beschreibbar ist. Zuletzt wird der
+Daemon unter den Rechten des zugewiesenen Benutzers gestartet.
+
+Der Daemon bleibt aktiv und überwacht regelmäßig die Verfügbarkeit der zugewiesenen
+Geräteschnittstelle. Sobald diese verfügbar wird, startet der Daemon einen
+Server, der die eigentliche Arbeit leistet und die Dateien für
+den CBM bereit stellt.
+Weiterhin überwacht der Daemon, ob der Server noch läuft.
+Falls dies nicht mehr der Fall sein sollte, prüft der Daemon nach gewissen Regeln,
+ob und wann der Server neu gestartet werden soll.
+
+\subsubsection*{Konfiguration des Init-Skripts}
+Über die Datei \texttt{/etc/default/fsser} wird das Init-Skript
+konfiguriert. Zum Bearbeiten dieser Datei sind Root-Rechte erforderlich.
+Nach jeder Bearbeitung muss der Server neu gestartet werden, damit die
+aktualisierte Datei eingelesen wird:
+
+\begin{verbatim}
+sudo vi /etc/default/fsser
+service fsser restart
+\end{verbatim}
+
+\texttt{DAEMON\_ARGS} \index{DAEMON\_ARGS} sind beinahe beliebige Parameter,
+die dem Server beim Start übergeben werden.
+Tragen Sie hier Ihre ASSIGN-Befehle ein um festzulegen, welche Inhalte der
+Server bereit stellen soll.
+Übergeben Sie hier keine -d Parameter zur Angabe der Gerätedatei,
+sondern verwenden Sie statt dessen \texttt{DEVICE}.
+
+\texttt{DEVICE} \index{DEVICE} definiert die zu überwachende Gerätedatei, die für den
+Server verwendet werden soll. Sie können Sie in den meisten Fällen undefiniert
+lassen, was die Verwendung des Vorgabewerts \texttt{auto} bewirken wird.
+Für die meisten Fälle wird dann \texttt{/dev/ttyUSB0} verwendet werden.
+Auf dem Raspberry Pi wird diese Schnittstelle ebenfalls verwendet, wenn das
+Gerät beim Systemstart bereits verfügbar ist, andernfalls wird die
+fest eingebaute serielle Schnittstelle \texttt{/dev/ttyAMA0} verwendet, die
+beispielsweise vom 3.1541 verwendet wird.
+
+\texttt{RESPAWN}\ \index{RESPAWN} legt fest, ob im Fehlerfall ein Neustart des Servers
+gewünscht ist (\texttt{=1}) oder nicht (alle anderen Werte,
+z.B. \texttt{RESPAWN=0}). Dies ist keine starre Regel, sondern eher ein
+Anhaltspunkt. Wenn beispielsweise das Gerät abgesteckt wird, beendet das
+zwangsläufig den Server. Dies wird nicht als echter Fehler behandelt,
+sondern der Server wird immer neu gestartet werden, wenn das Gerät wieder
+verfügbar ist. Bei schweren, nicht behebbaren Fehlern, wie beispielsweise
+fehlerhafte Konfigurationsparametern wird niemals neu gestartet.
+Diese Option behandelt eher den unvorhergesehen Fall und lässt Ihnen die
+Wahl, ob Ihre Priorität auf der Verfügbarkeit liegt oder auf dem Finden
+von Umständen, die den Server außerplanmäßig beenden.
+
+\texttt{RUN\_AS\_USER} \index{RUN\_AS\_USER} legt den Benutzer fest,
+unter dem der Server läuft.
+Das Init-Skript wird beim Systemstart als root aufgerufen, und es ist
+eine sehr gute Idee, den Server nicht ständig mit root-Rechten laufen zu lassen.
+Bei der Installation wird Ihr normaler Benutzername (aus der
+Umgebungsvariable \texttt{SUDO\_USER} eingetragen. Sie können dem Server
+auch einen eigenen Benutzer zuweisen, werden dann aber alle Aufrufe des
+Init-Skripts (z.B. zum Neustart des Servers) mittels \texttt{sudo}
+durchführen müssen.
+
+Wenn Sie die Parameter in \texttt{/etc/default/fsser} bearbeitet haben,
+müssen Sie den Server neu starten, damit er der Änderungen gewahr wird. Dies
+wird im folgenden Kapitel beschrieben.
+
+\subsubsection*{Manuelle Aufrufe des Init-Skripts}
+\index{Init-Skript}
+\index{Server!Neustart}
+\index{service fsser}
+Neustart des Servers:
+
+\begin{verbatim}
+service fsser restart
+\end{verbatim}
+
+Abfrage des Status von Server und Daemon:
+\index{Server!Status}
+
+\begin{verbatim}
+service fsser status
+\end{verbatim}
+
+Manueller Start/Stopp von Server und Daemon:
+
+\begin{verbatim}
+service fsser start
+service fsser stop
+\end{verbatim}
+
+\subsubsection*{Automatischen Start deaktivieren}
+Wenn Sie den Mechanismus des automatischen Starts entfernen möchten,
+und den Quelltext noch zur Hand haben, wenden Sie folgende Befehlszeilen an:
+
+\begin{verbatim}
+cd XD2031/pcserver
+sudo make exorcism
+\end{verbatim}
+
+Manuell kann der Autostart wie folgt entfernt werden:
+
+\begin{verbatim}
+service fsser stop
+sudo rm /etc/init.d/fsser
+sudo rm /usr/local/install/fsserd
+sudo rm /etc/default/fsser
+sudo update-rc.d fsser remove
+\end{verbatim}
+
+Dabei werden zunächst eventuell laufende Server und überwachende Init-Skripte
+beendet. Anschließend wird das Init-Skript, der Daemon, die persönliche Konfiguration
+und schließlich die Links der verschiedenen Run-Level
+auf das Init-Skript entfernt.
+
+\subsection{Installation der Server-Software (OS X)}
+\index{Server!Installation!OS X}
 Laden Sie von \osxbinaries{} den Server her"-unter und installieren ihn 
 wie üblich.
+
+\subsection{Installation der Server-Software (Windows)}
+\index{Server!Installation!Windows}
+Laden Sie von \winbinaries{} den Server her"-unter. Entpacken Sie die
+zip-Datei in einem Verzeichnis Ihrer Wahl. Der Server ist von dort aus
+direkt lauffähig, eine gesonderte Installation ist nicht erforderlich.
 
 \subsection{Aktualisierung der Firmware}
 \index{Firmware}
@@ -365,25 +570,24 @@ Wenn Sie ein petSD besitzen, lesen Sie bitte jetzt bei
 \glqq\ref{petsdfwinst} \nameref{petsdfwinst}\grqq\ auf Seite
 \pageref{petsdfwinst} weiter.
 
-\textbf{Tipp:} Um direkt zur gewünschten Stelle zu gelangen, können 
-Sie auch innerhalb der PDF-Datei die Kapitelnamen oder Seitenzahlen 
-anklicken.
-
 \subsubsection{Aktualisierung der Firmware für XS-1541}
+\index{XS-1541!Firmware aktualisieren}
 Laden Sie zunächst von \fwbinaries{} die Firm"-ware für das XS-1541
 herunter und entpacken Sie wenn nötig Archivdateien wie 
 etwa \glqq .zip\grqq . 
 
+\clearpage
 \subsubsection*{Linux}
+\index{XS-1541!Firmware aktualisieren!Linux}
 \begin{enumerate}
 \item Schließen Sie das XS-1541 mittels USB-Kabel an Ihren Computer an.
 \item Öffnen Sie ein Terminal.
 \item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
-\item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
+\item Machen Sie die Skript-Datei xs1541up.sh wie folgt ausführbar:
 
 \texttt{chmod +x xs1541up.sh}
 \item Für die aktuelle Firmware \texttt{XD2031-xs1541.hex}, tippen Sie
-	den folgenden Befehl ein, aber noch \textit{nicht} die 
+	den folgenden Befehl ein, aber noch \textbf{nicht} die
 	Eingabetaste:
 
 	\texttt{./xs1541up.sh}
@@ -395,14 +599,14 @@ etwa \glqq .zip\grqq .
 \textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
 \texttt{XD2031-xs1541.hex}
 eine andere Firmware aufspielen möchten, können Sie
-dem Script auch einen Dateinamen übergeben:
+dem Skript auch einen Dateinamen übergeben:
 
 \begin{verbatim}
 ./xs1541up.sh Beliebige-xs1541-Firmware.hex
 \end{verbatim}
 
 \subsubsection*{OS X}
-
+\index{XS-1541!Firmware aktualisieren!OS X}
 \begin{enumerate}
 \item Installieren Sie das \textit{CrossPack for 
 AVR\textsuperscript{\textregistered} Development} von 
@@ -411,10 +615,10 @@ AVR\textsuperscript{\textregistered} Development} von
 \item Klicken Sie auf \glqq Programme\grqq\ $\to$ \glqq Dienstprogramme\grqq
 $\to$ \glqq Terminal\grqq\ um ein Terminal zu öffnen.
 \item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
-\item Machen Sie die Script-Datei xs1541up.sh wie folgt ausführbar:
+\item Machen Sie die Skript-Datei xs1541up.sh wie folgt ausführbar:
 
 \texttt{chmod +x xs1541up.sh}
-\item Tippen Sie den folgenden Befehl ein, aber noch \textit{nicht} die
+\item Tippen Sie den folgenden Befehl ein, aber noch \textbf{nicht} die
 Eingabetaste:
 
 \texttt{sudo mv /dev/cu.usbserial}
@@ -423,8 +627,8 @@ Eingabetaste:
 \glqq usbserial\grqq\ sollte jetzt mit der Seriennummer Ihres Adapters
 vervollständigt werden, wie z.B. usbserial-A10044Co.
 
-Drücken Sie noch immer \textit{nicht} die Eingabetaste, sondern fügen
-Sie die folgende Zeile an den Behl an:
+Drücken Sie noch immer \textbf{nicht} die Eingabetaste, sondern fügen
+Sie die folgende Zeile an den Befehl an:
 
 \textit{<Leertaste>} \texttt{/dev/ttyUSB0}
 
@@ -437,7 +641,7 @@ Geben Sie dann Ihr Administrator-Passwort ein, um diesen Vorgang
 zu ermöglichen.
 \item Für die aktuelle Firmware 
    \texttt{XD2031-xs1541.hex} tippen Sie
-	folgenden Befehl ein, aber noch \textit{nicht} die 
+	folgenden Befehl ein, aber noch \textbf{nicht} die
 	Eingabetaste:
 
 	\texttt{./xs1541up.sh}
@@ -449,7 +653,7 @@ zu ermöglichen.
 \textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
 \texttt{XD2031-xs1541.hex}
 eine andere Firmware aufspielen möchten, können Sie
-dem Script auch einen Dateinamen übergeben:
+dem Skript auch einen Dateinamen übergeben:
 
 \begin{verbatim}
 ./xs1541up.sh Beliebige-xs1541-Firmware.hex
@@ -469,6 +673,7 @@ AVR-ISP-Programmierers aufgespielt werden.
 
 
 \subsubsection{Aktualisierung der Firmware für Raspberry Pi / 3.1541}
+\index{3.1541!Firmware aktualisieren}
 \label{fwinst31541}
 Laden Sie zunächst von \fwbinaries{} die Firm\-ware für das 3.1541
 herunter und entpacken Sie wenn nötig Archivdateien wie etwa \glqq .zip\grqq . 
@@ -478,7 +683,7 @@ leichter:
 
 \begin{enumerate}
 \item Wechseln Sie in das Verzeichnis, das die entpackte Firmware enthält.
-\item Machen Sie die Script-Datei 3.1541.sh wie folgt ausführbar:
+\item Machen Sie die Skript-Datei 3.1541.sh wie folgt ausführbar:
 
 \texttt{chmod +x 3.1541up.sh}
 \item Um die aktuelle Firmware \texttt{XD2031-xs1541.hex} aufzuspielen:
@@ -489,18 +694,19 @@ leichter:
 \textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
 \texttt{XD2031-xs1541.hex}
 eine andere Firmware aufspielen möchten, können Sie
-dem Script auch einen Dateinamen übergeben:
+dem Skript auch einen Dateinamen übergeben:
 
 \begin{verbatim}
 ./3.1541up.sh Beliebige-xs1541-Firmware.hex
 \end{verbatim}
 
 \subsubsection{Aktualisierung der Firmware für petSD}
+\index{petSD!Firmware aktualisieren}
 \label{petsdfwinst}
 Zwar wurden die 2011er petSD mit einem Bootloader zum einfachen
 Aktualisieren der Firmware über die SD-Karte versehen, es hat
 sich jedoch gezeigt, dass die verwendeten Fuses-Einstellungen
-des AVR Microcontrollers nicht mit der 
+des AVR Mikrocontroller nicht mit der
 \mbox{XD-2031} Firmware kompatibel sind.
 
 Leider können Bootloader nur die Firmware aktualisieren, 
@@ -512,7 +718,7 @@ AVR-ISP-Programmiergerätes.
 Ein solches Programmiergerät kann je nach Hersteller 
 für einen Betrag von ca. 20,-- bis 30,-- \euro{} erworben werden. 
 Das Atmel AVR ISP mkII ist eine Empfehlung wert und wird in allen
-Scripten als Standard verwendet.
+Skripten als Standard verwendet.
 
 \subsubsection*{Download der Firmware und Einstellen des
 Programmier-Gerätes}
@@ -551,12 +757,12 @@ CONNECTED_TO=usb
 Dieser Schritt ist nur einmalig notwendig und sollte bei
 weiteren Firmware-Updates ausgelassen werden.
 \begin{enumerate}
-\item Machen Sie das Script \texttt{petSD\_fix\_fuses.sh} ausführbar:
+\item Machen Sie das Skript \texttt{petSD\_fix\_fuses.sh} ausführbar:
 \begin{verbatim}
 chmod +x petSD_fix_fuses.sh
 \end{verbatim}
 
-\item Starten Sie das Script, um die Fuses für XD-2031 zu ändern:
+\item Starten Sie das Skript, um die Fuses für XD-2031 zu ändern:
 \begin{verbatim}
 ./petSD_fix_fuses.sh
 \end{verbatim}
@@ -566,7 +772,7 @@ chmod +x petSD_fix_fuses.sh
 \subsubsection*{Aktualisieren der Firmware mit AVR ISP Programmierer}
 
 \begin{enumerate}
-\item Machen Sie das Script \texttt{petSDisp.sh} ausführbar:
+\item Machen Sie das Skript \texttt{petSDisp.sh} ausführbar:
 \begin{verbatim}
 chmod +x petSDisp.sh
 \end{verbatim}
@@ -579,7 +785,7 @@ chmod +x petSDisp.sh
 \textbf{Tipp:} Wenn Sie statt der vorgegebenen Datei 
 \texttt{XD2031-petSD.hex}
 eine andere Firmware aufspielen möchten, können Sie
-dem Script auch einen Dateinamen übergeben:
+dem Skript auch einen Dateinamen übergeben:
 
 \begin{verbatim}
 ./petSDisp.sh Beliebige-petSD-Firmware.hex
@@ -612,16 +818,18 @@ Die meiste Arbeit ist nun geschafft. Bevor wir nun zum vergnüglichen
 Teil kommen, sollen kurz drei Begriffe geklärt werden, die von nun
 an in dieser Anleitung verwendet werden:
 \begin{itemize}
-\item Ihr moderner Computer wird fortan der Einfachkeit halber 
-	\glqq{}PC\grqq{} genannt.
+\item Ihr moderner Computer wird fortan der Einfachheit halber
+	\glqq{}PC\grqq{} genannt. \index{PC}
 \item Ihr alter Commodore wird als 
 \glqq{}CBM\grqq{} bezeichnet, ganz gleich, ob es sich um einen CBM / PET / C64 
 oder anderen 8-Bitter handelt.
+\index{CBM} \index{C64} \index{PET 2001} \index{C128}
 \item Ihr XS-1541, 3.1541 oder petSD wird 
 als \glqq{}Adapter\grqq{} bezeichnet.
 \end{itemize}
 
 \subsection{Adapter anschließen}
+\index{Anschließen des Adapters}
 Auch wenn es hier erwähnt wird, sollten Sie vorerst auf das Anschließen
 weiterer Diskettenlaufwerke verzichten, um Konflikte um Geräteadresse 8
 auszuschließen.
@@ -641,7 +849,7 @@ müssen diese ebenfalls alle ausgeschaltet sein.
 
 Vielleicht staunen Sie über dieses Prozedere. Tatsache ist, das weder
 IEEE-488-Bus noch IEC-Bus \textit{hot-pluggable} sind; das bedeutet:
-Ein- oder Ausstecken nur im ausgeschalteten Zustand -- auch wenn man es in
+Ein- oder Abstecken nur im ausgeschalteten Zustand -- auch wenn man es in
 der Praxis immer wieder anders sieht. Nichtbeachtung kann erforderlich
 machen, dass Sie Ersatzteile für Ihren CBM besorgen müssen und Chips
 aus- und einlöten müssen. Nebenbei bemerkt: der Bustreiber MC3446 ist
@@ -658,6 +866,7 @@ dass dadurch die Zuverlässigkeit beeinträchtigt werden kann und bleibende
 Schäden entstehen können. 
 
 \subsection{XS-1541 ein- und ausschalten}
+\index{Einschaltreihenfolge}
 Natürlich wollen wir den Adapter jetzt eingeschaltet lassen, aber dies
 ist die richtige Stelle, die Ein- und Ausschaltreihenfolge für das
 XS-1541 zu besprechen. Beim petSD ist die Reihenfolge unerheblich.
@@ -674,6 +883,7 @@ Geräte in den Grundzustand versetzt werden.
 \end{enumerate}
 
 \subsection*{XS-1541 ausschalten}
+\index{Ausschalten, Reihenfolge}
 \begin{enumerate}
 \item Schalten Sie den CBM und alle am Bus hängenden Peripheriegeräte
 wie Diskettenlaufwerke und Drucker aus.
@@ -682,7 +892,7 @@ schalten Sie erst jetzt den PC aus.
 \end{enumerate}
 
 \subsection{Server starten}
-
+\index{Server!Starten}
 Die Konfiguration des Servers ist für diese Beispiele nicht erforderlich.
 Sie wird später beschrieben.
 Öffnen Sie ein Terminal. Unter OS X klicken Sie dazu auf \glqq Programme\grqq\  
@@ -697,6 +907,7 @@ fsser
 
 
 \subsection{Inhaltsverzeichnis laden}
+\index{Inhaltsverzeichnis}
 Gegenüber dem CBM erscheint der Adapter wie ein klassisches Diskettenlaufwerk
 unter einer einzigen Geräteadresse. Voreingestellt ist Geräteadresse 8.
 So können Sie sich direkt wie früher das Inhaltsverzeichnis anzeigen
@@ -711,6 +922,8 @@ Probieren Sie es aus. Sie sollten das Heimatverzeichnis Ihres PCs
 angezeigt bekommen.
 
 \subsection{LOAD und SAVE}
+\index{LOAD}
+\index{SAVE}
 Geben Sie ein kleines Programm ein:
 
 \lstset{language=,} %[Visual]Basic}
@@ -747,6 +960,7 @@ RUN
 
 \subsection{Mehrere Laufwerke unter einer Geräteadresse}
 \index{Laufwerke}
+\index{Ger\"ateadresse}
 Unter einer Geräteadresse können mehrere Laufwerke gleichzeitig zur
 Verfügung gestellt werden. 
 
@@ -784,6 +998,8 @@ Wieso wurde das Programm geladen, obwohl wir doch \texttt{LOAD"DUMBDEMOPET",8}
 geschrieben haben? Hätten wir nicht \texttt{LOAD"1:DUMBDEMOPET",8} schreiben müssen,
 um von Laufwerk 1 zu laden?
 
+\index{Laufwerk!zuletzt verwendetes}
+\index{Laufwerk!aktuelles}
 Nun, \textit{ohne} Laufwerksnummer wird die \textit{zuletzt verwendete}
 Laufwerksnummer verwendet. Und das war die von Laufwerk 1, von dem wir
 das Inhaltsverzeichnis geladen haben.
@@ -796,6 +1012,7 @@ die mit den vorgestellten Laufwerksziffern 0 bis 9 angesprochen
 werden.
 
 \subsection{BASIC 4.0 Disketten-Befehle}
+\index{BASIC 4.0}
 Prinzipiell sind die zusätzlichen Disketten-Befehle des BASIC 4.0
 nützlich und werden auch von der Firmware unterstützt. 
 Eine gute Gelegenheit, das Hauptverzeichnis Ihres PCs
@@ -821,6 +1038,8 @@ BASIC prüft hier zwar falsch, da die größtmögliche Geräteadresse nicht 31
 sondern nur 30 ist, aber wenigstens stellt das keine Einschränkung dar.
 
 \subsection{Geräteadresse ändern}
+\index{Ger\"ateadresse!\"andern}
+\index{Adresse|see{Ger\"ateadresse}}
 Das Ändern der Geräteadresse Ihres Adapters erfolgt durch Senden
 eines Befehls an den Kommandokanal mit Sekundäradresse 15. Eine einfache
 Möglichkeit, mit BASIC-Bordmitteln Befehle zu senden, ist das Anhängen
@@ -841,7 +1060,7 @@ LIST
 
 Für die Assembler- oder C-Programmierer kann es einfacher sein,
 die Laufwerksangabe binär statt ASCII-dezimal zu übertragen. Mit diesem
-zugegeberweise BASIC-Beispiel hierfür stellen wir die Geräteadresse
+zugegebenermaßen BASIC-Beispiel hierfür stellen wir die Geräteadresse
 wieder von 30 zurück auf 8:
 
 \begin{verbatim}
@@ -857,6 +1076,7 @@ beizubehalten.
 
 \clearpage %MANFF
 \subsection{Laufwerken Inhalte zuweisen}
+\index{Provider}
 Bei klassischen Diskettenlaufwerken würden Sie eine Diskette 
 einlegen. Stattdessen muss hier dem Adapter mitgeteilt werden, 
 \textit{wo} wo die Daten liegen, die als virtuelle Diskette 
@@ -891,6 +1111,8 @@ Beispiele für jeden Provider finden Sie im Kapitel \
 \clearpage
 \section{Dateien und Verzeichnisse}
 \subsection{Regeln für Datei- und Verzeichnisnamen}
+\index{Dateinamen}
+\index{Verzeichnisnamen}
 Als maximale Länge eines Datei- oder Verzeichnisnamens sollten
 16 Zeichen nicht überschritten werden, damit alte Programme nicht
 durch unerwartet lange Dateinamen Schwierigkeiten bekommen.
@@ -906,13 +1128,16 @@ vermeiden. Absolut verboten sind:
 \item der Stern *
 \item das Fragezeichen ? 
 \item das Dollar-Zeichen \$
+\item das Komma ,
+\item das Gleichheitszeichen =
 \end{itemize}
-Leerzeichen können dagegen problemlos verwendet werden.
-Wenn Sie einen sichtbaren Trenner verwenden möchten, sollten
-Sie das Minus-Zeichen '-' bevorzugen, da der Unterstrich '\_' 
-auf einem CBM schwierig einzugeben sein kann.
+Leerzeichen und Punkte können dagegen problemlos verwendet werden.
+Für ein sichtbares Trennzeichen sollten Sie das Minus-Zeichen '-' gegenüber
+dem Unterstrich '\_' bevorzugen, da der Unterstrich auf einem CBM schwierig
+einzugeben sein kann.
 
 \subsection{Wildcards -- Dateimasken}
+\index{Wildcards}
 Wildcards funktionieren im CBM-Umfeld anders, als Sie es von DOS,
 Windows oder unixoiden Betriebssystemen gewöhnt sein werden, weshalb 
 Sie sich wenigstens den nächsten Abschnitt \glqq \nameref{starwc}\grqq\ 
@@ -955,9 +1180,11 @@ weitere Auswertung. Wenn Sie also versuchen würden, die Daten
 der ersten Quartale durch \texttt{*.Q1} zu kopieren, werden Sie
 feststellen, dass statt dessen \textit{alle} Dateien kopiert werden.
 Probieren Sie es aus, indem Sie sich mit \texttt{@\$:*.Q1} die
-etroffenen Dateien anzeigen lassen.
+passenden Dateien anzeigen lassen.
 
 \subsection{Verzeichnisse}
+\index{Verzeichnisnamen!Trennzeichen}
+\index{Trennzeichen}
 Die Trennzeichen, die verwendet werden können, um einzelne 
 Verzeichnisnamen innerhalb eines Pfades zu trennen, hängen vom
 jeweiligen Provider und Betriebs"-system ab. 
@@ -999,6 +1226,9 @@ in Unterverzeichnissen unter anderem wie folgt strukturiert:
 ;
 \end{tikzpicture}
 
+\index{Pfade}
+\index{absolute Pfade|see{Pfade}}
+\index{relative Pfade|see{Pfade}}
 Nehmen wir weiter an, sie befänden Sich im Unterverzeichnis Strategie
 und wollten Sich nun in das Ballerspiel-Verzeichnis wechseln.
 
@@ -1018,7 +1248,10 @@ Mit \texttt{@CD:..} gelangen Sie immer eine Verzeichnisebene höher.
 
 \clearpage
 \section{DOS-Befehle}
+\index{DOS-Befehle}
+\index{Syntax}
 \subsection{Verwendete Notation}
+\index{Notation}
 \subsection*{Ersetzung durch tatsächlich passende Werte}
 In spitzen Klammern und kursiver Schrift werden Werte angegeben, die 
 Sie durch für Sie im Einzelfall tatsächlich
@@ -1052,7 +1285,7 @@ verwendeten Laufwerk
 \subsection*{Optionale Wiederholung}
 Manche Befehle fordern mindestens einen Parameter, können aber beliebig
 viele weitere\footnote{
-	In der Praxis wird die Anzahl durch andere Umstände begrent, 
+	In der Praxis wird die Anzahl durch andere Umstände begrenzt,
 	wie etwa die Größe des Zwischenspeichers, der einen Befehl
 	aufnehmen soll
 } durch Kommata getrennte Parameter annehmen. Die optionale Wiederholung
@@ -1066,6 +1299,7 @@ PETER,PAUL,MARY
 \end{verbatim}
 
 \subsection{I -- Initialize -- Laufwerk initialisieren}
+\index{INIT}
 
 \texttt{I} \Big[ \textit{<Laufwerk-Nummer>} \Big]
 
@@ -1079,6 +1313,9 @@ I0
 \end{verbatim}
 
 \subsection{R -- Rename -- Datei oder Verzeichnis umbenennen}
+\index{RENAME}
+\index{Umbenennen}
+\index{Datei!umbenennen}
 Benennt eine Datei oder ein Verzeichnis um. Beachten Sie die Reihenfolge:
 der neue Dateiname wird zuerst genannt.
 
@@ -1092,6 +1329,9 @@ Beispiele:
 \end{verbatim}
 
 \subsection{S -- Scratch -- Datei(en) löschen}
+\index{SCRATCH}
+\index{Loeschen@L\"oschen!Datei}
+\index{Datei!l\"oschen}
 \texttt{S} \Big[ \textit{<Laufwerk-Nummer>} \Big] \texttt{:}
 \textit{<Dateimaske>} \Big[ \texttt{,} \ldots \  \Big]
 
@@ -1107,6 +1347,9 @@ Beispiele:
 \texttt{@S:*} löscht alle Dateien(!) des Unterverzeichnisses
 
 \subsection{CD / CHDIR -- Change directory -- Unterverzeichnis wechseln}
+\index{Verzeichnis!wechseln}
+\index{Ordner|see{Verzeichnis}}
+\index{Unterverzeichnis|see{Verzeichnis}}
 \mbox{\Big( \texttt{CD} \Big| \texttt{CHDIR} \Big) 
 \Big[ \textit{<Laufwerk-Nummer>} \Big]
 \texttt{:} \textit{<Verzeichnis>}}
@@ -1121,6 +1364,9 @@ Beispiele:
 \end{verbatim}
 
 \subsection{MD / MKDIR -- Make directory}
+\index{MD}
+\index{MKDIR}
+\index{Verzeichnis!anlegen}
 
 \mbox{\Big( \texttt{MD} \Big| \texttt{MKDIR} \Big) 
 \Big[ \textit{<Laufwerk-Nummer>} \Big]
@@ -1143,6 +1389,10 @@ Beispiele:
 
 
 \subsection{RD / RMDIR -- Remove directory}
+\index{RD}
+\index{RMDIR}
+\index{Verzeichnis!l\"oschen}
+\index{Loeschen@L\"oschen!Verzeichnis}
 
 \mbox{\Big( \texttt{RD} \Big| \texttt{RMDIR} \Big) 
 \Big[ \textit{<Laufwerk-Nummer>} \Big]
@@ -1156,18 +1406,126 @@ Beispiel:
 @RD:EXPERIMENT2
 \end{verbatim}
 
+\subsection{T / TI -- Uhr abfragen und stellen}
+\index{T}
+\index{TI}
+\index{Uhrenbefehle}
+\index{Echtzeituhr}
+
+
+\texttt{T}
+\Big[ \textit{<Wochentag>} \Big]
+\Big[ <Datum> \Big]
+\Big[ \texttt{T} \textit{<Uhrzeit>} \Big]
+
+\texttt{TI}
+\Big[ \textit{<Uhrzeit>} \Big]
+
+
+\renewcommand{\arraystretch}{2.2}
+\begin{tabular}[c]{l l}
+\toprule
+\textit{<Wochentag>:} & \Big(
+\texttt{MON} \Big|
+\texttt{TUE} \Big|
+\texttt{WED} \Big|
+\texttt{THU} \Big|
+\texttt{FRI} \Big|
+\texttt{SAT} \Big|
+\texttt{SUN} \Big) \\
+
+\textit{<Datum>:} & \texttt{JJJJ}\Big[-\Big]\texttt{MM}\Big[-\Big]\texttt{TT} \\
+
+\textit{<Uhrzeit>:} & \texttt{SS}\Big[:\Big]\texttt{mm}\Big[[:]\texttt{ss}\Big] \\
+\bottomrule
+\end{tabular}
+\renewcommand{\arraystretch}{1}
+
+
+Das Abfragen der Uhr erfolgt durch Aufruf ohne Parameter.
+Die Ausgabe erfolgt über den Status-Kanal \#15.
+
+Zum Stellen der Uhr werden entsprechende Parameter übergeben,
+die wenigstens rudimentärer Prüfung unterzogen werden. Bei
+Angabe eines Datums wird der Wochentag automatisch errechnet.
+
+Ist eine Echtzeituhr zwar vorhanden, die enthaltene Uhrzeit aber ungültig,
+wird \texttt{20,READ ERROR} geliefert.
+Kann dagegen gar kein Uhrenchip entdeckt werden, wird \texttt{74,DRIVE NOT READY} gemeldet.
+
+Bei Adaptern, die keine Echtzeituhrenunterstützung haben, wird
+immer (also auch bei völlig richtiger Syntax) \texttt{30,SYNTAX ERROR}
+zurück gegeben. Da der T-Befehl außer Speicherplatz belegen nichts
+anstellen könnte, wurde er deaktiviert und wird damit auch unbekannt.
+
+Beim Stellen des Datums kann die Angabe des Wochentages entfallen,
+da dieser automatisch berechnet wird. Wird er jedoch angegeben,
+muss er aus genau drei Buchstaben ohne eingefügte Leerzeichen bestehen.
+
+\texttt{T} orientiert sich bei der Schreibweise an ISO 8601.
+Jahresangaben müssen immer vierstellig erfolgen. Bei Uhrzeitangaben
+kann die Angabe der Sekunden entfallen.
+
+Numerische Parameter können zur besseren Lesbarkeit neben Leerzeichen
+auch andere Trennzeichen enthalten, die aber nicht erforderlich sind.
+Lediglich das 'T' bei Verwendung des gleichnamigen Befehls wird
+benötigt, um eine folgende Uhrzeitangabe zu kennzeichnen.
+Als Trennzeichen werden für Datumsangaben das Minuszeichen '-' und für
+Zeitangaben der Doppelpunkt ':' empfohlen, aber auch andere Sonderzeichen
+mit einem Wert PETSCII-Wert zwischen 1 und 64 werden akzeptiert,
+wie etwa Leerzeichen, Punkte und Schrägstriche.
+
+Die Ausgabe von \texttt{TI}
+erfolgt in einer Form, die bei Verwendung von BASIC 4.0 direkt
+der eingebauten Uhrenvariablen ti\$ zugewiesen werden kann:
+
+\begin{verbatim}
+OPEN 1,8,15,"TI" : TI$=DS$ : CLOSE 1
+\end{verbatim}
+
+Beispiele für das Abfragen von Uhrzeit und Datum:
+
+\begin{verbatim}
+@TI
+183720
+
+@T
+WED 2013-08-07T18:37:20
+\end{verbatim}
+
+Beispiele für Stellen von Datum und Uhrzeit:
+
+\begin{verbatim}
+
+@T 2013-08-07  T 18:37:20
+
+@TI 18:40
+
+@TT 18:40
+
+@T20130921
+
+@T20130921T183745
+\end{verbatim}
+
+
+
+
 
 % ----------------------------------------------------------------
 \label{xcommands}
 % ----------------------------------------------------------------
 
 \subsection{XU -- Change unit -- Geräteadresse ändern}
+\index{XU}
+\index{Ger\"ateadresse!\"andern}
+
 
 \texttt{XU=}\Big( \textit{<Geräteadresse in ASCII Ziffern>} \Big|
 \textit{<Geräteadresse binär>} \Big)
 
 Soll die Einstellung dauerhaft auch nach dem Ausschalten erhalten 
-bleiben, muss die Konfiguraton durch den Befehl \texttt{XW} gesichert werden.
+bleiben, muss die Konfiguration durch den Befehl \texttt{XW} gesichert werden.
 
 Beispiele:
 
@@ -1178,6 +1536,8 @@ OPEN 1,8,15 : PRINT#1,"XU=";CHR$(9) : CLOSE 1
 \end{verbatim}
 
 \subsection{XD - Change last drive - Letztes Laufwerk setzen}
+\index{XD}
+\index{Laufwerk!zuletzt verwendetes}
 
 \texttt{XD=}\Big( \textit{<Laufwerk-Nummer in ASCII Ziffern>} \Big|
 \textit{<Laufwerk-Nummer binär>} \Big)
@@ -1189,7 +1549,7 @@ Laufwerk angegeben wird.
 Zusätzlich kann dieses Laufwerk auch mit dem XD Befehl gesetzt werden.
 
 Soll die Einstellung dauerhaft auch nach dem Ausschalten erhalten 
-bleiben, muss die Konfiguraton durch den Befehl \texttt{XW} gesichert werden.
+bleiben, muss die Konfiguration durch den Befehl \texttt{XW} gesichert werden.
 
 Beispiele:
 
@@ -1200,6 +1560,10 @@ OPEN 1,8,15 : PRINT#1,"XD=";CHR$(0) : CLOSE 1
 \end{verbatim}
 
 \subsection{XI -- Init -- Einschaltkonfiguration wieder herstellen}
+\index{XI}
+\index{Einschaltkonfiguration}
+\index{Konfiguration!wiederherstellen}
+\index{Konfiguration!des Servers|see{Server}}
 
 \texttt{XI}
 
@@ -1221,10 +1585,11 @@ Letztes Laufwerk	& XD= & 0 \\
 \bottomrule
 \end{tabular}
 
-\clearpage %MANFF
 \subsection{XW -- Write configuration -- Konfiguration schreiben}
 
 \texttt{XW}
+\index{XW}
+\index{Konfiguration!speichern}
 
 Speichert die aktuelle Konfiguration in einem nicht flüchtigem Speicher.
 Beim nächsten Einschalten des Adapters werden die gespeicherten Werte
@@ -1232,6 +1597,9 @@ automatisch wieder hergestellt. Eine Übersicht der gespeicherten
 Einstellungen ist in der Be\-schrei\-bung des \texttt{XI}-Befehls enthalten.
 
 \subsection{XRESET - Adapter zurücksetzen}
+\index{XRESET}
+\index{Reset}
+\index{Bootloader}
 
 \texttt{XRESET}
 
@@ -1256,6 +1624,7 @@ kann daher dazu verwendet werden, den Aktualisierungsvorgang anzustoßen.
 
 \clearpage
 \section{Konfiguration des Servers}
+\label{serverconf}
 Der Server kann durch folgende Kommandozeilenparameter konfiguriert 
 werden:
 
@@ -1263,6 +1632,8 @@ werden:
 \textit{<Laufzeit-Verzeichnis>}
 
 \subsection{Laufzeit-Verzeichnis}
+\index{Laufzeit-Verzeichnis}
+\index{Pfade}
 Beim Starten wechselt der Server in das angegebene Unterverzeichnis
 \textit{<Laufzeit-Verzeichnis>}. Alle in den Optionen angegebenen
 relative Pfadangaben beziehen sich dann auf dieses Laufzeitverzeichnis.
@@ -1271,7 +1642,7 @@ Beispiel: Ihre CBM-Software liegt in einem Ordner mit dem Pfad
 
 \texttt{/home/benutzer-name/Software/Commodore/CBM/}
 
-Sie möchten nun Laufwerk 0 und Laufwerk 1 belegen. 
+Sie möchten nun die Laufwerke 0 bis 4 belegen.
 
 Langform ohne relative Pfadangaben:
 
@@ -1298,6 +1669,11 @@ fsser
 \end{verbatim}
 
 \subsection{Gerätedatei des Adapters}
+\index{Ger\"atedatei}
+\index{/dev/ttyUSB0}
+\index{/dev/ttyAMA0}
+\index{COM-Port}
+\index{auto (Gerätedatei)}
 \mbox{\Big[ \texttt{-d} \Big( \texttt{auto} \Big| 
 \textit{<device>} \Big) \Big] }
 
@@ -1322,7 +1698,7 @@ Please pick one.
 
 Die Benennung unterscheidet sich je nach Betriebssystem.
 Für den vom XS-1541 und petSD verwendeten Serial-over-USB Chip
-FT232RL weist Linux 
+FT232RL \index{FT232} weist Linux
 fortlaufende Nummern beginnend bei \texttt{/dev/ttyUSB0} 
 zu, während
 \mbox{OS X} die im Chip gespei"-cherte Seriennummer verwendet. 
@@ -1343,6 +1719,8 @@ petSD & OS X & /dev/cu.usbserial-petSD & Seriennummer bearbeitet \\
 \end{tabular}
 
 \subsection{Ausführlichkeit der Meldungen}
+\index{verbose}
+\index{Debug-Meldungen}
 \mbox{\Big[ \texttt{-v} \Big]}
 
 Wenn die Option \texttt{-v} \glqq{}verbose\grqq{} gegeben wird,
@@ -1381,6 +1759,7 @@ werden kann, nicht jedoch auf Verzeichnisse in höherer Ebene.
 \end{comment}
 
 \subsection{Laufzeit-Konfiguration der Busse}
+\index{Ger\"ateadresse!\"andern}
 \mbox{\Big[ \texttt{-X} \textit{<Bus>} \texttt{:}
 \textit{<Befehl>} \Big] \Big[ \ldots \Big] }
 
@@ -1398,6 +1777,7 @@ Um beispielsweise die Geräteadresse für den IEC-Bus auf
 \clearpage
 \section{Laufwerken Inhalte zuweisen}
 \label{assign}
+\index{ASSIGN}
 
 \subsection{Allgemeines über Provider}
 
@@ -1422,12 +1802,13 @@ http & Webserver (über PC, nur lesend) \\
 \end{tabular}
 
 \subsection{fs: Zugriff auf das Dateisystem des PC}
+\index{fs-Provider}
 \mbox{ \texttt{A}\textit{<Laufwerk-Nummer>} 
 \texttt{:} \textit{fs} \texttt{=}
 \textit{<Pfad-im-PC-Dateisystem>} }
 
-Der filesystem-Provider bietet Schreiblesezugriff auf das
-angegebene Verzeichnis. Bei relativen Pfadangaben beziehen sich diese
+Der Filesystem-Provider bietet schreibenden und lesenden Zugriff auf
+Verzeichnisse. Bei relativen Pfadangaben beziehen sich diese
 auf das Laufzeit-Verzeichnis des Servers, bei absoluten Pfadangaben
 spielt das Laufzeit-Verzeichnis natürlich keine Rolle.
 
@@ -1438,7 +1819,7 @@ dem Laufwerk 0 zugewiesen:
 fsser -A0:fs=/usr/local/xd2031/tools .
 \end{verbatim}
 
-Das Laufzeit-Verzeichnis des Servers wurde der Einfachkeit halber
+Das Laufzeit-Verzeichnis des Servers wurde der Einfachheit halber
 auf das aktuelle Verzeichnis '.' gesetzt.
 
 Ein Beispiel mit relativen Pfaden:
@@ -1454,6 +1835,10 @@ Dieses Verzeichnis steht nun als Laufwerk 0
 für Schreib- und Lesevorgänge zur Verfügung.
 
 \subsection{di: Zugriff auf Disk-Images im Dateisystem des PC}
+\index{di-Provider}
+\index{Disk Images}
+\index{D64}
+\index{D80}
 \mbox{ \texttt{A}\textit{<Laufwerk-Nummer>} 
 \texttt{:} \textit{di} \texttt{=}
 \textit{<Disk-Image-im-PC-Dateisystem>} }
@@ -1492,6 +1877,10 @@ D82 & 8250 & \numprint{1066496} \\
 Die Verwendung von Disk-Images bietet sich dort an,
 wo die Erhaltung von Sonderzeichen im Dateinamen oder die
 Anordnung innerhalb des Inhaltsverzeichnis wichtig ist.
+\index{Sonderzeichen}
+\index{PETSCII}
+\index{Verzeichnis!Reihenfolge}
+\index{Reihenfolge|see{Verzeichnis}}
 
 Beispiel: die \glqq{}virtuelle Diskette\grqq{}
 \texttt{visicalc.d82} wird in Laufwerk 0 eingelegt:
@@ -1503,9 +1892,10 @@ fsser -A0:di=office/calc/visicalc.d82 ~/Software/Commodore/CBM
 \clearpage
 \section{Anhang}
 \subsection{Verwendete Lizenzen}
+\index{Lizenzen}
 \subsubsection{Benutzerhandbuch}
 Dieses Handbuch ist unter der
-\textit{Creative Commons CC BY-SA 3.0} lizensiert.
+\textit{Creative Commons CC BY-SA 3.0} lizenziert.
 
 \copyright{} 2013 Nils Eilers
 
@@ -1517,7 +1907,7 @@ einsehen.
 
 \subsubsection{XD-2031}
 Das Programm \glqq{}XD-2031\grqq{} ist unter der
-\textit{GNU General Public License, Version 2} lizensiert.
+\textit{GNU General Public License, Version 2} lizenziert
 
 \copyright{} 2012-2013 André Fachat, Ingo Korb, Thomas Winkler,
 Nils Eilers und andere.
@@ -1530,10 +1920,7 @@ Lizenz ist im Quelltext der jeweiligen Datei enthalten.
 
 \input{gpl-2.0.tex}
 
-% Erzeugt falschen Link im PDF
-% \addcontentsline{toc}{subsection}{Stichwortverzeichnis}
-
-% \renewcommand{\indexname}{Stichwortverzeichnis}
+\renewcommand{\indexname}{Stichwortverzeichnis}
 \printindex
 
 \end{document}

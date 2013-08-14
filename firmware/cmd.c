@@ -28,6 +28,10 @@
 #include "name.h"
 #include "wireformat.h"
 
+#ifdef HAS_RTC
+#include "rtc.h"
+#endif
+
 #include "debug.h"
 
 #undef	DEBUG_CMD
@@ -50,6 +54,9 @@ command_t command_find(uint8_t *input) {
 		break;
 	case 'S':
 		return CMD_SCRATCH;
+		break;
+	case 'T':
+		return CMD_TIME;
 		break;
 	case 'C':
 		if (*(input+1) == 'D' || *(input+1) == 'H') {
@@ -107,6 +114,9 @@ const char *command_to_name(command_t cmd) {
         case CMD_SCRATCH:
                 return "SCRATCH";
                 break;
+	case CMD_TIME:
+		return "TIME";
+		break;
         case CMD_CD:
                 return "CD";
                 break;
@@ -238,6 +248,15 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		}
 		return 0;
 	}
+#ifdef HAS_RTC
+	else if(nameinfo.cmd == CMD_TIME) {
+		debug_puts("TIME\n");
+		int8_t rv = rtc_time( (char*) command->command_buffer, errormsg);
+		if(rv < 0) rv = 0; // OK, RTC was updated
+                callback(rv, NULL);
+		return 0;
+	}
+#endif
 
 	// need to have the error message set when returning <0
         set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);

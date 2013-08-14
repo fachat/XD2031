@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#define	DEBUG_NAME 
+#undef	DEBUG_NAME 
 
 #include <stdio.h>
 #include <ctype.h>
@@ -211,8 +211,9 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 					result->drive2 = NAMEINFO_UNUSED_DRIVE;
 					result->name2 = (p+1);
 					result->namelen2 = len-1;
-					if (result->cmd == CMD_ASSIGN) {
-						state = NAME_NAME2;
+					// Some commands take the string "as is":
+					if ((result->cmd == CMD_ASSIGN) || (result->cmd == CMD_TIME)) {
+						state = NAME_NAME2; // quit parser
 					} else {
 						state = NAME_DRIVE2;
 					}

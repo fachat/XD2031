@@ -22,6 +22,7 @@
 #ifndef TERM_H
 #define TERM_H
 
+#include <stdio.h>
 #include "provider.h"
 
 void term_init();
@@ -34,5 +35,6 @@ void term_rom_puts(const char *);
 void term_printf(const char *, ...);
 void term_rom_printf(const char *, ...);
 
+int term_putchar(char c, FILE *stream); // stdout
 
 #endif
