@@ -37,6 +37,9 @@
 #define	DEBUG_DIR
 
 
+//#define	MAX_LINE_NUMBER		63999
+#define	MAX_LINE_NUMBER		65535
+
 /*
  * helper for conversion of ASCII to PETSCII
  */
@@ -97,7 +100,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		in[3] = inp[FS_DIR_LEN + 3];
 
 		if (in[3] > 0) {
-			lineno = 63999;
+			lineno = MAX_LINE_NUMBER;
 		} else {
 
 			// first add 253, so that the "leftover" bytes in the remainder
@@ -158,13 +161,13 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 				tmp[2] += (tmp[1] >> 8) & 0xff;
 				tmp[3] += (tmp[2] >> 8) & 0xff;
 			}
-			// now compute the line number, restricting to 63999 in the process
+			// now compute the line number, restricting to MAX_LINE_NUMBER in the process
 			if (tmp[3] > 0) {
-				lineno = 63999;
+				lineno = MAX_LINE_NUMBER;
 			} else {
 				lineno = (tmp[1] & 0xff) | ((tmp[2] & 0xff) << 8);
-				if (lineno > 63999) {
-					lineno = 63999;
+				if (lineno > MAX_LINE_NUMBER) {
+					lineno = MAX_LINE_NUMBER;
 				}
 			}
 		}
