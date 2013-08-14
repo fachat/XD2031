@@ -1086,6 +1086,9 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    }
    if (!np)
    {
+      if (type == FS_DIR_TYPE_UNKNOWN) {
+	type = FS_DIR_TYPE_PRG;
+      }
       rv = di_create_entry(diep, tfd, filename, type, *reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
