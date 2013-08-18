@@ -39,7 +39,8 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
         uint8_t *t;
 
 	if (p == NULL) {
-		*type = FS_DIR_TYPE_PRG;
+		// no type given, so any may match
+		*type = FS_DIR_TYPE_UNKNOWN;
 		reclen = 0;
 		return;
 	}

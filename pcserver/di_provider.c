@@ -651,12 +651,16 @@ static int di_next_slot(di_endpoint_t *diep,slot_t *slot)
 // di_match_slot
 // *************
 
-static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name)
+static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name, uint8_t type)
 {
    do
    {
       di_read_slot(diep,slot);
-      if (slot->type && compare_pattern((char*)slot->filename,(char*)name)) return 1; // found
+      if (slot->type 
+		&& ((type == FS_DIR_TYPE_UNKNOWN) || ((slot->type & FS_DIR_ATTR_TYPEMASK) == type))
+		&& compare_pattern((char*)slot->filename,(char*)name)) {
+		return 1; // found
+      }
    }  while (di_next_slot(diep,slot));
    return 0; // not found
 }
@@ -997,12 +1001,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 {
    int np,rv;
    File *file;
-   uint8_t type = FS_DIR_TYPE_PRG;	// PRG
+   uint8_t type = FS_DIR_TYPE_UNKNOWN;	// unknown
 
    *reclen = 0;		// not set
 
    openpars_process_options(opts, &type, reclen);
-
+ 
    log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, type + 0x30, *reclen);
 
    if (*reclen > 254) {
@@ -1042,10 +1046,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 	np=1;
    } else {
    	di_first_slot(diep,&file->Slot);
-   	np  = di_match_slot(diep,&file->Slot,filename);
+   	np  = di_match_slot(diep,&file->Slot,filename, type);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
-	if (type == FS_DIR_TYPE_REL) {
+	if ((type == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+		type = FS_DIR_TYPE_REL;
+		file->access_mode = FS_OPEN_RW;
 		// check record length
 		if (!np) {
 			// does not exist yet
@@ -1080,6 +1086,9 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    }
    if (!np)
    {
+      if (type == FS_DIR_TYPE_UNKNOWN) {
+	type = FS_DIR_TYPE_PRG;
+      }
       rv = di_create_entry(diep, tfd, filename, type, *reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
@@ -1087,7 +1096,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    if (di_cmd == FS_OPEN_AP) {
 	di_pos_append(diep,file);
    }
-   return CBM_ERROR_OK;
+   return (type == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 
 // **********
@@ -1250,7 +1259,7 @@ static int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eo
       return rv;
    }
 
-   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->dirpattern))
+   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->dirpattern, FS_DIR_TYPE_UNKNOWN))
    {    
       rv = di_fill_entry((uint8_t *)retbuf,&diep->Slot);
       di_next_slot(diep,&diep->Slot);
@@ -1294,10 +1303,20 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 {
    int oldpos;
    int block;
+   uint8_t t = 0, s = 0;
    uint8_t zero = 0;
    // log_debug("di_write_byte %2.2x\n",ch);
    if (f->chp > 253)
    {
+    	if (f->access_mode == FS_OPEN_RW) {
+		// to make sure we're not in the middle of a file
+		// check the link track number
+     		di_fseek_tsp(diep,f->cht,f->chs,0);
+     		fread(&t,1,1,diep->Ip);
+     		fread(&s,1,1,diep->Ip);
+	}
+	if (t == 0) {
+		// only update link chain if we're not in the middle of a file
       f->chp = 0;
       oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
       block = di_find_free_block(diep,f);
@@ -1310,6 +1329,13 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
       fwrite(&zero,1,1,diep->Ip); // new link sector
       ++f->Slot.size; // increment filesize
       // log_debug("next block: (%d/%d)\n",f->cht,f->chs);
+	} else {
+		// position at next (existing) block
+      		f->chp = 0;
+		f->cht = t;
+		f->chs = s;
+      		di_fseek_tsp(diep,t,s,2);
+	}
    }
    fwrite(&ch,1,1,diep->Ip);
    ++f->chp;
@@ -1441,7 +1467,7 @@ static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
    di_first_slot(diep,&slot);
    do
    {
-      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf)))
+      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf, FS_DIR_TYPE_UNKNOWN)))
       {
          di_delete_file(diep,&slot);
          ++(*outdeleted);
@@ -1468,13 +1494,13 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
    // check if target exists
 
    di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto)))
+   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)))
    {
       return CBM_ERROR_FILE_EXISTS;
    }
 
    di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom)))
+   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom, FS_DIR_TYPE_UNKNOWN)))
    {
       n = strlen(nameto);
       if (n > 16) n = 16;
@@ -2002,6 +2028,9 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
             		o++;
         	}
 
+		log_debug("writing back previous last file sector to %d/%d with link to %d/%d\n",
+			last_track, last_sector, new_track, new_sector);
+
 		// write back data sector
 		di_fseek_tsp(diep, last_track, last_sector, 0);
 		fwrite(datasector, 1, 256, diep->Ip);
@@ -2078,6 +2107,8 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
    unsigned int rec_start;	// start of record in block
    unsigned int super, side;	// super side sector index, side sector index
    unsigned int offset;		// temp for the number of file bytes pointed to by blocks in a sss or ss
+
+   uint8_t next_track, next_sector;
 
    di_endpoint_t *diep = (di_endpoint_t*) ep;
 
@@ -2167,12 +2198,20 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
 	// record as given in the parameter
 	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-      	fread(&f->next_track ,1,1,diep->Ip);
-      	fread(&f->next_sector,1,1,diep->Ip);
+      	fread(&next_track ,1,1,diep->Ip);
+      	fread(&next_sector,1,1,diep->Ip);
+
+	// is there enough space on the last block?
+	if (next_track == 0 && next_sector < (rec_start + reclen + 1)) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
 
 	f->cht = ss_track;
 	f->chs = ss_sector;
 	f->chp = rec_start;
+	f->next_track = next_track;
+	f->next_sector = next_sector;
+
 	// clean up the "expand me" flag
 	f->lastpos = 0;
 
