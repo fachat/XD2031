@@ -171,8 +171,8 @@ int main()
 #ifdef USE_FAT
 	// register fat provider
 	provider_register("FAT", &fat_provider);
-	provider_assign(0, "FAT", "/");		// might be overwritten when fetching X-commands
-	provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
+	//provider_assign(0, "FAT", "/");		// might be overwritten when fetching X-commands
+	//provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
 #endif
 
 	// show our version...
