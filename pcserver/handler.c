@@ -21,6 +21,7 @@
 
 
 #include <sys/types.h>
+#include <string.h>
 
 #include "registry.h"
 #include "handler.h"
@@ -33,7 +34,7 @@
 
 // prototypes
 static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
-                                        const char *name, char **outname);
+                                        const char *name, const char **outname);
 
 
 // This file defines the file type handler interface. This is used
@@ -44,7 +45,7 @@ static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
 // you can CD into a D64 file stored in a D81 image read from an FTP 
 // server...
 
-static registry_t handlers = { 0 };
+static registry_t handlers;
 
 /*
  * register a new provider, usually called at startup
@@ -62,9 +63,8 @@ void handler_init(void) {
 	reg_init(&handlers, "handlers", 10);
 }
 
-
 // unused as of now
-file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, char **outname) {
+file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, const char **outname) {
 
 	file_t *newfile = NULL;
 
@@ -92,13 +92,14 @@ static handler_t ep_handler;
 
 typedef struct {
 	file_t 		file;		// embedded
-	int		channel;	// for the endpoint
+	int		epchan;		// channel for endpoint (-1 is not opened yet)
 	uint16_t	recordlen;
 } ep_file_t;
 
 static type_t ep_file_type = {
 	"ep_file",
-	sizeof(ep_file_t)
+	sizeof(ep_file_t),
+	NULL
 };
 
 
@@ -113,19 +114,20 @@ static type_t ep_file_type = {
 
 int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *inname, const char *opts) {
 
-	char *outname = NULL;
+	const char *outname = NULL;
 	int err = CBM_ERROR_FAULT;
 	file_t *file = NULL;
 	file_t *direntry = NULL;
 
-	// initial file struct
-	err = ep_create(ep, chan, outfile, inname, &outname):
+	// initial file struct, corresponds to root directory of endpoint
+	err = ep_create(ep, chan, outfile, inname, &outname);
 
 	if (err != CBM_ERROR_OK) {
 		return err;
 	}
-	name = outname;
+	const char *name = outname;
 
+	// as long as we have filename parts left
 	while (outfile != NULL && name != NULL && *name != 0) {
 
 		file = *outfile;
@@ -134,8 +136,12 @@ int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t typ
 		while ((direntry = file->handler->direntry(file)) != NULL) {
 
 			// test each dir entry against the different handlers
+			// handlers implement checks e.g. for P00 files and wrap them
+			// in another file_t level
+			// the handler->resolve() method also matches the name, as the
+			// P00 files may contain their own "real" name within them
 			*outfile = NULL;
-			*outname = strchr(name, '/');	// determine end of name
+			outname = strchr(name, '/');	// default end of name (if no handler matches)
 
 			for (int i = 0; ; i++) {
 				handler_t *handler = reg_get(&handlers, i);
@@ -143,42 +149,48 @@ int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t typ
 					// no handler found
 					break;
 				}
-				err = handler->resolve(direntry, outfile, type, name, opts, outname);
+				err = handler->resolve(direntry, outfile, type, name, opts, &outname);
 				if (err != CBM_ERROR_OK) {
-					log_error("Got %d as error from handler %s\n", err, handler->name);
+					log_error("Got %d as error from handler %s for %s\n", 
+						err, handler->name, name);
 				} else {
 					// found a handler
 					break;
 				}
 			}
-			
+		
+			// replace original dir entry with wrapped one	
 			if (*outfile != NULL) {
 				file = *outfile;
+				// do not check any further dir entries
+				break;
 			}
-
-			// end of file name = end of path pattern
-			*outname = 0;
-
-			// now that we found an entry, match with the search path
-			const char *filename = file->handler->getname(file);
-
-			const char *pattern = name;
-
-			if (compare_pattern(filename, pattern)) {
-				// found entry
-				// next search path
-				name = outname + 1;
-
-			} else {
-				// file does not match name
+			// now check if the original filename matches the pattern
+			if (compare_dirpattern(direntry->handler->getname(direntry), name, &outname)) {
+				// matches, so go on with it
+				file = direntry;
+				// do not check any further dir entries
+				break;
 			}
 		}
 
+		// found our directory entry and wrapped it in file
+		// now check if we have/need a container wrapper (with e.g. a ZIP file in a P00 file)
+		if (outname == NULL || *outname == 0) {
+			// no more pattern left, so outfile should be what was required
+			// i.e. we have raw access to container files like D64 or ZIP
+			// (which is similar to the "$" file on non-load secondary addresses)
+			*outfile = file;
+			return CBM_ERROR_OK;
+		}
 
+		// check with the container providers (i.e. endpoint providers)
+		// whether to wrap it 
+		*outfile = provider_wrap(file);
 	}
 
 	return err;
-
+}
 	
 //	int reclen = 0;
 //	int err = CBM_ERROR_FAULT;
@@ -265,8 +277,8 @@ int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile) {
 	file->file.handler = &ep_handler;
 	file->file.parent = NULL;
 
-	file->endpoint = ep;
-	file->channel = chan;
+	file->file.endpoint = ep;
+	//file->channel = chan;
 	file->recordlen = 0;
 
 	*outfile = (file_t*) file;
@@ -279,13 +291,13 @@ int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile) {
 
 // TODO: belongs into endpoint
 static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
-                                        const char *name, char **outname) {
+                                        const char *name, const char **outname) {
 
 	const char *dirname = "/";
 
 	*outname = NULL;
 
-	int err = ep->ptype->opendir(ep, chan, dirname, opts);
+	int err = ep->ptype->opendir(ep, chan, dirname, NULL);
 
 	if (err == CBM_ERROR_OK) {
 		
@@ -294,8 +306,8 @@ static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
 		file->file.endpoint = ep;
 		file->file.parent = NULL;
 		file->file.handler = &ep_handler;
-		file->isdir = 1;
-		file->channel = chan;
+		//file->isdir = 1;
+		//file->channel = chan;
 
 		// remove root directory indicator
 		char *p = name;
@@ -390,6 +402,18 @@ static charconv_t ep_convfrom(file_t *file, const char *tocharset) {
 	return provider_convfrom(xfile->file.endpoint->ptype);
 }
 
+// if the given file is a directory, return the next directory entry wrapped
+// in a file_t. If no file is found, or not a directory, return NULL
+static file_t* ep_direntry(file_t *fp) {
+
+	if (fp->isdir == 0) {
+		return NULL;
+	}
+
+
+}
+
+
 
 
 static handler_t ep_handler = {
@@ -417,6 +441,8 @@ static handler_t ep_handler = {
 
         ep_write,      // write file data
                         //int           (*writefile)(file_t *fp, char *buf, int len, int is_eof);       
+
+	ep_direntry,	// file_t*         (*direntry)(file_t *fp);
 
         // -------------------------
 

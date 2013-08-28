@@ -29,6 +29,14 @@
  */
 int8_t compare_pattern(const char *name, const char *pattern);
 
+/**
+ * compares the given name to the given pattern
+ * and returns true if it matches.
+ * Both names are null-terminated, but if the name is finished, 
+ * and the pattern ends with a path separator, the name still matches.
+ * Also returns the rest of the pattern in the outpattern pointer
+ */
+int8_t compare_dirpattern(const char *name, const char *pattern, const char **outpattern);
 
 #endif
 

@@ -466,6 +466,7 @@ provider_t tcp_provider = {
 	tnp_new,
 	tnp_temp,
 	tnp_free,
+	NULL,	// wrap
 	close_fds,
 	tcp_open,
 	NULL,	//open_dr,

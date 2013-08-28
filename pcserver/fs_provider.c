@@ -1299,6 +1299,7 @@ provider_t fs_provider = {
 	fsp_new,
 	fsp_temp,
 	fsp_free,
+	NULL,		// wrap
 	close_fds,
 	open_file,
 	open_dr,

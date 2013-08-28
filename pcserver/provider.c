@@ -32,6 +32,9 @@
 #include "provider.h"
 #include "errors.h"
 #include "wireformat.h"
+#include "types.h"
+#include "registry.h"
+#include "mem.h"
 
 #include "charconvert.h"
 
@@ -44,51 +47,71 @@ extern provider_t fs_provider;
 extern provider_t di_provider;
 
 //------------------------------------------------------------------------------------
-// Mapping from drive number, which is given on open and commands, to endpoint
-// provider
+// handling the registered list of providers
 
-struct {
+typedef struct {
         provider_t      *provider;
 	charset_t	native_cset_idx;
 	charconv_t	to_provider;
 	charconv_t	from_provider;
-} providers[MAX_NUMBER_OF_PROVIDERS];
+} providers_t;
+
+static void providers_init(const type_t *type, void *obj) {
+	(void)type; // silence unused warning
+
+	providers_t *p = (providers_t*) obj;
+
+	p->provider = NULL;
+	p->to_provider = NULL;
+	p->from_provider = NULL;
+}
+
+static type_t providers_type = {
+	"providers",
+	sizeof(providers_t),
+	providers_init
+};
+
+static registry_t providers;
+
+int provider_register(provider_t *provider) {
+
+	providers_t *p = mem_alloc(&providers_type);
+
+	p->provider = provider;
+	if (provider->native_charset != NULL) {
+		p->native_cset_idx = cconv_getcharset(provider->native_charset);
+	} else {
+		p->native_cset_idx = -1;
+	}
+	p->to_provider = cconv_identity;
+	p->from_provider = cconv_identity;
+
+	reg_append(&providers, p);
+
+	return 0;
+}
+
+// return the index of the given provider in the providers[] table
+static int provider_index(provider_t *prov) {
+
+	for (int i = 0; ; i++) {
+		providers_t *p = reg_get(&providers, i);
+		if (p == NULL) {
+			return -1;
+		}
+		if (p->provider == prov) {
+			return i;
+		}
+	}
+	return -1;
+}
 
 struct {
         int             epno;
         endpoint_t      *ep;
 } eptable[MAX_NUMBER_OF_ENDPOINTS];
 
-
-int provider_register(provider_t *provider) {
-        int i;
-        for(i=0;i<MAX_NUMBER_OF_PROVIDERS;i++) {
-          	if (providers[i].provider == NULL) {
-			providers[i].provider = provider;
-			if (provider->native_charset != NULL) {
-				providers[i].native_cset_idx = cconv_getcharset(provider->native_charset);
-			} else {
-				providers[i].native_cset_idx = -1;
-			}
-			providers[i].to_provider = cconv_identity;
-			providers[i].from_provider = cconv_identity;
-			return 0;
-		}
-        }
-	log_error("No space left in provider table for provider %s\n", provider->name);
-	return -22;
-}
-
-// return the index of the given provider in the providers[] table
-static int provider_index(provider_t *prov) {
-	int i;
-	for (i = 0; i < MAX_NUMBER_OF_PROVIDERS;i++) {
-		if (providers[i].provider == prov) {
-			return i;
-		}
-	}
-	return -1;
-}
 
 //------------------------------------------------------------------------------------
 // character set handling
@@ -111,10 +134,14 @@ void provider_set_ext_charset(char *charsetname) {
 	charset_t ext_cset_idx = cconv_getcharset(charsetname);
 
 	int i;
-	for (i = 0; i < MAX_NUMBER_OF_ENDPOINTS; i++) {
-		if (providers[i].provider != NULL) {
-			providers[i].to_provider = cconv_converter(ext_cset_idx, providers[i].native_cset_idx);
-			providers[i].from_provider = cconv_converter(providers[i].native_cset_idx, ext_cset_idx);
+	for (i = 0; ; i++) {
+		providers_t *p = reg_get(&providers, i);
+		if (p == NULL) {
+			break;
+		}
+		if (p->provider != NULL) {
+			p->to_provider = cconv_converter(ext_cset_idx, p->native_cset_idx);
+			p->from_provider = cconv_converter(p->native_cset_idx, ext_cset_idx);
 		}
 	}
 }
@@ -122,7 +149,7 @@ void provider_set_ext_charset(char *charsetname) {
 charconv_t provider_convto(provider_t *prov) {
 	int idx = provider_index(prov);
 	if (idx >= 0) {
-		return providers[idx].to_provider;
+		return ((providers_t*)reg_get(&providers, idx))->to_provider;
 	} else {
 		log_error("Could not find provider %p\n", prov);
 	}
@@ -133,12 +160,32 @@ charconv_t provider_convto(provider_t *prov) {
 charconv_t provider_convfrom(provider_t *prov) {
 	int idx = provider_index(prov);
 	if (idx >= 0) {
-		return providers[idx].from_provider;
+		return ((providers_t*)reg_get(&providers, idx))->from_provider;
 	} else {
 		log_error("Could not find provider %p\n", prov);
 	}
 	// fallback
 	return cconv_identity;
+}
+
+//------------------------------------------------------------------------------------
+// wrap a given (raw) file into a container file_t (i.e. a directory), when
+// it can be identified by one of the providers - like a d64 file, or a ZIP file
+file_t *provider_wrap(file_t *file) {
+
+	for (int i = 0; ; i++) {
+		providers_t *p = reg_get(&providers, i);
+		if (p == NULL) {
+			return NULL;
+		}
+		if (p->provider->wrap != NULL) {
+			file_t *outfile = p->provider->wrap(file);
+			if (outfile != NULL) {
+				return outfile;
+			}
+		}
+	}
+	return NULL;
 }
 
 
@@ -169,16 +216,19 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 
 	if (provider == NULL) {
 		// check each of the providers in turn
-		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
-			if (providers[i].provider != NULL) {
-				log_debug("Compare to provider %s\n", providers[i].provider->name);
-				const char *pname = providers[i].provider->name;
+		for (int i = 0; ; i++) {
+			providers_t *p = reg_get(&providers, i);
+			if (p != NULL) {
+				log_debug("Compare to provider %s\n", p->provider->name);
+				const char *pname = p->provider->name;
 				if (!strcmp(pname, name)) {
 					// got one
-					provider = providers[i].provider;
+					provider = p->provider;
 					log_debug("Found provider named '%s'\n", provider->name);
 					break;
 				}
+			} else {
+				break;
 			}
 		}
 	}
@@ -230,6 +280,9 @@ void provider_cleanup(endpoint_t *ep) {
 }
 
 void provider_init() {
+
+	reg_init(&providers, "providers", 10);
+
         int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
           eptable[i].epno = -1;
@@ -286,8 +339,12 @@ endpoint_t *provider_lookup(int drive, char **name) {
 
 		unsigned int l = p-(*name);
 		p++; // first char after ':'
-		for (int i = MAX_NUMBER_OF_PROVIDERS-1; i >= 0; i--) {
-			provider_t *prov = providers[i].provider;
+		for (int i = 0; ; i++) {
+			providers_t *pp = reg_get(&providers, i);
+			if (pp == NULL) {
+				break;
+			}
+			provider_t *prov = pp->provider;
 			if (prov != NULL && (strlen(prov->name) == l)
 				&& (strncmp(prov->name, *name, l) == 0)) {
 				// we got a provider, but no endpoint yet

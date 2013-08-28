@@ -31,11 +31,14 @@
  * The structs are allocated by this code, and filled with zero.
  */
 
-typedef struct {
-	int 	numentries;
-	int 	capacity;
-	void 	**entries;
-} registry_t;
+typedef struct _registry registry_t;
+
+struct _registry {
+        const char      *name;
+        int             numentries;
+        int             capacity;
+        void            **entries;
+};
 
 // initialize a registry
 void reg_init(registry_t *reg, const char *name, int initial_capacity);

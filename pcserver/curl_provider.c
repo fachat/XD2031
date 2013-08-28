@@ -888,6 +888,7 @@ provider_t ftp_provider = {
 	ftp_new,
 	ftp_temp,
 	prov_free,
+	NULL,	// wrap
 
 	close_fds,
 	open_rd,
@@ -910,6 +911,7 @@ provider_t http_provider = {
 	http_new,
 	http_temp,
 	prov_free,
+	NULL,	// wrap
 
 	close_fds,
 	open_rd,

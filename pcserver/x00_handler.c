@@ -30,6 +30,9 @@
 #include "errors.h"
 #include "wireformat.h"
 #include "openpars.h"
+#include "wildcard.h"
+
+#define	MAX_NAME_LEN	17	/* 16 chars plus zero-terminator */
 
 static handler_t x00_handler;
 
@@ -41,11 +44,22 @@ typedef struct {
 	file_t		file;		// embedded
 	uint8_t		recordlen;
 	uint8_t		filetype;
+	char		name[MAX_NAME_LEN];
 } x00_file_t;
+
+static void x00_file_init(const type_t *t, void *p) {
+	(void) t; // silence unused warning
+
+	x00_file_t *x = (x00_file_t*) p;
+
+	x->filetype = FS_DIR_TYPE_UNKNOWN;
+	memset(x->name, 0, MAX_NAME_LEN);
+}
 
 static type_t x00_file_type = {
 	"x00_file",
-	sizeof(x00_file_t)
+	sizeof(x00_file_t),
+	x00_file_init
 };
 
 /*
@@ -53,9 +67,12 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, const char *name, const char *opts, char **outname) {
+static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const char *opts, const char **outname) {
 
 	(void) type;
+
+	// check the file name of the given file_t, if it actually is a Pxx file.
+	const char *name = infile->handler->getname(infile);
 
 	// must be at least one character, plus "." plus "x00" ending
 	if (name == NULL || strlen(name) < 5) {
@@ -140,6 +157,16 @@ static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, con
 		return CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 
+	if (x00_buf[0x18] != 0) {
+		// corrupt header - zero is needed here for string termination
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
+	// now compare the original file name with the search pattern
+	if (!compare_dirpattern((char*)&(x00_buf[8]), inname, outname)) {
+		return CBM_ERROR_FILE_NOT_FOUND;
+	}
+
 	// done, alloc x00_file and prepare for operation
 	// no seek necessary, read pointer is already at start of payload
 
@@ -149,6 +176,8 @@ static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, con
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
+	strncpy(file->name, (char*)&(x00_buf[8]), MAX_NAME_LEN);
+
 	file->recordlen = x00_buf[0x19];
 	file->filetype = ftype;
 
@@ -157,23 +186,24 @@ static int x00_resolve(const file_t *infile, file_t **outfile, uint8_t type, con
 	return CBM_ERROR_OK;
 }
 
-static void x00_close(file_t *file) {
+static void x00_close(file_t *file, int recurse) {
 	x00_file_t *xfile = (x00_file_t*)file;
 
 	// no resources to clean here, so just forward the close
-	xfile->file.parent->handler->close(xfile->file.parent);
+	// we are a resolve wrapper, so close the inner file as well
+	xfile->file.parent->handler->close(xfile->file.parent, recurse);
 
 	// and then free the file struct memory
 	mem_free(xfile);
 }
 
-static uint16_t x00_recordlen(file_t *file) {
+static uint16_t x00_recordlen(const file_t *file) {
 	x00_file_t *xfile = (x00_file_t*)file;
 
 	return xfile->recordlen;
 }
 
-static uint8_t x00_filetype(file_t *file) {
+static uint8_t x00_filetype(const file_t *file) {
 	x00_file_t *xfile = (x00_file_t*)file;
 
 	return xfile->filetype;
@@ -195,6 +225,12 @@ static int x00_write(file_t *file, char *buf, int len, int writeflg) {
 	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
 }
 
+static const char *x00_getname(const file_t *file) {
+	x00_file_t *xfile = (x00_file_t*)file;
+
+	return xfile->name;
+}
+
 
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
@@ -202,7 +238,7 @@ static handler_t x00_handler = {
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
 
-	x00_close, 	//void		(*close)(file_t *fp);	// close the file
+	x00_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
 	NULL,		//int		(*open)(file_t *fp); 	// open a file
 
@@ -227,8 +263,8 @@ static handler_t x00_handler = {
 
 	x00_recordlen,	//uint16_t	(*recordlen)(file_t *fp);	// return the record length for file
 
-	x00_filetype	//uint8_t	(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
-
+	x00_filetype,	//uint8_t	(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
+	x00_getname	// const char	(*getname)(file_t *fp);		// return real name of file
 };
 
 

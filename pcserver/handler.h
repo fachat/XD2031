@@ -34,9 +34,7 @@
 // you can CD into a D64 file stored in a D81 image read from an FTP 
 // server...
 
-typedef struct _file file_t;
-
-typedef struct {
+struct _handler {
 	const char	*name;				// handler name, for debugging
 	const char	*native_charset;		// get name of the native charset for that handler
 
@@ -55,8 +53,8 @@ typedef struct {
 							// can directly be given into the next 
 							// (child) resolve method (i.e. path separators
 							// are filtered out). 
-	int		(*resolve)(const file_t *infile, file_t **outfile, 
-					uint8_t type, const char *name, const char *opts, char **outname); 
+	int		(*resolve)(file_t *infile, file_t **outfile, 
+				uint8_t type, const char *name, const char *opts, const char **outname); 
 
 							// close the file; do so recursively by closing
 							// parents if recurse is set
@@ -83,30 +81,16 @@ typedef struct {
 
 	// -------------------------
 
-	uint16_t	(*recordlen)(file_t *fp);	// return the record length for file
+	uint16_t	(*recordlen)(const file_t *fp);	// return the record length for file
 
-	uint8_t		(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
+	uint8_t		(*filetype)(const file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
 
-} handler_t;
+	const char*	(*getname)(const file_t *fp);		// return a pointer to the real file name
+};
 
 // values to be set in the out parameter readflag for readfile()
 #define	READFLAG_EOF	1
 #define	READFLAG_DENTRY	2
-
-// base struct for a file. Is extended in the separate handlers with handler-specific
-// information.
-//
-// The endpoint is recorded for each file and contains the "uppermost" endpoint. A d64 file
-// in a zip file in a file system file has three stacked endpoints, one for the file system,
-// one for th zip file, and one for the d64. When FS_MOVEing a file, the endpoints of source
-// and target are compared, and if identical, the move is forwarded to the endpoint, otherwise
-// the file is copied.
-struct _file {
-	handler_t	*handler;
-	endpoint_t	*endpoint;	// endpoint for that file
-	file_t		*parent;	// for resolving ".."
-	int		isdir;		// when set, is directory
-};
 
 /*
  * register a new provider, usually called at startup
@@ -121,7 +105,7 @@ void handler_init(void);
 /*
  * find a file
  */
-file_t *handler_find(file_t *parent, uint8_t type, const char *name, const char *opts);
+file_t *handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, const char **outname);
 
 /*
  * resolve a file_t from an endpoint, i.e. being a root file_t for further resolves into

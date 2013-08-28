@@ -19,31 +19,25 @@
 
 ****************************************************************************/
 
-#ifndef REGISTRY_H
-#define REGISTRY_H
 
 #include <stdio.h>
 
 #include "types.h"
 #include "log.h"
 #include "mem.h"
+#include "registry.h"
+
 
 static type_t entries_t = {
 	"registry_entry",
-	sizeof(void*)
+	sizeof(void*),
+	NULL
 };
 
 /*
  * This code wraps a registry for structs (of the same type).
  * The structs are allocated by this code, and filled with zero.
  */
-
-typedef struct {
-	const char 	*name;
-	int 		numentries;
-	int 		capacity;
-	void 		**entries;
-} registry_t;
 
 // initialize a registry
 void reg_init(registry_t *reg, const char *name, int initial_capacity) {
@@ -86,4 +80,3 @@ void *reg_get(registry_t *reg, int position) {
 	return reg->entries[position];
 }
 
-#endif

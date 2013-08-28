@@ -48,6 +48,8 @@
 #define MAX_LEN_OF_PROVIDER_NAME	16
 
 typedef struct _endpoint endpoint_t;
+typedef struct _file file_t;
+typedef struct _handler handler_t;
 
 typedef struct {
 	const char	*name;				// provider name, used in ASSIGN as ID
@@ -57,6 +59,8 @@ typedef struct {
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
+	file_t*		(*wrap)(file_t *file);		// check if the given file is for the provider 
+							// and wrap it into a container file_t
 	// file-related	
 	void		(*close)(endpoint_t *ep, int chan);	// close a channel
         int             (*open)(endpoint_t *ep, int chan, const char *name, const char *opts, int *reclen, int type); // open a file; type is the FS_OPEN_* command value
@@ -81,6 +85,21 @@ typedef struct {
 struct _endpoint {
 	provider_t	*ptype;
 	int		is_temporary;
+};
+
+// base struct for a file. Is extended in the separate handlers with handler-specific
+// information.
+//
+// The endpoint is recorded for each file and contains the "uppermost" endpoint. A d64 file
+// in a zip file in a file system file has three stacked endpoints, one for the file system,
+// one for th zip file, and one for the d64. When FS_MOVEing a file, the endpoints of source
+// and target are compared, and if identical, the move is forwarded to the endpoint, otherwise
+// the file is copied.
+struct _file {
+        handler_t       *handler;
+        endpoint_t      *endpoint;      // endpoint for that file
+        file_t          *parent;        // for resolving ".."
+        int             isdir;          // when set, is directory
 };
 
 int provider_assign(int drive, const char *name, const char *assign_to);
@@ -137,6 +156,9 @@ charconv_t provider_convto(provider_t *prov);
 // get the converter FROM the provider
 charconv_t provider_convfrom(provider_t *prov);
 
+// wrap a given (raw) file into a container file_t (i.e. a directory), when
+// it can be identified by one of the providers - like a d64 file, or a ZIP file
+file_t *provider_wrap(file_t *file);
 
 #endif
 
