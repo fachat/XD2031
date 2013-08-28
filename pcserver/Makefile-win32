@@ -30,18 +30,18 @@ PKG_CONFIG=$(CROSS)pkg-config
 
 COMMONC=fsser.c fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c
 COMMONC+=serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
-COMMONC+=openpars.c curl_provider.c
+COMMONC+=openpars.c curl_provider.c diskimgs.c
 COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h
 COMMONH+=provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h
-COMMONH+=../common/petscii.h ../common/charconvert.h openpars.h 
+COMMONH+=../common/petscii.h ../common/charconvert.h openpars.h diskimgs.h
 #COMMONC+=tcp_provider.c 
 
 OBJECTS=$(COMMONC:.c=.o)
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
-LIBS=-lcurl -static -Wl,-Bsymbolic-functions -lssh2 -lidn -lgnutls -lwldap32 -lz -lnettle
-LIBS+=-lgcrypt -lintl -liconv -lhogweed -lgmp -lgnutls-openssl -lgpg-error -lws2_32 
+LIBS=-static -Wl,-Bsymbolic-functions -lcurl -lssh2 -lidn -lgcrypt -lgnutls -lcrypt32 -lwldap32 -lz -lnettle
+LIBS+=-lintl -liconv -lhogweed -lgmp -lgnutls-openssl -lgpg-error -lws2_32
 CFLAGS+=-DCURL_STATICLIB
 
 # fstcp builds a version that listens on a TCP/IP port - but there is not
@@ -51,7 +51,7 @@ all: $(COMMONC) $(COMMONH) $(FSSER_EXE)
 
 $(FSSER_EXE): $(OBJECTS)
 	$(V2) LINK $@
-	$(V1) $(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS) 
+	$(V1) $(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $@
 
 .c.o:
 	$(V2) CC $<
