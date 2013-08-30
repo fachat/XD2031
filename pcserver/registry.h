@@ -50,4 +50,8 @@ void reg_append(registry_t *reg, void *ptr);
 // returns NULL if position is behind last entry
 void *reg_get(registry_t *reg, int position);
 
+// remove an entry from the registry
+// Note: linear with registry size
+void reg_remove(registry_t *reg, void *ptr);
+
 #endif

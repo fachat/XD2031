@@ -59,14 +59,9 @@ typedef struct {
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
+	file_t*		(*root)(endpoint_t *ep);	// root directory for the endpoint
 	file_t*		(*wrap)(file_t *file);		// check if the given file is for the provider 
 							// and wrap it into a container file_t
-	// file-related	
-	void		(*close)(endpoint_t *ep, int chan);	// close a channel
-        int             (*open)(endpoint_t *ep, int chan, const char *name, const char *opts, int *reclen, int type); // open a file; type is the FS_OPEN_* command value
-	int		(*opendir)(endpoint_t *ep, int chan, const char *name, const char *opts); // open a directory for reading
-	int		(*readfile)(endpoint_t *ep, int chan, char *retbuf, int len, int *readflag);	// read file data
-	int		(*writefile)(endpoint_t *ep, int chan, char *buf, int len, int is_eof);	// write a file
 
 	// command channel
 	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete

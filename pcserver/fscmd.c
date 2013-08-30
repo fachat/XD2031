@@ -480,29 +480,27 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			if (prov->open != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
-					prov->name, name);
-				rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
-				retbuf[FSP_DATA] = rv;
-				if (rv == CBM_ERROR_OPEN_REL) {
-					record = fp->handler->recordlen(fp);
-					retbuf[FSP_DATA+1] = record & 0xff;
-					retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-					retbuf[FSP_LEN] = FSP_DATA + 3;	
+			provider_convto(prov)(name, convlen, name, convlen);
+			options = get_options(name, len - FSP_DATA - 1);
+			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
+				prov->name, name);
+			rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
+			retbuf[FSP_DATA] = rv;
+			if (rv == CBM_ERROR_OPEN_REL) {
+				record = fp->handler->recordlen(fp);
+				retbuf[FSP_DATA+1] = record & 0xff;
+				retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
+				retbuf[FSP_LEN] = FSP_DATA + 3;	
+			}
+			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+				channel_set(tfd, fp);
+				break; // out of switch() to escape provider_cleanup()
+			} else {
+				if (fp != NULL) {
+					fp->handler->close(fp, 1);
+					fp = NULL;
 				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					channel_set(tfd, fp);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					if (fp != NULL) {
-						fp->handler->close(fp, 1);
-						fp = NULL;
-					}
-					log_rv(rv);
-				}
+				log_rv(rv);
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
@@ -513,19 +511,16 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			// not all providers support directory operation
-			if (prov->opendir != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				options = get_options(name, len - FSP_DATA - 1);
-				log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-				rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
-				retbuf[FSP_DATA] = rv;
-				if (rv == 0) {
-					channel_set(tfd, fp);
-					break; // out of switch() to escape provider_cleanup()
-				} else {
-					log_rv(rv);
-				}
+			provider_convto(prov)(name, convlen, name, convlen);
+			options = get_options(name, len - FSP_DATA - 1);
+			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
+			rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
+			retbuf[FSP_DATA] = rv;
+			if (rv == 0) {
+				channel_set(tfd, fp);
+				break; // out of switch() to escape provider_cleanup()
+			} else {
+				log_rv(rv);
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);

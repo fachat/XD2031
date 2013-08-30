@@ -54,6 +54,7 @@
 #include "channel.h"
 #include "os.h"
 #include "openpars.h"
+#include "registry.h"
 
 #include "log.h"
 
@@ -65,7 +66,11 @@
 
 //#define	min(a,b)	(((a)<(b))?(a):(b))
 
+extern provider_t fs_provider;
+extern handler_t fs_file_handler;
+
 typedef struct {
+	file_t		file;
 	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
@@ -77,14 +82,53 @@ typedef struct {
 	unsigned char	block_ptr;
 } File;
 
+static void file_init(const type_t *t, void *obj) {
+	(void) t;	// silence unused warning
+	File *fp = (File*) obj;
+
+	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
+
+	fp->file.handler = &fs_file_handler;
+
+        fp->chan = -1;
+	fp->fp = NULL;
+	fp->dp = NULL;
+	fp->block = NULL;
+	fp->block_ptr = 0;
+	fp->recordlen = 0;	// not a rel file
+}
+
+static type_t file_type = {
+	"fs_file",
+	sizeof(File),
+	file_init
+};
+
 typedef struct {
 	// derived from endpoint_t
 	endpoint_t	 	base;
 	// payload
 	char			*basepath;			// malloc'd base path
 	char			*curpath;			// malloc'd current path
-	File 			files[MAXFILES];
+	registry_t		files;
 } fs_endpoint_t;
+
+static void endpoint_init(const type_t *t, void *obj) {
+	(void) t;	// silence unused warning
+	fs_endpoint_t *fsep = (fs_endpoint_t*)obj;
+	reg_init(&(fsep->files), "fs_endpoint_files", 16);
+
+	fsep->basepath = NULL;
+	fsep->curpath = NULL;
+
+	fsep->base.ptype = &fs_provider;
+}
+
+static type_t endpoint_type = {
+	"fs_endpoint",
+	sizeof(fs_endpoint_t),
+	endpoint_init
+};
 
 static type_t block_type = {
 	"direct_buffer",
@@ -101,25 +145,24 @@ static type_t record_type = {
 static int expand_relfile(File *file, long cursize, long curpos);
 static size_t file_get_size(FILE *fp);
 
-void fsp_init() {
+static void fsp_init() {
+	provider_register(&fs_provider);
 }
 
-extern provider_t fs_provider;
+static File *reserve_file(fs_endpoint_t *fsep, int chan) {
 
-static void init_fp(File *fp) {
+	File *file = mem_alloc(&file_type);
 
-	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
+	file->chan = chan;
+	file->file.endpoint = (endpoint_t*)fsep;
 
-        fp->chan = -1;
-	fp->fp = NULL;
-	fp->dp = NULL;
-	fp->block = NULL;
-	fp->block_ptr = 0;
-	fp->recordlen = 0;	// not a rel file
+	reg_append(&fsep->files, file);
+
+	return file;
 }
 
 // close a file descriptor
-static int close_fd(File *file) {
+static int close_fd(File *file, int recurse) {
 
 	if (file->chan < 0) {
 		return CBM_ERROR_NO_CHANNEL;
@@ -144,17 +187,23 @@ static int close_fd(File *file) {
 		mem_free(file->block);
 		file->block = NULL;
 	}
-	init_fp(file);
+
+	if (recurse && file->file.parent != NULL) {
+		file->file.parent->handler->close(file->file.parent, recurse);
+	}
+
+	// remove file from endpoint registry
+	reg_remove(&(((fs_endpoint_t*)file->file.endpoint)->files), file);
 	return er;
 }
 
 
 static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
-        int i;
-        for(i=0;i<MAXFILES;i++) {
-	        close_fd(&(cep->files[i]));
-        }
+	File *f;
+	while ((f = (File*)reg_get(&cep->files, 0)) != NULL) {
+		close_fd(f, 1);
+	}
 	mem_free(cep->basepath);
 	mem_free(cep->curpath);
         mem_free(ep);
@@ -172,14 +221,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
 
 	// alloc and init a new endpoint struct
-	fs_endpoint_t *fsep = malloc(sizeof(fs_endpoint_t));
-	fsep->basepath = NULL;
-	fsep->curpath = NULL;
-        for(int i=0;i<MAXFILES;i++) {
-		init_fp(&(fsep->files[i]));
-        }
-
-	fsep->base.ptype = &fs_provider;
+	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
 
 	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
 				path);
@@ -281,42 +323,6 @@ static int errno_to_error(int err) {
 	}
 }
 
-
-// ----------------------------------------------------------------------------------
-//
-
-static File *reserve_file(endpoint_t *ep, int chan) {
-        fs_endpoint_t *cep = (fs_endpoint_t*) ep;
-
-        for (int i = 0; i < MAXFILES; i++) {
-                if (cep->files[i].chan == chan) {
-                        close_fd(&(cep->files[i]));
-                }
-                if (cep->files[i].chan < 0) {
-                        File *fp = &(cep->files[i]);
-                        init_fp(fp);
-                        fp->chan = chan;
-
-			log_debug("reserving file %p for chan %d\n", fp, chan);
-
-                        return &(cep->files[i]);
-                }
-        }
-        log_warn("Did not find free fs session for channel=%d\n", chan);
-        return NULL;
-}
-
-static File *find_file(endpoint_t *ep, int chan) {
-        fs_endpoint_t *cep = (fs_endpoint_t*) ep;
-
-        for (int i = 0; i < MAXFILES; i++) {
-                if (cep->files[i].chan == chan) {
-                        return &(cep->files[i]);
-                }
-        }
-        log_warn("Did not find fs session for channel=%d\n", chan);
-        return NULL;
-}
 
 // ----------------------------------------------------------------------------------
 // helpers
@@ -457,7 +463,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			// buffer into the device
 			// channel is closed by device with separate FS_CLOSE
 
-			file = reserve_file(ep, channel);
+			file = reserve_file((fs_endpoint_t*)ep, channel);
 			open_block_channel(file);
 			// copy the file contents into the buffer
 			// test
@@ -474,7 +480,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			// U2 basically opens a short-lived channel to write the contents of a
 			// buffer from the device
 			// channel is closed by device with separate FS_CLOSE
-			file = reserve_file(ep, channel);
+			file = reserve_file((fs_endpoint_t*)ep, channel);
 			open_block_channel(file);
 
 			handler_resolve_block(ep, channel, &fp);
@@ -494,82 +500,62 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 	return CBM_ERROR_ILLEGAL_T_OR_S;
 }
 
-static int read_block(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-	File *file = find_file(ep, tfd);
+static int read_block(File *file, char *retbuf, int len, int *eof) {
 
 #ifdef DEBUG_BLOCK
 	log_debug("read_block: file=%p, len=%d\n", file, len);
 #endif
 
-	if (file != NULL) {
-		int avail = 256 - file->block_ptr;
-		int n = len;
-		if (len >= avail) {
-			n = avail;
-			*eof = READFLAG_EOF;
-		}
+	int avail = 256 - file->block_ptr;
+	int n = len;
+	if (len >= avail) {
+		n = avail;
+		*eof = READFLAG_EOF;
+	}
 
 #ifdef DEBUG_BLOCK
-		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+	log_debug("read_block: avail=%d, n=%d\n", avail, n);
 #endif
 
-		if (n > 0) {
-			memcpy(retbuf, file->block+file->block_ptr, n);
-			file->block_ptr += n;
-		}
-		return n;
+	if (n > 0) {
+		memcpy(retbuf, file->block+file->block_ptr, n);
+		file->block_ptr += n;
 	}
-	return -CBM_ERROR_FAULT;
+	return n;
 }
 
-static int write_block(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
-
-	(void) is_eof;
-
-	File *file = find_file(ep, tfd);
+static int write_block(File *file, char *buf, int len, int is_eof) {
 
 	(void)is_eof; // silence warning unused parameter
 
 	log_debug("write_block: file=%p, len=%d\n", file, len);
 
-	if (file != NULL) {
-		int avail = 256 - file->block_ptr;
-		int n = len;
-		if (len >= avail) {
-			n = avail;
-		}
+	int avail = 256 - file->block_ptr;
+	int n = len;
+	if (len >= avail) {
+		n = avail;
+	}
 
-		log_debug("read_block: avail=%d, n=%d\n", avail, n);
+	log_debug("read_block: avail=%d, n=%d\n", avail, n);
 
-		if (n > 0) {
-			memcpy(file->block+file->block_ptr, buf, n);
-			file->block_ptr += n;
-		}
+	if (n > 0) {
+		memcpy(file->block+file->block_ptr, buf, n);
+		file->block_ptr += n;
+	}
 
 #ifdef DEBUG_BLOCK
-		log_debug("Block:");
-		for (int i = 0; i < 256; i++) {
-			log_debug(" %02x", file->block[i] & 0xff);
-		}
-#endif
-		return CBM_ERROR_OK;
+	log_debug("Block:");
+	for (int i = 0; i < 256; i++) {
+		log_debug(" %02x", file->block[i] & 0xff);
 	}
-	return -CBM_ERROR_FAULT;
+#endif
+	return CBM_ERROR_OK;
 }
 
 // ----------------------------------------------------------------------------------
 // file command handling
 
-
-// close a file descriptor
-static void close_fds(endpoint_t *ep, int tfd) {
-	File *file = find_file(ep, tfd); // ((fs_endpoint_t*)ep)->files;
-	if (file != NULL) {
-		close_fd(file);
-		init_fp(file);
-	}
-}
-
+/*
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int fs_cmd) {
 	int er = CBM_ERROR_FAULT;
@@ -581,13 +567,14 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 
 	openpars_process_options((const uint8_t*) opts, &type, &recordlen);
 
-	log_info("open file (cmd=%d) for fd=%d in dir %s with name %s (type=%c, recordlen=%d)\n", fs_cmd, tfd, fsep->curpath, buf, 0x30+type, recordlen);
+	log_info("open file (cmd=%d) for fd=%d in dir %s with name %s (type=%c, recordlen=%d)\n", 
+						fs_cmd, tfd, fsep->curpath, buf, 0x30+type, recordlen);
 
 	if (fs_cmd == FS_OPEN_RW) {
 		if (*buf == '#') {
 			// ok, open a direct block channel
 
-			File *file = reserve_file(ep, tfd);
+			File *file = reserve_file(fsep, tfd);
 
 			int er = open_block_channel(file);
 
@@ -692,7 +679,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			}
 		}
 
-		file = reserve_file(ep, tfd);
+		file = reserve_file(fsep, tfd);
 
 		if (file) {
 			file->fp = fp;
@@ -727,7 +714,9 @@ exit:
 	mem_free(filename);
 	return er;
 }
+*/
 
+/*
 // open a directory read
 static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 
@@ -742,13 +731,13 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 		return CBM_ERROR_NO_PERMISSION;
 	}
  
-	File *file = reserve_file(ep, tfd);
+	File *file = reserve_file(fsep, tfd);
 
 	if (file != NULL) {
 
 		// save pattern for later comparisons
 		strcpy(file->dirpattern, buf);
-		DIR *dp = opendir(fsep->curpath /*buf+FSP_DATA*/);
+		DIR *dp = opendir(fsep->curpath); //buf+FSP_DATA);
 
 		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
 							tfd, (void*)file, (void*)dp);
@@ -767,6 +756,7 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 	}
 	return CBM_ERROR_FAULT;
 }
+*/
 
 // TODO: put that ... into dir.c?
 static size_t file_get_size(FILE *fp) {
@@ -787,6 +777,7 @@ static size_t file_get_size(FILE *fp) {
 //
 // returns the number of bytes read (>= 0), or a negative error number
 //
+/*
 static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
@@ -819,42 +810,39 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	}
 	return -CBM_ERROR_FAULT;
 }
+*/
 
 // read file data
 //
 // returns positive number of bytes read, or negative error number
 //
-static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-	File *file = find_file(ep, tfd);
+static int read_file(File *file, char *retbuf, int len, int *eof) {
 
-	if (file != NULL) {
-		int rv = 0;
+	int rv = 0;
 
-		  FILE *fp = file->fp;
+	FILE *fp = file->fp;
 
-		  int n = fread(retbuf, 1, len, fp);
-		  rv = n;
-		  if(n<len) {
+	int n = fread(retbuf, 1, len, fp);
+	rv = n;
+	if(n<len) {
 		    // short read, so either error or eof
 		    *eof = READFLAG_EOF;
-		    log_debug("short read on %d\n", tfd);
-		  } else {
+		    log_debug("short read on %d\n", file->chan);
+	} else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
 		    int eofc = fgetc(fp);
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = READFLAG_EOF;
-		      log_debug("EOF on read %d\n", tfd);
+		      log_debug("EOF on read %d\n", file->chan);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
 		      ungetc(eofc, fp);
 		      // do not send EOF
 		    }
-		  }
-		return rv;
 	}
-	return -CBM_ERROR_FAULT;
+	return rv;
 }
 
 static int expand_relfile(File *file, long cursize, long curpos) {
@@ -941,47 +929,46 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 }
 
 // write file data
-static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
-	File *file = find_file(ep, tfd);
+static int write_file(File *file, char *buf, int len, int is_eof) {
 
 	//log_debug("write_file: file=%p\n", file);
 
-	if (file != NULL) {
-		FILE *fp = file->fp;
+	FILE *fp = file->fp;
 
-		if (file->recordlen > 0) {
-			long curpos = ftell(fp);
-			long cursize = file_get_size(fp);
-			log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
-			// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
-			// record
-			if ((curpos + file->recordlen) > cursize) {
-				// fill up such that currently written record has space
-				expand_relfile(file, cursize, curpos + file->recordlen);
-				// back to original file position
-				fseek(fp, curpos, SEEK_SET);
-			}
+	if (file->recordlen > 0) {
+		long curpos = ftell(fp);
+		long cursize = file_get_size(fp);
+		log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
+		// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
+		// record
+		if ((curpos + file->recordlen) > cursize) {
+			// fill up such that currently written record has space
+			expand_relfile(file, cursize, curpos + file->recordlen);
+			// back to original file position
+			fseek(fp, curpos, SEEK_SET);
 		}
+	}
 
-		if(fp) {
-		  // TODO: evaluate return value
-		  int n = fwrite(buf, 1, len, fp);
-		  if (n < len) {
-			// short write indicates an error
-			log_debug("Close fd=%d on short write!\n", tfd);
-			close_fds(ep, tfd);
-			return -CBM_ERROR_WRITE_ERROR;
-		  }
-		  if(is_eof) {
-		    log_debug("fd=%d received an EOF on write file (ignored)\n", tfd);
-		    //close_fds(ep, tfd);
-		  }
-		  return CBM_ERROR_OK;
-		}
+	if(fp) {
+	  // TODO: evaluate return value
+	  int n = fwrite(buf, 1, len, fp);
+	  if (n < len) {
+		// short write indicates an error
+		log_debug("Close fd=%d on short write!\n", file->chan);
+		fclose(fp);
+		file->fp = NULL;
+		return -CBM_ERROR_WRITE_ERROR;
+	  }
+	  if(is_eof) {
+	    log_debug("fd=%d received an EOF on write file (ignored)\n", file->chan);
+	    //close_fds(ep, tfd);
+	  }
+	  return CBM_ERROR_OK;
 	}
 	return -CBM_ERROR_FAULT;
 }
 
+/*
 // position to record
 static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 
@@ -1027,6 +1014,7 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 	}
 	return CBM_ERROR_DRIVE_NOT_READY;
 }
+*/
 
 // ----------------------------------------------------------------------------------
 // command channel
@@ -1247,50 +1235,65 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 // ----------------------------------------------------------------------------------
 
 
-static int readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof) {
+static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
-	File *f = find_file(ep, chan); // ((fs_endpoint_t*)ep)->files;
+	File *f = (File*) fp;
 #ifdef DEBUG_READ
 	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, block=%p, eof=%d)\n",
 		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *eof);
 #endif
 	int rv = 0;
 
-	if (f->dp) {
-		rv = read_dir(ep, chan, retbuf, len, eof);
-	} else
 	if (f->fp) {
 		// read a file
 		// standard file read
-		rv = read_file(ep, chan, retbuf, len, eof);
+		rv = read_file(f, retbuf, len, readflag);
 	} else
 	if (f->block != NULL) {
 		// direct channel block buffer read
-		rv = read_block(ep, chan, retbuf, len, eof);
+		rv = read_block(f, retbuf, len, readflag);
 	}
 	return rv;
 }
 
 // write file data
-static int writefile(endpoint_t *ep, int chan, char *buf, int len, int is_eof) {
-	File *file = find_file(ep, chan);
+static int writefile(file_t *fp, char *buf, int len, int is_eof) {
+
+	File *file = (File*) fp;
 
 	int rv = -CBM_ERROR_FAULT;
 
 	//log_debug("write_file: file=%p\n", file);
 
-	if (file != NULL) {
-
-		if (file->block != NULL) {
-			rv = write_block(ep, chan, buf, len, is_eof);
-		} else {
-			rv = write_file(ep, chan, buf, len, is_eof);
-		}	
-	}
+	if (file->block != NULL) {
+		rv = write_block(file, buf, len, is_eof);
+	} else {
+		rv = write_file(file, buf, len, is_eof);
+	}	
 	return rv;
 }
 
+static uint16_t recordlen(const file_t *fp) {
+	return ((File*)fp)->recordlen;
+}
+
 // ----------------------------------------------------------------------------------
+
+handler_t fs_file_handler = {
+	"fs_file_handler",
+	"ASCII",
+	NULL,			// resolve
+	NULL,			// close
+	NULL,			// open
+	NULL,			// convfrom
+	NULL,			// seek
+	readfile,		// readfile
+	writefile,		// writefile
+	NULL,			// direntry
+	recordlen,		// recordlen
+	NULL,			// filetype
+	NULL			// getname
+};
 
 provider_t fs_provider = {
 	"fs",
@@ -1299,18 +1302,14 @@ provider_t fs_provider = {
 	fsp_new,
 	fsp_temp,
 	fsp_free,
+	NULL,		// root
 	NULL,		// wrap
-	close_fds,
-	open_file,
-	open_dr,
-	readfile,
-	writefile,
 	fs_delete,
 	fs_rename,
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	fs_position,
+	NULL,		//fs_position,
 	fs_direct
 };
 

@@ -21,6 +21,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 
 #include "types.h"
 #include "log.h"
@@ -79,4 +80,21 @@ void *reg_get(registry_t *reg, int position) {
 	}
 	return reg->entries[position];
 }
+
+// remove an entry from the registry
+// Note: linear with registry size
+void reg_remove(registry_t *reg, void *ptr) {
+
+	for (int i = reg->numentries-1; i >= 0; i--) {
+		if (reg->entries[i] == ptr) {
+			int size = (reg->numentries - 1 - i) * sizeof(void*);
+			if (size > 0) {
+				memmove(reg->entries+i, reg->entries+i+1, size);
+			}
+			reg->numentries--;
+		}
+		break;
+	}
+}
+
 

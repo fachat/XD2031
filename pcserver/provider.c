@@ -40,11 +40,13 @@
 
 
 // TODO: this is ... awkward
+/*
 extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
-extern provider_t fs_provider;
 extern provider_t di_provider;
+*/
+extern provider_t fs_provider;
 
 //------------------------------------------------------------------------------------
 // handling the registered list of providers
@@ -290,8 +292,8 @@ void provider_init() {
 
         // manually handle the initial provider
         fs_provider.init();
-	provider_register(&fs_provider);
 
+/*
         ftp_provider.init();
 	provider_register(&ftp_provider);
 
@@ -305,7 +307,7 @@ void provider_init() {
 
         di_provider.init();
 	provider_register(&di_provider);
-
+*/
         //eptable[0].epno = 0;            // drive 0
         //eptable[0].ep = fs_provider.newep(NULL, ".");
 
