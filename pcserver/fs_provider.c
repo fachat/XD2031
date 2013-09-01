@@ -413,6 +413,8 @@ exit:
 	return res;
 }
 
+
+
 // ----------------------------------------------------------------------------------
 // commands as sent from the device
 
@@ -716,13 +718,11 @@ exit:
 }
 */
 
-/*
+
 // open a directory read
-static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
+static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *opts, File **outfile) {
 
 	(void)opts; // silence warning unused parameter
-
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
        	char *fullname = malloc_path(fsep->curpath, buf);
 	os_patch_dir_separator(fullname);
@@ -746,17 +746,32 @@ static int open_dr(endpoint_t *ep, int tfd, const char *buf, const char *opts) {
 		  file->fp = NULL;
 		  file->dp = dp;
 		  file->is_first = 1;
+		  *outfile = file;
 		  return CBM_ERROR_OK;
 		} else {
 		  log_errno("Error opening directory");
 		  int er = errno_to_error(errno);
-		  close_fd(file);
+		  close_fd(file, 1);
 		  return er;
 		}
 	}
 	return CBM_ERROR_FAULT;
 }
-*/
+
+// root directory
+static file_t *fsp_root(endpoint_t *ep) {
+	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+
+	File *file = NULL;
+
+	int err = open_dr(fsep, -1, "/", NULL, &file);
+
+	if (err == CBM_ERROR_OK) {
+		return (file_t*) file;
+	}
+	return NULL;
+}
+
 
 // TODO: put that ... into dir.c?
 static size_t file_get_size(FILE *fp) {
@@ -811,6 +826,27 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 	return -CBM_ERROR_FAULT;
 }
 */
+
+static int direntry(file_t *fp, file_t **outentry) {
+	  if (file->is_first) {
+		    file->is_first = 0;
+		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
+		    rv = l;
+		    file->de = dir_next(file->dp, file->dirpattern);
+		    return rv;
+	  }
+	  if(!file->de) {
+		    *eof |= READFLAG_EOF;
+		    int l = dir_fill_disk(retbuf, fsep->curpath);
+		    rv = l;
+		    return rv;
+	  }
+	  int l = dir_fill_entry(retbuf, fsep->curpath, file->de, len);
+	  rv = l;
+	  // prepare for next read (so we know if we're done)
+	  file->de = dir_next(file->dp, file->dirpattern);
+	  return rv;
+}
 
 // read file data
 //
@@ -1289,7 +1325,7 @@ handler_t fs_file_handler = {
 	NULL,			// seek
 	readfile,		// readfile
 	writefile,		// writefile
-	NULL,			// direntry
+	direntry,		// direntry
 	recordlen,		// recordlen
 	NULL,			// filetype
 	NULL			// getname
@@ -1302,14 +1338,13 @@ provider_t fs_provider = {
 	fsp_new,
 	fsp_temp,
 	fsp_free,
-	NULL,		// root
-	NULL,		// wrap
+	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
+	NULL,			// wrap not needed on fs_provider
 	fs_delete,
 	fs_rename,
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	NULL,		//fs_position,
 	fs_direct
 };
 

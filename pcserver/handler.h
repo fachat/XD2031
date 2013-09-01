@@ -77,7 +77,7 @@ struct _handler {
 	int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
 							// get the next directory entry (NULL if end)
-	file_t*		(*direntry)(file_t *fp);
+	int		(*direntry)(file_t *fp, file_t **outentry);
 
 	// -------------------------
 
@@ -85,7 +85,7 @@ struct _handler {
 
 	uint8_t		(*filetype)(const file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
 
-	const char*	(*getname)(const file_t *fp);		// return a pointer to the real file name
+	const char*	(*getname)(const file_t *fp);	// return a pointer to the real file name
 };
 
 // values to be set in the out parameter readflag for readfile()

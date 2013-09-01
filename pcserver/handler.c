@@ -102,6 +102,30 @@ static type_t ep_file_type = {
 	NULL
 };
 
+int handler_wrap(file_t *infile, uint8_t type, const char *name, const char *opts, 
+		const char **outname, file_t **outfile) {
+
+	int err = CBM_ERROR_OK;
+	*outfile = infile;
+
+	for (int i = 0; ; i++) {
+		handler_t *handler = reg_get(&handlers, i);
+		if (handler == NULL) {
+			// no handler found
+			break;
+		}
+		err = handler->resolve(infile, outfile, type, name, opts, outname);
+		if (err != CBM_ERROR_OK) {
+			log_error("Got %d as error from handler %s for %s\n", 
+				err, handler->name, name);
+		} else {
+			// found a handler
+			break;
+		}
+	}
+	return err;
+}
+	
 
 /*
  * open a file
@@ -134,7 +158,7 @@ int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t typ
 		file = *outfile;
 
 		// loop over directory entries
-		while ((direntry = file->handler->direntry(file)) != NULL) {
+		while (file->handler->direntry(file, &direntry) == CBM_ERROR_OK) {
 
 			// test each dir entry against the different handlers
 			// handlers implement checks e.g. for P00 files and wrap them
@@ -144,21 +168,7 @@ int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t typ
 			*outfile = NULL;
 			outname = strchr(name, '/');	// default end of name (if no handler matches)
 
-			for (int i = 0; ; i++) {
-				handler_t *handler = reg_get(&handlers, i);
-				if (handler == NULL) {
-					// no handler found
-					break;
-				}
-				err = handler->resolve(direntry, outfile, type, name, opts, &outname);
-				if (err != CBM_ERROR_OK) {
-					log_error("Got %d as error from handler %s for %s\n", 
-						err, handler->name, name);
-				} else {
-					// found a handler
-					break;
-				}
-			}
+			handler_wrap(direntry, type, name, opts, &outname, outfile);
 		
 			// replace original dir entry with wrapped one	
 			if (*outfile != NULL) {

@@ -61,7 +61,10 @@ typedef struct {
 
 	file_t*		(*root)(endpoint_t *ep);	// root directory for the endpoint
 	file_t*		(*wrap)(file_t *file);		// check if the given file is for the provider 
+							// (e.g. a d64 file for the di_provider)
 							// and wrap it into a container file_t
+							// (pointing to a new temp. endpoint created
+							// for it)
 
 	// command channel
 	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete
@@ -69,7 +72,6 @@ typedef struct {
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
-	int		(*position)(endpoint_t *ep, int chan, int recordno);	// position to record
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
 } provider_t;
 
