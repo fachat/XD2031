@@ -27,6 +27,7 @@
 #include "file.h"
 #include "name.h"
 #include "wireformat.h"
+#include "cmdnames.h"
 
 #ifdef HAS_RTC
 #include "rtc.h"
@@ -36,117 +37,6 @@
 
 #undef	DEBUG_CMD
 
-
-command_t command_find(uint8_t *input) {
-	switch(*input) {
-	case '$':
-		return CMD_DIR;
-		break;
-	case 'I':
-		return CMD_INITIALIZE;
-		break;
-	case 'R':
-		if (*(input+1) == 'M' || *(input+1) == 'D') {
-			// RMDIR or RD
-			return CMD_RMDIR;
-		}
-		return CMD_RENAME;
-		break;
-	case 'S':
-		return CMD_SCRATCH;
-		break;
-	case 'T':
-		return CMD_TIME;
-		break;
-	case 'C':
-		if (*(input+1) == 'D' || *(input+1) == 'H') {
-			// CD or CHDIR
-			return CMD_CD;
-		}
-		// this would be the COPY command
-		return CMD_SYNTAX;
-		break;
-	case 'M':
-		if (*(input+1) == 'D' || *(input+1) == 'K') {
-			// MKDIR or MD
-			return CMD_MKDIR;
-		}
-		// here we would have M-R/M-W/M-E
-		return CMD_SYNTAX;
-		break;
-	case 'A':
-		return CMD_ASSIGN;
-		break;
-	case 'U':
-		return CMD_UX;
-		break;
-	case 'B':
-		return CMD_BLOCK;
-		break;
-	case 'X':
-		// extensions for XD2031
-		return CMD_EXT;
-		break;
-	case 'P':
-		return CMD_POSITION;
-		break;
-	}
-        return CMD_SYNTAX;
-}
-
-const char *command_to_name(command_t cmd) {
-        switch(cmd) {
-        case CMD_NONE:
-                return "-";
-                break;
-        case CMD_DIR:
-                return "$";
-                break;
-        case CMD_SYNTAX:
-                return "?";
-                break;
-        case CMD_INITIALIZE:
-                return "INIT";
-                break;
-        case CMD_RENAME:
-                return "RENAME";
-                break;
-        case CMD_SCRATCH:
-                return "SCRATCH";
-                break;
-	case CMD_TIME:
-		return "TIME";
-		break;
-        case CMD_CD:
-                return "CD";
-                break;
-        case CMD_MKDIR:
-                return "MKDIR";
-                break;
-        case CMD_RMDIR:
-                return "RMDIR";
-                break;
-        case CMD_ASSIGN:
-                return "ASSIGN";
-                break;
-        case CMD_UX:
-                return "USER";
-                break;
-        case CMD_BLOCK:
-                return "BLOCK";
-                break;
-	case CMD_EXT:
-		return "EXT";
-		break;
-     	case CMD_OVERWRITE:
-		return "@";
-		break;
-	case CMD_POSITION:
-		return "P";
-		break;
-   }
-        return "";
-}
 
 // note: this does not return an actual error code, 
 // but only <0 if an error occurred; in that case, the error
