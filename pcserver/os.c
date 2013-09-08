@@ -92,13 +92,12 @@ const char* os_get_home_dir (void) {
  */
 int os_path_is_file(const char *name) {
 	struct stat sbuf;
-	int isfile;
+	int isfile = 1;
 
 	log_debug("checking file with name %s\n",name);
 
 	if (lstat(name, &sbuf) < 0) {
 		log_errno("Error stat'ing file");
-		isfile = 1;
 		// note we still return 1, as open may succeed - e.g. for 
 		// save where the file does not exist in the first place
 	} else {
