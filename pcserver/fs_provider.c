@@ -645,7 +645,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			options = "wb";
 			break;
 		case FS_OPEN_RW:
-			options = "r+";
+			options = "rb+";
 			break;
 		default:
 			log_error("Internal error: open_file with fs_cmd %d\n", fs_cmd);
