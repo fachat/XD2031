@@ -58,7 +58,7 @@ zoo:			   # Compile everything
 	rm -f $(BINDIR)/*
 	mkdir -p $(BINDIR)
 	@for d in xs1541 petSD petSD2 ;do \
-	  echo "\n$(BAR)   Compiling $$d\n$(BAR)" ;\
+	  printf "\n$(BAR)   Compiling $$d\n$(BAR)" ;\
 	  make DEVICE=$$d clean; \
 	  make DEVICE=$$d ;\
 	  make DEVICE=$$d clean; \
@@ -73,7 +73,7 @@ zoo:			   # Compile everything
 	cp petSD/programmer.cfg $(BINDIR)
 
 zip:	zoo
-	@echo "\n$(BAR)   Zip\n$(BAR)"
+	@printf "\n$(BAR)   Zip\n$(BAR)"
 	zip -j XD2031-$$(date +%Y-%m-%d).zip $(BINDIR)/*
 
 zooclean:
