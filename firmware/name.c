@@ -1,7 +1,7 @@
 /****************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2013 Andre Fachat, Nils Eilers
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -24,16 +24,25 @@
  * This file contains the file name parser
  */
 
-#undef	DEBUG_NAME 
+#undef	DEBUG_NAME
 
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <inttypes.h>
 
-#include "cmd.h"
 #include "name.h"
+#include "cmd.h"
 
+#ifdef PCTEST
+#define debug_flush() fflush(stdout)
+#define term_rom_puts(x) printf("%s", x)
+#define debug_putcrlf() printf("\n")
+#define PROGMEM
+#define nullstring "<NULL>"
+#else
 #include "debug.h"
+#endif
 
 #define	NAME_DRIVE	0
 #define	NAME_NAME	1
@@ -45,7 +54,7 @@
 #define	NAME_NAME2	8
 #define	NAME_RELPAR	9
 
-#ifdef DEBUG_NAME
+#if defined(DEBUG_NAME) || defined(PCTEST)
 static const char name_state[][9] PROGMEM = {
 	"DRIVE", "NAME", "OPTS", "-?- ", "COMMAND", "CMDDRIVE", "FILE",
 	"DRIVE2", "NAME2", "RELPAR"
@@ -114,11 +123,11 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	uint8_t drv = 0;
 	while (len > 0) {
 		ch = *p;
-#ifdef DEBUG_NAME
-		debug_printf("len=%d, curr=%c, state=", len, *p);
+#if defined(DEBUG_NAME) || defined(PCTEST)
+		printf("len=%d, curr=%c, state=", len, *p);
 		if(state == 3 || state > 9) {
 			term_rom_puts(name_state[3]);
-			debug_printf("%02X", state);
+			printf("%02X", state);
 		} else term_rom_puts(name_state[state]);
 		debug_putcrlf();
 #endif
@@ -296,22 +305,23 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 		}
 	}
 
-#ifdef DEBUG_NAME
-	debug_printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
-	debug_printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' : 
+#if defined(DEBUG_NAME) || defined(PCTEST)
+	printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
+	printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive + 0x30));
-	debug_printf("NAME='%s' (%d)\n", result->name ? (char*)result->name : nullstring, result->namelen);
-	debug_puts("ACCESS="); debug_putc(result->access); debug_putcrlf();
-	debug_puts("TYPE="); debug_putc(result->type); debug_putcrlf();
-	debug_printf("NAME2='%s' (%d)\n", result->name2 ? (char*)result->name2 : nullstring, result->namelen2);
-	debug_printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' : 
+	printf("NAME='%s' (%d)\n", result->name ? (char*)result->name : nullstring, result->namelen);
+	printf("ACCESS=%c\n", result->access);
+	printf("TYPE=%c\n", result->type);
+	printf("NAME2='%s' (%d)\n", result->name2 ? (char*)result->name2 : nullstring, result->namelen2);
+	printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
 				result->drive2 + 0x30));
-	debug_printf("RECLEN=%d\n", result->recordlen); 
+	printf("RECLEN=%d\n", result->recordlen);
 	debug_flush();
 #endif
 }
+
 
 /**
  * assembles the filename packet from nameinfo into the target buffer.
@@ -367,3 +377,45 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	return p-trg;
 }
 
+
+
+#ifdef PCTEST
+
+#define MAX_LINE 255
+int main(int argc, char** argv) {
+    char line[MAX_LINE + 1]; int had_a_comment = 1;
+    cmd_t in;
+    nameinfo_t result;
+    uint8_t parsehint = PARSEHINT_COMMAND;
+
+    while(fgets(line, MAX_LINE, stdin) != NULL) {
+        line[strlen(line) - 1] = 0; // drop '\n'
+        if(line[0] == '#') {
+            if(!had_a_comment) puts("\n");
+            puts(line);
+            had_a_comment=1;
+            continue;
+        } else if(line[0] == '!') {
+            printf("%s\n", line);
+            if(!strcmp(line, "!PARSEHINT_COMMAND")) parsehint = PARSEHINT_COMMAND;
+            else if(!strcmp(line, "!PARSEHINT_LOAD")) parsehint = PARSEHINT_LOAD;
+            else printf("*** SYNTAX ERROR: '%s'\n", line);
+            continue;
+        } else {
+            if(!had_a_comment) puts("\n");
+            had_a_comment=0;
+            printf("Test: '%s'\n", line);
+        }
+        // --------------------------------------
+        strcpy((char*)in.command_buffer, line);
+        in.command_length = strlen(line) + 1; // length including zero-byte
+        printf("parsehint: ");
+        if(parsehint == PARSEHINT_COMMAND) printf("PARSEHINT_COMMAND\n");
+        else if(parsehint == PARSEHINT_LOAD) printf("PARSEHINT_LOAD\n");
+        else printf("%d ?\n", parsehint);
+        parse_filename(&in, &result, parsehint);
+    }
+
+    return 0;
+}
+#endif

@@ -31,7 +31,7 @@
 #include <stdint.h>
 
 #include "errormsg.h"
-#include "rtconfig.h"
+#include "wireformat.h"
 #include "config.h"
 
 // Note the value definitions are such that no mapping is necessary between internal
