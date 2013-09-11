@@ -1208,7 +1208,7 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
    BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
    Track         = 1;
 
-   while (BAM_Number < 5 && diep->BAM[BAM_Number])
+   while (BAM_Number < 4 && diep->BAM[BAM_Number])
    {
       fbl = diep->BAM[BAM_Number] + di->BAMOffset;
       if (di->ID == 71 && Track > di->Tracks)
