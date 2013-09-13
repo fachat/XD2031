@@ -264,6 +264,7 @@ errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		rtconfig_init_rtc(rtc, get_default_device_address());
 		er = CBM_ERROR_OK;
 		debug_puts("RUNTIME CONFIG INITIALIZED\n");
+		break;
 	case 'W':
 		// write runtime config to EEPROM
 		nv_save_config(rtc);
