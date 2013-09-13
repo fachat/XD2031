@@ -484,14 +484,15 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			options = get_options(name, len - FSP_DATA - 1);
 			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 				prov->name, name);
-			rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
-			retbuf[FSP_DATA] = rv;
-			if (rv == CBM_ERROR_OPEN_REL) {
+			rv = handler_resolve_file(ep, &fp, name, options, cmd);
+			if (rv == CBM_ERROR_OK && fp->handler->recordlen(fp) > 0) {
 				record = fp->handler->recordlen(fp);
 				retbuf[FSP_DATA+1] = record & 0xff;
 				retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
 				retbuf[FSP_LEN] = FSP_DATA + 3;	
+				rv = CBM_ERROR_OPEN_REL;
 			}
+			retbuf[FSP_DATA] = rv;
 			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 				channel_set(tfd, fp);
 				break; // out of switch() to escape provider_cleanup()
@@ -514,7 +515,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			provider_convto(prov)(name, convlen, name, convlen);
 			options = get_options(name, len - FSP_DATA - 1);
 			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-			rv = handler_resolve_file(ep, tfd, &fp, cmd, name, options);
+			rv = handler_resolve_dir(ep, &fp, name, options);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				channel_set(tfd, fp);
@@ -529,14 +530,16 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_READ:
 		fp = channel_to_file(tfd);
 		if (fp != NULL) {
-			readflag = 0;	// default just in case
-			rv = fp->handler->readfile(fp, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
-			// TODO: handle error (rv<0)
-			if (rv < 0) {
+			if (fp->isdir) {
+			} else {
+			    readflag = 0;	// default just in case
+			    rv = fp->handler->readfile(fp, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
+			    // TODO: handle error (rv<0)
+			    if (rv < 0) {
 				// an error is sent as REPLY with error code
 				retbuf[FSP_DATA] = rv;
 				log_rv(-rv);
-			} else {
+			    } else {
 				// a WRITE mirrors the READ request when ok 
 				retbuf[FSP_CMD] = FS_WRITE;
 				retbuf[FSP_LEN] = FSP_DATA + rv;
@@ -552,6 +555,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 								retbuf+FSP_DATA+FS_DIR_NAME, 
 								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
 				}
+			    }
 			}
 		}
 		break;
@@ -576,7 +580,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		if (fp != NULL) {
 			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
 			printf("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
-			rv = fp->handler->seek(fp, record * fp->handler->recordlen(fp));
+			rv = fp->handler->seek(fp, record * fp->handler->recordlen(fp), SEEKFLAG_ABS);
 			if (rv != 0) {
 				log_rv(rv);
 			}

@@ -59,7 +59,12 @@ typedef struct {
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
-	file_t*		(*root)(endpoint_t *ep);	// root directory for the endpoint
+	file_t*		(*root)(endpoint_t *ep, int isroot); // start directory for the endpoint 
+							// isroot is set when the endpoint root
+							// is required, usually through a "/" at the
+							// start of a file name. If not set, then
+							// the current directory (as defined by previous
+							// chdir() is returned.
 	file_t*		(*wrap)(file_t *file);		// check if the given file is for the provider 
 							// (e.g. a d64 file for the di_provider)
 							// and wrap it into a container file_t
@@ -97,7 +102,16 @@ struct _file {
         endpoint_t      *endpoint;      // endpoint for that file
         file_t          *parent;        // for resolving ".."
         int             isdir;          // when set, is directory
+	// for traversing a directory
+	int		dirstate;	// 0 = first line, 1 = file matches, 2 = end line
+	const char	*pattern;	// pattern for dir matching
+	file_t		*firstmatch;	// first match on dir open (stored on open)
 };
+
+// note: go from FIRST to ENTRIES to END by +1
+#define	DIRSTATE_FIRST		0
+#define	DIRSTATE_ENTRIES	1
+#define	DIRSTATE_END		2
 
 int provider_assign(int drive, const char *name, const char *assign_to);
 

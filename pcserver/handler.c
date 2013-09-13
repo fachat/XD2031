@@ -31,10 +31,8 @@
 #include "provider.h"
 #include "wireformat.h"
 #include "wildcard.h"
+#include "openpars.h"
 
-// prototypes
-static int ep_create(endpoint_t *ep, int chan, file_t **outfile,
-                                        const char *name, const char **outname);
 
 
 // This file defines the file type handler interface. This is used
@@ -86,23 +84,9 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 
 
 //----------------------------------------------------------------------------
-// handler that wraps the operations to an endpoint
 
-static handler_t ep_handler;
 
-typedef struct {
-	file_t 		file;		// embedded
-	int		epchan;		// channel for endpoint (-1 is not opened yet)
-	uint16_t	recordlen;
-} ep_file_t;
-
-static type_t ep_file_type = {
-	"ep_file",
-	sizeof(ep_file_t),
-	NULL
-};
-
-int handler_wrap(file_t *infile, uint8_t type, const char *name, const char *opts, 
+int handler_wrap(file_t *infile, uint8_t type, const char *name,  
 		const char **outname, file_t **outfile) {
 
 	int err = CBM_ERROR_OK;
@@ -114,7 +98,7 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name, const char *opt
 			// no handler found
 			break;
 		}
-		err = handler->resolve(infile, outfile, type, name, opts, outname);
+		err = handler->resolve(infile, outfile, type, name, NULL, outname);
 		if (err != CBM_ERROR_OK) {
 			log_error("Got %d as error from handler %s for %s\n", 
 				err, handler->name, name);
@@ -128,173 +112,326 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name, const char *opt
 	
 
 /*
- * open a file
+ * open a file/dir, internally
  *
  * This function takes the file name from an OPEN, and the endpoint defined for the 
  * drive as given in the OPEN, and recursively walks the path parts of that file name.
  *
  * Each path part is checked against the list of handlers for a match
+ *
+ * It returns the directory, as well as the first match in that directory, both as file_t 
+ * objects.
  */
 
-int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *inname, const char *opts) {
+static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
+		const char *inname, const char **outpattern, uint8_t type) {
 
 	const char *outname = NULL;
 	int err = CBM_ERROR_FAULT;
 	file_t *file = NULL;
 	file_t *direntry = NULL;
 
+
+	int inlen = (inname == NULL) ? 0 : strlen(inname);
+	char *name = NULL;
+	// canonicalize the name
+	if (inlen == 0) {
+		// no name given - replace with pattern
+		name = mem_alloc_str("*");
+	} else
+	if (inname[inlen-1] == CBM_PATH_SEPARATOR_CHAR) {
+		// name ends with a path separator, add pattern
+		name = mem_alloc_c(inlen + 2, "search path");
+		strcpy(name, inname);
+		strcat(name, "*");
+	} else {
+		// it's either a single pattern, or a path with a pattern
+		name = mem_alloc_str(inname);
+	}
+
+	// runtime
+	const char *namep = name;
+	file_t *current_dir = NULL;
+	file_t *wrapped_direntry = NULL;
+
+	// handle root dir case
 	// initial file struct, corresponds to root directory of endpoint
 	//err = ep_create(ep, chan, outfile, inname, &outname);
-	ep->ptype->root(ep);
-
-	if (err != CBM_ERROR_OK) {
-		return err;
+	if (*namep == '/') {
+		current_dir = ep->ptype->root(ep, 1);
+		namep++;
+	} else {
+		current_dir = ep->ptype->root(ep, 0);
 	}
-	const char *name = outname;
 
-	// as long as we have filename parts left
-	while (outfile != NULL && name != NULL && *name != 0) {
+	// through name canonicalization, we know namep does now not point to a 0
 
-		file = *outfile;
+	// loop as long as we have filename parts left
+	while (current_dir != NULL && namep != NULL && *namep != 0) {
 
 		// loop over directory entries
-		while (file->handler->direntry(file, &direntry) == CBM_ERROR_OK) {
+		// note: loops over all directory entries, as we cannot simply match the name
+		// due to the x00 pattern matching madness
+		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
+		// we have an empty directory
+		file = NULL;
+		while ((err = file->handler->direntry(current_dir, &direntry)) == CBM_ERROR_OK) {
+
+			if (direntry == NULL) {
+				break;
+			}
+
+			// default end of name (if no handler matches)
+			outname = strchr(name, CBM_PATH_SEPARATOR_CHAR);	
 
 			// test each dir entry against the different handlers
 			// handlers implement checks e.g. for P00 files and wrap them
 			// in another file_t level
 			// the handler->resolve() method also matches the name, as the
 			// P00 files may contain their own "real" name within them
-			*outfile = NULL;
-			outname = strchr(name, '/');	// default end of name (if no handler matches)
 
-			handler_wrap(direntry, type, name, opts, &outname, outfile);
+			handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
 		
 			// replace original dir entry with wrapped one	
-			if (*outfile != NULL) {
-				file = *outfile;
+			if (wrapped_direntry != NULL) {
+				file = wrapped_direntry;
 				// do not check any further dir entries
 				break;
 			}
+
+			// no handler match found, thus
 			// now check if the original filename matches the pattern
-			if (compare_dirpattern(direntry->handler->getname(direntry), name, &outname)) {
+			// outname must be set either to point to the trailing '/', or the trailing 0,
+			// but not be set to NULL itself
+			if (compare_dirpattern(direntry->handler->getname(direntry), namep, &outname)) {
 				// matches, so go on with it
 				file = direntry;
 				// do not check any further dir entries
 				break;
 			}
+
+			// close the directory entry, we don't need it anymore
+			// (handler de-allocates it if necessary)
+			direntry->handler->close(direntry, 0);
+			direntry = NULL;
+		}
+
+		if (err != CBM_ERROR_OK || file == NULL) {
+			break;
 		}
 
 		// found our directory entry and wrapped it in file
 		// now check if we have/need a container wrapper (with e.g. a ZIP file in a P00 file)
-		if (outname == NULL || *outname == 0) {
-			// no more pattern left, so outfile should be what was required
+		if (*outname == 0) {
+			// no more pattern left, so file should be what was required
 			// i.e. we have raw access to container files like D64 or ZIP
 			// (which is similar to the "$" file on non-load secondary addresses)
-			*outfile = file;
-			return CBM_ERROR_OK;
+			break;
 		}
 
+		// outname points to the path separator trailing the matched file name pattern
+		// From name canonicalization that is followed by at least a '*', if not further
+		// patterns
+		namep = outname + 1;
+		current_dir = file;
+
 		// check with the container providers (i.e. endpoint providers)
-		// whether to wrap it 
-		*outfile = provider_wrap(file);
+		// whether to wrap it. Here e.g. d64 or zip files are wrapped into 
+		// directory file_t handlers 
+		wrapped_direntry = provider_wrap(current_dir);
+		if (wrapped_direntry != NULL) {
+			current_dir = wrapped_direntry;
+		}
+	}
+
+	// here we have:
+	// - current_dir as the current directory
+	// - file, the unwrapped first pattern match in that directory, maybe NULL
+	// - a possibly large list of opened files, reachable through current_dir->parent etc
+	// - namep pointing to the directory match pattern for the current directory
+
+	*outdir = NULL;
+	*outfile = NULL;
+	if (outpattern != NULL) {
+		*outpattern = NULL;
+	}
+	if (err == CBM_ERROR_OK) {
+		*outdir = current_dir;
+		*outfile = file;
+		if (outpattern != NULL) {
+			*outpattern = mem_alloc_str(namep);
+		}
+	} else {
+		// this should close all parents as well
+		file->handler->close(file, 1);
+	}
+	mem_free(name);
+	
+	return err;
+}
+	
+/*
+ * open a file, from fscmd
+ *
+ * Uses handler_resolve() from above to do the bulk work
+ */
+
+int handler_resolve_file(endpoint_t *ep, file_t **outfile, 
+		const char *inname, const char *opts, uint8_t type) {
+
+	int err = CBM_ERROR_FAULT;
+	file_t *dir = NULL;
+	file_t *file = NULL;
+	const char *pattern = NULL;
+	uint16_t reclen;
+	uint8_t filetype;
+
+	openpars_process_options((uint8_t*)opts, &filetype, &reclen);
+
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, type);
+
+	if (err == CBM_ERROR_OK) {
+		
+		switch (type) {
+		case FS_OPEN_RD:
+			if (file == NULL) {
+				err = CBM_ERROR_FILE_NOT_FOUND;
+			} else {
+				*outfile = file;
+				err = file->handler->seek(file, 0, SEEKFLAG_ABS);
+			}
+			break;
+		case FS_OPEN_WR:
+			if (file != NULL) {
+				err = CBM_ERROR_FILE_EXISTS;
+				break;
+			}
+			// fall-through
+		case FS_OPEN_AP:
+		case FS_OPEN_OW:
+		case FS_OPEN_RW:
+			if (file == NULL) {
+				err = dir->handler->create(dir, &file, pattern, filetype, reclen);
+				if (err != CBM_ERROR_OK) {
+					break;
+				}
+			}
+			if (filetype != FS_DIR_TYPE_UNKNOWN 
+				&& file->handler->filetype(file) != filetype) {
+				err = CBM_ERROR_FILE_TYPE_MISMATCH;
+				break; 
+			}
+			if (!file->handler->iswriteable(file)) {
+				err = CBM_ERROR_WRITE_PROTECT;
+				break;
+			}
+			break;
+		}
+
+		if (err == CBM_ERROR_OK) {
+			if (reclen != 0) {
+				if (file->handler->recordlen(file) != reclen
+					|| file->handler->filetype(file) != FS_DIR_TYPE_REL) {
+					err = CBM_ERROR_RECORD_NOT_PRESENT;
+				}
+			}
+		}
+
+		if (type == FS_OPEN_AP) {
+			err = file->handler->seek(file, 0, SEEKFLAG_END);
+		}
+
+		// we want the file here, so we can close the dir and its parents
+		dir->handler->close(dir, 1);
+
+
+		if (err == CBM_ERROR_OK) {
+			*outfile = file;
+		} else {
+			// on error
+			if (file != NULL) {
+				file->handler->close(file, 0);
+			}
+			*outfile = NULL;
+		}
+	}
+
+	if (pattern != NULL) {
+		mem_free((char*)pattern);
 	}
 
 	return err;
 }
-	
-//	int reclen = 0;
-//	int err = CBM_ERROR_FAULT;
-//
-//	// assuming infile is NULL
-//
-//	switch(type) {
-//		case FS_OPEN_RD:
-//			err = ep->ptype->open_rd(ep, chan, name, opts, &reclen);
-//			break;
-//		case FS_OPEN_WR:
-//			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 0);
-//			break;
-//		case FS_OPEN_AP:
-//			err = ep->ptype->open_ap(ep, chan, name, opts, &reclen);
-//			break;
-//		case FS_OPEN_OW:
-//			err = ep->ptype->open_wr(ep, chan, name, opts, &reclen, 1);
-//			break;
-//		case FS_OPEN_RW:
-//			err = ep->ptype->open_rw(ep, chan, name, opts, &reclen);
-//			break;
-//		case FS_OPEN_DR:
-//			err = ep->ptype->opendir(ep, chan, name, opts);
-//			break;
-//	}
-//
-//	if (err != CBM_ERROR_OK) {
-//		return err;
-//	}
-//
-//	ep_file_t *file = mem_alloc(&ep_file_type);
-//
-//	file->file.handler = &ep_handler;
-//	file->file.parent = NULL;
-//
-//	file->endpoint = ep;
-//	file->channel = chan;
-//	file->recordlen = reclen;
-//
-//
-//	// now wrap into handler for file types
-//	file_t *oldfile = (file_t*) file;
-//	file_t *newfile = NULL;
-//	int i = 0;
-//	err = CBM_ERROR_FILE_NOT_FOUND;
-//	do {
-//		handler_t *handler = reg_get(&handlers, i);
-//		if (handler == NULL) {
-//			break;
-//		}
-//		err = handler->resolve(oldfile, &newfile, type, name, opts);
-//		i++;
-//	} while (err == CBM_ERROR_FILE_NOT_FOUND);
-//
-//log_info("resolved file to %p, with err=%d\n", newfile, err);
-//
-//	if (err == CBM_ERROR_OK) {
-//		*outfile = newfile;
-//	} else
-//	if (err == CBM_ERROR_FILE_NOT_FOUND) {
-//		// no handler found, stay with original
-//		*outfile = oldfile;
-//		err = CBM_ERROR_OK;
-//	} else {
-//		// file found, but serious error, so close and be done
-//		oldfile->handler->close(oldfile);
-//	}
-//
-//	// TODO: here would be the check if the current file would be a container
-//	// (directory) and if the file name contained more parts to recursively 
-//	// traverse
-//
-//	return err;
-//}
+
 
 /*
- * resolve a file_t from an endpoint, for a block operation
+ * open a directory, from fscmd
+ *
+ * Uses handler_resolve() from above to do the bulk work
  */
-int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile) {
 
-	ep_file_t *file = mem_alloc(&ep_file_type);
+int handler_resolve_dir(endpoint_t *ep, file_t **outdir, 
+		const char *inname, const char *opts) {
 
-	file->file.handler = &ep_handler;
-	file->file.parent = NULL;
+	int err = CBM_ERROR_FAULT;
+	file_t *dir = NULL;
+	file_t *file = NULL;
+	const char *pattern = NULL;
+	uint16_t reclen;
+	uint8_t filetype;
 
-	file->file.endpoint = ep;
-	//file->channel = chan;
-	file->recordlen = 0;
+	openpars_process_options((uint8_t*)opts, &filetype, &reclen);
 
-	*outfile = (file_t*) file;
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR);
 
-	return CBM_ERROR_OK;
+	// we can close the parents anyway
+	file_t *parent = dir->parent;
+	if (parent != NULL) {
+		parent->handler->close(parent, 1);
+	}
+
+	if (err == CBM_ERROR_OK) {
+		
+		// init directory traversal
+		dir->dirstate = DIRSTATE_FIRST;
+		dir->pattern = mem_alloc_str(pattern);
+		dir->firstmatch = file;		// maybe NULL
+	
+		*outdir = dir;	
+	} else {
+		if (dir != NULL) {
+			dir->handler->close(dir, 0);
+		}
+		if (file != NULL) {
+			file->handler->close(file, 0);
+		}
+	}
+		
+	if (pattern != NULL) {
+		mem_free((char*)pattern);
+	}
+
+	return err;
 }
 
+int handler_direntry(file_t *dir, file_t **direntry) {
+
+	int err = CBM_ERROR_OK;
+	file_t *match = NULL;
+
+	// for now, ignore header and blocks free
+	if (dir->firstmatch != NULL) {
+		match = dir->firstmatch;
+		dir->firstmatch = NULL;
+		err = CBM_ERROR_OK;
+	} else {
+		err = dir->handler->direntry(dir, &match);
+	}
+
+	if (err == CBM_ERROR_OK) {
+		*direntry = match;
+	}
+
+	return err;
+}
 

@@ -127,7 +127,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	int flg;
 
 	// seek to start of file
-	infile->handler->seek(infile, 0);
+	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
 	infile->handler->readfile(infile, (char*)x00_buf, 0x1a, &flg);
 
@@ -209,10 +209,23 @@ static uint8_t x00_filetype(const file_t *file) {
 	return xfile->filetype;
 }
 
-static int x00_seek(file_t *file, long pos) {
+static int x00_seek(file_t *file, long pos, int flag) {
 
 	// add header offset, that's all
-	return file->parent->handler->seek(file->parent, pos + 0x1a );
+	switch(flag) {
+	case SEEKFLAG_ABS:
+		return file->parent->handler->seek(file->parent, pos + 0x1a, flag );
+	case SEEKFLAG_END:
+		return file->parent->handler->seek(file->parent, pos, flag );
+	default:
+		return CBM_ERROR_FAULT;
+	}
+}
+
+static int x00_truncate(file_t *file, long pos) {
+
+	// add header offset, that's all
+	return file->parent->handler->truncate(file->parent, pos + 0x1a);
 }
 
 static int x00_read(file_t *file, char *buf, int len, int *readflg) {
@@ -229,6 +242,16 @@ static const char *x00_getname(const file_t *file) {
 	x00_file_t *xfile = (x00_file_t*)file;
 
 	return xfile->name;
+}
+
+static int x00_iswriteable(const file_t *file) {
+
+	return file->parent->handler->iswriteable(file->parent);
+}
+
+static int x00_isseekable(const file_t *file) {
+
+	return file->parent->handler->isseekable(file->parent);
 }
 
 
@@ -257,14 +280,24 @@ static handler_t x00_handler = {
 	x00_write,	// write file data
 			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
-	NULL,		// direntry
+	x00_truncate,	// truncate	(file_t *fp, long size);
 
 	// -------------------------
 
 	x00_recordlen,	//uint16_t	(*recordlen)(file_t *fp);	// return the record length for file
 
 	x00_filetype,	//uint8_t	(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
-	x00_getname	// const char	(*getname)(file_t *fp);		// return real name of file
+	x00_getname,	// const char	(*getname)(file_t *fp);		// return real name of file
+
+	x00_iswriteable,// int(*iswriteable)(file_t *fp);
+
+	x00_isseekable,	// int (*isseekable)(file_t *fp);
+
+	// -------------------------
+
+	NULL,		// int direntry(file_t *fp, file_t **outentry);
+
+	NULL		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
 };
 
 

@@ -22,6 +22,9 @@
 #ifndef WILDCARD_H
 #define	WILDCARD_H
 
+#define	CBM_PATH_SEPARATOR_CHAR 	'/'
+#define	CBM_PATH_SEPARATOR_STR	 	"/"
+
 /**
  * compares the given name to the given pattern
  * and returns true if it matches.

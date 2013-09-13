@@ -68,7 +68,7 @@ struct _handler {
 
 	// -------------------------
 							// position the file
-	int		(*seek)(file_t *fp, long abs_position);
+	int		(*seek)(file_t *fp, long position, int flag);
 
 							// read file data
 	int		(*readfile)(file_t *fp, char *retbuf, int len, int *readflag);	
@@ -76,8 +76,8 @@ struct _handler {
 							// write file data
 	int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
-							// get the next directory entry (NULL if end)
-	int		(*direntry)(file_t *fp, file_t **outentry);
+							// truncate to a given size
+	int		(*truncate)(file_t *fp, long size);	
 
 	// -------------------------
 
@@ -86,11 +86,26 @@ struct _handler {
 	uint8_t		(*filetype)(const file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
 
 	const char*	(*getname)(const file_t *fp);	// return a pointer to the real file name
+
+	int		(*iswriteable)(const file_t *fp); // return true if file is writeable
+
+	int		(*isseekable)(const file_t *fp); // return true if file is seekable
+					
+	// -------------------------
+							// get the next directory entry (NULL if end)
+	int		(*direntry)(file_t *dirfp, file_t **outentry);
+							// create a new file in the directory
+	int		(*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype, 
+				uint16_t recordlen);
 };
 
 // values to be set in the out parameter readflag for readfile()
-#define	READFLAG_EOF	1
-#define	READFLAG_DENTRY	2
+#define	READFLAG_EOF		1
+#define	READFLAG_DENTRY		2
+
+// values to be set in the seek() flag parameter
+#define	SEEKFLAG_ABS		0		/* count from the start */
+#define	SEEKFLAG_END		1		/* count from the end of the file */
 
 /*
  * register a new provider, usually called at startup
@@ -108,11 +123,21 @@ void handler_init(void);
 file_t *handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, const char **outname);
 
 /*
- * resolve a file_t from an endpoint, i.e. being a root file_t for further resolves into
- * subdirs
+ * recursively resolve a file from an endpoint using the given inname as path
  */
-int handler_resolve_file(endpoint_t *ep, int chan, file_t **outfile, uint8_t type, const char *name, const char *opts);
+int handler_resolve_file(endpoint_t *ep, file_t **outfile,
+                const char *inname, const char *opts, uint8_t type);
 
+/*
+ * recursively resolve a dir from an endpoint using the given inname as path
+ */
+int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
+                const char *inname, const char *opts);
+
+/*
+ * get next directory entry
+ */
+int handler_direntry(file_t *dir, file_t **direntry);
 
 /*
  * resolve a file_t from an endpoint, for a block operation
