@@ -26,6 +26,8 @@ DUDE_PORT = usb
 ####################################################################
 # Should not be modified
 
+.PHONY: clean rootclean testclean doc zip zoo dist
+
 TARGET=XD2031-$(DEVICE)
 BINDIR=bin
 
