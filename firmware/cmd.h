@@ -82,9 +82,5 @@ typedef struct {
 //	errormsg_t	*errormsg;
 } cmd_t;
 
-command_t command_find(uint8_t *buf);
-
-const char* command_to_name(command_t cmd);
-
 
 #endif

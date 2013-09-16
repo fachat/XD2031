@@ -31,6 +31,7 @@
 #include "serial.h"
 #include "wireformat.h"
 #include "bufcmd.h"
+#include "cmdnames.h"
 
 #include "debug.h"
 #include "led.h"
@@ -173,10 +174,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
 	// check for default drive (here is the place to set the last used one)
-	if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+	if (nameinfo.drive == NAMEINFO_LAST_DRIVE) {
 		nameinfo.drive = rtconf->last_used_drive;
 	}
-	if (nameinfo.drive != NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
+	else if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+		// TODO: match CBM behavior
+		nameinfo.drive = rtconf->last_used_drive;
+	}
+	else if (nameinfo.drive < MAX_DRIVES) {
 		// only save real drive numbers as last used default
 		rtconf->last_used_drive = nameinfo.drive;
 	}

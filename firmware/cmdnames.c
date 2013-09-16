@@ -20,10 +20,13 @@
 
 ***************************************************************************/
 
-
+#include <string.h>
 #include "cmdnames.h"
 
-command_t command_find(uint8_t *input) {
+command_t command_find(uint8_t *input, uint8_t *len) {
+	*len = 1; // true for most commands
+	char *n = (char*) input + 1;
+	char c = *n;
 	switch(*input) {
 	case '$':
 		return CMD_DIR;
@@ -32,8 +35,12 @@ command_t command_find(uint8_t *input) {
 		return CMD_INITIALIZE;
 		break;
 	case 'R':
-		if (*(input+1) == 'M' || *(input+1) == 'D') {
-			// RMDIR or RD
+		if (c == 'D') {			// RD
+			*len = 2;
+			return CMD_RMDIR;
+		}
+		if (!strncmp(n, "MDIR", 4)) {	// RMDIR
+			*len = 5;
 			return CMD_RMDIR;
 		}
 		return CMD_RENAME;
@@ -42,19 +49,30 @@ command_t command_find(uint8_t *input) {
 		return CMD_SCRATCH;
 		break;
 	case 'T':
+		if (c == 'I') {			// TI
+			*len = 2;
+		}				// T
 		return CMD_TIME;
 		break;
 	case 'C':
-		if (*(input+1) == 'D' || *(input+1) == 'H') {
-			// CD or CHDIR
+		if (c == 'D') {			// CD
+			*len = 2;
+			return CMD_CD;
+		}
+		if (!strncmp(n, "HDIR", 4)) {	// CHDIR
+			*len = 5;
 			return CMD_CD;
 		}
 		// this would be the COPY command
 		return CMD_SYNTAX;
 		break;
 	case 'M':
-		if (*(input+1) == 'D' || *(input+1) == 'K') {
-			// MKDIR or MD
+		if (c == 'D') {			// MD
+			*len = 2;
+			return CMD_MKDIR;
+		}
+		if (!strncmp(n, "KDIR", 4)) {	// MKDIR
+			*len = 5;
 			return CMD_MKDIR;
 		}
 		// here we would have M-R/M-W/M-E
@@ -71,6 +89,9 @@ command_t command_find(uint8_t *input) {
 		break;
 	case 'X':
 		// extensions for XD2031
+		if(c) *len = 2;			// XD, XU
+		else return CMD_SYNTAX;
+		if (!strncmp(n, "RESET", 5)) *len = 6;	// XRESET
 		return CMD_EXT;
 		break;
 	case 'P':
