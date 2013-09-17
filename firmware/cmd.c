@@ -101,6 +101,10 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	} else
 	if (nameinfo.cmd == CMD_INITIALIZE) {
 		debug_puts("INITIALIZE\n");
+		// If a drive number is given, set the last used drive
+		if (command->command_buffer[1]) {
+			rtconf->last_used_drive = command->command_buffer[1] - 0x30;
+		}
 		// need to unlock the caller by calling the callback function
 		callback(CBM_ERROR_OK, NULL);
 		return 0;
