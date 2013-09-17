@@ -43,6 +43,7 @@
 #include "fat_provider.h"
 #include "dir.h"
 #include "config.h"
+#include "petscii.h"
 
 
 #define  DEBUG_FAT
@@ -51,7 +52,7 @@
 
 static uint8_t current_charset;
 
-static void *prov_assign(uint8_t drive, const char *parameter);
+static void *prov_assign(uint8_t drive, const char *petscii_parameter);
 static void prov_free(void *epdata);
 static void fat_submit(void *epdata, packet_t *buf);
 static void fat_submit_call(
@@ -220,11 +221,21 @@ static void fat_provider_init(void) {
    fat_provider_initialized = TRUE;
 }
 
-static void *prov_assign(uint8_t drive, const char *parameter) {
+static void *prov_assign(uint8_t drive, const char *petscii_parameter) {
    int8_t res;
    TCHAR cwd[_MAX_LFN + 1];
+   char parameter[64];
 
    if(!fat_provider_initialized) fat_provider_init();
+
+   // prov_assign receives PETSCII, translate to ASCII first
+   strcpy(parameter, petscii_parameter);
+   char *p = parameter;
+   while(*p) {
+      *p = petscii_to_ascii(*p);
+      p++;
+   }
+
    debug_printf("fat_prov_assign: drv=%u par=%s\n", drive, parameter);
    for(uint8_t i=0; i < FAT_MAX_ASSIGNS; i++) {
       if(fat_assign[i].drive == AVAILABLE || fat_assign[i].drive == drive) {
