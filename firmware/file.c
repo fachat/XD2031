@@ -202,7 +202,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
 		endpoint = bufcmd_provider();
 	} else {
-		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.name);
+		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.drivename);
 	}
 
 	// convert from bus' PETSCII to provider

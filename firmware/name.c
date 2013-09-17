@@ -266,7 +266,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	}
 
 	if (nameinfo->drivename) {
-		len = strlen((char*)nameinfo->drivename) + 1;
+		len = strlen((char*)nameinfo->drivename);
 		memmove (p, nameinfo->drivename, len);
 		p += len;
 		*p++ = ':';	// TODO: use '\0' instead of ':' as separator
@@ -282,7 +282,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 		// two file names
 		*p++ = nameinfo->drive2;
 		if (*nameinfo->drivename2) {
-			len = strlen((char*)nameinfo->drivename2) + 1;
+			len = strlen((char*)nameinfo->drivename2);
 			memmove (p, nameinfo->drivename2, len);
 			p += len;
 			*p++ = ':';	// TODO: use '\0' instead of ':' as separator
