@@ -44,6 +44,8 @@
 #include "wireformat.h"
 #include "provider.h"
 #include "log.h"
+#include "filetypes.h"
+#include "dir.h"
 
 
 #undef DEBUG_CURL
@@ -90,7 +92,7 @@ typedef struct File {
 	char	*name_buffer;		// malloc'd buffer for dir path
 } File;
 
-typedef struct {
+typedef struct curl_endpoint_t {
 	// derived from endpoint_t
 	endpoint_t 		base;
 	// payload
@@ -606,17 +608,7 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 	char *namep = retbuf + FS_DIR_NAME;
 	switch(fp->read_state) {
 	case 0:		// disk name
-		retbuf[FS_DIR_MODE] = FS_DIR_MOD_NAM;
-		retbuf[FS_DIR_ATTR] = FS_DIR_TYPE_PRG;
-		l = strlen(fp->name_buffer);
-		if (len < FS_DIR_NAME + l + 1) {
-			log_error("read buffer too small for dir name (is %d, need at least %d - concatenating)\n",
-				len, l+FS_DIR_NAME+1);
-			l = len - FS_DIR_NAME - 1;
-		}
-		strncpy(namep, fp->name_buffer, l);
-		retbuf[l + FS_DIR_NAME]=0;
-		l = l + FS_DIR_NAME + 1;
+		l = dir_fill_header(retbuf, 0, cep->path_buffer);
 		fp->read_state++;
 		break;
 	case 1:
@@ -669,6 +661,8 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 					break;
 				}
 			}
+
+
 			if (eof != 0) {
 				log_debug("end of dir read\n");
 				fp->read_state++;
@@ -678,6 +672,11 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
 		eof = 0;
 		if (l > FS_DIR_NAME) {
+			// Check if filename has a known extension, e.g. PRG USR SEQ
+			// Default to PRG for files that have no extension
+			// Default to SEQ to prevent LOADing unknown extensions
+			retbuf[FS_DIR_ATTR] |= extension_to_filetype(retbuf + FS_DIR_NAME,
+					FS_DIR_TYPE_PRG, FS_DIR_TYPE_SEQ);
 			break;
 		}
 		// otherwise fall through
