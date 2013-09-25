@@ -129,7 +129,6 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	while(isspace(cmdstr[cmdlen])) ++cmdlen;
 
 	// the position command is fully binary
-	if (result->cmd == CMD_POSITION) ++cmdlen;
 	if (result->cmd == CMD_POSITION || result->cmd == CMD_TIME) {
 		result->name = cmdstr + cmdlen;
 		result->namelen = len - cmdlen;
