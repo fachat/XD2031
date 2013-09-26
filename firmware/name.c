@@ -91,6 +91,7 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
 	int8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
 	*drivename = NULL;
 	*filename  = in;
+	uint8_t len;
 
 	if (p) {                    // there is a colon
 		*p = 0;             // zero-terminate drive name
@@ -105,7 +106,10 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
 			}
 		}
 	}
-	*namelen  = strlen((char *)*filename);
+	// Drop CR if appended to filename
+	len = strlen((char *)*filename);
+	if (*(*filename + len - 1) == 13) *(*filename + --len) = 0;
+	*namelen  = len;
 	return r;
 }
 
