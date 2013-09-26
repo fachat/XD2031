@@ -1027,7 +1027,7 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 
 static int _delete_callback(const int num_of_match, const char *name) {
 
-	printf("%d: Calling DELETE on: %s\n", num_of_match, name);
+	log_debug("%d: Calling DELETE on: %s\n", num_of_match, name);
 
 	if (unlink(name) < 0) {
 		// error handling
