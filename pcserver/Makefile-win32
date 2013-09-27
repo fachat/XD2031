@@ -30,10 +30,11 @@ PKG_CONFIG=$(CROSS)pkg-config
 
 COMMONC=fsser.c fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c
 COMMONC+=serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c
-COMMONC+=openpars.c curl_provider.c diskimgs.c ../common/filetypes.c
+COMMONC+=openpars.c curl_provider.c diskimgs.c ../common/filetypes.c terminal.c
 COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h
 COMMONH+=provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h
 COMMONH+=../common/petscii.h ../common/charconvert.h openpars.h diskimgs.h ../common/filetypes.h
+COMMONH+=terminal.h
 #COMMONC+=tcp_provider.c 
 
 OBJECTS=$(COMMONC:.c=.o)

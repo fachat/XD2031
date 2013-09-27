@@ -50,6 +50,7 @@
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
+#include "terminal.h"
 
 #define FALSE 0
 #define TRUE 1
@@ -89,6 +90,7 @@ int main(int argc, char *argv[]) {
 	// when processing other options
 	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
 
+	terminal_init();
 
 	i=1;
 	while(i<argc && argv[i][0]=='-') {
