@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 		    /* exits on more or less than a single possibility */
 		  }
 		  if(!strcmp(device,"-")) device = NULL; 	// use stdin/out
-		  printf("main: device = %s\n", device);
+		  log_info("main: device = %s\n", device);
 		}
  	     	break;
 	    case 'A':
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
 	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
-	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
+		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
 	  exit(EXIT_RESPAWN_NEVER);
 	}
@@ -151,12 +151,12 @@ int main(int argc, char *argv[]) {
 		fdesc = device_open(device);
 		if (os_open_failed(fdesc)) {
 		  /* error */
-		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
+		  log_error("Could not open device %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
-		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)\n",
+		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
