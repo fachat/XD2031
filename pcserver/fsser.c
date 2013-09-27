@@ -82,9 +82,12 @@ int main(int argc, char *argv[]) {
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
-	int verbose = 0;
 
 	mem_init();
+
+	// Check -v (verbose) first to enable log_debug()
+	// when processing other options
+	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
 
 
 	i=1;
@@ -111,7 +114,6 @@ int main(int argc, char *argv[]) {
 		// ignore these, as those will be evaluated later by cmd_...
 		break;
 	    case 'v':
-		verbose = 1;
 		break;
 	    case 'D':
 		disable_user_interface();
@@ -124,10 +126,6 @@ int main(int argc, char *argv[]) {
 	  i++;
 	}
 	if(!parameter_d_given) guess_device(&device);
-
-	if (verbose) {
-		set_verbose();
-	}
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
