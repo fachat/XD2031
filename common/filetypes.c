@@ -24,6 +24,10 @@
  * Convert filetypes to strings and vice versa
  */
 
+#ifdef __STRICT_ANSI__		// enable strcasecmp()
+#undef __STRICT_ANSI__
+#endif
+
 #ifdef __AVR__
 #include <avr/pgmspace.h>
 #else
@@ -34,7 +38,6 @@
 
 #include <inttypes.h>
 #include <string.h>
-
 
 // TODO: how about DIR ?
 
