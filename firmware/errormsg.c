@@ -34,7 +34,7 @@
 #undef	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
-const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION LONGVERSION;
+const char IN_ROM versionstr[] = SW_NAME " V" VERSION LONGVERSION "/" HW_NAME;
 
 #define	H(v)	((v)|0x80)
 
