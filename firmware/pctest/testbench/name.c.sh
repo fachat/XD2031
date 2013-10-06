@@ -3,11 +3,11 @@
 
 TESTFILE=name
 CFLAGS="-Wall -std=c99"
-INCLUDE="-I. -I.. -I../../common"
+INCLUDE="-I.. -I../.. -I../../../common"
 
-gcc -D PCTEST $INCLUDE $CFLAGS ../$TESTFILE.c ../cmdnames.c -o $TESTFILE || exit 1
+gcc -D PCTEST $INCLUDE $CFLAGS ../../$TESTFILE.c ../mains/$TESTFILE.c ../../cmdnames.c -o ../bin/$TESTFILE || exit 1
 
-./$TESTFILE << "EOF"
+../bin/$TESTFILE << "EOF"
 # To set the parsehint parameter, give a
 !PARSEHINT_COMMAND
 # or

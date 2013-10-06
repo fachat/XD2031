@@ -1,0 +1,100 @@
+0: .DEL
+1: .SEQ
+2: .PRG
+3: .USR
+4: .REL
+5: .PRG
+6: .PRG
+7: .PRG
+8: .PRG
+9: .PRG
+# First parameter: filename
+# [   Second parameter: numeric type for files without extension (2 = PRG)
+#   [ Third parameter: numeric type for files with unknown extension (1 = SEQ) ] ]
+#
+Test: 'without_extension 1 1'
+--> .SEQ
+
+
+Test: 'without_extension 2 1'
+--> .PRG
+
+
+Test: 'without_extension'
+--> .PRG
+
+
+Test: 'program.prg'
+--> .PRG
+
+
+Test: 'PROGRAM.PRG'
+--> .PRG
+
+
+Test: 'data.seq'
+--> .SEQ
+
+
+Test: 'DATA.SEQ'
+--> .SEQ
+
+
+Test: 'data.rel'
+--> .REL
+
+
+Test: 'DATA.REL'
+--> .REL
+
+
+Test: 'user.usr'
+--> .USR
+
+
+Test: 'USER.USR'
+--> .USR
+
+
+Test: 'image.d64'
+--> .SEQ
+
+
+Test: 'IMAGE.D64'
+--> .SEQ
+
+
+Test: 'image.d71'
+--> .SEQ
+
+
+Test: 'IMAGE.D71'
+--> .SEQ
+
+
+Test: 'image.d80'
+--> .SEQ
+
+
+Test: 'IMAGE.D80'
+--> .SEQ
+
+
+Test: 'image.d81'
+--> .SEQ
+
+
+Test: 'IMAGE.D81'
+--> .SEQ
+
+
+Test: 'image.d82'
+--> .SEQ
+
+
+Test: 'IMAGE.D82'
+--> .SEQ
+
+
+Test: 'unknown.tar.gz'
+--> .SEQ

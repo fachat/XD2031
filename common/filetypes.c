@@ -76,15 +76,3 @@ const char* filetype_to_extension (uint8_t filetype) {
    if (filetype > (KNOWN_EXT - 1)) return (extensions[2]); // default to PRG
    return extensions[filetype];
 }
-
-
-#ifdef PCTEST
-#include <stdio.h>
-int main(int argc, char** argv) {
-   if(argc > 2) printf("%d\n", extension_to_filetype(argv[1], atoi(argv[2])));
-   else for (uint8_t i=0; i<10; i++) {
-      printf("%u: %s\n", i, (char*) filetype_to_extension(i));
-   }
-   return 0;
-}
-#endif

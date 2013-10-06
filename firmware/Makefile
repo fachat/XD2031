@@ -82,3 +82,6 @@ zooclean:
 	rm -f $(BINDIR)/*
 
 dist:	zooclean zoo zip
+
+tests:
+	make -C pctest tests

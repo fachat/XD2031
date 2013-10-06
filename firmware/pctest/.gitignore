@@ -1,4 +1,4 @@
 # Ignore executables
-name
-rtc
-cmdnames
+bin
+# Ignore user generated log files
+log

@@ -1,0 +1,54 @@
+
+# CBM Commands
+Input:  'I0'
+Parsed: cmd =   7   len =  1   <INIT>
+
+Input:  'INIT'
+Parsed: cmd =   7   len =  4   <INIT>
+
+Input:  'INI'
+Parsed: cmd =   7   len =  3   <INIT>
+
+Input:  'S1:FILE'
+Parsed: cmd =  14   len =  1   <SCRATCH>
+
+Input:  'SCRA FILE'
+Parsed: cmd =  14   len =  4   <SCRATCH>
+
+Input:  'U1 2,0,18,0'
+Parsed: cmd = 127   len =  1   <USER>
+
+Input:  'RENAME NEW=OLD'
+Parsed: cmd =  13   len =  6   <RENAME>
+
+Input:  'R NEW=OLD'
+Parsed: cmd =  13   len =  1   <RENAME>
+
+Input:  'REN 1:NEW=OLD'
+Parsed: cmd =  13   len =  3   <RENAME>
+
+
+# Illegal
+Input:  'MURX'
+Parsed: cmd =   1   len =  0   <?>
+
+
+# FS COMMANDS
+Input:  'MKDIR newdir'
+Parsed: cmd =  18   len =  5   <MKDIR>
+
+Input:  'MD newdir'
+Parsed: cmd =  18   len =  2   <MKDIR>
+
+Input:  'CD..'
+Parsed: cmd =  19   len =  2   <CD>
+
+Input:  'CD SUB'
+Parsed: cmd =  19   len =  2   <CD>
+
+Input:  'XRESET'
+Parsed: cmd =  21   len =  1   <X>
+
+Input:  '$1:*'
+Parsed: cmd =   6   len =  1   <$>
+
