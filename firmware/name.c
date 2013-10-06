@@ -35,6 +35,7 @@
 #include "name.h"
 #include "cmd.h"
 #include "cmdnames.h"
+#include "archcompat.h"
 
 #ifdef PCTEST
 #define debug_flush() fflush(stdout)

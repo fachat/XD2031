@@ -33,7 +33,6 @@
 
 #include "hwdefines.h"
 #include "device.h"
-#include "mem.h"
 #include "led.h"
 
 // -----------------------------------------------------------------------------

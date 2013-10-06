@@ -32,7 +32,7 @@ TARGET=XD2031-$(DEVICE)
 BINDIR=bin
 
 FILES=ieee.c bus.c main.c errormsg.c cmd.c cmdnames.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c dirconverter.c debug.c ../common/charconvert.c ../common/wildcard.c
-DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h debug.h cmd.h cmdnames.h cmd2.h term.h packet.h name.h provider.h ../common/petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h dirconverter.h ../common/charconvert.h ../common/wildcard.h
+DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h debug.h cmd.h cmdnames.h cmd2.h term.h packet.h name.h provider.h ../common/petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h dirconverter.h ../common/charconvert.h ../common/wildcard.h ../common/archcompat.h
 
 all:	$(BINDIR)/$(TARGET).hex size
 

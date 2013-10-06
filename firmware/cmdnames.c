@@ -23,15 +23,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "cmdnames.h"
-
-#ifdef __AVR__
-#include <avr/pgmspace.h>
-#else
-#define PROGMEM
-#define memcpy_P memcpy
-static inline uint8_t pgm_read_byte(uint8_t *a) { return *a; }
-#endif
-
+#include "archcompat.h"
 
 #define STRLEN 7 /* max length of command name without zero-terminator */
 #define TABLEN (sizeof(cmd_tab) / sizeof(struct cmd_struct))
@@ -43,7 +35,7 @@ struct cmd_struct {
 
 // This table resides in flash memory
 
-static const struct cmd_struct PROGMEM cmd_tab[] = {
+static const struct cmd_struct IN_ROM cmd_tab[] = {
 	{"-"      , CMD_NONE       }, // command_to_name starts here
 	{"?"      , CMD_SYNTAX     },
 	{"@"      , CMD_OVERWRITE  },
@@ -85,11 +77,11 @@ command_t command_find(uint8_t *input, uint8_t *len) {
 	}
 	for (i=4; i < TABLEN; i++) {
 		for (j=0; j <= STRLEN; j++) {
-			b = pgm_read_byte((uint8_t *)&cmd_tab[i].name[j]);
+			b = rom_read_byte((uint8_t *)&cmd_tab[i].name[j]);
 			if (b == 0 || !isalpha(input[j])) { // comparison ends
 				*len = j;
 				if (j == 0) return CMD_SYNTAX;    // no valid input
-				return pgm_read_byte((uint8_t *)&cmd_tab[i].cmd);
+				return rom_read_byte((uint8_t *)&cmd_tab[i].cmd);
 			}
 			if (b != input[j]) break;     // strings are not equal
 		}
@@ -107,8 +99,8 @@ const char *command_to_name(command_t cmd) {
 
 	strcpy(cmd_string, "-");          // Initialize with CMD_NONE
 	for (i=0; i < TABLEN; i++) {
-		if (cmd == pgm_read_byte( (uint8_t *) &cmd_tab[i].cmd)) {
-			memcpy_P(cmd_string, cmd_tab[i].name, STRLEN + 1);
+		if (cmd == rom_read_byte( (uint8_t *) &cmd_tab[i].cmd)) {
+			rom_memcpy(cmd_string, cmd_tab[i].name, STRLEN + 1);
 			break;
 		}
 	}

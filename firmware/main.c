@@ -62,7 +62,7 @@
 #include "file.h"
 #include "channel.h"
 #include "bus.h"
-#include "mem.h"
+#include "archcompat.h"
 #include "bufcmd.h"
 
 #include "timer.h"

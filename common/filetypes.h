@@ -20,6 +20,8 @@
 
 ***************************************************************************/
 
+#include <inttypes.h>
+
 int8_t extension_to_filetype (char* filename, uint8_t no_extension_default, uint8_t default_unknown);
 
 const char* filetype_to_extension (uint8_t filetype);

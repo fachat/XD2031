@@ -4,7 +4,7 @@
 #
 
 ARCHFILES=avr/uarthw.c avr/ledhw.c avr/timerhw.c avr/avr.c avr/nvconfighw.c avr/reset.c
-ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/mem.h avr/timerhw.h avr/timerint.o avr/arch.h
+ARCHDEPS=avr/compat.h avr/delayhw.h avr/uarthw.h avr/uartints.o avr/timerhw.h avr/timerint.o avr/arch.h
 ARCHASMOBJ=avr/uartints.o avr/timerint.o
 
 ARCH=avr

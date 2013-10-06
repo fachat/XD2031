@@ -23,7 +23,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "mem.h"
+#include "archcompat.h"
 #include "errormsg.h"
 #include "channel.h"
 #include "version.h"		/* for SW_NAME */

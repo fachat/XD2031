@@ -28,13 +28,7 @@
 #undef __STRICT_ANSI__
 #endif
 
-#ifdef __AVR__
-#include <avr/pgmspace.h>
-#else
-#define PROGMEM
-#include <strings.h>
-#include <stdlib.h>
-#endif
+#include "archcompat.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -42,7 +36,7 @@
 // TODO: how about DIR ?
 
 #define KNOWN_EXT 5
-static const char extensions[KNOWN_EXT][5] PROGMEM =
+static const char extensions[KNOWN_EXT][5] IN_ROM =
 	{ ".DEL", ".SEQ", ".PRG", ".USR", ".REL" };
 
 /** @brief Converts filename[.ext] to filetype

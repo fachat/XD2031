@@ -25,7 +25,6 @@
 #define ASSERT_H
 
 #include "debug.h"
-#include "mem.h"
 
 #define	assert_not_null(p,m)	 				\
 	do {							\
