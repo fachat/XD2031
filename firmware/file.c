@@ -360,7 +360,7 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rx
 					err = bufcmd_relfile_proxy(channelno, active[i].endpoint, reclen);
 				}	
 
-				active[i].callback(err, active[i].rxdata);
+				active[i].callback(err, (uint8_t *) active[i].rxdata);
 			}
 			active[i].channel_no = -1;
 			break;
