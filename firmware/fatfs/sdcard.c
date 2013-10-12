@@ -2,20 +2,12 @@
 /* MMCv3/SDv1/SDv2 (in SPI mode) control module  (C)ChaN, 2010           */
 /*-----------------------------------------------------------------------*/
 
-#include <avr/io.h>
-#include <avr/pgmspace.h>
 #include "device.h"     /* Device dependent I/O definitions */
 #include "diskio.h"
 #include "sdcard.h"
 #include "spi.h"
 #include "timer.h"
-
-#ifdef XITOA
-   // #####   FIXME: debug output does not yet work here   #####
-#  include "xitoa.h"
-#else
-#  include "debug.h"
-#endif
+#include "debug.h"
 
 #undef DEBUG_CMD
 
@@ -340,13 +332,13 @@ DSTATUS SD_disk_status (
 /*-----------------------------------------------------------------------*/
 
 DRESULT SD_disk_read (
-    BYTE drv,           /* Physical drive nmuber (0) */
+    BYTE pdrv,          /* Physical drive nmuber (0) */
     BYTE *buff,         /* Pointer to the data buffer to store read data */
     DWORD sector,       /* Start sector number (LBA) */
-    BYTE count          /* Sector count (1..255) */
+    UINT count          /* Sector count */
 )
 {
-    if (drv || !count) return RES_PARERR;
+    if (pdrv || !count) return RES_PARERR;
     if (media_status & STA_NOINIT) return RES_NOTRDY;
 
     if (!(CardType & CT_BLOCK)) sector *= 512;  /* Convert to byte address if needed */
@@ -381,7 +373,7 @@ DRESULT SD_disk_write (
     BYTE drv,           /* Physical drive nmuber (0) */
     const BYTE *buff,   /* Pointer to the data to be written */
     DWORD sector,       /* Start sector number (LBA) */
-    BYTE count          /* Sector count (1..255) */
+    UINT count          /* Sector count */
 )
 {
     if (drv || !count) return RES_PARERR;
@@ -564,19 +556,19 @@ MEDIA_CHANGE_HANDLER
  * No need to care about ATA, USB... thus no diskio.c
  * Alias all routines to SD versions */
 
-DSTATUS                          disk_initialize (BYTE)
+DSTATUS                          disk_initialize (BYTE pdrv)
 __attribute__ ((weak, alias ("SD_disk_initialize")));
 
-DSTATUS                          disk_status (BYTE)
+DSTATUS                          disk_status (BYTE pdrv)
 __attribute__ ((weak, alias ("SD_disk_status")));
 
-DRESULT                          disk_read (BYTE, BYTE*, DWORD, BYTE)
+DRESULT                          disk_read (BYTE pdrv, BYTE*buff, DWORD sector, UINT count)
 __attribute__ ((weak, alias ("SD_disk_read")));
 
 #if _READONLY == 0
-DRESULT                          disk_write (BYTE, const BYTE*, DWORD, BYTE)
+DRESULT                          disk_write (BYTE pdvr, const BYTE*buff, DWORD sector, UINT count)
 __attribute__ ((weak, alias ("SD_disk_write")));
 #endif
 
-DRESULT                          disk_ioctl (BYTE, BYTE, void*)
+DRESULT                          disk_ioctl (BYTE pdvr, BYTE cmd, void*buff)
 __attribute__ ((weak, alias ("SD_disk_ioctl")));;

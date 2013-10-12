@@ -210,13 +210,17 @@ static FRESULT tbl_close_file(uint8_t chan) {
 // ----- Provider routines -------------------------------------------------
 
 static void fat_provider_init(void) {
+   uint8_t res;
+
    debug_puts("fat_provider_init()\n");
    for(uint8_t i=0; i < FAT_MAX_ASSIGNS; i++) {
       fat_assign[i].drive = AVAILABLE;
       fat_assign[i].cwd[0] = 0;
    }
-   disk_initialize(0);
-   f_mount(0, &Fatfs[0]);
+   res = disk_initialize(0);
+   debug_printf("disk_initialize: %u", res); debug_putcrlf();
+   res = f_mount(&Fatfs[0], "", 1);
+   if(res) debug_printf("f_mount: %u\n", res);
    tbl_init();
    fat_provider_initialized = TRUE;
 }

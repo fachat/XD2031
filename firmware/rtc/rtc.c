@@ -22,6 +22,8 @@
 
 // This file holds routines common for all types of
 // real time clocks, e.g. the time parser
+// It also provides the current time for the SD card provider/FatFs
+// for file timestamps.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +37,6 @@
 #endif
 
 #include "rtc.h"
-
 
 static uint8_t day_of_week(uint16_t y, uint8_t m, uint8_t d) {
 // Algorithm by Tomohiko Sakamoto
@@ -292,3 +293,34 @@ void rtc_timestamp(const RTC_t* datim) {
          datim->year, datim->month, datim->mday,
          datim->hour, datim->min, datim->sec);
 }
+
+// ------------------------------------------------------------------------
+
+// get_fatttime() used by FatFs / SD-card provider
+#ifdef USE_FAT
+
+#include "integer.h"
+#include "ffconf.h"
+
+#if _FS_READONLY
+# define get_fattime() 0
+#else
+/* RTC only needed for write access / time stamps */
+
+DWORD get_fattime (void)
+{
+    RTC_t rtc;
+
+    /* Get local time */
+    rtc_gettime(&rtc);
+
+    /* Pack date and time into a DWORD variable */
+    return    ((DWORD)(rtc.year - 1980) << 25)
+            | ((DWORD)rtc.month << 21)
+            | ((DWORD)rtc.mday << 16)
+            | ((DWORD)rtc.hour << 11)
+            | ((DWORD)rtc.min << 5)
+            | ((DWORD)rtc.sec >> 1);
+}
+#endif
+#endif

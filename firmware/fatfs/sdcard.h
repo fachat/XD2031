@@ -12,12 +12,15 @@ volatile uint8_t media_status;
 
 /* Prototypes for disk control functions */
 
-DSTATUS SD_disk_initialize (BYTE);
-DSTATUS SD_disk_status (BYTE);
-DRESULT SD_disk_read (BYTE, BYTE*, DWORD, BYTE);
-#if _READONLY == 0
-  DRESULT SD_disk_write (BYTE, const BYTE*, DWORD, BYTE);
-#endif
-DRESULT SD_disk_ioctl (BYTE, BYTE, void*);
+#if 0
 
+DSTATUS SD_disk_initialize (BYTE pdrv);
+DSTATUS SD_disk_status (BYTE pdrv);
+DRESULT disk_read (BYTE pdrv, BYTE*buff, DWORD sector, UINT count);
+#if _READONLY == 0
+DRESULT disk_write (BYTE pdrv, const BYTE* buff, DWORD sector, UINT count);
+#endif
+DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
+
+#endif
 #endif
