@@ -128,6 +128,19 @@ static errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
 static errno_t fs_move(char *buf);
 static void fs_delete(char *path, packet_t *p);
 
+// Copy a filename/path limited to 16 characters
+// If the path is too long, copy only the last characters preceeded by ".."
+static void shortname(char* dest, const char* src) {
+  uint8_t len = strlen(src);
+  if(len  > 16) {
+     memmove(dest + 2, src + len - 14, 14);
+     dest[0] = '.';
+     dest[1] = '.';
+ } else strcpy(dest, src);
+ dest[16] = 0;
+}
+
+
 // ----- File / Channel table ----------------------------------------------
 
 static void tbl_init(void) {
@@ -448,22 +461,14 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
                strncpy(dir.mask, b, sizeof dir.mask);
                dir.mask[sizeof(dir.mask) -1] = 0;
             }
-            // If the path is too long, show the last 16 characters
-            strncpy(dir.headline, b + ((strlen(b) > 16) ? strlen(b) - 16 : 0), 16);
-            dir.headline[sizeof(dir.headline) - 1] = 0;
+            shortname(dir.headline, b);
          } else {
             debug_puts("no dirmask\n");
-            // FIXME: use current directory of assigned drive instead of "."
             if((fres = f_opendir(&dir.D, "."))) break;
             // Use dir.mask as temporary storage for current directory
-            // because it is much larger than dir.headline
+            // because it is much larger (_MAX_LFN+1) than dir.headline (16+1)
             f_getcwd(dir.mask, sizeof dir.mask);
-            // Remove FATFS drive string "0:"
-            memmove(dir.mask, dir.mask + 2, sizeof(dir.mask) - 2);
-            // If the path is too long, show the last 16 characters
-            strncpy(dir.headline, dir.mask +
-               ((strlen(dir.mask) > 16) ? strlen(dir.mask) - 16 : 0), 16);
-            dir.headline[sizeof(dir.headline) - 1] = 0;
+            shortname(dir.headline, dir.mask);
             strcpy(dir.mask, "*");
          }
          dir.drive = txbuf->buffer[0];
