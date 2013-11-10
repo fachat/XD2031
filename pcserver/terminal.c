@@ -139,12 +139,23 @@ int terminal_init (void) {
 		return 1;
 	}
 
+        char *boldstr = NULL;
+        if(tigetstr("bold")) boldstr = strdup(tigetstr("bold"));
+
 	if (tigetstr("setaf")) {
 		log_debug("Using setaf color definitions\n");
 		red	= strdup(tiparm(tigetstr("setaf"), 1));
 		green	= strdup(tiparm(tigetstr("setaf"), 2));
 		yellow	= strdup(tiparm(tigetstr("setaf"), 3));
-		blue	= strdup(tiparm(tigetstr("setaf"), 4));
+                if(boldstr) {
+		   blue	= malloc(strlen(boldstr) + strlen(tiparm(tigetstr("setaf"))) + 1);
+                   if(!blue) {
+                      log_error("malloc failed!\n");
+                      exit(1);
+                   }
+                   strcpy(blue, boldstr);
+                   strcat(blue, tiparm(tigetstr("setaf"), 4));
+                } else blue = strdup(tiparm(tigetstr("setaf"), 4));
 		magenta = strdup(tiparm(tigetstr("setaf"), 5));
 		cyan	= strdup(tiparm(tigetstr("setaf"), 6));
 		white	= strdup(tiparm(tigetstr("setaf"), 7));
