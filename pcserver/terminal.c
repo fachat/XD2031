@@ -27,11 +27,13 @@
 #ifdef _WIN32
 
 #include <windows.h>
+#include <stdbool.h>
 #include "log.h"
 
 static HANDLE hStdout;
 static CONSOLE_SCREEN_BUFFER_INFO default_settings;
 static WORD default_attributes;
+static bool usecolors = false;
 
 void color_default (void) {
 	SetConsoleTextAttribute (hStdout, default_attributes);
@@ -40,24 +42,23 @@ void color_default (void) {
 int terminal_init(void) {
 	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hStdout == INVALID_HANDLE_VALUE) {
-		log_error("Error while getting stdout handle\n");
+		DWORD err = GetLastError();
+		log_error("Error %d while getting stdout handle\n", err);
 		return 1;
 	}
 
 	// Save current text colors as default
-	if(!GetConsoleScreenBufferInfo(hStdout, &default_settings)) {
-		log_error("Error while getting default color settings\n");
-		return 1;
-	}
+	if(!GetConsoleScreenBufferInfo(hStdout, &default_settings)) return 1;
 
 	default_attributes = default_settings.wAttributes;
+        usecolors = true;
 
 	atexit(color_default);
 	return 0;
 }
 
 void color_textcolor(WORD attr) {
-	SetConsoleTextAttribute (hStdout, attr);
+	if (usecolors) SetConsoleTextAttribute (hStdout, attr);
 }
 
 // Set foreground color
