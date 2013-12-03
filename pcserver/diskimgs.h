@@ -66,6 +66,7 @@ typedef struct Disk_Image
    uint8_t DirTrack;              // Header and directory track
    uint8_t DirSector;             // Sector number of first directory entry block
    uint8_t bamts[8];		  // up to four BAM block addresses (t/s)
+   uint8_t HasErrorTable;         // Error table appended
 } Disk_Image_t;
 
 int diskimg_identify(Disk_Image_t *di, unsigned int filesize);
