@@ -52,7 +52,7 @@ wildcard.o:	$(XD2031PATH)/common/wildcard.c
 	$(SILENT)$(CC) $(CFLAGS) $(INCLUDE) -c $<
 
 clean:
-	$(RM) $(OBJ) $(EXE) $(PRGNAME).zip
+	$(RM) $(OBJ) $(EXE) $(PRGNAME).zip $(PRGNAME).exe
 
 winzip:
 	make WIN=y clean
