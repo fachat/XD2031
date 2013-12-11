@@ -52,7 +52,7 @@
 #include "channel.h"
 #include "serial.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
