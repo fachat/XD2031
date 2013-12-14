@@ -7,3 +7,5 @@ docsrc/doxygen/*
 .project
 .cproject
 .settings
+*.o
+*.d

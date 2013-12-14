@@ -1,87 +1,201 @@
+HELP="\n\
+XD-2031 Firmware Makefile                                            \n\
+                                                                     \n\
+                                                                     \n\
+make [action ... ]  [ <option> ... ]                                 \n\
+                                                                     \n\
+Options:                                                             \n\
+                                                                     \n\
+        DEVICE=<yourdevice>   --> overrides devices                  \n\
+        V=1                   --> verbose compilation                \n\
+        VERSION=x.y.z         --> version number for a release       \n\
+        MCU=<cpu>             --> override MCU                       \n\
+                                                                     \n\
+For AVR specific options, have a look at avr/Makefile                \n\
+Options specific for your device are in <yourdevice>/Makefile        \n\
+                                                                     \n\
+DO NOT EDIT Makefiles to set your options.                           \n\
+Your changes would prevent updating with 'git pull'.                 \n\
+Store your personal settings here:                                   \n\
+                                                                     \n\
+        ~/.xd2031/firmware.conf                                      \n\
+                                                                     \n\
+Some actions:                                                        \n\
+                                                                     \n\
+make           --> compile                                           \n\
+make flash     --> compile and flash (ISP-programming)               \n\
+make load      --> compile and update via serial bootloader          \n\
+make size      --> show info about memory usage (per file + total)   \n\
+make relsize   --> show memory usage expressed as a percentage       \n\
+make dist      --> compile for every device and zip binaries         \n\
+make clean     --> cleans object and dependencies for current device \n\
+make veryclean --> forces cleaning of all generated files            \n\
+make tests     --> perform some local tests                          \n\
+make update    --> fetch updates and compile the new code            \n\
+make help      --> gives this help text                              \n\
+\n\n"
 
+BAR="==================================================================="
 
-# Uncomment one of the following lines to select your device:
-DEVICE=xs1541
-#DEVICE=petSD
-#DEVICE=petSD2
+# Get home directory, called with sudo or not
+REALHOME=~$(shell who -m | awk '{print $$1;}')
 
-# This defines the serial-over-USB port to use when loading the
-# firmware into the device with "make load"
-# For AVR (AtMega) needs avrdude - see avr/Makefile for details
-SERIAL=/dev/ttyUSB0
+# make zoo|dist makes no sense with settings for a specific device
+# otherwise read user settings for his device
+ifndef IGNORE_USER_SETTINGS
+   -include $(REALHOME)/.xd2031/firmware.conf
+endif
 
-# If you do ISP programming with "make flash", select your programmer/port:
-DUDE_PROGRAMMER = avrispmkii
-# DUDE_PROGRAMMER = stk200
-# DUDE_PROGRAMMER = petsd2
+# If no DEVICE=<yourdevice> is given, default to xs1541
+DEVICE?=xs1541
+DEVICES=xs1541 petSD petSD2
 
-DUDE_PORT = usb
-# DUDE_PORT = /dev/parport0
-# DUDE_PORT = lpt1
-# DUDE_PORT = /dev/ttyUSB0
+# If no VERSION=<x.y.z.> is given, default to today's date
+VERSION?=$(shell date +"%Y-%m-%d")
 
-# If you didn't find your programmer, have a took at the list given from:
-# avrdude -c ?
-#
-####################################################################
-# Should not be modified
+# Enable verbose compile with make V=1
+ifeq ($(V),1)
+  V1=
+  V2=@\#
+else
+  V1=@
+  V2=@echo
+endif
 
-.PHONY: clean rootclean testclean doc zip zoo dist
+.PHONY: clean firmware elf size zoo dumppar
+.SUFFIXES:
+.SUFFIXES: .c .S
+all: dumppar firmware
 
-TARGET=XD2031-$(DEVICE)
-BINDIR=bin
+SWNAME=xd2031
 
-FILES=ieee.c bus.c main.c errormsg.c cmd.c cmdnames.c file.c term.c name.c channel.c serial.c provider.c rtconfig.c iec.c bufcmd.c dirconverter.c debug.c ../common/charconvert.c ../common/wildcard.c
-DEPS=assert.h ieee.h bus.h main.h errormsg.h ../common/errors.h channel.h debug.h cmd.h cmdnames.h cmd2.h term.h packet.h name.h provider.h ../common/petscii.h serial.h delay.h ../common/wireformat.h led.h rtconfig.h version.h file.h iec.h timer.h nvconfig.h bufcmd.h dirconverter.h ../common/charconvert.h ../common/wildcard.h ../common/archcompat.h
+# Create automatic dependency files (*.d) on the fly during compilation
+AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
-all:	$(BINDIR)/$(TARGET).hex size
+# Sorting include paths and defines simplifies checking them
+INCPATHS=. ../common $(ARCH) $(DEVICE)
+INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
+SDEFS=$(sort $(DEFS))
 
+# CFLAGS/ASFLAGS common to all devices/platforms
+#CFLAGS+=-Wall
+#CFLAGS+=-Wextra
+CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
+
+ASFLAGS=$(MCU_CC) $(sort -I$(ARCH) -I$(DEVICE))
+
+# OBJDIR contains temporary object and dependency files
+OBJDIR=obj/obj-$(DEVICE)-$(MCU)/
+DEPDIR=$(OBJDIR).dep/
+# ZOOBINDIR contains all binaries
+ZOOBINDIR=$(SWNAME)-firmware-$(VERSION)
+# THISBINDIR contains distributable binary files for the current device
+THISBINDIR=$(ZOOBINDIR)/$(SWNAME)-$(VERSION)-$(DEVICE)-$(MCU)
+# BINNAME prefixes binary files which may co-exist in various file formats
+BINNAME=$(SWNAME)-$(VERSION)-$(DEVICE)-$(MCU)
+
+# Common source files
+SRC=$(wildcard *.c) $(wildcard common/*.c)
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
 
-# Include optional modules?
+# Optional modules (enabled by USE_* in device/Makefile)
 ifeq ($(strip $(USE_FAT)),y)
-	include fatfs/Makefile
+  INCPATHS+=fatfs
+  DEFS+=-DUSE_FAT
+  SRC+=fatfs/fat_provider.c fatfs/ff.c fatfs/dir.c fatfs/errcompat.c
+  SRC+=fatfs/option/ccsbcs.c
 endif
 
-doc:
-	mkdir -p ../docsrc/doxygen
-	mkdir -p ../docsrc/doxygen/firmware
-	doxygen Doxyfile
+# locations where make searches C source files
+vpath %.c . ../common $(DEVICE) $(ARCH) fatfs fatfs/option rtc i2c
+# locations where make searches Assembler source files
+vpath %.S $(DEVICE) $(ARCH)
 
-rootclean:
-	rm -f $(BINDIR)/$(TARGET).elf $(BINDIR)/$(TARGET).hex
+# Create object names from .c and .S
+_OBJ=$(notdir $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRC))))
+OBJ=$(addprefix $(OBJDIR),$(_OBJ))
+# Create dependency names from .o
+DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
 
-testclean:
-	rm -f rtc/rtc
+# Include automatic dependencies, continue if they don't exist yet
+-include $(DEP)
 
-BAR="======================================================================\\n"
-zoo:			   # Compile everything
-	rm -f $(BINDIR)/*
-	mkdir -p $(BINDIR)
-	@for d in xs1541 petSD petSD2 ;do \
-	  printf "\n$(BAR)   Compiling $$d\n$(BAR)" ;\
-	  make DEVICE=$$d clean; \
-	  make DEVICE=$$d ;\
-	  make DEVICE=$$d clean; \
-	done
-	# Copy firmware updater scripts
-	cp xs1541/xs1541up.sh $(BINDIR)
-	cp xs1541/3.1541up.sh $(BINDIR)
-	cp petSD/petSDisp.sh $(BINDIR)
-	# Copy petSD fix fuses script
-	cp petSD/petSD_fix_fuses.sh $(BINDIR)
-	# Copy ISP programmer configuration
-	cp petSD/programmer.cfg $(BINDIR)
+# Compile C files
+$(OBJDIR)%.o: %.c
+	$(V2) CC $<
+	$(V1) $(CC) $(CFLAGS) $(AUTODEP) -c $< -o $@
 
-zip:	zoo
-	@printf "\n$(BAR)   Zip\n$(BAR)"
-	zip -j XD2031-$$(date +%Y-%m-%d).zip $(BINDIR)/*
+# Assemble S files
+$(OBJDIR)%.o: %.S
+	$(V2) AS $<
+	$(V1) $(AS) $(ASFLAGS) $(AUTODEP) -c $< -o $@
 
-zooclean:
-	rm -f $(BINDIR)/*
+# Link object files
+$(TARGET): $(OBJDIR) $(DEPDIR) $(THISBINDIR) $(OBJ)
+	$(V2) LD $(notdir $@)
+	$(V1) $(LD) -o $@ $(LDFLAGS) $(OBJ)
 
-dist:	zooclean zoo zip
+# Make sure, the arch/Makefile has properly set a MCU switch
+MCU_CC?=$(error Undefined or unsupported MCU $(MCU))
+
+# Clean directories
+clean: objclean depclean
+
+objclean:
+	$(V2) Cleaning object files
+	$(V1) rm -f $(OBJ)
+	@# The object directory gets removed by make depclean
+
+depclean:
+	$(V2) Cleaning dependencies
+	$(V1) rm -f $(DEP)
+	$(V1) if [ -d $(DEPDIR) ]; then rmdir $(DEPDIR); fi
+
+veryclean:
+	rm -rf obj
+	rm -rf xd2031-firmware*
+
+# Create build directories
+$(OBJDIR):
+	$(V1) mkdir -p $@
+$(DEPDIR):
+	$(V1) mkdir -p $@
+$(THISBINDIR):
+	$(V1) mkdir -p $@
 
 tests:
-	make -C pctest tests
+	@make --no-print-directory -C pctest tests
+
+dumppar:
+	@printf "Target: $(DEVICE)   MCU: $(MCU)   Version: $(VERSION)\n"
+
+# Build for all devices
+zoo:
+	make --no-print-directory IGNORE_USER_SETTINGS=y _zoo
+_zoo: veryclean
+	# Build devices with default values
+	@for d in $(DEVICES) ; do                                   \
+	   printf "\n$(BAR)\n\tTarget: $$d\n$(BAR)\n"              ;\
+	   make --no-print-directory DEVICE=$$d VERSION=$(VERSION) ;\
+	done
+	# Build devices with extra settings
+	make --no-print-directory DEVICE=xs1541 VERSION=$(VERSION) MCU=m1284p
+
+# Create a zip file with all binaries
+dist: zoo
+	zip -r $(ZOOBINDIR).zip $(ZOOBINDIR)
+
+# Fetch updates and compile
+update:
+	git pull
+	@make --no-print-directory
+	@printf "$(BAR)\n\nNew firmware is ready.\n\n"
+	@printf "To upload with a ISP programmer:\n\n\tmake flash\n\n"
+	@printf "To upload using USB cable/bootloader:\n\n\tmake load\n\n"
+
+help:
+	printf $(HELP)
+
+x:
+	@echo $(REALHOME)

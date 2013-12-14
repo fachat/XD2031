@@ -1,18 +1,21 @@
 # petSD Options
-
-USE_FAT=y                       # Enable optional FAT module?
-USE_RTC=y			# Enable optional real time clock?
+#
+# DO NOT EDIT Makefiles to set your options
+# Your changes would prevent updating with 'git pull'.
+# Store your personal settings here:
+#
+#         ~/.xd2031/firmware.conf
+#
+USE_FAT?=y                       # Enable optional FAT module?
+USE_RTC?=y                       # Enable optional real time clock?
 
 #########################################################################
 # Should not be modified
 
-# specific switches for this device
-DEVICEOPTS=-DHAS_IEEE -DHAS_EEPROM
+MCU?=m1284p
 
-# MCU name madness
-ARCHDEVICE = -mmcu=atmega1284p  # for compiling
-TARGET_MCU = m1284p             # for programming with AVRDUDE
-SIZE_MCU   = atmega1284p        # for info about memory usage
+# specific switches for this device
+DEFS+=-DHAS_IEEE -DHAS_EEPROM
 
 # AVR fuses settings
 LFUSE = f7
@@ -22,34 +25,36 @@ EFUSE = ff
 # SCK period
 DUDE_SPEED=-B 1.0
 
-DEVICEFILES=petSD/ieeehw.c petSD/device.c
-DEVICEDEPS=petSD/device.h petSD/config.h petSD/atn.o petSD/ieeehw.h petSD/device.h
+SRC+=petSD/ieeehw.c
+SRC+=petSD/device.c
+SRC+=petSD/atn.S
 
-DEVICEASMOBJ=atn.o
-
+# SD card low level routines
 ifeq ($(strip $(USE_FAT)),y)
-	DEVICE_CFLAGS=-DUSE_FAT             # Define USE_FAT
-	DEVICEDEPS+=avr/spi.h               # SPI routines
-	DEVICEFILES+=fatfs/sdcard.c         # SD card low level routines
-	DEVICEDEPS+=rtc/rtc.h               # Real time clock defs and prototypes
-	DEVICEFILES+=fat_provider.c         # FAT provider
-	DEVICEDEPS+=fat_provider.h
+	SRC+=fatfs/sdcard.c
 endif
+
 ifeq ($(strip $(USE_RTC)),y)
-	DEVICEOPTS+=-DHAS_RTC               # Define HAS_RTC
-        DEVICEFILES+=rtc/rtc.c              # T commands
-	DEVICEFILES+=rtc/ds1307.c           # DS1307 Real time clock routines
-	DEVICEDEPS+=i2c/i2c.h               # I2C prototypes
-	DEVICEFILES+=i2c/i2c.c              # I2C high level routines
-	DEVICEFILES+=i2c/i2c-bb.c           # I2C bit banging routines
+   DEFS+=-DHAS_RTC
+   INCPATHS+=i2c rtc
+   # T commands
+   SRC+=rtc/rtc.c
+   # DS1307 Real time clock routines
+   SRC+=rtc/ds1307.c
+   # I2C high level routines
+   SRC+=i2c/i2c.c
+   # I2C bit banging routines
+   SRC+=i2c/i2c-bb.c
 endif
-
-## Assembler files
-petSD/atn.o: petSD/atn.S
-	$(CC) $(INCLUDES) $(ARCHDEVICE) $(ASMFLAGS) -c  $<
-
-deviceclean:
-	rm -f atn.o
 
 # include platform specific Makefile
 include avr/Makefile
+
+# Device specific scripts that should be copied to the bin directory
+devicefiles: $(THISBINDIR)/petSDisp.sh $(THISBINDIR)/petSD_fix_fuses.sh $(THISBINDIR)/programmer.cfg
+$(THISBINDIR)/petSDisp.sh:
+	$(V1) cp petSD/petSDisp.sh $@
+$(THISBINDIR)/petSD_fix_fuses.sh:
+	$(V1) cp petSD/petSD_fix_fuses.sh $@
+$(THISBINDIR)/programmer.cfg:
+	$(V1) cp petSD/programmer.cfg $@
