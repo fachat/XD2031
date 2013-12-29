@@ -50,6 +50,7 @@
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
+#include "terminal.h"
 
 #define FALSE 0
 #define TRUE 1
@@ -82,10 +83,14 @@ int main(int argc, char *argv[]) {
 	char *dir;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
-	int verbose = 0;
 
 	mem_init();
 
+	// Check -v (verbose) first to enable log_debug()
+	// when processing other options
+	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
+
+	terminal_init();
 
 	i=1;
 	while(i<argc && argv[i][0]=='-') {
@@ -103,7 +108,7 @@ int main(int argc, char *argv[]) {
 		    /* exits on more or less than a single possibility */
 		  }
 		  if(!strcmp(device,"-")) device = NULL; 	// use stdin/out
-		  printf("main: device = %s\n", device);
+		  log_info("main: device = %s\n", device);
 		}
  	     	break;
 	    case 'A':
@@ -111,7 +116,6 @@ int main(int argc, char *argv[]) {
 		// ignore these, as those will be evaluated later by cmd_...
 		break;
 	    case 'v':
-		verbose = 1;
 		break;
 	    case 'D':
 		disable_user_interface();
@@ -124,10 +128,6 @@ int main(int argc, char *argv[]) {
 	  i++;
 	}
 	if(!parameter_d_given) guess_device(&device);
-
-	if (verbose) {
-		set_verbose();
-	}
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
 	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
-	  fprintf(stderr, "Couldn't change to directory %s, errno=%d (%s)\n",
+		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
 	  exit(EXIT_RESPAWN_NEVER);
 	}
@@ -153,12 +153,12 @@ int main(int argc, char *argv[]) {
 		fdesc = device_open(device);
 		if (os_open_failed(fdesc)) {
 		  /* error */
-		  fprintf(stderr, "Could not open device %s, errno=%d (%s)\n", 
+		  log_error("Could not open device %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
-		  fprintf(stderr, "Unable to configure serial port %s, errno=%d (%s)\n",
+		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}

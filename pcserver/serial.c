@@ -143,46 +143,40 @@ int config_ser(int fd) {
 
 void guess_device(char** device) {
 /* search /dev for a (virtual) serial port 
-   Change "device" to it, if exactly one found
-   If none found or more than one, exit() with error msg.
-   FT232 (XS-1541, petSD) connects as ttyUSB0 (ttyUSB1 ...) on Linux,
-   and as cu.usbserial-<SERIAL NUMBER> on OS X.
-   ttyAMA0 is Raspberry Pi's serial port (3.1541) */
+	Return pointer to device name, if exactly one found.
+	If none found or more than one, exit() with error msg.
+	FT232 (XS-1541, petSD) connects as ttyUSB0 (ttyUSB1 ...) on Linux,
+	and as cu.usbserial-<SERIAL NUMBER> on OS X.
+	ttyAMA0 is Raspberry Pi's serial port (3.1541) */
 
-  DIR *dirptr;
-  struct direct *entry;
-  static char devicename[80] = "/dev/";
-  int candidates = 0;
+	DIR *dirptr;
+	struct direct *entry;
 
-  dirptr = opendir(devicename);
-  while((entry=readdir(dirptr))!=NULL) {
-    if ((!fnmatch("cu.usbserial-*",entry->d_name,FNM_NOESCAPE)) ||
-        (!fnmatch("ttyUSB*",entry->d_name,FNM_NOESCAPE)) ||
-        (!strcmp("ttyAMA0",entry->d_name)))
-    {
-      strncpy(devicename + 5, entry->d_name, 80-5); 
-      devicename[80] = 0; // paranoid... wish I had strncpy_s...
-      candidates++;
-    }
-  }
-  if(candidates == 1) *device = devicename;
-
-  // return(candidates); someday the error handling could be outside this fn
-
-  switch(candidates) {
-    case 0:
-      fprintf(stderr, "Could not auto-detect device: none found\n");
-      exit(EXIT_FAILURE);
-    case 1:
-      log_info("Serial device %s auto-detected\n", *device);
-      break;
-    default:
-      fprintf(stderr, "Unable to decide which serial device it is. "
-                      "Please pick one.\n");
-      exit(EXIT_RESPAWN_NEVER);
-      break;
-  }
+	*device = NULL;
+	dirptr = opendir("/dev/");
+	while((entry=readdir(dirptr)) != NULL) {
+		if ((!fnmatch("cu.usbserial-*", entry->d_name, FNM_NOESCAPE)) ||
+		    (!fnmatch("ttyUSB*", entry->d_name, FNM_NOESCAPE)) ||
+		    (!strcmp("ttyAMA0", entry->d_name))) {
+			log_info("Serial device /dev/%s auto-detected\n", entry->d_name);
+			if (*device) {
+				fprintf(stderr, "Unable to decide which serial device it is. "
+				                "Please pick one.\n");
+				exit(EXIT_RESPAWN_NEVER);
+			}
+			*device = malloc(strlen(entry->d_name) + 6);
+			strcpy(*device, "/dev/");
+			strcat(*device, entry->d_name);
+		}
+	}
+	closedir(dirptr); // free ressources claimed by opendir
+	if(*device == NULL) {
+		fprintf(stderr, "Could not auto-detect device: none found\n");
+		exit(EXIT_FAILURE);
+	}
 }
+
+
 
 #else
 

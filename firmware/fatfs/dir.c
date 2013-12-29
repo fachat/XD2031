@@ -34,6 +34,7 @@
 #include "config.h"
 #include "device.h"
 #include "wildcard.h"
+#include "errcompat.h"
 
 uint8_t is_path_separator(char c) {
 	if(c == '/' || c =='\\') return 1;
@@ -69,7 +70,7 @@ char *splitpath(char *path, char **dir) {
  * returns CBM_ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
  * otherwise returns CBM_ERROR_OK
  */
-int8_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
+errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
 	if((strlen(dir) + 1 + strlen(name)) > pathmax) return CBM_ERROR_FILE_NAME_TOO_LONG;
 	strcpy(path, dir);
 	strcat(path, "/");
@@ -78,20 +79,21 @@ int8_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const
 }
 
 // just a dummy action for debug purposes
-int8_t dummy_action(const char *path) {
+errno_t dummy_action(const char *path) {
 	debug_printf("--> '%s'\n", path);
 	return CBM_ERROR_OK;
 }
 
-int8_t traverse(
+errno_t traverse(
 	char		*path,			// path string (may contain wildcards and path separators)
 	uint16_t	max_matches,		// abort if this number of matches is reached
 	uint16_t	*matches,		// count number of total matches
 	uint8_t		required_flags,		// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
 	uint8_t		forbidden_flags,	// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
-	int8_t 	(*action)(const char *path)	// function called by each match
+	errno_t	(*action)(const char *path)	// function called by each match
 ) {
-	uint8_t res;
+	errno_t cres = CBM_ERROR_OK;
+	FRESULT fres;
 	char *b, *d;
 	char *filename;
         char action_path[_MAX_LFN+1];
@@ -108,15 +110,15 @@ int8_t traverse(
 	b = splitpath(path, &d);
 	debug_printf("DIR: %s NAME: %s\n", d, b);
 
-	res = f_opendir(&dir, d);
-	if(res) {
-		debug_printf("traverse f_opendir=%d", res); debug_putcrlf();
-		return res;
+	fres = f_opendir(&dir, d);
+	if(fres) {
+		debug_printf("traverse f_opendir=%d", fres); debug_putcrlf();
+		return conv_fresult(fres);
 	}
 
 	while (1) {
-		res = f_readdir(&dir, &Finfo);
-		if(res || !Finfo.fname[0]) break;
+		fres = f_readdir(&dir, &Finfo);
+		if(fres || !Finfo.fname[0]) break;
 
 		filename = Finfo.fname;
 #		ifdef _USE_LFN
@@ -135,12 +137,17 @@ int8_t traverse(
 		}
 
 		if(compare_pattern(filename, b)) {
-			res = concat_path_filename(action_path, sizeof(action_path), d, filename);
-			if(res) return res;
-			res = action(action_path);
+			cres = concat_path_filename(action_path, sizeof(action_path), d, filename);
+			if(cres) return cres;
+			cres = action(action_path);
 			(*matches)++;
-			if(res || (*matches == max_matches)) return res;
+			if(cres || (*matches == max_matches)) return cres;
 		}
 	}
-	return CBM_ERROR_OK;
+	fres = f_closedir(&dir);
+	if(fres != FR_OK) {
+		debug_printf("f_closedir: %d", fres); debug_putcrlf();
+		cres = conv_fresult(fres);
+	}
+	return cres;
 }

@@ -54,7 +54,7 @@
 #include "serial.h"
 #include "handler.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -203,7 +203,7 @@ static void cmd_sync(serial_port_t readfd, serial_port_t writefd) {
 	int e = 0;
 	do {
 #if defined DEBUG_WRITE || defined DEBUG_CMD
-		printf("sync write %02x\n", syncbuf[0]);
+		log_debug("sync write %02x\n", syncbuf[0]);
 #endif
 		e = os_write(writefd, syncbuf, 1);
 	} while (e == 0 || (e < 0 &&  errno == EAGAIN));
@@ -215,8 +215,8 @@ static void cmd_sync(serial_port_t readfd, serial_port_t writefd) {
 	do {
 		n = os_read(readfd, syncbuf, 1);
 #ifdef DEBUG_READ
-	        printf("sync read %d bytes: ",n);
-	        for(int i=0;i<n;i++) printf("%02x ",255&syncbuf[i]); printf("\n");
+	        log_debug("sync read %d bytes: ",n);
+		log_hexdump(syncbuf, n, 0);
 #endif
 		if (n < 0) {
 			log_errno("Error on sync read", errno);
@@ -319,8 +319,8 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 	      n = os_read(readfd, buf+wrp, 8192-wrp);
 #ifdef DEBUG_READ
 	      if(n) {
-		printf("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
-		for(int i=0;i<n;i++) printf("%02x ",255&buf[wrp+i]); printf("\n");
+		log_debug("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
+		log_hexdump(buf[wrp], n, 0);
               }
 #endif
 
@@ -332,8 +332,8 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 	      }
 
               if(n < 0) {
-                fprintf(stderr,"fsser: read error %d (%s)\n",os_errno(),strerror(os_errno()));
-		fprintf(stderr,"Did you power off your device?\n");
+                log_error("fsser: read error %d (%s)\nDid you power off your device?\n",
+			os_errno(),strerror(os_errno()));
                 return 1;
               }
               wrp+=n;
@@ -408,7 +408,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		{
 			int n = buf[FSP_LEN];
 			log_debug("term: %d bytes @%p: ",n, buf);
-			for(int i=0;i<n;i++) log_debug("%02x ",255&buf[i]); log_debug("\n");
+			log_hexdump(buf, n, 0);
 		}
 #endif
 
@@ -579,7 +579,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		fp = channel_to_file(tfd);
 		if (fp != NULL) {
 			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
-			printf("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
+			log_debug("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
 			rv = fp->handler->seek(fp, record * fp->handler->recordlen(fp), SEEKFLAG_ABS);
 			if (rv != 0) {
 				log_rv(rv);
@@ -784,13 +784,12 @@ static void write_packet(serial_port_t fd, char *retbuf) {
 
 	int e = os_write(fd, retbuf, 0xff & retbuf[FSP_LEN]);
 	if (e < 0) {
-		printf("Error on write: %d\n", errno);
+		log_error("Error on write: %d\n", errno);
 	}
 #if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
-	log_debug("write %02x %02x %02x (%s):", 255&retbuf[0], 255&retbuf[1],
+	log_debug("write %02x %02x %02x (%s):\n", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
-	for (int i = 3; i<retbuf[FSP_LEN];i++) log_debug(" %02x", 255&retbuf[i]);
-	log_debug("\n");
+	log_hexdump(retbuf + 3, retbuf[FSP_LEN] - 3, 0);
 #endif
 }
 

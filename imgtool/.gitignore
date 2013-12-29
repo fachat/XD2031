@@ -1,0 +1,8 @@
+# Ignore object files and executables
+*.o
+imgtool
+imgtool.exe
+# Ignore distribution zip
+imgtool.zip
+# Ignore symbolic link to XD2031 for Eclipse
+XD2031

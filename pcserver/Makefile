@@ -14,13 +14,12 @@ PKG_CONFIG=$(CROSS)pkg-config
 FSSER_EXE=fsser
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
-#COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c openpars.c handler.c registry.c x00_handler.c diskimgs.c
-COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c ../common/charconvert.c ../common/wildcard.c openpars.c handler.c registry.c x00_handler.c diskimgs.c
-COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h openpars.h handler.h registry.h diskimgs.h
+COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c
+COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h openpars.h handler.h registry.h diskimgs.h ../common/filetypes.h terminal.h
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
-LIBS=-lcurl
+LIBS=-lncurses -lcurl
 
 # Open the serial device with root or user rights
 PRIVILEGED=y
@@ -30,13 +29,6 @@ ifeq ($(UNAME),Darwin)
 endif
 ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
-endif
-
-# Check if AVRDUDE configuration has already been added to /etc/avrdude.conf
-CONF_MISSING := $(shell grep petsd2 /etc/avrdude.conf > /dev/null; echo  $$?)
-ADD_AVRDUDE_CONF=echo "AVRDUDE configuration already installed."
-ifeq ($(CONF_MISSING),1)
-	ADD_AVRDUDE_CONF=cat ../firmware/avr/avrdude.conf >> /etc/avrdude.conf; echo "AVRDUDE configuration added."
 endif
 
 # fstcp builds a version that listens on a TCP/IP port - but there is not
@@ -105,8 +97,6 @@ endif
 	cp ../sample/* $(PREFIX)/$(SAMPLEDIR)
 	test -d $(PREFIX)/$(TOOLSDIR) || mkdir -p $(PREFIX)/$(TOOLSDIR)
 	cp ../tools/* $(PREFIX)/$(TOOLSDIR)
-	@# Add petSD2 programmer to /etc/avrdude.conf if not already there
-	@$(ADD_AVRDUDE_CONF)
 
 uninstall:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;

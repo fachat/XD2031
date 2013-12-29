@@ -23,154 +23,105 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "mem.h"
+#include "archcompat.h"
 #include "errormsg.h"
 #include "channel.h"
-#include "version.h"		/* for SW_NAME */
-#include "hwdefines.h"		/* for HW_NAME */
+#include "version.h"    /* for SW_NAME */
+#include "hwdefines.h"  /* for HW_NAME */
 #include "debug.h"
 #include "led.h"
 
 #undef	DEBUG_ERROR
 
 /// Version number string, will be added to message 73
-const char IN_ROM versionstr[] = HW_NAME "/" SW_NAME " V" VERSION LONGVERSION;
+const char IN_ROM versionstr[] = SW_NAME " V" VERSION LONGVERSION "/" HW_NAME;
 
-#define	H(v)	((v)|0x80)
+const char IN_ROM STR_OK[]                   = " OK";
+const char IN_ROM STR_SCRATCHED[]            = "FILES SCRATCHED";
+const char IN_ROM STR_READ[]                 = "READ ERROR";
+const char IN_ROM STR_WRITE_PROTECT[]        = "WRITE PROTECT ERROR";
+const char IN_ROM STR_WRITE_ERROR[]          = "WRITE ERROR";
+const char IN_ROM STR_SYNTAX_ERROR[]         = "SYNTAX ERROR";
+const char IN_ROM STR_FILE_NOT_FOUND[]       = "FILE NOT FOUND";
+const char IN_ROM STR_FILE_NOT_OPEN[]        = "FILE NOT OPEN";
+const char IN_ROM STR_FILE_EXISTS[]          = "FILE EXISTS";
+const char IN_ROM STR_FILE_TYPE_MISMATCH[]   = "FILE TYPE MISMATCH";
+const char IN_ROM STR_DIR_NOT_EMPTY[]        = "DIR NOT EMPTY";
+const char IN_ROM STR_NO_PERMISSION[]        = "NO PERMISSION";
+const char IN_ROM STR_FAULT[]                = "GENERAL FAULT";
+const char IN_ROM STR_NO_CHANNEL[]           = "NO CHANNEL";
+const char IN_ROM STR_DIR_ERROR[]            = "DIR ERROR";
+const char IN_ROM STR_DISK_FULL[]            = "DISK FULL";
+const char IN_ROM STR_DRIVE_NOT_READY[]      = "DRIVE NOT READY";
+const char IN_ROM STR_NO_BLOCK[]             = "NO BLOCK";
+const char IN_ROM STR_ILLEGAL_T_OR_S[]       = "ILLEGAL TRACK OR SECTOR";
+const char IN_ROM STR_OVERFLOW_IN_RECORD[]   = "OVERFLOW IN RECORD";
+const char IN_ROM STR_RECORD_NOT_PRESENT[]   = "RECORD NOT PRESENT";
+const char IN_ROM STR_TOO_LARGE[]            = "FILE TOO LARGE";
+const char IN_ROM STR_EMPTY[]                = "";
 
-static const uint8_t IN_ROM tokens[] = {
-	"\201ERROR"	// 1
-	"\202FILE"	// 2
-	"\203WRITE "	// 3
-	"\204SYNTAX "	// 4
-	"\205NOT "	// 5
-	"\206OPEN"	// 6
-	"\207FOUND"	// 7
-	"\210DIR "	// 8
-	"\211NO "	// 9
-	"\212RECORD"	// 10
-	// zero-terminated
+struct err_struct {
+  uint8_t    code;
+  const char *str;
 };
 
-static const uint8_t IN_ROM messages[] = {
-	H(CBM_ERROR_OK),			' ','O','K',
-	H(CBM_ERROR_SCRATCHED), 		2,'S',' ','S','C','R','A','T','C','H','E','D',
-	H(CBM_ERROR_READ),			'R','E','A','D',' ',1,
-	H(CBM_ERROR_WRITE_PROTECT),		3,'P','R','O','T','E','C','T',' ',1,
-	H(CBM_ERROR_WRITE_ERROR),		3,1,		// WRITE ERROR
-	H(CBM_ERROR_SYNTAX_UNKNOWN),
-	H(CBM_ERROR_SYNTAX_NONAME),
-	H(CBM_ERROR_SYNTAX_INVAL),
-	H(CBM_ERROR_SYNTAX_DIR_SEPARATOR),
-	H(CBM_ERROR_FILE_NAME_TOO_LONG),	4,1,		// SYNTAX ERROR
-	H(CBM_ERROR_FILE_NOT_FOUND),	2,' ',5,7,	// FILE NOT FOUND
-	H(CBM_ERROR_FILE_NOT_FOUND62),	2,' ',5,7,	// FILE NOT FOUND
-	H(CBM_ERROR_FILE_NOT_OPEN),		2,' ',5,6,	// FILE NOT OPEN
-	H(CBM_ERROR_FILE_EXISTS),		2,' ','E','X','I','S','T','S',
-	H(CBM_ERROR_FILE_TYPE_MISMATCH),	2,' ','T','Y','P','E',' ','M','I','S','M','A','T','C','H',
-	H(CBM_ERROR_DIR_NOT_EMPTY),		8,  5,'E','M','T','Y',
-	H(CBM_ERROR_NO_PERMISSION),		9,'P','E','R','M','I','S','S','I','O','N',
-	H(CBM_ERROR_FAULT),			'G','E','N','E','R','A','L',' ','F','A','U','L','T',
-	H(CBM_ERROR_NO_CHANNEL),		9,'C','H','A','N','N','E','L',
-	H(CBM_ERROR_DIR_ERROR),		8,1,
-	H(CBM_ERROR_DISK_FULL),		'D','I','S','K',' ','F','U','L','L',
-	H(CBM_ERROR_DRIVE_NOT_READY),	'D','R','I','V','E',' ',  5,'R','E','A','D','Y',
-	H(CBM_ERROR_NO_BLOCK),		9,'B','L','O','C','K',
-	H(CBM_ERROR_ILLEGAL_T_OR_S),	'I','L','L','E','G','A','L',' ','T','R','A','C','K',' ',
-					'O','R',' ','S','E','C','T','O','R',
-	H(CBM_ERROR_OVERFLOW_IN_RECORD),	'O','V','E','R','F','L','O','W',' ','I','N',' ',10,
-	H(CBM_ERROR_RECORD_NOT_PRESENT),	10,' ', 5,'P','R','E','S','E','N','T',
-	H(CBM_ERROR_TOO_LARGE),		2,' ','T','O','O',' ','L','A','R','G','E', 
-	0
+const struct err_struct IN_ROM err_tab[] = {
+	{CBM_ERROR_OK                   , STR_OK                   },
+	{CBM_ERROR_SCRATCHED            , STR_SCRATCHED            },
+	{CBM_ERROR_READ                 , STR_READ                 },
+	{CBM_ERROR_WRITE_PROTECT        , STR_WRITE_PROTECT        },
+	{CBM_ERROR_WRITE_ERROR          , STR_WRITE_ERROR          },
+	{CBM_ERROR_SYNTAX_UNKNOWN       , STR_SYNTAX_ERROR         },
+	{CBM_ERROR_SYNTAX_NONAME        , STR_SYNTAX_ERROR         },
+	{CBM_ERROR_SYNTAX_INVAL         , STR_SYNTAX_ERROR         },
+	{CBM_ERROR_SYNTAX_DIR_SEPARATOR , STR_SYNTAX_ERROR         },
+	{CBM_ERROR_FILE_NAME_TOO_LONG   , STR_SYNTAX_ERROR         },
+	{CBM_ERROR_FILE_NOT_FOUND       , STR_FILE_NOT_FOUND       },
+	{CBM_ERROR_FILE_NOT_FOUND62     , STR_FILE_NOT_FOUND       },
+	{CBM_ERROR_FILE_NOT_OPEN        , STR_FILE_NOT_OPEN        },
+	{CBM_ERROR_FILE_EXISTS          , STR_FILE_EXISTS          },
+	{CBM_ERROR_FILE_TYPE_MISMATCH   , STR_FILE_TYPE_MISMATCH   },
+	{CBM_ERROR_DIR_NOT_EMPTY        , STR_DIR_NOT_EMPTY        },
+	{CBM_ERROR_NO_PERMISSION        , STR_NO_PERMISSION        },
+	{CBM_ERROR_FAULT                , STR_FAULT                },
+	{CBM_ERROR_NO_CHANNEL           , STR_NO_CHANNEL           },
+	{CBM_ERROR_DIR_ERROR            , STR_DIR_ERROR            },
+	{CBM_ERROR_DISK_FULL            , STR_DISK_FULL            },
+	{CBM_ERROR_DRIVE_NOT_READY      , STR_DRIVE_NOT_READY      },
+	{CBM_ERROR_NO_BLOCK             , STR_NO_BLOCK             },
+	{CBM_ERROR_ILLEGAL_T_OR_S       , STR_ILLEGAL_T_OR_S       },
+	{CBM_ERROR_OVERFLOW_IN_RECORD   , STR_OVERFLOW_IN_RECORD   },
+	{CBM_ERROR_RECORD_NOT_PRESENT   , STR_RECORD_NOT_PRESENT   },
+	{CBM_ERROR_TOO_LARGE            , STR_TOO_LARGE            },
+	{CBM_ERROR_DOSVERSION           , versionstr               }
 };
 
-static uint8_t *appendmsg(uint8_t *msg, const uint8_t *table, const uint8_t code) {
+const char *errmsg(const uint8_t code) {  // lookup error text
+	uint8_t i;
 
-	uint8_t *ptr = (uint8_t*) table; // table index
-	uint8_t pattern = H(code);
-
-	// first find the code in the give table
-	uint8_t c = rom_read_byte(ptr);
-	while (c != 0 && c != pattern) {
-		ptr++;
-		c = rom_read_byte(ptr);
+	for (i=0; i < sizeof(err_tab) / sizeof(struct err_struct); i++) {
+		if (code == rom_read_byte( (uint8_t *) &err_tab[i].code))
+			return (const char *) rom_read_pointer (&err_tab[i].str);
 	}
-	if (c == 0) {
-		// not found
-		return msg;
-	}
-	// skip over remaining codes
-	c = rom_read_byte(ptr);
-	while (c & 0x80) {
-		ptr++;
-		c = rom_read_byte(ptr);
-	}
-	// now ptr points to the first text entry	
-	// c contains the value
-	do {	
-		if (c < 32) {
-			// get text from token table (recursive)
-			msg = appendmsg(msg, tokens, c);
-		} else {
-			*msg = c;
-			msg++;
-		}
-		ptr++;
-		c = rom_read_byte(ptr);
-	} while (c != 0 && (c & 0x80) == 0);
-	
-	return msg;
+	return STR_EMPTY;            // default if code not in table
 }	
-	
-/* Append a decimal number to a string */
-uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
-  	if (value >= 100) {
-    		*msg++ = '0' + value/100;
-    		value %= 100;
-  	}
-  	*msg++ = '0' + value/10;
-  	*msg++ = '0' + value%10;
-
-  	return msg;
-}
 
 void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector) {
-  	uint8_t *msg = err->error_buffer;
-
+	char *msg = (char *)err->error_buffer;
 	err->errorno = errornum;
-
   	err->readp = 0;
 
-  	msg = appendnumber(msg,errornum);
-  	*msg++ = ',';
+	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
+	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
+	rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\n"), track, sector); // track & sector
 
-	if (errornum == CBM_ERROR_DOSVERSION) {
-		char *p = (char*) versionstr;
-		uint8_t c;
-		while ((c = rom_read_byte(p++)) != 0) {
-			*msg++ = c;
-		}
-	} else {
-    		msg = appendmsg(msg,messages,errornum);
-	}
-  	*msg++ = ',';
-
-  	msg = appendnumber(msg,track);
-  	*msg++ = ',';
-
-  	msg = appendnumber(msg,sector);
-  	*msg++ = 13;
-
-  	// end string marker
-  	*msg = 0;
-
-	if (errornum != CBM_ERROR_OK && errornum != CBM_ERROR_DOSVERSION && errornum != CBM_ERROR_SCRATCHED) {
+	if (errornum != CBM_ERROR_OK         &&
+	    errornum != CBM_ERROR_DOSVERSION &&
+	    errornum != CBM_ERROR_SCRATCHED) {
 		led_set(ERROR);
-
 		term_printf("Setting status to: %s\n", err->error_buffer);
 	} else {
-		// same as idle, but clears error
-		led_set(OFF);
+		led_set(OFF); // same as idle, but clears error
 	}
 
 #ifdef DEBUG_ERROR

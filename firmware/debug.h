@@ -36,7 +36,7 @@
 #if DEBUG 
 
 #include "term.h"
-#include "mem.h"
+#include "archcompat.h"
 
 extern const char nullstring[7];
 

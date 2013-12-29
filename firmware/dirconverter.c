@@ -34,7 +34,7 @@
 
 #include "debug.h"
 
-#define	DEBUG_DIR
+#undef	DEBUG_DIR
 
 
 //#define	MAX_LINE_NUMBER		63999

@@ -29,6 +29,7 @@
 #include <inttypes.h>
 
 #include "petscii.h"
+#include "terminal.h"
 
 static int verbose = 0;
 
@@ -44,6 +45,7 @@ void log_term(const char *msg) {
 	
 	int newline = 0;
 
+	color_log_term();
 	printf(">>>: ");
 	char c;
 	while ((c = *msg) != 0) {
@@ -66,6 +68,7 @@ void log_term(const char *msg) {
 		msg++;
 	}
 	printf("\n");
+	color_default();
 	fflush(stdout);
 }
 
@@ -74,6 +77,7 @@ void log_errno(const char *msg, ...) {
        va_start(args, msg);
 	char buffer[1024];
 
+	color_log_error();
 	if (strchr(msg, '%') != NULL) {
 		// the msg contains parameter, so we need to fix it
 		vsprintf(buffer, msg, args);
@@ -81,6 +85,7 @@ void log_errno(const char *msg, ...) {
 	}
         printf("ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
 	newline = lastlog_anything;
+	color_default();
 	fflush(stdout);
 }
 
@@ -88,6 +93,7 @@ void log_warn(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
+	color_log_warn();
 	if (newline != lastlog_warn) {
        		printf("WRN:");
 	}
@@ -96,6 +102,7 @@ void log_warn(const char *msg, ...) {
 		newline = lastlog_warn;
 	}
         vprintf(msg, args);
+	color_default();
 	fflush(stdout);
 }
 
@@ -103,6 +110,7 @@ void log_error(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
+	color_log_error();
 	if (newline != lastlog_error) {
        		printf("ERR:");
 	}
@@ -111,6 +119,7 @@ void log_error(const char *msg, ...) {
 		newline = lastlog_error;
 	}
         vprintf(msg, args);
+	color_default();
 	fflush(stdout);
 }
 
@@ -118,6 +127,7 @@ void log_info(const char *msg, ...) {
        va_list args;
        va_start(args, msg);
 
+	color_log_info();
 	if (newline != lastlog_info) {
 		printf("INF:");
 	}
@@ -126,6 +136,7 @@ void log_info(const char *msg, ...) {
 		newline = lastlog_info;
 	}
         vprintf(msg, args);
+	color_default();
 	fflush(stdout);
 }
 
@@ -134,6 +145,7 @@ void log_debug(const char *msg, ...) {
        		va_list args;
        		va_start(args, msg);
 
+		color_log_debug();
 		if (newline != lastlog_debug) {
 			printf("DBG:");
 		}
@@ -142,6 +154,7 @@ void log_debug(const char *msg, ...) {
 			newline = lastlog_debug;
 		}
         	vprintf(msg, args);
+		color_default();
 	}
 	fflush(stdout);
 }
@@ -152,6 +165,7 @@ void log_hexdump(char *p, int len, int petscii) {
 	int x = 0;
 
 	newline = lastlog_anything;
+	color_log_debug();
 
 	if(len) {
 		while(tot < len) {
@@ -177,6 +191,7 @@ void log_hexdump(char *p, int len, int petscii) {
 		}
 
 	}
+	color_default();
 }
 
 #if 0

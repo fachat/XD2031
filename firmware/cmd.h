@@ -31,7 +31,7 @@
 #include <stdint.h>
 
 #include "errormsg.h"
-#include "rtconfig.h"
+#include "wireformat.h"
 #include "config.h"
 
 // Note the value definitions are such that no mapping is necessary between internal
@@ -81,10 +81,6 @@ typedef struct {
 	uint8_t 		command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 //	errormsg_t	*errormsg;
 } cmd_t;
-
-command_t command_find(uint8_t *buf);
-
-const char* command_to_name(command_t cmd);
 
 
 #endif

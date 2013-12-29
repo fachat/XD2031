@@ -802,7 +802,6 @@ static void relfile_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, 
 debug_flush();
 #endif
 
-	uint8_t plen;
 	uint8_t *ptr = NULL;
 	ptr+=2;
 	cmdbuf_t *buffer = NULL;

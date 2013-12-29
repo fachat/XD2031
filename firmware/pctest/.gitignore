@@ -1,0 +1,4 @@
+# Ignore executables
+bin
+# Ignore user generated log files
+log

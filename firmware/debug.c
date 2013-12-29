@@ -41,6 +41,9 @@ void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
 	uint8_t line = 0;
 	uint8_t x = 0;
 
+	// assure the output fits into a packet to prevent unwanted line breaks
+	term_flush();
+
 	if(len) {
 		while(tot < len) {
 			debug_printf("%04X  ", tot);
@@ -61,7 +64,7 @@ void debug_hexdump(uint8_t *p, uint16_t len, uint8_t petscii) {
 				} else debug_putc(' ');
 			}
 			debug_putc('|');
-			debug_putcrlf();
+			debug_putcrlf(); // this implies a term_flush
 			line = tot;
 		}
 

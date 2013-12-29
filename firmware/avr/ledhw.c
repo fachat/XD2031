@@ -27,13 +27,15 @@
  * Takes the LED_PORT, LED_DDR and LED_BIT definitions from config.h
  */
 
+#include "config.h"
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <inttypes.h>
 
 #include "hwdefines.h"
 #include "device.h"
-#include "mem.h"
 #include "led.h"
 
 // -----------------------------------------------------------------------------
@@ -88,6 +90,23 @@ static uint8_t has_error = 0;
 
 // -----------------------------------------------------------------------------
 
+/* Device with two  (red and green) LEDs: red --> both   --> green --> both off
+   Device with dual (red and green) LED:  red --> yellow --> green --> both off
+   Device with single LED:                on  --> off    --> on    --> off
+*/
+static inline void led_hello_blinky(void) {
+#ifdef ACTIVE_LED_DDR
+	device_led_on();				_delay_ms(300);
+	device_active_led_on();				_delay_ms(300);
+	device_leds_off(); device_active_led_on(); 	_delay_ms(600);
+#else
+	device_led_on();	_delay_ms(500);
+	device_leds_off();	_delay_ms(200);
+	device_led_on();	_delay_ms(500);
+#endif
+	device_leds_off();
+}
+
 void led_init() {
 	// set data direction
 	LED_DDR  |= _BV(LED_BIT);
@@ -104,6 +123,8 @@ void led_init() {
 
 	// save error state over ACTIVE/IDLE calls
 	has_error = 0;
+
+	led_hello_blinky();
 }
 
 static inline void _led_on() {

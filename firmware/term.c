@@ -32,7 +32,7 @@
 #include "term.h"
 #include "serial.h"
 #include "wireformat.h"
-#include "mem.h"
+#include "archcompat.h"
 
 #include "led.h"
 

@@ -1,13 +1,13 @@
 #!/bin/sh
-# en.wikipedia.org/wiki/Here_document
+# http://en.wikipedia.org/wiki/Here_document
 
 TESTFILE=rtc
 CFLAGS="-Wall -std=c99 -DHAS_RTC"
-INCLUDE="-I ."
+INCLUDE="-I.. -I../.. -I../../rtc"
 
-gcc -D PCTEST $INCLUDE $CFLAGS $TESTFILE.c -o $TESTFILE || exit 1
+gcc -D PCTEST $INCLUDE $CFLAGS ../../rtc/$TESTFILE.c ../mains/$TESTFILE.c -o ../bin/$TESTFILE || exit 1
 
-./$TESTFILE << "EOF"
+../bin/$TESTFILE << "EOF"
 # Calling without parameters should output date and time (empty line)
 T
 # Calling without parameters should output date and time (whitespaces)

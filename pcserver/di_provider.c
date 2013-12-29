@@ -304,6 +304,7 @@ static int di_load_image(di_endpoint_t *diep, const char *filename)
 {
    unsigned int filesize;
 
+   if(!os_path_is_file(filename)) return 0;
    if (!(diep->Ip = fopen(filename, "rb+"))) {
      log_error("Unable to open %s\n", filename);
      return 0;
@@ -343,7 +344,7 @@ static endpoint_t *di_newep(endpoint_t *parent, const char *path)
    strcpy(diep->curpath,path);
    for(int i=0;i<MAXFILES;i++) di_init_fp(&(diep->files[i]));
    diep->base.ptype = &di_provider;
-   di_load_image(diep,path);
+   if(!di_load_image(diep,path)) return NULL; // not a valid disk image
    for (i=0 ; i < 5 ; ++i) diep->chan[i] = -1;
    log_debug("di_newep(%s) = %p\n",path,diep);
    return (endpoint_t*) diep;
@@ -1214,7 +1215,7 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
    BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
    Track         = 1;
 
-   while (diep->BAM[BAM_Number])
+   while (BAM_Number < 4 && diep->BAM[BAM_Number])
    {
       fbl = diep->BAM[BAM_Number] + di->BAMOffset;
       if (di->ID == 71 && Track > di->Tracks)

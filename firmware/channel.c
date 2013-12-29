@@ -109,7 +109,10 @@ static inline uint8_t channel_is_eof(channel_t *chan) {
 static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	packet_t *p = &c->buf[slot];
 
-debug_printf("pull: chan=%p, channo=%d (ep=%p)\n", c, c->channel_no, (void*)c->endpoint);
+#ifdef DEBUG_CHANNEL
+	debug_printf("pull: chan=%p, channo=%d (ep=%p)\n",
+		c, c->channel_no, (void*)c->endpoint);
+#endif
 
 	// prepare to write a buffer with length 0
 	packet_set_filled(p, c->channel_no, FS_READ, 0);
@@ -150,7 +153,9 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov,
 	int8_t (*dirconv)(void *ep, packet_t *, uint8_t drive), 
 	uint8_t drive) {
 
-//debug_printf("channel_open: chan=%d\n", chan);
+#ifdef DEBUG_CHANNEL
+	debug_printf("channel_open: chan=%d\n", chan);
+#endif
 
 	for (int8_t i = MAX_CHANNELS-1; i>= 0; i--) {
 		if (channels[i].channel_no < 0) {
@@ -158,7 +163,10 @@ int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov,
 			channels[i].current = 0;
 			channels[i].writetype = writetype & WTYPE_MASK;
 			channels[i].options = writetype & ~WTYPE_MASK;
-//debug_printf("wtype=%d, option=%d\n", channels[i].writetype, channels[i].options);
+#ifdef DEBUG_CHANNEL
+			debug_printf("wtype=%d, option=%d\n", channels[i].writetype,
+				channels[i].options);
+#endif
 			channels[i].endpoint = prov;
 			channels[i].directory_converter = dirconv;
 			channels[i].drive = drive;
@@ -375,7 +383,7 @@ void channel_close(int8_t channel_no) {
 	channel_t *chan = channel_flush(channel_no);
 
 #ifdef DEBUG_CHANNEL
-	debug_printf("channel_close(%p -> %d), push=%d, pull=%d\n", chan, channel_no, 
+	debug_printf("channel_close(%p -> %d), push=%d, pull=%d\n", chan, channel_no,
 		chan == NULL ? -1 : chan->push_state, chan == NULL ? -1 : chan->pull_state); debug_flush();
 #endif
 
@@ -452,7 +460,10 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
         channel_t *p = channel_find(channelno);
         if (p != NULL) {
-debug_printf("push_cb: c=%d, p=%p, type=%d, errnum=%d, rxp=%p, p[0]=%02x\n", channelno, p, packet_get_type(rxpacket), errnum, rxpacket,  packet_get_buffer(rxpacket)[0]);
+#ifdef DEBUG_CHANNEL
+		debug_printf("push_cb: c=%d, p=%p, type=%d, errnum=%d, rxp=%p, p[0]=%02x\n",
+			channelno, p, packet_get_type(rxpacket), errnum, rxpacket,  packet_get_buffer(rxpacket)[0]);
+#endif
 		if (errnum < 0 || rxpacket == NULL) {
                 	p->last_push_errorno = CBM_ERROR_FAULT;
 		} else if (packet_get_type(rxpacket) == FS_REPLY) {
@@ -460,7 +471,9 @@ debug_printf("push_cb: c=%d, p=%p, type=%d, errnum=%d, rxp=%p, p[0]=%02x\n", cha
 		} else {
 			p->last_push_errorno = CBM_ERROR_OK;
 		}
-debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
+#ifdef DEBUG_CHANNEL
+		debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
+#endif
 
                 // TODO: only if errorno == 0?
                 // Probably need some PUSH_ERROR as well
@@ -488,7 +501,9 @@ int8_t channel_put(channel_t *chan, uint8_t c, uint8_t forceflush) {
 
 	packet_t *curpack = &chan->buf[push_slot(chan)];
 
-//debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
+#ifdef DEBUG_CHANNEL
+	debug_printf("channel_put(%02x), flush=%d, push_state=%d\n", c, forceflush, chan->push_state);
+#endif
 
 	if (chan->push_state == PUSH_OPEN) {
 		chan->push_state = PUSH_FILLONE;

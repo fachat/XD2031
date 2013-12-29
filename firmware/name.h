@@ -50,9 +50,11 @@ typedef struct {
 	uint8_t	type;		// file type requested ("S", "P", ...)
 	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
 	uint8_t options;	// access options, as bit mask
+	uint8_t *drivename;     // name of drive ("FTP", ...)
 	uint8_t *name;		// pointer to the actual name
 	uint8_t	namelen;	// length of file name
 	uint8_t	drive2;		// starts from 0 (real zero, not $30 = ASCII "0")
+	uint8_t *drivename2;    // name of drive ("FTP", ...)
 	uint8_t *name2;		// pointer to the actual name after the '='
 	uint8_t	namelen2;	// length of remaining file name
 	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd

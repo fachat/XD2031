@@ -33,6 +33,7 @@
 #include "diskimgs.h"
 #include "petscii.h"
 #include "log.h"
+#include "terminal.h"
 
 
 static void read_sector(FILE *fp, Disk_Image_t *di, int track, int sector, uint8_t *buf) {
@@ -452,6 +453,8 @@ static void usage(void) {
 
 	
 int main(int argc, char *argv[]) {
+
+	terminal_init();
 
 	if (argc < 3) {
 		usage();

@@ -1,0 +1,178 @@
+# Calling without parameters should output date and time (empty line)
+Test: 'T'
+SAT 2013-10-05T14:39:20
+
+
+# Calling without parameters should output date and time (whitespaces)
+Test: 'T  '
+SAT 2013-10-05T14:39:20
+
+
+# Called as TI should output a ti$ compatible format
+Test: 'TI'
+143920
+
+
+# Setting time in a ti$ compatible format
+Test: 'TI123456'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:56
+
+
+# Set only day of week to monday
+Test: 'TMON'
+before: SAT 2013-10-05T14:39:20
+ after: MON 2013-10-05T14:39:20
+
+
+# Set only day of week to tuesday
+Test: 'TTUE'
+before: SAT 2013-10-05T14:39:20
+ after: TUE 2013-10-05T14:39:20
+
+
+# Set date to 2012-01-13
+Test: 'T2012-01-13'
+before: SAT 2013-10-05T14:39:20
+ after: FRI 2012-01-13T14:39:20
+
+
+# Set date without delimiter (it was a monday)
+Test: 'T20111024'
+before: SAT 2013-10-05T14:39:20
+ after: MON 2011-10-24T14:39:20
+
+
+# Should be a sunny sunday
+Test: 'T2038-02-28'
+before: SAT 2013-10-05T14:39:20
+ after: SUN 2038-02-28T14:39:20
+
+
+# Set time to 12:34
+Test: 'TT12:34'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:00
+
+
+# Set time to 12:34:56
+Test: 'TT12:34:56'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:56
+
+
+# Set time to 12:34
+Test: 'TT1234'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:00
+
+
+# Set time to 12:34:56
+Test: 'TT123456'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:56
+
+
+# Set time to 12:34 (whitespaces)
+Test: 'T   T  1  2  :  3  4'
+before: SAT 2013-10-05T14:39:20
+ after: SAT 2013-10-05T12:34:00
+
+
+# Set day of week, date and time
+Test: 'TWED 2013-01-02 T23:45:16'
+before: SAT 2013-10-05T14:39:20
+ after: WED 2013-01-02T23:45:16
+
+
+#####################################################################
+############ The following tests should produce errors ##############
+#####################################################################
+# Anything but not a date
+Test: 'TLAYER 8 ERROR'
+expected T
+***** ERROR 3 *****
+
+
+# Year < 2000
+Test: 'T1999-01-01'
+Illegal date
+***** ERROR 3 *****
+
+
+# Year > 2099
+Test: 'T2100-01-01'
+Illegal date
+***** ERROR 3 *****
+
+
+# Month < 1
+Test: 'T2013-00-00'
+Illegal date
+***** ERROR 3 *****
+
+
+# Month > 12
+Test: 'T2013-13-01'
+Illegal date
+***** ERROR 3 *****
+
+
+# Day < 1
+Test: 'T2013-01-00'
+Illegal date
+***** ERROR 3 *****
+
+
+# Day > 31
+Test: 'T2013-01-32'
+Illegal date
+***** ERROR 3 *****
+
+
+# Short date
+Test: 'T2013-01'
+Expected date as YYYY-MM-DD
+***** ERROR 3 *****
+
+
+# Short time
+Test: 'TT12'
+Expected HH:MM[:SS]
+***** ERROR 3 *****
+
+
+# Too short time
+Test: 'TT'
+Expected HH:MM[:SS]
+***** ERROR 3 *****
+
+
+# Hours too long
+Test: 'TT123:4'
+Value too long
+***** ERROR 3 *****
+
+
+# Minutes too long
+Test: 'TT12:003'
+Expected HH:MM[:SS]
+***** ERROR 3 *****
+
+
+# Minutes too long
+Test: 'TT12:003:0'
+Value too long
+***** ERROR 3 *****
+
+
+# Year too long but day too short
+Test: 'T20131-02-3'
+before: SAT 2013-10-05T14:39:20
+ after: WED 2013-10-23T14:39:20
+
+
+# Month too long but day too short
+Test: 'T2013-123-0'
+before: SAT 2013-10-05T14:39:20
+ after: MON 2013-12-30T14:39:20

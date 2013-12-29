@@ -1,0 +1,32 @@
+How to update FatFs
+===================
+
+This document describes changes to the vanilla FatFs
+and how to update to a new version from
+http://elm-chan.org/fsw/ff/00index_e.html
+
+- Download new FatFs version
+- Apply patches (if any)
+
+- Check the error conversion table in fat_provider.c
+  (It will remember you if you should forget this :)
+
+- Apply any changes due to API changes
+
+
+
+The following files were changed:
+
+- options/ccsbcs.c 
+	Place the table in ROM:
+	:%s/= {/IN_ROM = {/g
+
+- integer.h
+	Ignore the C89 file and keep using our C99 version
+
+- ffconf.h:
+
+	_CODE_PAGE	--> 1252
+	_USE_LFN	--> 2
+	_FS_RPATH	--> 2
+	_WORD_ACCESS	--> 1

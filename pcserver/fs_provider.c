@@ -640,7 +640,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			options = "wb";
 			break;
 		case FS_OPEN_RW:
-			options = "r+";
+			options = "rb+";
 			break;
 		default:
 			log_error("Internal error: open_file with fs_cmd %d\n", fs_cmd);
@@ -1057,7 +1057,7 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 
 static int _delete_callback(const int num_of_match, const char *name) {
 
-	printf("%d: Calling DELETE on: %s\n", num_of_match, name);
+	log_debug("%d: Calling DELETE on: %s\n", num_of_match, name);
 
 	if (unlink(name) < 0) {
 		// error handling

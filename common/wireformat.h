@@ -45,6 +45,7 @@
 // the first byte of the payload is the (binary) drive number, or one of those two
 #define NAMEINFO_UNUSED_DRIVE   0xff    // unspecified like: LOAD"file",8
 #define NAMEINFO_UNDEF_DRIVE    0xfe    // non-numeric drive like: LOAD"ftp:file",8
+#define NAMEINFO_LAST_DRIVE     0xfd    // colon without drive means last drive: LOAD":file",8
 
 /** 
  * filesystem commands 

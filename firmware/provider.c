@@ -128,6 +128,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
 		if (drives[i].drive == drive) {
 			drives[i].drive = -1;
+			drives[i].endpoint.provider->prov_free(drives[i].endpoint.provdata);
 			drives[i].endpoint.provider = NULL;
 			break;
 		}

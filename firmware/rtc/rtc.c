@@ -1,5 +1,29 @@
+/**************************************************************************
+
+    XD-2031 - Serial line filesystem server for CBMs
+    Copyright (C) 2013 Andre Fachat, Nils Eilers
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA  02110-1301, USA.
+
+***************************************************************************/
+
 // This file holds routines common for all types of
 // real time clocks, e.g. the time parser
+// It also provides the current time for the SD card provider/FatFs
+// for file timestamps.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +37,6 @@
 #endif
 
 #include "rtc.h"
-
 
 static uint8_t day_of_week(uint16_t y, uint8_t m, uint8_t d) {
 // Algorithm by Tomohiko Sakamoto
@@ -271,67 +294,33 @@ void rtc_timestamp(const RTC_t* datim) {
          datim->hour, datim->min, datim->sec);
 }
 
+// ------------------------------------------------------------------------
 
-#ifdef PCTEST
+// get_fatttime() used by FatFs / SD-card provider
+#ifdef USE_FAT
 
-RTC_t time_after;
+#include "integer.h"
+#include "ffconf.h"
 
-int8_t rtc_gettime(RTC_t* datim) {
-    time_t t = time(NULL);
-    struct tm *tm;
+#if _FS_READONLY
+# define get_fattime() 0
+#else
+/* RTC only needed for write access / time stamps */
 
-    tm = localtime(&t);
-    if(!tm) return 1;
+DWORD get_fattime (void)
+{
+    RTC_t rtc;
 
-    datim->year  = tm->tm_year + 1900;
-    datim->month = tm->tm_mon + 1;
-    datim->mday  = tm->tm_mday;
-    datim->hour  = tm->tm_hour;
-    datim->min   = tm->tm_min;
-    datim->sec   = tm->tm_sec;
-    datim->wday  = tm->tm_wday ? tm->tm_wday : 7;
+    /* Get local time */
+    rtc_gettime(&rtc);
 
-    return 0;
+    /* Pack date and time into a DWORD variable */
+    return    ((DWORD)(rtc.year - 1980) << 25)
+            | ((DWORD)rtc.month << 21)
+            | ((DWORD)rtc.mday << 16)
+            | ((DWORD)rtc.hour << 11)
+            | ((DWORD)rtc.min << 5)
+            | ((DWORD)rtc.sec >> 1);
 }
-
-int8_t rtc_settime(const RTC_t* datim) {
-    time_after = *datim;
-    return 0;
-}
-
-#define MAX_LINE 255
-int main(int argc, char** argv) {
-    char line[MAX_LINE + 1]; int had_a_comment = 1;
-
-    RTC_t time_before; rtc_gettime(&time_before);
-    int8_t res;
-    char* output[32];
-
-    while(fgets(line, MAX_LINE, stdin) != NULL) {
-        line[strlen(line) - 1] = 0; // drop '\n'
-        if(line[0] == '#') {
-            if(!had_a_comment) puts("\n");
-            puts(line);
-            had_a_comment=1;
-            continue;
-        } else {
-            if(!had_a_comment) puts("\n");
-            had_a_comment=0;
-            printf("Test: '%s'\n", line);
-        }
-        // --------------------------------------
-        res = rtc_time(line, output);
-        if(res == -1 ) {
-	    printf("before: "); rtc_timestamp(&time_before);
-	    printf(" after: "); rtc_timestamp(&time_after);
-        } else if(res > 0) {
-            printf("***** ERROR %d *****\n", res);
-        } else if(res < -1) {
-            printf("***** ERROR %d *****\n", res);
-        }
-    }
-
-    return 0;
-}
-
+#endif
 #endif
