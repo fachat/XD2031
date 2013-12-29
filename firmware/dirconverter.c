@@ -161,15 +161,18 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 				tmp[2] += (tmp[1] >> 8) & 0xff;
 				tmp[3] += (tmp[2] >> 8) & 0xff;
 			}
-			// now compute the line number, restricting to MAX_LINE_NUMBER in the process
+			// now compute the line number
 			if (tmp[3] > 0) {
 				lineno = MAX_LINE_NUMBER;
 			} else {
 				lineno = (tmp[1] & 0xff) | ((tmp[2] & 0xff) << 8);
-				if (lineno > MAX_LINE_NUMBER) {
-					lineno = MAX_LINE_NUMBER;
-				}
 			}
+
+			// restrict line number
+#			if MAX_LINE_NUMBER < 65535
+				if (lineno > MAX_LINE_NUMBER) lineno = MAX_LINE_NUMBER;
+#			endif
+
 		}
 	}
 	*outp = lineno & 255; outp++;
