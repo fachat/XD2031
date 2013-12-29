@@ -105,7 +105,7 @@ static void listenloop() {
 #ifdef DEBUG_BUS
 	debug_putc('L');
 #endif
-        int er, c;
+        int er, c = 0; // silence warning maybe uninitialized
         while(((er=liecin(&c))&E_ATN)!=E_ATN) {
             par_status = bus_sendbyte(&bus, c, (er & E_EOI) ? BUS_FLUSH : 0);
         }
