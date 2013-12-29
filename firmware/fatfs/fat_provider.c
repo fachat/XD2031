@@ -209,7 +209,7 @@ static FIL *tbl_find_file(uint8_t chan) {
 }
 
 static errno_t tbl_close_file(uint8_t chan) {
-   uint8_t pos;
+   int8_t pos;
    errno_t cres = CBM_ERROR_OK;
    FRESULT fres;
 
