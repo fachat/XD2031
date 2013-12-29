@@ -244,7 +244,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		}
 		const char *ftypes[] = { "del", "seq", "prg", "usr", "rel" };
 		uint8_t ftype = attribs & FS_DIR_ATTR_TYPEMASK;
-		if (ftype >= 0 && ftype < 5) {
+		if (ftype < 5) {
 			outp = append(asciiconv, outp, ftypes[ftype]);
 		} else {
 			outp = append(asciiconv, outp, "---");
