@@ -195,6 +195,3 @@ update:
 
 help:
 	printf $(HELP)
-
-x:
-	@echo $(REALHOME)
