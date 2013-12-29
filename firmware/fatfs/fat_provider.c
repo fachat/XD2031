@@ -77,6 +77,8 @@ provider_t fat_provider  = {
    fat_submit,
    fat_submit_call,
    directory_converter,
+   NULL,                        // channel_get
+   NULL                         // channel_put
 };
 
 #define FALSE 0
