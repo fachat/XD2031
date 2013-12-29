@@ -26,13 +26,13 @@ typedef uint8_t		BYTE;
 /* These types must be 16-bit integer */
 typedef int16_t		SHORT;
 typedef uint16_t	USHORT;
-typedef uint16_t	WORD;
+typedef uint16_t	__attribute__((__may_alias__)) WORD;
 typedef uint16_t	WCHAR;
 
 /* These types must be 32-bit integer */
 typedef int32_t		LONG;
 typedef uint32_t 	ULONG;
-typedef uint32_t	DWORD;
+typedef uint32_t	__attribute__((__may_alias__)) DWORD;
 
 #endif
 
