@@ -3,6 +3,9 @@
 # Create a XD-2031 daemon
 #
 
+set -e
+trap "printf \"An error occured, aborting\n\"" ERR
+
 LOGFILE=/var/log/fsser
 
 # Determine the user who runs the server
@@ -20,7 +23,7 @@ fi
 echo "/etc/default/fsser: the server will run as user $XD2031_USER"
 
 # Stop the server
-service fsser stop
+service fsser stop || true
 
 # Install daemon
 install -m 755 fsserd.localized $1/fsserd
@@ -53,7 +56,11 @@ chown $XD2031_USER $LOGFILE
 chgrp $XD2031_USER $LOGFILE
 
 # Update runlevel links
-update-rc.d fsser defaults
+if $(command -v chkconfig > /dev/null ) ; then
+   chkconfig fsser on
+else
+   update-rc.d fsser defaults
+fi
 
 # We're done
 echo ""
