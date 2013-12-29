@@ -95,7 +95,7 @@ THISBINDIR=$(ZOOBINDIR)/$(SWNAME)-$(VERSION)-$(DEVICE)-$(MCU)
 BINNAME=$(SWNAME)-$(VERSION)-$(DEVICE)-$(MCU)
 
 # Common source files
-SRC=$(wildcard *.c) $(wildcard common/*.c)
+SRC=$(wildcard *.c) $(wildcard ../common/*.c)
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
 
