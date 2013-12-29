@@ -198,7 +198,7 @@ static errno_t tbl_ins_dir(int8_t chan) {
 
 }
 static FIL *tbl_find_file(uint8_t chan) {
-   uint8_t pos;
+   int8_t pos;
 
    if((pos = tbl_chpos(chan)) < 0) {
       debug_printf("tbl_find_file: #%d not found!\n", chan);
