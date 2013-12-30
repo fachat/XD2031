@@ -20,9 +20,11 @@ clean:
 
 install:
 	make -C pcserver install
+	make -C imgtool install
 
 uninstall:
 	make -C pcserver uninstall
+	make -C imgtool uninstall
 
 sample/webcat: doc/webcat.lst
 	petcat -l 0401 -w4 doc/webcat.lst > sample/webcat

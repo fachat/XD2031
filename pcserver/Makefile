@@ -157,11 +157,16 @@ daemon:
 exorcism:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	service fsser stop
-	rm -f /etc/init.d/fsser
-	rm -f $(PREFIX)/$(BINDIR)/fsserd
-	update-rc.d fsser remove
+	@if $$(command -v chkconfig > /dev/null ) ; then       \
+	   chkconfig --del fsser                              ;\
+	   rm -f /etc/init.d/fsser $(PREFIX)/$(BINDIR)/fsserd ;\
+	   systemctl daemon-reload                            ;\
+	else                                                   \
+	   rm -f /etc/init.d/fsser $(PREFIX)/$(BINDIR)/fsserd ;\
+	   update-rc.d fsser remove                           ;\
+	fi
 	@echo "Personal files preserved:"
 	@echo "- /etc/default/fsser"
 	@echo "- /var/log/fsser"
 
-.PHONY: all install uninstall run dmg fsser
+.PHONY: all install uninstall run dmg fsser daemon exorcism

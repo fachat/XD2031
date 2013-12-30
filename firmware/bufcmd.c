@@ -21,6 +21,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bus.h"
 #include "errormsg.h"
@@ -767,10 +768,7 @@ static int8_t bufcmd_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 				buffer->pos_of_record, buffer->recordlen);
 	} else {
 		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
-			uint8_t *b = buffer->buffer;
-			for (uint8_t i = buffer->recordlen - 1; i >= 0; i--) {
-				*(b++) = 0;
-			}
+			memset(buffer->buffer, 0, buffer->recordlen);
 			buffer->lastvalid = 0;
 		} else {
 			rv = bufcmd_read_buffer(channel, buffer->real_endpoint, buffer->recordlen);

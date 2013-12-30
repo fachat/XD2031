@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copy this file to /etc/init.d/fsser
 #
@@ -19,10 +19,14 @@ LOGFILE=/var/log/fsser
 ME=$0
 
 start_daemon() {
+    # Make sure, the logfile exists and the user can access it
+    touch $LOGFILE || exit 1
+    chown $RUN_AS_USER $LOGFILE || exit 1
+    chgrp $RUN_AS_USER $LOGFILE || exit 1
     if [ $RUN_AS_USER = `whoami` ] ; then
-        PREFIX/BINDIR/fsserd &>> $LOGFILE
+        PREFIX/BINDIR/fsserd &>> $LOGFILE &
     else
-        su - $RUN_AS_USER -c "PREFIX/BINDIR/fsserd &>> $LOGFILE" &>> $LOGFILE
+        su - $RUN_AS_USER -c "PREFIX/BINDIR/fsserd &>> $LOGFILE" &>> $LOGFILE &
     fi
 }
 
@@ -35,11 +39,6 @@ if [ -z $RUN_AS_USER ] ; then
   echo "/etc/default/fsser: RUN_AS_USER undefined!"
   exit 1
 fi
-
-# Make sure, the logfile exists and the user can access it
-touch $LOGFILE
-chown $RUN_AS_USER $LOGFILE
-chgrp $RUN_AS_USER $LOGFILE
 
 case "$1" in
 start)
@@ -57,14 +56,14 @@ fi
 stop)
 if pidof PREFIX/BINDIR/fsser > /dev/null ; then
   echo "Killing XD-2031 server..."
-  kill `pidof PREFIX/BINDIR/fsser`
+  kill `pidof PREFIX/BINDIR/fsser` || exit 1
   sleep 1
 else
   echo "No running server found."
 fi
 # Kill all daemons, start with the oldest.
 while [ `pgrep -c .*fsserd` -gt 0 ] ; do
-  kill `pgrep -o .*fsserd`
+  kill `pgrep -o .*fsserd` || exit 1
 done
 echo Daemon stopped
 ;;

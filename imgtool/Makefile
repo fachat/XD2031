@@ -2,6 +2,9 @@
 # Cross compile for Windows:      make WIN=y
 # To compile and zip for Windows: make winzip
 
+PREFIX?=/usr/local
+BINDIR?=bin
+
 XD2031PATH=..
 INCLUDE=-I $(XD2031PATH)/common -I $(XD2031PATH)/pcserver
 
@@ -59,5 +62,15 @@ winzip:
 	$(RM) $(PRGNAME).zip
 	make WIN=y
 	zip $(PRGNAME).zip $(PRGNAME).exe
+
+install:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
+	test -d $(PREFIX) || mkdir -p $(PREFIX)
+	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
+	install -m 0755 $(EXE) $(PREFIX)/$(BINDIR)
+
+uninstall:
+	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
+	rm -f $(PREFIX)/$(BINDIR)/$(EXE)
 
 .PHONY: all clean dist

@@ -78,8 +78,7 @@ INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 SDEFS=$(sort $(DEFS))
 
 # CFLAGS/ASFLAGS common to all devices/platforms
-#CFLAGS+=-Wall
-#CFLAGS+=-Wextra
+CFLAGS+=-Wall -Wextra -Wno-unused-parameter
 CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
 
 ASFLAGS=$(MCU_CC) $(sort -I$(ARCH) -I$(DEVICE))
@@ -196,6 +195,3 @@ update:
 
 help:
 	printf $(HELP)
-
-x:
-	@echo $(REALHOME)

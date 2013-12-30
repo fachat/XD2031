@@ -77,6 +77,8 @@ provider_t fat_provider  = {
    fat_submit,
    fat_submit_call,
    directory_converter,
+   NULL,                        // channel_get
+   NULL                         // channel_put
 };
 
 #define FALSE 0
@@ -198,7 +200,7 @@ static errno_t tbl_ins_dir(int8_t chan) {
 
 }
 static FIL *tbl_find_file(uint8_t chan) {
-   uint8_t pos;
+   int8_t pos;
 
    if((pos = tbl_chpos(chan)) < 0) {
       debug_printf("tbl_find_file: #%d not found!\n", chan);
@@ -209,9 +211,9 @@ static FIL *tbl_find_file(uint8_t chan) {
 }
 
 static errno_t tbl_close_file(uint8_t chan) {
-   uint8_t pos;
+   int8_t pos;
    errno_t cres = CBM_ERROR_OK;
-   FRESULT fres;
+   FRESULT fres = FR_OK;
 
    if((pos = tbl_chpos(chan)) != AVAILABLE) {
       if(tbl[pos].dir_state == DIR_INACTIVE) {
