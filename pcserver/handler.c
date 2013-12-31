@@ -183,6 +183,9 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 
 			// default end of name (if no handler matches)
 			outname = strchr(name, CBM_PATH_SEPARATOR_CHAR);	
+			if (outname == NULL) {
+				outname = name;
+			}
 
 			// test each dir entry against the different handlers
 			// handlers implement checks e.g. for P00 files and wrap them
@@ -263,7 +266,9 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		}
 	} else {
 		// this should close all parents as well
-		file->handler->close(file, 1);
+		if (file != NULL) {
+			file->handler->close(file, 1);
+		}
 	}
 	mem_free(name);
 	
@@ -321,7 +326,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 				err = CBM_ERROR_FILE_TYPE_MISMATCH;
 				break; 
 			}
-			if (!file->handler->iswriteable(file)) {
+			if (!file->handler->iswritable(file)) {
 				err = CBM_ERROR_WRITE_PROTECT;
 				break;
 			}
@@ -384,31 +389,33 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR);
 
-	// we can close the parents anyway
-	file_t *parent = dir->parent;
-	if (parent != NULL) {
-		parent->handler->close(parent, 1);
-	}
+	if (dir != NULL) {
+		// we can close the parents anyway
+		file_t *parent = dir->parent;
+		if (parent != NULL) {
+			parent->handler->close(parent, 1);
+		}
 
-	if (err == CBM_ERROR_OK) {
+		if (err == CBM_ERROR_OK) {
 		
-		// init directory traversal
-		dir->dirstate = DIRSTATE_FIRST;
-		dir->pattern = mem_alloc_str(pattern);
-		dir->firstmatch = file;		// maybe NULL
+			// init directory traversal
+			dir->dirstate = DIRSTATE_FIRST;
+			dir->pattern = mem_alloc_str(pattern);
+			dir->firstmatch = file;		// maybe NULL
 	
-		*outdir = dir;	
-	} else {
-		if (dir != NULL) {
-			dir->handler->close(dir, 0);
+			*outdir = dir;	
+		} else {
+			if (dir != NULL) {
+				dir->handler->close(dir, 0);
+			}
+			if (file != NULL) {
+				file->handler->close(file, 0);
+			}
 		}
-		if (file != NULL) {
-			file->handler->close(file, 0);
-		}
-	}
 		
-	if (pattern != NULL) {
-		mem_free((char*)pattern);
+		if (pattern != NULL) {
+			mem_free((char*)pattern);
+		}
 	}
 
 	return err;

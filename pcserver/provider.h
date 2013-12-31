@@ -59,7 +59,7 @@ typedef struct {
 	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
-	file_t*		(*root)(endpoint_t *ep, int isroot); // start directory for the endpoint 
+	file_t*		(*root)(endpoint_t *ep, uint8_t isroot); // start directory for the endpoint 
 							// isroot is set when the endpoint root
 							// is required, usually through a "/" at the
 							// start of a file name. If not set, then
@@ -106,6 +106,7 @@ struct _file {
 	int		dirstate;	// 0 = first line, 1 = file matches, 2 = end line
 	const char	*pattern;	// pattern for dir matching
 	file_t		*firstmatch;	// first match on dir open (stored on open)
+	uint8_t		mode;		// same as FS_DIR_MODE
 };
 
 // note: go from FIRST to ENTRIES to END by +1

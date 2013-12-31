@@ -244,15 +244,15 @@ static const char *x00_getname(const file_t *file) {
 	return xfile->name;
 }
 
-static int x00_iswriteable(const file_t *file) {
+static uint8_t x00_iswritable(const file_t *file) {
 
-	return file->parent->handler->iswriteable(file->parent);
+	return file->parent->handler->iswritable(file->parent);
 }
 
-static int x00_isseekable(const file_t *file) {
-
-	return file->parent->handler->isseekable(file->parent);
-}
+//static int x00_isseekable(const file_t *file) {
+//
+//	return file->parent->handler->isseekable(file->parent);
+//}
 
 
 static handler_t x00_handler = {
@@ -289,9 +289,9 @@ static handler_t x00_handler = {
 	x00_filetype,	//uint8_t	(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
 	x00_getname,	// const char	(*getname)(file_t *fp);		// return real name of file
 
-	x00_iswriteable,// int(*iswriteable)(file_t *fp);
+	x00_iswritable,// int(*iswritable)(file_t *fp);
 
-	x00_isseekable,	// int (*isseekable)(file_t *fp);
+//	x00_isseekable,	// int (*isseekable)(file_t *fp);
 
 	// -------------------------
 

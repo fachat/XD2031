@@ -74,12 +74,15 @@ typedef struct {
 	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
-	char		dirpattern[MAX_BUFFER_SIZE];
+	char		*filename;	// pure filename (doubles as disk name)
+	char		*ospath;	// full path to the file (incl. filename)
 	struct dirent	*de;
-	unsigned int	is_first :1;	// is first directory entry?
 	char		*block;		// direct channel block buffer, 256 byte when allocated
 	uint16_t	recordlen;
 	unsigned char	block_ptr;
+	ssize_t		filesize;
+	uint8_t		writable;
+	time_t		last_mod;
 } File;
 
 static void file_init(const type_t *t, void *obj) {
@@ -94,8 +97,10 @@ static void file_init(const type_t *t, void *obj) {
 	fp->fp = NULL;
 	fp->dp = NULL;
 	fp->block = NULL;
+	fp->filename = NULL;
 	fp->block_ptr = 0;
 	fp->recordlen = 0;	// not a rel file
+	fp->writable = 0;	// not writable
 }
 
 static type_t file_type = {
@@ -473,7 +478,8 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 				file->block[i] = i;
 			}
 
-			handler_resolve_block(ep, channel, &fp);
+			// TODO
+			//handler_resolve_block(ep, channel, &fp);
 
 			channel_set(channel, fp);
 		
@@ -485,7 +491,8 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			file = reserve_file((fs_endpoint_t*)ep, channel);
 			open_block_channel(file);
 
-			handler_resolve_block(ep, channel, &fp);
+			// TODO
+			//handler_resolve_block(ep, channel, &fp);
 
 			channel_set(channel, fp);
 		
@@ -718,6 +725,41 @@ exit:
 }
 */
 
+/**
+ * return a malloc'd string containing the concatenated contents of the
+ * given strings (if not null)
+ */
+static char *str_concat(const char *str1, const char *str2, const char *str3) {
+
+	char *rv = NULL;
+
+	uint16_t len = 0;
+	if (str1 != NULL) {
+		len += strlen(str1);
+	}
+	if (str2 != NULL) {
+		len += strlen(str2);
+	}
+	if (str3 != NULL) {
+		len += strlen(str3);
+	}
+
+	rv = mem_alloc_c(len + 1, "str_concat");
+
+	rv[0] = 0;
+	if (str1 != NULL) {
+		strcpy(rv, str1);
+	}
+	if (str2 != NULL) {
+		strcat(rv, str2);
+	}
+	if (str3 != NULL) {
+		strcat(rv, str3);
+	}
+	rv[len] = 0;	// just in case
+	return rv;
+}
+
 
 // open a directory read
 static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *opts, File **outfile) {
@@ -735,8 +777,6 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *op
 
 	if (file != NULL) {
 
-		// save pattern for later comparisons
-		strcpy(file->dirpattern, buf);
 		DIR *dp = opendir(fsep->curpath); //buf+FSP_DATA);
 
 		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
@@ -745,8 +785,13 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *op
 		if(dp) {
 		  file->fp = NULL;
 		  file->dp = dp;
-		  file->is_first = 1;
+		  file->file.dirstate = DIRSTATE_FIRST;
 		  *outfile = file;
+		  
+		  // save pattern for later comparisons
+		  file->filename = mem_alloc_str(buf);
+		  file->ospath = mem_alloc_str(fsep->curpath);
+
 		  return CBM_ERROR_OK;
 		} else {
 		  log_errno("Error opening directory");
@@ -759,7 +804,7 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *op
 }
 
 // root directory
-static file_t *fsp_root(endpoint_t *ep) {
+static file_t *fsp_root(endpoint_t *ep, uint8_t isroot) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	File *file = NULL;
@@ -827,24 +872,91 @@ static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 }
 */
 
+/**
+ * return a malloc'd string with the full path of the file,
+ * and the path separator char appended. if child is not NULL,
+ * append it after the path separator
+ */
+static char *get_path(File *parent, const char *child) {
+
+	char *path = NULL;
+
+	if (child != NULL) {
+		path = str_concat(parent->ospath, dir_separator_string(), child);
+	} else {
+		path = mem_alloc_str(parent->ospath);
+	}
+	return path;
+}
+
 static int direntry(file_t *fp, file_t **outentry) {
-	  if (file->is_first) {
-		    file->is_first = 0;
-		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
-		    rv = l;
-		    file->de = dir_next(file->dp, file->dirpattern);
-		    return rv;
+	  File *file = (File*) fp;
+	  File *retfile = NULL;
+	  int rv = CBM_ERROR_FAULT;
+	  struct stat sbuf;
+
+ 	  // alloc directory entry struct
+	  retfile = mem_alloc(&file_type);
+
+	  if (fp->dirstate == DIRSTATE_FIRST) {
+		    // not first anymore
+		    fp->dirstate = DIRSTATE_ENTRIES;
+
+		    retfile->filename = mem_alloc_str(fp->pattern);
+		    retfile->ospath = get_path(file, retfile->filename);
+		    retfile->file.mode = FS_DIR_MOD_NAM;
+
+		    // TODO: error handling
+		    file->de = dir_next(file->dp, file->filename);
+		    if (file->de == NULL) {
+			fp->dirstate = DIRSTATE_END;
+		    }
+		    return CBM_ERROR_OK;
 	  }
-	  if(!file->de) {
-		    *eof |= READFLAG_EOF;
-		    int l = dir_fill_disk(retbuf, fsep->curpath);
-		    rv = l;
-		    return rv;
+	  if(fp->dirstate == DIRSTATE_END) {
+		    retfile->filename = NULL;
+		    retfile->ospath = mem_alloc_str(file->ospath);
+		    fp->mode = FS_DIR_MOD_FRE;
+		    unsigned long long total = os_free_disk_space(file->ospath);
+		    if (total > SSIZE_MAX) {
+			total = SSIZE_MAX;
+		    }
+		    retfile->filesize = total;
+		    return CBM_ERROR_OK;
+	  } else {
+		    // TODO: charset conversion
+		    retfile->filename = mem_alloc_str(file->de->d_name);
+		    retfile->ospath = get_path(file, retfile->filename);
+		    retfile->file.mode = FS_DIR_MOD_FIL;
+
+	            int rv = stat(retfile->ospath, &sbuf);
+        	    if (rv < 0) {
+                   	log_error("Failed stat'ing entry %s\n", file->de->d_name);
+                	log_errno("Problem stat'ing dir entry");
+        	    } else {
+		        // TODO: error handling
+                	int writecheck = access(file->ospath, W_OK);
+                	if ((writecheck < 0) && (errno != EACCES)) {
+                            writecheck = -errno;
+                            log_error("Could not get write access to %s\n", file->de->d_name);
+                            log_errno("Reason");
+                	}
+			if (writecheck >= 0) {
+			    retfile->writable = 1;
+			} else {
+			    retfile->writable = 0;
+			}
+			retfile->last_mod = sbuf.st_mtime;
+			retfile->filesize = sbuf.st_size;
+        	    }
+
+	            // prepare for next read (so we know if we're done)
+	            file->de = dir_next(file->dp, file->filename);
+    	            if (file->de == NULL) {
+			fp->dirstate = DIRSTATE_END;
+    	            }
 	  }
-	  int l = dir_fill_entry(retbuf, fsep->curpath, file->de, len);
-	  rv = l;
-	  // prepare for next read (so we know if we're done)
-	  file->de = dir_next(file->dp, file->dirpattern);
+	  *outentry = (file_t*) retfile;
 	  return rv;
 }
 
@@ -1313,6 +1425,15 @@ static uint16_t recordlen(const file_t *fp) {
 	return ((File*)fp)->recordlen;
 }
 
+static const char* getname(const file_t *fp) {
+	return ((File*)fp)->filename;
+}
+
+static uint8_t iswritable(const file_t *fp) {
+	return ((File*)fp)->writable;
+}
+
+
 // ----------------------------------------------------------------------------------
 
 handler_t fs_file_handler = {
@@ -1325,10 +1446,13 @@ handler_t fs_file_handler = {
 	NULL,			// seek
 	readfile,		// readfile
 	writefile,		// writefile
-	direntry,		// direntry
+	NULL,			// truncate
 	recordlen,		// recordlen
 	NULL,			// filetype
-	NULL			// getname
+	getname,		// getname
+	iswritable,		// iswritable
+	direntry,		// direntry
+	NULL			// create
 };
 
 provider_t fs_provider = {

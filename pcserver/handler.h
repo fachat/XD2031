@@ -87,10 +87,8 @@ struct _handler {
 
 	const char*	(*getname)(const file_t *fp);	// return a pointer to the real file name
 
-	int		(*iswriteable)(const file_t *fp); // return true if file is writeable
+	uint8_t		(*iswritable)(const file_t *fp); // return true if file is writeable
 
-	int		(*isseekable)(const file_t *fp); // return true if file is seekable
-					
 	// -------------------------
 							// get the next directory entry (NULL if end)
 	int		(*direntry)(file_t *dirfp, file_t **outentry);

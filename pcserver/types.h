@@ -31,6 +31,7 @@ struct _type {
 	const char 	*name;
 	unsigned int	sizeoftype;
 	void		(*constructor)(const type_t *type, void *obj);
+	//type_t		*parent;	// super class - used in constructor call
 };
 
 typedef int 	bool_t;
