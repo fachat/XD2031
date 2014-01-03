@@ -852,7 +852,7 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 
 	file_t *entry = f->file.firstmatch;
 	if (entry == NULL) {
-		rv = -f->file.handler->direntry((file_t*)f, &entry);
+		rv = -f->file.handler->direntry((file_t*)f, &entry, readflag);
 	}
 	f->file.firstmatch = NULL;
 
@@ -862,7 +862,12 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 
 	if (rv == CBM_ERROR_OK && entry != NULL) {
 
-		rv = dir_fill_entry_from_file(retbuf, entry, len, provider_convfrom(entry->endpoint->ptype));
+		if (entry->mode == FS_DIR_MOD_NAM) {
+			// TODO: drive number
+			rv = dir_fill_header(retbuf, 0, entry->filename);
+		} else {
+			rv = dir_fill_entry_from_file(retbuf, entry, len, provider_convfrom(entry->endpoint->ptype));
+		}
 
 		// just close the entry
 		entry->handler->close(entry, 0);
@@ -924,21 +929,24 @@ static char *get_path(File *parent, const char *child) {
 	return path;
 }
 
-static int direntry(file_t *fp, file_t **outentry) {
+static int direntry(file_t *fp, file_t **outentry, int *readflag) {
 	  File *file = (File*) fp;
 	  File *retfile = NULL;
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
+	
+  	  *readflag = 0;
 
 	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
  	  // alloc directory entry struct
-	  retfile = reserve_file(fp->endpoint, file->chan);
+	  retfile = reserve_file((fs_endpoint_t*)fp->endpoint, file->chan);
 	  retfile->file.parent = fp;
 
 	  if (fp->dirstate == DIRSTATE_FIRST) {
 		    // not first anymore
 		    fp->dirstate = DIRSTATE_ENTRIES;
+		    fp->firstmatch = (file_t*)retfile;
 
 		    retfile->file.filename = mem_alloc_str(fp->pattern);
 		    retfile->ospath = get_path(file, retfile->file.filename);
@@ -952,6 +960,7 @@ static int direntry(file_t *fp, file_t **outentry) {
 		    } else {
 			log_debug("Got next dir entry for: %s\n", file->de->d_name);
 		    }
+		    *readflag = READFLAG_DENTRY;
 		    rv = CBM_ERROR_OK;
 	  } else
 	  if(fp->dirstate == DIRSTATE_END) {
@@ -963,6 +972,7 @@ static int direntry(file_t *fp, file_t **outentry) {
 			total = SSIZE_MAX;
 		    }
 		    retfile->file.filesize = total;
+		    *readflag = READFLAG_EOF;
 		    rv = CBM_ERROR_OK;
 	  } else {
 		    log_debug("direntry: get new dir entry\n");

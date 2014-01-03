@@ -134,6 +134,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 
 	log_entry("handler_resolve");
 
+	int readflag;
 	const char *outname = NULL;
 	int err = CBM_ERROR_FAULT;
 	file_t *file = NULL;
@@ -188,7 +189,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
 		// we have an empty directory
 		direntry = NULL;
-		while ((err = current_dir->handler->direntry(current_dir, &direntry)) == CBM_ERROR_OK) {
+		while ((err = current_dir->handler->direntry(current_dir, &direntry, &readflag)) == CBM_ERROR_OK) {
 
 			log_debug("got direntry %p (current_dir is %p)\n", direntry, current_dir);
 
@@ -441,7 +442,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 	return err;
 }
 
-int handler_direntry(file_t *dir, file_t **direntry) {
+int handler_direntry(file_t *dir, file_t **direntry, int *readflag) {
 
 	int err = CBM_ERROR_OK;
 	file_t *match = NULL;
@@ -452,7 +453,7 @@ int handler_direntry(file_t *dir, file_t **direntry) {
 		dir->firstmatch = NULL;
 		err = CBM_ERROR_OK;
 	} else {
-		err = dir->handler->direntry(dir, &match);
+		err = dir->handler->direntry(dir, &match, readflag);
 	}
 
 	if (err == CBM_ERROR_OK) {

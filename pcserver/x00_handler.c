@@ -172,7 +172,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
-	file->file.filename = mem_alloc_str(x00_buf+8);
+	file->file.filename = mem_alloc_str((char*)(x00_buf+8));
 
 	file->file.recordlen = x00_buf[0x19];
 	file->file.type = ftype;

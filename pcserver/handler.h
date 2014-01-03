@@ -81,7 +81,7 @@ struct _handler {
 
 	// -------------------------
 
-	int		(*direntry)(file_t *dirfp, file_t **outentry);
+	int		(*direntry)(file_t *dirfp, file_t **outentry, int *readflag);
 							// create a new file in the directory
 	int		(*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype, 
 				uint16_t recordlen);
@@ -125,7 +125,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 /*
  * get next directory entry
  */
-int handler_direntry(file_t *dir, file_t **direntry);
+int handler_direntry(file_t *dir, file_t **direntry, int *readflag);
 
 /*
  * resolve a file_t from an endpoint, for a block operation

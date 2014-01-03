@@ -48,7 +48,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
  *
  * returns the length of the written buffer
  */
-int dir_fill_header(char *dest, int driveno, char *dirpattern);
+int dir_fill_header(char *dest, int driveno, const char *dirpattern);
 
 /**
  * finds the next directory entry matching the given directory pattern

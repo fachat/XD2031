@@ -171,7 +171,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
  *
  * returns the length of the buffer
  */
-int dir_fill_header(char *dest, int driveno, char *dirpattern) {
+int dir_fill_header(char *dest, int driveno, const char *dirpattern) {
         dest[FS_DIR_LEN+0] = driveno & 255;
         dest[FS_DIR_LEN+1] = 0;
         dest[FS_DIR_LEN+2] = 0;
