@@ -61,7 +61,7 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern);
  * returns the length of the written buffer
  */
 int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize);
-int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t converter);
+int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize);
 
 /**
  * fill in the buffer with the final disk info entry

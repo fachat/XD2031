@@ -36,7 +36,6 @@
 #include <time.h>
 #include <errno.h>
 
-#include "charconvert.h"
 #include "provider.h"
 #include "dir.h"
 #include "wildcard.h"
@@ -281,7 +280,7 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 /**
  * fill in the buffer with a directory entry from a file_t struct
  */
-int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t converter) {
+int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize) {
 	struct tm *tp;
 
 	ssize_t size = file->filesize;
@@ -308,7 +307,10 @@ int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t c
 	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
 	//}
 
+	log_debug("dir_fill_entry: type=%02x, attr=%02x\n", file->type, file->attr);
+
         dest[FS_DIR_MODE] = file->mode;
+        dest[FS_DIR_ATTR] = file->attr | file->type;
 
 	// file name
        	int l = 0;
@@ -324,7 +326,6 @@ int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t c
 	}
 	// character set conversion
       	l = strlen(dest+FS_DIR_NAME);
-	converter(dest+FS_DIR_NAME, l, dest+FS_DIR_NAME, l);
 
 	return FS_DIR_NAME + l + 1;
 }

@@ -866,8 +866,10 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 			// TODO: drive number
 			rv = dir_fill_header(retbuf, 0, entry->filename);
 		} else {
-			rv = dir_fill_entry_from_file(retbuf, entry, len, provider_convfrom(entry->endpoint->ptype));
+			rv = dir_fill_entry_from_file(retbuf, entry, len);
 		}
+		provider_convfrom(entry->endpoint->ptype)(retbuf + FS_DIR_NAME, len - FS_DIR_NAME,
+				retbuf + FS_DIR_NAME, len - FS_DIR_NAME);
 
 		// just close the entry
 		entry->handler->close(entry, 0);
@@ -980,6 +982,8 @@ static int direntry(file_t *fp, file_t **outentry, int *readflag) {
 		    retfile->file.filename = mem_alloc_str(file->de->d_name);
 		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_FIL;
+		    retfile->file.type = FS_DIR_TYPE_PRG;
+		    retfile->file.attr = 0;
 
 	            int rvx = stat(retfile->ospath, &sbuf);
         	    if (rvx < 0) {
@@ -987,15 +991,17 @@ static int direntry(file_t *fp, file_t **outentry, int *readflag) {
                 	log_errno("Problem stat'ing dir entry");
         	    } else {
 		        // TODO: error handling
-                	int writecheck = access(file->ospath, W_OK);
+                	int writecheck = access(retfile->ospath, W_OK);
                 	if ((writecheck < 0) && (errno != EACCES)) {
                             writecheck = -errno;
                             log_error("Could not get write access to %s\n", file->de->d_name);
                             log_errno("Reason");
                 	}
+			log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
 			if (writecheck >= 0) {
 			    retfile->file.writable = 1;
 			} else {
+			    retfile->file.attr |= FS_DIR_ATTR_LOCKED;
 			    retfile->file.writable = 0;
 			}
 			retfile->file.lastmod = sbuf.st_mtime;
@@ -1481,17 +1487,23 @@ static int writefile(file_t *fp, char *buf, int len, int is_eof) {
 	return rv;
 }
 
-static void closefile(file_t *file, int recurse) {
+static void closefile(file_t *fp, int recurse) {
 
-	if (file->pattern != NULL) {
-		mem_free((void*)file->pattern);
-	}
-	if (file->filename != NULL) {
-		mem_free((void*)file->filename);
+	File *file = (File*) fp;
+
+	if (file->ospath != NULL) {
+		mem_free((void*)file->ospath);
 	}
 
-	if (recurse && file->parent != NULL) {
-		file->parent->handler->close(file->parent, recurse);
+	if (fp->pattern != NULL) {
+		mem_free((void*)fp->pattern);
+	}
+	if (fp->filename != NULL) {
+		mem_free((void*)fp->filename);
+	}
+
+	if (recurse && fp->parent != NULL) {
+		fp->parent->handler->close(fp->parent, recurse);
 	}
 }
  
