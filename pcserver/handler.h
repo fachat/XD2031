@@ -60,7 +60,7 @@ struct _handler {
 							// parents if recurse is set
 	void		(*close)(file_t *fp, int recurse);	
 
-	int		(*open)(file_t *fp); 		// open a file
+	int		(*open)(file_t *fp, int type); 	// open a file
 
 	// -------------------------
 							// get the converter FROM the file

@@ -198,7 +198,15 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			}
 
 			if (direntry->mode == FS_DIR_MOD_NAM || direntry->mode == FS_DIR_MOD_FRE) {
-				break;
+				if (type == FS_OPEN_DR) {
+					break;
+				} else {
+					// close the directory entry, we don't need it anymore
+					// (handler de-allocates it if necessary)
+					direntry->handler->close(direntry, 0);
+					direntry = NULL;
+					continue;
+				}
 			}
 
 			// default end of name (if no handler matches)
@@ -320,14 +328,17 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	err = handler_resolve(ep, &dir, &file, inname, &pattern, type);
 
 	if (err == CBM_ERROR_OK) {
-		
+	
+
+		log_info("File open gave %d\n", err);
+	
 		switch (type) {
 		case FS_OPEN_RD:
 			if (file == NULL) {
 				err = CBM_ERROR_FILE_NOT_FOUND;
 			} else {
 				*outfile = file;
-				err = file->handler->seek(file, 0, SEEKFLAG_ABS);
+				err = file->handler->open(file, type);
 			}
 			break;
 		case FS_OPEN_WR:
@@ -372,7 +383,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 
 		// we want the file here, so we can close the dir and its parents
 		dir->handler->close(dir, 1);
-
+		// and loose the pointer to it
+		file->parent = NULL;
 
 		if (err == CBM_ERROR_OK) {
 			*outfile = file;

@@ -1487,7 +1487,22 @@ static int writefile(file_t *fp, char *buf, int len, int is_eof) {
 	return rv;
 }
 
-static void closefile(file_t *fp, int recurse) {
+static int fs_seek(file_t *fp, long position, int flag) {
+
+	errno_t rv = CBM_ERROR_OK;
+
+	File *file = (File*) fp;
+
+	if (file->fp != NULL) {
+		if (fseek(file->fp, position, flag) < 0) {
+			rv = CBM_ERROR_FAULT;
+			log_errno("Seek");
+		}
+	}
+	return rv;
+}
+
+static void fs_close(file_t *fp, int recurse) {
 
 	File *file = (File*) fp;
 
@@ -1506,6 +1521,29 @@ static void closefile(file_t *fp, int recurse) {
 		fp->parent->handler->close(fp->parent, recurse);
 	}
 }
+
+static int fs_open(file_t *fp, int type) {
+
+	errno_t rv = CBM_ERROR_OK;
+
+	File *file = (File*) fp;
+
+	char *flags = "";
+	switch(type) {
+	case FS_OPEN_RD: flags = "rb"; break;
+	case FS_OPEN_WR: flags = "wb+"; break;
+	case FS_OPEN_AP: flags = "ab"; break;
+	case FS_OPEN_RW: flags = "wb+"; break;
+	case FS_OPEN_OW: flags = "wb"; break;
+	}
+
+	file->fp = fopen(file->ospath, flags);
+	if (file->fp == NULL) {
+		log_errno("fopen");
+		rv = CBM_ERROR_FAULT;
+	}
+	return rv;
+}
  
 // ----------------------------------------------------------------------------------
 
@@ -1513,10 +1551,10 @@ handler_t fs_file_handler = {
 	"fs_file_handler",
 	"ASCII",
 	NULL,			// resolve
-	closefile,		// close
-	NULL,			// open
+	fs_close,		// close
+	fs_open,		// open
 	NULL,			// convfrom
-	NULL,			// seek
+	fs_seek,		// seek
 	readfile,		// readfile
 	writefile,		// writefile
 	NULL,			// truncate
