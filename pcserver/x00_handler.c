@@ -42,9 +42,6 @@ void x00_handler_init(void) {
 
 typedef struct {
 	file_t		file;		// embedded
-	uint8_t		recordlen;
-	uint8_t		filetype;
-	char		name[MAX_NAME_LEN];
 } x00_file_t;
 
 static void x00_file_init(const type_t *t, void *p) {
@@ -52,8 +49,7 @@ static void x00_file_init(const type_t *t, void *p) {
 
 	x00_file_t *x = (x00_file_t*) p;
 
-	x->filetype = FS_DIR_TYPE_UNKNOWN;
-	memset(x->name, 0, MAX_NAME_LEN);
+	x->file.type = FS_DIR_TYPE_UNKNOWN;
 }
 
 static type_t x00_file_type = {
@@ -72,7 +68,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	(void) type;
 
 	// check the file name of the given file_t, if it actually is a Pxx file.
-	const char *name = infile->handler->getname(infile);
+	const char *name = infile->filename;
 
 	// must be at least one character, plus "." plus "x00" ending
 	if (name == NULL || strlen(name) < 5) {
@@ -176,10 +172,10 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
-	strncpy(file->name, (char*)&(x00_buf[8]), MAX_NAME_LEN);
+	file->file.filename = mem_alloc_str(x00_buf+8);
 
-	file->recordlen = x00_buf[0x19];
-	file->filetype = ftype;
+	file->file.recordlen = x00_buf[0x19];
+	file->file.type = ftype;
 
 	*outfile = (file_t*)file;
 
@@ -195,18 +191,6 @@ static void x00_close(file_t *file, int recurse) {
 
 	// and then free the file struct memory
 	mem_free(xfile);
-}
-
-static uint16_t x00_recordlen(const file_t *file) {
-	x00_file_t *xfile = (x00_file_t*)file;
-
-	return xfile->recordlen;
-}
-
-static uint8_t x00_filetype(const file_t *file) {
-	x00_file_t *xfile = (x00_file_t*)file;
-
-	return xfile->filetype;
 }
 
 static int x00_seek(file_t *file, long pos, int flag) {
@@ -238,23 +222,6 @@ static int x00_write(file_t *file, char *buf, int len, int writeflg) {
 	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
 }
 
-static const char *x00_getname(const file_t *file) {
-	x00_file_t *xfile = (x00_file_t*)file;
-
-	return xfile->name;
-}
-
-static uint8_t x00_iswritable(const file_t *file) {
-
-	return file->parent->handler->iswritable(file->parent);
-}
-
-//static int x00_isseekable(const file_t *file) {
-//
-//	return file->parent->handler->isseekable(file->parent);
-//}
-
-
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
@@ -281,17 +248,6 @@ static handler_t x00_handler = {
 			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
 	x00_truncate,	// truncate	(file_t *fp, long size);
-
-	// -------------------------
-
-	x00_recordlen,	//uint16_t	(*recordlen)(file_t *fp);	// return the record length for file
-
-	x00_filetype,	//uint8_t	(*filetype)(file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
-	x00_getname,	// const char	(*getname)(file_t *fp);		// return real name of file
-
-	x00_iswritable,// int(*iswritable)(file_t *fp);
-
-//	x00_isseekable,	// int (*isseekable)(file_t *fp);
 
 	// -------------------------
 

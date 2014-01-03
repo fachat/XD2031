@@ -121,10 +121,18 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
  *
  * It returns the directory, as well as the first match in that directory, both as file_t 
  * objects.
+ *
+ * Note that in case of an empty directory, *outfile may be null.
+ * 
+ * TODO:
+ * - handling of ".."
+ * - handling of "."
  */
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
 		const char *inname, const char **outpattern, uint8_t type) {
+
+	log_entry("handler_resolve");
 
 	const char *outname = NULL;
 	int err = CBM_ERROR_FAULT;
@@ -164,7 +172,12 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		current_dir = ep->ptype->root(ep, 0);
 	}
 
+
+	log_debug("current_dir (i.e. root) is %p, namep=%s\n", current_dir, namep);
+
 	// through name canonicalization, we know namep does now not point to a 0
+
+	current_dir->pattern = mem_alloc_str(namep);
 
 	// loop as long as we have filename parts left
 	while (current_dir != NULL && namep != NULL && *namep != 0) {
@@ -174,10 +187,16 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// due to the x00 pattern matching madness
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
 		// we have an empty directory
-		file = NULL;
-		while ((err = file->handler->direntry(current_dir, &direntry)) == CBM_ERROR_OK) {
+		direntry = NULL;
+		while ((err = current_dir->handler->direntry(current_dir, &direntry)) == CBM_ERROR_OK) {
+
+			log_debug("got direntry %p (current_dir is %p)\n", direntry, current_dir);
 
 			if (direntry == NULL) {
+				break;
+			}
+
+			if (direntry->mode == FS_DIR_MOD_NAM || direntry->mode == FS_DIR_MOD_FRE) {
 				break;
 			}
 
@@ -195,18 +214,19 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 
 			handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
 		
-			// replace original dir entry with wrapped one	
-			if (wrapped_direntry != NULL) {
-				file = wrapped_direntry;
-				// do not check any further dir entries
-				break;
-			}
+//			// replace original dir entry with wrapped one	
+//			if (wrapped_direntry != NULL) {
+//				file = wrapped_direntry;
+//				// do not check any further dir entries
+//				break;
+//			}
+			direntry = wrapped_direntry;
 
 			// no handler match found, thus
 			// now check if the original filename matches the pattern
 			// outname must be set either to point to the trailing '/', or the trailing 0,
 			// but not be set to NULL itself
-			if (compare_dirpattern(direntry->handler->getname(direntry), namep, &outname)) {
+			if (compare_dirpattern(direntry->filename, namep, &outname)) {
 				// matches, so go on with it
 				file = direntry;
 				// do not check any further dir entries
@@ -252,6 +272,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	// - file, the unwrapped first pattern match in that directory, maybe NULL
 	// - a possibly large list of opened files, reachable through current_dir->parent etc
 	// - namep pointing to the directory match pattern for the current directory
+	log_debug("current_dir=%p, file=%p, namep=%s\n", current_dir, file, namep);
 
 	*outdir = NULL;
 	*outfile = NULL;
@@ -271,7 +292,9 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		}
 	}
 	mem_free(name);
-	
+
+	log_debug("outdir=%p, outfile=%p, outpattern=%s\n", *outdir, *outfile, *outpattern);
+	log_exitr(err);	
 	return err;
 }
 	
@@ -322,11 +345,11 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 				}
 			}
 			if (filetype != FS_DIR_TYPE_UNKNOWN 
-				&& file->handler->filetype(file) != filetype) {
+				&& file->type != filetype) {
 				err = CBM_ERROR_FILE_TYPE_MISMATCH;
 				break; 
 			}
-			if (!file->handler->iswritable(file)) {
+			if (!file->writable) {
 				err = CBM_ERROR_WRITE_PROTECT;
 				break;
 			}
@@ -335,8 +358,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 
 		if (err == CBM_ERROR_OK) {
 			if (reclen != 0) {
-				if (file->handler->recordlen(file) != reclen
-					|| file->handler->filetype(file) != FS_DIR_TYPE_REL) {
+				if (file->recordlen != reclen
+					|| file->type != FS_DIR_TYPE_REL) {
 					err = CBM_ERROR_RECORD_NOT_PRESENT;
 				}
 			}
@@ -389,6 +412,8 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR);
 
+	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p, parent=%p\n", err, dir, (dir==NULL)?NULL:dir->parent);
+
 	if (dir != NULL) {
 		// we can close the parents anyway
 		file_t *parent = dir->parent;
@@ -398,11 +423,6 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 		if (err == CBM_ERROR_OK) {
 		
-			// init directory traversal
-			dir->dirstate = DIRSTATE_FIRST;
-			dir->pattern = mem_alloc_str(pattern);
-			dir->firstmatch = file;		// maybe NULL
-	
 			*outdir = dir;	
 		} else {
 			if (dir != NULL) {

@@ -44,9 +44,9 @@
 #include <sys/types.h>
 #include <libgen.h>
 
-#include "dir.h"
 #include "fscmd.h"
 #include "provider.h"
+#include "dir.h"
 #include "handler.h"
 #include "errors.h"
 #include "mem.h"
@@ -58,7 +58,7 @@
 
 #include "log.h"
 
-#undef DEBUG_READ
+#define DEBUG_READ
 #define DEBUG_CMD
 #define DEBUG_BLOCK
 
@@ -74,15 +74,10 @@ typedef struct {
 	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
-	char		*filename;	// pure filename (doubles as disk name)
 	char		*ospath;	// full path to the file (incl. filename)
 	struct dirent	*de;
 	char		*block;		// direct channel block buffer, 256 byte when allocated
-	uint16_t	recordlen;
 	unsigned char	block_ptr;
-	ssize_t		filesize;
-	uint8_t		writable;
-	time_t		last_mod;
 } File;
 
 static void file_init(const type_t *t, void *obj) {
@@ -97,10 +92,7 @@ static void file_init(const type_t *t, void *obj) {
 	fp->fp = NULL;
 	fp->dp = NULL;
 	fp->block = NULL;
-	fp->filename = NULL;
 	fp->block_ptr = 0;
-	fp->recordlen = 0;	// not a rel file
-	fp->writable = 0;	// not writable
 }
 
 static type_t file_type = {
@@ -762,24 +754,28 @@ static char *str_concat(const char *str1, const char *str2, const char *str3) {
 
 
 // open a directory read
-static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *opts, File **outfile) {
+static int open_dr(fs_endpoint_t *fsep, int tfd, const char *name, const char *opts, File **outfile) {
 
 	(void)opts; // silence warning unused parameter
 
-       	char *fullname = malloc_path(fsep->curpath, buf);
+	log_debug("ENTER: fs_provider.open_dr(name=%s, opts=%s)", name, opts);
+
+       	char *fullname = str_concat(fsep->curpath, dir_separator_string(), name);
 	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
+		log_exitr(CBM_ERROR_NO_PERMISSION);
 		return CBM_ERROR_NO_PERMISSION;
 	}
- 
+
+	*outfile = NULL; 
 	File *file = reserve_file(fsep, tfd);
 
 	if (file != NULL) {
 
-		DIR *dp = opendir(fsep->curpath); //buf+FSP_DATA);
+		DIR *dp = opendir(fsep->curpath); //name+FSP_DATA);
 
-		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",buf,(void*)dp,
+		log_debug("OPEN_DR(%s)=%p, (chan=%d, file=%p, dp=%p)\n",name,(void*)dp,
 							tfd, (void*)file, (void*)dp);
 
 		if(dp) {
@@ -789,17 +785,21 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *op
 		  *outfile = file;
 		  
 		  // save pattern for later comparisons
-		  file->filename = mem_alloc_str(buf);
+		  file->file.pattern = NULL;
+		  file->file.filename = mem_alloc_str(name);
 		  file->ospath = mem_alloc_str(fsep->curpath);
 
+		  log_exitr(CBM_ERROR_OK);
 		  return CBM_ERROR_OK;
 		} else {
 		  log_errno("Error opening directory");
 		  int er = errno_to_error(errno);
 		  close_fd(file, 1);
+		  log_exitr(er);
 		  return er;
 		}
 	}
+	log_exitr(CBM_ERROR_FAULT);
 	return CBM_ERROR_FAULT;
 }
 
@@ -807,13 +807,21 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *buf, const char *op
 static file_t *fsp_root(endpoint_t *ep, uint8_t isroot) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
+	log_entry("fs_provider.fps_root");
+
 	File *file = NULL;
 
 	int err = open_dr(fsep, -1, "/", NULL, &file);
 
 	if (err == CBM_ERROR_OK) {
+		log_exitr(CBM_ERROR_OK);
 		return (file_t*) file;
 	}
+
+	if (file != NULL) {
+		file->file.handler->close((file_t*)file, 1);
+	}
+	log_exitr(err);
 	return NULL;
 }
 
@@ -837,6 +845,33 @@ static size_t file_get_size(FILE *fp) {
 //
 // returns the number of bytes read (>= 0), or a negative error number
 //
+static int read_dir(File *f, char *retbuf, int len, int *readflag) {
+
+	int rv = CBM_ERROR_OK;
+	log_entry("fs_provider.read_dir");
+
+	file_t *entry = f->file.firstmatch;
+	if (entry == NULL) {
+		rv = -f->file.handler->direntry((file_t*)f, &entry);
+	}
+	f->file.firstmatch = NULL;
+
+	log_debug("read_dir: process entry %p (parent=%p) for %s\n", entry, 
+		(entry == NULL)?NULL:entry->parent,
+		(entry == NULL)?"-":entry->filename);
+
+	if (rv == CBM_ERROR_OK && entry != NULL) {
+
+		rv = dir_fill_entry_from_file(retbuf, entry, len, provider_convfrom(entry->endpoint->ptype));
+
+		// just close the entry
+		entry->handler->close(entry, 0);
+	}
+
+	log_exitr(rv);
+	return rv;
+}
+
 /*
 static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 
@@ -895,42 +930,49 @@ static int direntry(file_t *fp, file_t **outentry) {
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
 
+	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
+
  	  // alloc directory entry struct
-	  retfile = mem_alloc(&file_type);
+	  retfile = reserve_file(fp->endpoint, file->chan);
+	  retfile->file.parent = fp;
 
 	  if (fp->dirstate == DIRSTATE_FIRST) {
 		    // not first anymore
 		    fp->dirstate = DIRSTATE_ENTRIES;
 
-		    retfile->filename = mem_alloc_str(fp->pattern);
-		    retfile->ospath = get_path(file, retfile->filename);
+		    retfile->file.filename = mem_alloc_str(fp->pattern);
+		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_NAM;
 
 		    // TODO: error handling
-		    file->de = dir_next(file->dp, file->filename);
+		    file->de = dir_next(file->dp, fp->pattern);
 		    if (file->de == NULL) {
+			log_debug("Got NULL next dir entry\n");
 			fp->dirstate = DIRSTATE_END;
+		    } else {
+			log_debug("Got next dir entry for: %s\n", file->de->d_name);
 		    }
-		    return CBM_ERROR_OK;
-	  }
+		    rv = CBM_ERROR_OK;
+	  } else
 	  if(fp->dirstate == DIRSTATE_END) {
-		    retfile->filename = NULL;
+		    retfile->file.filename = NULL;
 		    retfile->ospath = mem_alloc_str(file->ospath);
-		    fp->mode = FS_DIR_MOD_FRE;
+		    retfile->file.mode = FS_DIR_MOD_FRE;
 		    unsigned long long total = os_free_disk_space(file->ospath);
 		    if (total > SSIZE_MAX) {
 			total = SSIZE_MAX;
 		    }
-		    retfile->filesize = total;
-		    return CBM_ERROR_OK;
+		    retfile->file.filesize = total;
+		    rv = CBM_ERROR_OK;
 	  } else {
+		    log_debug("direntry: get new dir entry\n");
 		    // TODO: charset conversion
-		    retfile->filename = mem_alloc_str(file->de->d_name);
-		    retfile->ospath = get_path(file, retfile->filename);
+		    retfile->file.filename = mem_alloc_str(file->de->d_name);
+		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_FIL;
 
-	            int rv = stat(retfile->ospath, &sbuf);
-        	    if (rv < 0) {
+	            int rvx = stat(retfile->ospath, &sbuf);
+        	    if (rvx < 0) {
                    	log_error("Failed stat'ing entry %s\n", file->de->d_name);
                 	log_errno("Problem stat'ing dir entry");
         	    } else {
@@ -942,19 +984,23 @@ static int direntry(file_t *fp, file_t **outentry) {
                             log_errno("Reason");
                 	}
 			if (writecheck >= 0) {
-			    retfile->writable = 1;
+			    retfile->file.writable = 1;
 			} else {
-			    retfile->writable = 0;
+			    retfile->file.writable = 0;
 			}
-			retfile->last_mod = sbuf.st_mtime;
-			retfile->filesize = sbuf.st_size;
+			retfile->file.lastmod = sbuf.st_mtime;
+			retfile->file.filesize = sbuf.st_size;
         	    }
 
 	            // prepare for next read (so we know if we're done)
-	            file->de = dir_next(file->dp, file->filename);
+	            file->de = dir_next(file->dp, fp->pattern);
     	            if (file->de == NULL) {
+			log_debug("Got NULL next dir entry\n");
 			fp->dirstate = DIRSTATE_END;
+		    } else {
+			log_debug("Got next dir entry for: %s\n", file->de->d_name);
     	            }
+		    rv = CBM_ERROR_OK;
 	  }
 	  *outentry = (file_t*) retfile;
 	  return rv;
@@ -1006,9 +1052,9 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 				// reset to end of file
 				fseek(fp, cursize, SEEK_SET);
 				// fill rest of last existing record when needed
-				rest = cursize % file->recordlen;
+				rest = cursize % file->file.recordlen;
 				if (rest > 0) {
-					rest = file->recordlen - rest;	
+					rest = file->file.recordlen - rest;	
 					log_debug("having to fill %d rest bytes\n", rest);
 					cursize += rest;	// adjust
 					while(rest) {
@@ -1030,7 +1076,7 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 				// calculate up to what record would be filled by the drive
 				// adjust newpos to record boundary (absolute file size)
 				pos = curpos;
-				n = pos % file->recordlen;
+				n = pos % file->file.recordlen;
 				// partial record used, adjust (ignore rest)
 				pos = pos - n;
 				// now check for blocks
@@ -1044,25 +1090,25 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 				// ignoring the rest of the division, as partial record 
 				// at end of block is ignored. cursize is record-aligned,
 				// so no problem just substracting it
-				nrec = (pos - cursize) / file->recordlen;
+				nrec = (pos - cursize) / file->file.recordlen;
 				log_debug("calculate file to be %d bytes - %d records to write\n", pos, nrec);
 				// prepare buffer
 				n = 0;
 				while (n < record_type.sizeoftype) {
 					buf[n] = 255;
-					n+= file->recordlen;
+					n+= file->file.recordlen;
 				}
 				// number of records in buffer
-				brec = (n / file->recordlen) - 1;
+				brec = (n / file->file.recordlen) - 1;
 				// write filler records
 				n = 1;
 				while (n > 0 && nrec) {
 					log_debug("append min(nrec=%d, brec=%d) records\n", nrec, brec);
 					if (nrec >= brec) {
-						n = fwrite(buf, brec * file->recordlen, 1, fp);
+						n = fwrite(buf, brec * file->file.recordlen, 1, fp);
 						nrec -= brec;
 					} else {
-						n = fwrite(buf, nrec * file->recordlen, 1, fp);
+						n = fwrite(buf, nrec * file->file.recordlen, 1, fp);
 						// done
 						break;
 					}
@@ -1083,15 +1129,15 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 
 	FILE *fp = file->fp;
 
-	if (file->recordlen > 0) {
+	if (file->file.recordlen > 0) {
 		long curpos = ftell(fp);
 		long cursize = file_get_size(fp);
 		log_debug(">>>> current position is %ld, size=%ld\n", curpos, cursize);
 		// now if curpos > cursize, fill up with "0xff 0x00 ..." for each missing
 		// record
-		if ((curpos + file->recordlen) > cursize) {
+		if ((curpos + file->file.recordlen) > cursize) {
 			// fill up such that currently written record has space
-			expand_relfile(file, cursize, curpos + file->recordlen);
+			expand_relfile(file, cursize, curpos + file->file.recordlen);
 			// back to original file position
 			fseek(fp, curpos, SEEK_SET);
 		}
@@ -1387,11 +1433,15 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
 	File *f = (File*) fp;
 #ifdef DEBUG_READ
-	log_debug("readfile chan %d: file=%p (fp=%p, dp=%p, block=%p, eof=%d)\n",
-		chan, f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *eof);
+	log_debug("readfile file=%p (fp=%p, dp=%p, block=%p, *readflag=%d)\n",
+		f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *readflag);
 #endif
 	int rv = 0;
 
+	if (f->dp) {
+		// read a directory entry
+		rv = read_dir(f, retbuf, len, readflag);
+	} else
 	if (f->fp) {
 		// read a file
 		// standard file read
@@ -1421,36 +1471,33 @@ static int writefile(file_t *fp, char *buf, int len, int is_eof) {
 	return rv;
 }
 
-static uint16_t recordlen(const file_t *fp) {
-	return ((File*)fp)->recordlen;
+static void closefile(file_t *file, int recurse) {
+
+	if (file->pattern != NULL) {
+		mem_free((void*)file->pattern);
+	}
+	if (file->filename != NULL) {
+		mem_free((void*)file->filename);
+	}
+
+	if (recurse && file->parent != NULL) {
+		file->parent->handler->close(file->parent, recurse);
+	}
 }
-
-static const char* getname(const file_t *fp) {
-	return ((File*)fp)->filename;
-}
-
-static uint8_t iswritable(const file_t *fp) {
-	return ((File*)fp)->writable;
-}
-
-
+ 
 // ----------------------------------------------------------------------------------
 
 handler_t fs_file_handler = {
 	"fs_file_handler",
 	"ASCII",
 	NULL,			// resolve
-	NULL,			// close
+	closefile,		// close
 	NULL,			// open
 	NULL,			// convfrom
 	NULL,			// seek
 	readfile,		// readfile
 	writefile,		// writefile
 	NULL,			// truncate
-	recordlen,		// recordlen
-	NULL,			// filetype
-	getname,		// getname
-	iswritable,		// iswritable
 	direntry,		// direntry
 	NULL			// create
 };

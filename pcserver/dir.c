@@ -36,6 +36,8 @@
 #include <time.h>
 #include <errno.h>
 
+#include "charconvert.h"
+#include "provider.h"
 #include "dir.h"
 #include "wildcard.h"
 #include "fscmd.h"
@@ -194,14 +196,18 @@ int dir_fill_header(char *dest, int driveno, char *dirpattern) {
 /**
  * finds the next directory entry matching the given directory pattern
  */
-struct dirent* dir_next(DIR *dp, char *dirpattern) {
+struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 
 	struct dirent *de = NULL;
+
+	log_debug("dir_next(dp=%p, pattern=%s\n", dp, dirpattern);
 
 	de = readdir(dp);
 
 	if (dirpattern != NULL && *dirpattern != 0) {
 		while (de != NULL) {
+			log_debug("dir_next:match(%s)\n", de->d_name);
+
 			if (compare_pattern(de->d_name, dirpattern)) {
 				// match
 				return de;
@@ -270,6 +276,57 @@ int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
 	dest[maxsize-1] = 0;
 
 	return FS_DIR_NAME + strlen(dest+FS_DIR_NAME) + 1;
+}
+
+/**
+ * fill in the buffer with a directory entry from a file_t struct
+ */
+int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t converter) {
+	struct tm *tp;
+
+	ssize_t size = file->filesize;
+	// TODO: overflow check if ssize_t has more than 32 bits
+        dest[FS_DIR_LEN] = size & 255;
+        dest[FS_DIR_LEN+1] = (size >> 8) & 255;
+        dest[FS_DIR_LEN+2] = (size >> 16) & 255;
+        dest[FS_DIR_LEN+3] = (size >> 24) & 255;
+
+        tp = localtime(&(file->lastmod));
+        dest[FS_DIR_YEAR]  = tp->tm_year;
+        dest[FS_DIR_MONTH] = tp->tm_mon;
+        dest[FS_DIR_DAY]   = tp->tm_mday;
+        dest[FS_DIR_HOUR]  = tp->tm_hour;
+        dest[FS_DIR_MIN]   = tp->tm_min;
+        dest[FS_DIR_SEC]   = tp->tm_sec;
+
+	dest[FS_DIR_ATTR]  = file->type;
+	if (file->writable == 0) {
+		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
+	}
+	// test
+	//if (sbuf.st_size & 1) {
+	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
+	//}
+
+        dest[FS_DIR_MODE] = file->mode;
+
+	// file name
+       	int l = 0;
+	if (file->filename == NULL) {
+		// blocks free
+		dest[FS_DIR_NAME] = 0;
+	} else {
+        	l = strlen(file->filename);
+        	strncpy(dest+FS_DIR_NAME, file->filename,
+                	  min(l+1, maxsize-1-FS_DIR_NAME));
+		// make sure we're still null-terminated
+		dest[maxsize-1] = 0;
+	}
+	// character set conversion
+      	l = strlen(dest+FS_DIR_NAME);
+	converter(dest+FS_DIR_NAME, l, dest+FS_DIR_NAME, l);
+
+	return FS_DIR_NAME + l + 1;
 }
 
 

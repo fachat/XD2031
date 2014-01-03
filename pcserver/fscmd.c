@@ -43,10 +43,10 @@
 
 #include "wireformat.h"
 #include "fscmd.h"
-#include "dir.h"
 #include "charconvert.h"
 #include "petscii.h"
 #include "provider.h"
+#include "dir.h"
 #include "handler.h"
 #include "log.h"
 #include "xcmd.h"
@@ -54,7 +54,7 @@
 #include "serial.h"
 #include "handler.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ
 #undef DEBUG_WRITE
@@ -485,8 +485,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 				prov->name, name);
 			rv = handler_resolve_file(ep, &fp, name, options, cmd);
-			if (rv == CBM_ERROR_OK && fp->handler->recordlen(fp) > 0) {
-				record = fp->handler->recordlen(fp);
+			if (rv == CBM_ERROR_OK && fp->recordlen > 0) {
+				record = fp->recordlen;
 				retbuf[FSP_DATA+1] = record & 0xff;
 				retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
 				retbuf[FSP_LEN] = FSP_DATA + 3;	
@@ -580,7 +580,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		if (fp != NULL) {
 			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
 			log_debug("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
-			rv = fp->handler->seek(fp, record * fp->handler->recordlen(fp), SEEKFLAG_ABS);
+			rv = fp->handler->seek(fp, record * fp->recordlen, SEEKFLAG_ABS);
 			if (rv != 0) {
 				log_rv(rv);
 			}

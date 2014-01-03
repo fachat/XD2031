@@ -91,6 +91,9 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 
 	check_alloc(ptr, file, line);
 
+	// malloc returns "non-initialized" memory! 
+	memset(ptr, 0, type->sizeoftype);
+
 	if (type->constructor != NULL) {
 		type->constructor(type, ptr);
 	}

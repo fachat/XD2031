@@ -53,7 +53,7 @@ int dir_fill_header(char *dest, int driveno, char *dirpattern);
 /**
  * finds the next directory entry matching the given directory pattern
  */
-struct dirent* dir_next(DIR *dp, char *dirpattern);
+struct dirent* dir_next(DIR *dp, const char *dirpattern);
 
 /**
  * fill in the buffer with a directory entry
@@ -61,6 +61,7 @@ struct dirent* dir_next(DIR *dp, char *dirpattern);
  * returns the length of the written buffer
  */
 int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize);
+int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize, charconv_t converter);
 
 /**
  * fill in the buffer with the final disk info entry

@@ -28,6 +28,8 @@
 #ifndef PROVIDER_H
 #define PROVIDER_H
 
+#include <time.h>
+
 #include "charconvert.h"
 
 //
@@ -106,7 +108,16 @@ struct _file {
 	int		dirstate;	// 0 = first line, 1 = file matches, 2 = end line
 	const char	*pattern;	// pattern for dir matching
 	file_t		*firstmatch;	// first match on dir open (stored on open)
+	// file/dir attributes
+	size_t		filesize;	// size of file
+	time_t		lastmod;	// last modification timestamp
+	const char	*filename;	// file name
+	uint16_t	recordlen;	// record length (if REL file)
 	uint8_t		mode;		// same as FS_DIR_MODE
+	uint8_t		type;		// same as FS_DIR_TYPE
+	uint8_t		attr;		// same as FS_DIR_ATTR
+	uint8_t		writable;	// is file writable?
+	uint8_t		seekable;	// is file seekable?	
 };
 
 // note: go from FIRST to ENTRIES to END by +1

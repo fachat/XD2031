@@ -81,16 +81,6 @@ struct _handler {
 
 	// -------------------------
 
-	uint16_t	(*recordlen)(const file_t *fp);	// return the record length for file
-
-	uint8_t		(*filetype)(const file_t *fp);	// return the type of the file as FS_DIR_TYPE_*
-
-	const char*	(*getname)(const file_t *fp);	// return a pointer to the real file name
-
-	uint8_t		(*iswritable)(const file_t *fp); // return true if file is writeable
-
-	// -------------------------
-							// get the next directory entry (NULL if end)
 	int		(*direntry)(file_t *dirfp, file_t **outentry);
 							// create a new file in the directory
 	int		(*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype, 
