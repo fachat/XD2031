@@ -55,14 +55,16 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
                 const char *inname, const char *opts);
 
 /*
- * get next directory entry
- */
-int handler_direntry(file_t *dir, file_t **direntry, int *readflag);
-
-/*
  * resolve a file_t from an endpoint, for a block operation
  */
 int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile);
+
+
+/*
+ * wrap a file_t (e.g. with x00* handler)
+ */
+int handler_wrap(file_t *infile, uint8_t type, const char *name,
+                const char **outname, file_t **outfile);
 
 /*
  * not really nice, but here's the list of existing handlers (before we do an own

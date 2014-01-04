@@ -90,8 +90,10 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 int handler_wrap(file_t *infile, uint8_t type, const char *name,  
 		const char **outname, file_t **outfile) {
 
+	log_debug("handler_wrap(infile=%s)\n", infile->filename);
+
 	int err = CBM_ERROR_OK;
-	*outfile = infile;
+	*outfile = NULL;
 
 	for (int i = 0; ; i++) {
 		handler_t *handler = reg_get(&handlers, i);
@@ -212,8 +214,8 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			// the handler->resolve() method also matches the name, as the
 			// P00 files may contain their own "real" name within them
 
-			handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
-			direntry = wrapped_direntry;
+			//handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
+			//direntry = wrapped_direntry;
 
 			// no handler match found, thus
 			// now check if the original filename matches the pattern

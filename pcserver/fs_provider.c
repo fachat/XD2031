@@ -984,6 +984,9 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
 	  const char *outpattern = NULL;
+	  
+	  File *wrapfile = NULL;
+	  char *wrapname = NULL;
 	
 	  *readflag = READFLAG_DENTRY;
 
@@ -1020,54 +1023,63 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	            // read entry from underlying dir
 		    do {
 	            	file->de = readdir(file->dp);
-		    } while ((file->de != NULL) && (compare_dirpattern(file->de->d_name, fp->pattern, &outpattern) == 0));
-    	            if (file->de == NULL) {
-			log_debug("Got NULL next dir entry\n");
-			if (isresolve) {
-				rv = CBM_ERROR_OK;
-			} else {
-				fp->dirstate = DIRSTATE_END;
-			}
-		    } else {
-			log_debug("Got next dir entry for: %s\n", file->de->d_name);
 
-		    	// TODO: charset conversion
-		    	retfile->file.filename = mem_alloc_str(file->de->d_name);
-		    	retfile->ospath = get_path(file, retfile->file.filename);
-		    	retfile->file.mode = FS_DIR_MOD_FIL;
-		    	retfile->file.type = FS_DIR_TYPE_PRG;
-		    	retfile->file.attr = 0;
-
-	            	int rvx = stat(retfile->ospath, &sbuf);
-        	    	if (rvx < 0) {
-				rv = errno_to_error(errno);
-                   		log_error("Failed stat'ing entry %s\n", file->de->d_name);
-                		log_errno("Problem stat'ing dir entry");
-				close_fd(retfile, 0);
-        	    	} else {
-		        	// TODO: error handling
-                		int writecheck = access(retfile->ospath, W_OK);
-                		if ((writecheck < 0) && (errno != EACCES)) {
-                            		writecheck = -errno;
-                            		log_error("Could not get write access to %s\n", file->de->d_name);
-                            		log_errno("Reason");
-                		}
-				log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
-				if (writecheck >= 0) {
-			    		retfile->file.writable = 1;
+	    	        if (file->de == NULL) {
+				log_debug("Got NULL next dir entry\n");
+				if (isresolve) {
+					rv = CBM_ERROR_OK;
 				} else {
-			    		retfile->file.attr |= FS_DIR_ATTR_LOCKED;
-			    		retfile->file.writable = 0;
+					fp->dirstate = DIRSTATE_END;
 				}
-				retfile->file.lastmod = sbuf.st_mtime;
-				retfile->file.filesize = sbuf.st_size;
-				if (S_ISDIR(sbuf.st_mode)) {
-					retfile->file.mode = FS_DIR_MOD_DIR;
+			} else {
+				log_debug("Got next dir entry for: %s\n", file->de->d_name);
+
+			    	// TODO: charset conversion
+			    	retfile->file.filename = mem_alloc_str(file->de->d_name);
+			    	retfile->ospath = get_path(file, retfile->file.filename);
+			    	retfile->file.mode = FS_DIR_MOD_FIL;
+			    	retfile->file.type = FS_DIR_TYPE_PRG;
+			    	retfile->file.attr = 0;
+
+		            	int rvx = stat(retfile->ospath, &sbuf);
+        		    	if (rvx < 0) {
+					rv = errno_to_error(errno);
+                   			log_error("Failed stat'ing entry %s\n", file->de->d_name);
+                			log_errno("Problem stat'ing dir entry");
+					close_fd(retfile, 0);
+        		    	} else {
+			        	// TODO: error handling
+                			int writecheck = access(retfile->ospath, W_OK);
+                			if ((writecheck < 0) && (errno != EACCES)) {
+                            			writecheck = -errno;
+	                            		log_error("Could not get write access to %s\n", file->de->d_name);
+        	                    		log_errno("Reason");
+                			}
+					log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
+					if (writecheck >= 0) {
+				    		retfile->file.writable = 1;
+					} else {
+				    		retfile->file.attr |= FS_DIR_ATTR_LOCKED;
+				    		retfile->file.writable = 0;
+					}
+					retfile->file.lastmod = sbuf.st_mtime;
+					retfile->file.filesize = sbuf.st_size;
+					if (S_ISDIR(sbuf.st_mode)) {
+						retfile->file.mode = FS_DIR_MOD_DIR;
+					}
+			    		rv = CBM_ERROR_OK;
 				}
-		    		rv = CBM_ERROR_OK;
-		    		*outentry = (file_t*) retfile;
-        	    	}
-		    	return rv;
+				handler_wrap(retfile, FS_OPEN_DR, fp->pattern, &wrapfile, &outpattern);
+				if (wrapfile != NULL) {
+					retfile = wrapfile;
+					wrapfile = NULL;
+				}
+			}
+		    } while ((file->de != NULL) && (compare_dirpattern(retfile->file.filename, fp->pattern, &outpattern) == 0));
+
+		    if (file->de != NULL) {
+			    *outentry = (file_t*) retfile;
+			    return rv;
 		    }
 	  }
 	
