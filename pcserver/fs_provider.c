@@ -1508,10 +1508,12 @@ static int fs_seek(file_t *fp, long position, int flag) {
 
 	errno_t rv = CBM_ERROR_OK;
 
+	int seekflag = (flag == SEEKFLAG_END) ? SEEK_END : SEEK_SET;
+
 	File *file = (File*) fp;
 
 	if (file->fp != NULL) {
-		if (fseek(file->fp, position, flag) < 0) {
+		if (fseek(file->fp, position, seekflag) < 0) {
 			rv = CBM_ERROR_FAULT;
 			log_errno("Seek");
 		}
