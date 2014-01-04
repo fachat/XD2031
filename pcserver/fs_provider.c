@@ -55,6 +55,7 @@
 #include "os.h"
 #include "openpars.h"
 #include "registry.h"
+#include "wildcard.h"
 
 #include "log.h"
 
@@ -71,7 +72,6 @@ extern handler_t fs_file_handler;
 
 typedef struct {
 	file_t		file;
-	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
 	const char	*ospath;	// full path to the file (incl. filename)
@@ -88,7 +88,6 @@ static void file_init(const type_t *t, void *obj) {
 
 	fp->file.handler = &fs_file_handler;
 
-        fp->chan = -1;
 	fp->fp = NULL;
 	fp->dp = NULL;
 	fp->block = NULL;
@@ -146,11 +145,10 @@ static void fsp_init() {
 	provider_register(&fs_provider);
 }
 
-static File *reserve_file(fs_endpoint_t *fsep, int chan) {
+static File *reserve_file(fs_endpoint_t *fsep) {
 
 	File *file = mem_alloc(&file_type);
 
-	file->chan = chan;
 	file->file.endpoint = (endpoint_t*)fsep;
 
 	reg_append(&fsep->files, file);
@@ -161,10 +159,7 @@ static File *reserve_file(fs_endpoint_t *fsep, int chan) {
 // close a file descriptor
 static int close_fd(File *file, int recurse) {
 
-	if (file->chan < 0) {
-		return CBM_ERROR_NO_CHANNEL;
-	}
-	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
+	log_debug("Closing file descriptor %p\n", file);
 	int er = 0;
 
 	if (file->ospath != NULL) {
@@ -474,7 +469,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			// buffer into the device
 			// channel is closed by device with separate FS_CLOSE
 
-			file = reserve_file((fs_endpoint_t*)ep, channel);
+			file = reserve_file((fs_endpoint_t*)ep/*, channel*/);
 			open_block_channel(file);
 			// copy the file contents into the buffer
 			// test
@@ -492,7 +487,7 @@ static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
 			// U2 basically opens a short-lived channel to write the contents of a
 			// buffer from the device
 			// channel is closed by device with separate FS_CLOSE
-			file = reserve_file((fs_endpoint_t*)ep, channel);
+			file = reserve_file((fs_endpoint_t*)ep/*, channel*/);
 			open_block_channel(file);
 
 			// TODO
@@ -766,19 +761,55 @@ static char *str_concat(const char *str1, const char *str2, const char *str3) {
 
 
 // open a directory read
-static int open_dr(fs_endpoint_t *fsep, int tfd, const char *name, const char *opts, File **outfile) {
+static int open_dir(File *file) {
 
-	(void)opts; // silence warning unused parameter
+	DIR *dp = opendir(file->ospath); 
 
-	log_debug("ENTER: fs_provider.open_dr(name=%s, opts=%s)", name, opts);
+	log_debug("ENTER: OPEN_DR(%p), (file=%p, dp=%p)\n",(void*)dp,
+			(void*)file, (file == NULL)?"<nil>":file->file.filename);
+
+	if(dp != NULL) {
+	  file->fp = NULL;
+	  file->dp = dp;
+	  file->file.dirstate = DIRSTATE_FIRST;
+		  
+	  log_exitr(CBM_ERROR_OK);
+	  return CBM_ERROR_OK;
+	} else {
+	  log_errno("Error opening directory");
+	  int er = errno_to_error(errno);
+	  log_exitr(er);
+	  return er;
+	}
+}
+
+static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
+
+	errno_t rv = CBM_ERROR_OK;
 
        	char *fullname = str_concat(fsep->curpath, dir_separator_string(), name);
+
+	log_debug("ENTER: fs_provider.open_dr(name=%s, path=%s)", name, fullname);
+
 	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
 		mem_free(fullname);
 		log_exitr(CBM_ERROR_NO_PERMISSION);
 		return CBM_ERROR_NO_PERMISSION;
 	}
+
+	File *file = reserve_file(fsep);
+
+	file->file.pattern = NULL;
+	file->file.filename = mem_alloc_str(name);
+	file->ospath = mem_alloc_str(fsep->curpath);
+
+	*outfile = file;
+
+	return CBM_ERROR_OK;
+}
+
+/*
 
 	*outfile = NULL; 
 	File *file = reserve_file(fsep, tfd);
@@ -814,6 +845,7 @@ static int open_dr(fs_endpoint_t *fsep, int tfd, const char *name, const char *o
 	log_exitr(CBM_ERROR_FAULT);
 	return CBM_ERROR_FAULT;
 }
+*/
 
 // root directory
 static file_t *fsp_root(endpoint_t *ep, uint8_t isroot) {
@@ -823,7 +855,7 @@ static file_t *fsp_root(endpoint_t *ep, uint8_t isroot) {
 
 	File *file = NULL;
 
-	int err = open_dr(fsep, -1, "/", NULL, &file);
+	int err = open_dr(fsep, "/", &file);
 
 	if (err == CBM_ERROR_OK) {
 		log_exitr(CBM_ERROR_OK);
@@ -862,11 +894,9 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 	int rv = CBM_ERROR_OK;
 	log_entry("fs_provider.read_dir");
 
-	file_t *entry = f->file.firstmatch;
-	if (entry == NULL) {
-		rv = -f->file.handler->direntry((file_t*)f, &entry, readflag);
-	}
-	f->file.firstmatch = NULL;
+	file_t *entry = NULL;
+
+	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag);
 
 	log_debug("read_dir: process entry %p (parent=%p) for %s\n", entry, 
 		(entry == NULL)?NULL:entry->parent,
@@ -880,9 +910,10 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 		} else {
 			rv = dir_fill_entry_from_file(retbuf, entry, len);
 		}
+/*
 		provider_convfrom(entry->endpoint->ptype)(retbuf + FS_DIR_NAME, len - FS_DIR_NAME,
 				retbuf + FS_DIR_NAME, len - FS_DIR_NAME);
-
+*/
 		// just close the entry
 		entry->handler->close(entry, 0);
 	}
@@ -943,41 +974,106 @@ static char *get_path(File *parent, const char *child) {
 	return path;
 }
 
-static int direntry(file_t *fp, file_t **outentry, int *readflag) {
+/**
+ * get the next directory entry in the directory given as fp.
+ * If isresolve is set, then the disk header and blocks free entries are skipped
+ */
+static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
 	  File *file = (File*) fp;
 	  File *retfile = NULL;
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
+	  const char *outpattern = NULL;
 	
   	  *readflag = 0;
 
 	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
+	  if (file->dp == NULL) {
+		rv = open_dir(file);
+		if (rv != CBM_ERROR_OK) {
+			return rv;
+		}
+	  }
+
  	  // alloc directory entry struct
-	  retfile = reserve_file((fs_endpoint_t*)fp->endpoint, file->chan);
+	  retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
 	  retfile->file.parent = fp;
 
-	  if (fp->dirstate == DIRSTATE_FIRST) {
+	  // do we have to send the disk header?
+	  if ((!isresolve) && (fp->dirstate == DIRSTATE_FIRST)) {
 		    // not first anymore
 		    fp->dirstate = DIRSTATE_ENTRIES;
-		    fp->firstmatch = (file_t*)retfile;
 
-		    retfile->file.filename = mem_alloc_str(fp->pattern);
+		    retfile->file.filename = mem_alloc_str((fp->pattern == NULL)?"(nil)":fp->pattern);
 		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_NAM;
 
-		    // TODO: error handling
-		    file->de = dir_next(file->dp, fp->pattern);
-		    if (file->de == NULL) {
-			log_debug("Got NULL next dir entry\n");
-			fp->dirstate = DIRSTATE_END;
-		    } else {
-			log_debug("Got next dir entry for: %s\n", file->de->d_name);
-		    }
 		    *readflag = READFLAG_DENTRY;
 		    rv = CBM_ERROR_OK;
-	  } else
-	  if(fp->dirstate == DIRSTATE_END) {
+		    *outentry = (file_t*) retfile;
+		    return rv;
+	  } 
+
+	  // check if we have to send a file entry
+	  if(isresolve || (fp->dirstate == DIRSTATE_ENTRIES)) {
+
+	            // read entry from underlying dir
+		    do {
+	            	file->de = readdir(file->dp);
+		    } while ((file->de != NULL) && (compare_dirpattern(file->de->d_name, fp->pattern, &outpattern) == 0));
+    	            if (file->de == NULL) {
+			log_debug("Got NULL next dir entry\n");
+			if (isresolve) {
+				rv = CBM_ERROR_OK;
+			} else {
+				fp->dirstate = DIRSTATE_END;
+			}
+		    } else {
+			log_debug("Got next dir entry for: %s\n", file->de->d_name);
+
+		    	// TODO: charset conversion
+		    	retfile->file.filename = mem_alloc_str(file->de->d_name);
+		    	retfile->ospath = get_path(file, retfile->file.filename);
+		    	retfile->file.mode = FS_DIR_MOD_FIL;
+		    	retfile->file.type = FS_DIR_TYPE_PRG;
+		    	retfile->file.attr = 0;
+
+	            	int rvx = stat(retfile->ospath, &sbuf);
+        	    	if (rvx < 0) {
+				rv = errno_to_error(errno);
+                   		log_error("Failed stat'ing entry %s\n", file->de->d_name);
+                		log_errno("Problem stat'ing dir entry");
+				close_fd(retfile, 0);
+        	    	} else {
+		        	// TODO: error handling
+                		int writecheck = access(retfile->ospath, W_OK);
+                		if ((writecheck < 0) && (errno != EACCES)) {
+                            		writecheck = -errno;
+                            		log_error("Could not get write access to %s\n", file->de->d_name);
+                            		log_errno("Reason");
+                		}
+				log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
+				if (writecheck >= 0) {
+			    		retfile->file.writable = 1;
+				} else {
+			    		retfile->file.attr |= FS_DIR_ATTR_LOCKED;
+			    		retfile->file.writable = 0;
+				}
+				retfile->file.lastmod = sbuf.st_mtime;
+				retfile->file.filesize = sbuf.st_size;
+				if (S_ISDIR(sbuf.st_mode)) {
+					retfile->file.mode = FS_DIR_MOD_DIR;
+				}
+		    		rv = CBM_ERROR_OK;
+		    		*outentry = (file_t*) retfile;
+        	    	}
+		    	return rv;
+		    }
+	  }
+	
+	  // end of dir entry - blocks free
+	  if ((!isresolve) && (fp->dirstate == DIRSTATE_END)) {
 		    retfile->file.filename = NULL;
 		    retfile->ospath = mem_alloc_str(file->ospath);
 		    retfile->file.mode = FS_DIR_MOD_FRE;
@@ -988,52 +1084,11 @@ static int direntry(file_t *fp, file_t **outentry, int *readflag) {
 		    retfile->file.filesize = total;
 		    *readflag = READFLAG_EOF;
 		    rv = CBM_ERROR_OK;
-	  } else {
-		    log_debug("direntry: get new dir entry\n");
-		    // TODO: charset conversion
-		    retfile->file.filename = mem_alloc_str(file->de->d_name);
-		    retfile->ospath = get_path(file, retfile->file.filename);
-		    retfile->file.mode = FS_DIR_MOD_FIL;
-		    retfile->file.type = FS_DIR_TYPE_PRG;
-		    retfile->file.attr = 0;
-
-	            int rvx = stat(retfile->ospath, &sbuf);
-        	    if (rvx < 0) {
-                   	log_error("Failed stat'ing entry %s\n", file->de->d_name);
-                	log_errno("Problem stat'ing dir entry");
-        	    } else {
-		        // TODO: error handling
-                	int writecheck = access(retfile->ospath, W_OK);
-                	if ((writecheck < 0) && (errno != EACCES)) {
-                            writecheck = -errno;
-                            log_error("Could not get write access to %s\n", file->de->d_name);
-                            log_errno("Reason");
-                	}
-			log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
-			if (writecheck >= 0) {
-			    retfile->file.writable = 1;
-			} else {
-			    retfile->file.attr |= FS_DIR_ATTR_LOCKED;
-			    retfile->file.writable = 0;
-			}
-			retfile->file.lastmod = sbuf.st_mtime;
-			retfile->file.filesize = sbuf.st_size;
-			if (S_ISDIR(sbuf.st_mode)) {
-				retfile->file.mode = FS_DIR_MOD_DIR;
-			}
-        	    }
-
-	            // prepare for next read (so we know if we're done)
-	            file->de = dir_next(file->dp, fp->pattern);
-    	            if (file->de == NULL) {
-			log_debug("Got NULL next dir entry\n");
-			fp->dirstate = DIRSTATE_END;
-		    } else {
-			log_debug("Got next dir entry for: %s\n", file->de->d_name);
-    	            }
-		    rv = CBM_ERROR_OK;
+	  	    *outentry = (file_t*) retfile;
+	  	    return rv;
 	  }
-	  *outentry = (file_t*) retfile;
+
+	  close_fd(retfile, 0);
 	  return rv;
 }
 
@@ -1052,7 +1107,7 @@ static int read_file(File *file, char *retbuf, int len, int *eof) {
 	if(n<len) {
 		    // short read, so either error or eof
 		    *eof = READFLAG_EOF;
-		    log_debug("short read on %d\n", file->chan);
+		    log_debug("short read on %p\n", file);
 	} else {
 		    // as feof() does not let us know if the file is EOF without
 		    // having attempted to read it first, we need this kludge
@@ -1060,7 +1115,7 @@ static int read_file(File *file, char *retbuf, int len, int *eof) {
 		    if (eofc < 0) {
 		      // EOF
 		      *eof = READFLAG_EOF;
-		      log_debug("EOF on read %d\n", file->chan);
+		      log_debug("EOF on read %p\n", file);
 		    } else {
 		      // restore fp, so we can read it properly on the next request
 		      ungetc(eofc, fp);
@@ -1179,14 +1234,14 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 	  int n = fwrite(buf, 1, len, fp);
 	  if (n < len) {
 		// short write indicates an error
-		log_debug("Close fd=%d on short write!\n", file->chan);
+		log_debug("Close fd=%p on short write!\n", file);
 		fflush(fp);
 		fclose(fp);
 		file->fp = NULL;
 		return -CBM_ERROR_WRITE_ERROR;
 	  }
 	  if(is_eof) {
-	    log_debug("fd=%d received an EOF on write file (ignored)\n", file->chan);
+	    log_debug("fd=%d received an EOF on write file\n", file);
 	    fflush(fp);
 	    //close_fds(ep, tfd);
 	  }
@@ -1527,19 +1582,23 @@ static int fs_open(file_t *fp, int type) {
 
 	File *file = (File*) fp;
 
-	char *flags = "";
-	switch(type) {
-	case FS_OPEN_RD: flags = "rb"; break;
-	case FS_OPEN_WR: flags = "wb+"; break;
-	case FS_OPEN_AP: flags = "ab"; break;
-	case FS_OPEN_RW: flags = "wb+"; break;
-	case FS_OPEN_OW: flags = "wb"; break;
-	}
+	if (type == FS_OPEN_DR) {
+		rv = open_dir(file);
+	} else {
+		char *flags = "";
+		switch(type) {
+		case FS_OPEN_RD: flags = "rb"; break;
+		case FS_OPEN_WR: flags = "wb+"; break;
+		case FS_OPEN_AP: flags = "ab"; break;
+		case FS_OPEN_RW: flags = "wb+"; break;
+		case FS_OPEN_OW: flags = "wb"; break;
+		}
 
-	file->fp = fopen(file->ospath, flags);
-	if (file->fp == NULL) {
-		log_errno("fopen");
-		rv = CBM_ERROR_FAULT;
+		file->fp = fopen(file->ospath, flags);
+		if (file->fp == NULL) {
+			log_errno("fopen");
+			rv = CBM_ERROR_FAULT;
+		}
 	}
 	return rv;
 }
@@ -1555,13 +1614,13 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, uint8_t
 
 		const char *ospath = str_concat(dir->ospath, dir_separator_string(), name);
 		
-		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint, dir->chan);
+		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
 		retfile->ospath = ospath;
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
 
-		if ((rv = fs_open(retfile, opentype)) == CBM_ERROR_OK) {
+		if ((rv = fs_open((file_t*)retfile, opentype)) == CBM_ERROR_OK) {
 			*outentry = (file_t*)retfile;	
 		} else {
 			close_fd(retfile, 0);
@@ -1570,6 +1629,12 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, uint8_t
 
 	return rv;
 }
+
+static charconv_t convfrom(file_t *prov, const char *tocharset) {
+
+	return provider_convfrom(prov->endpoint->ptype);
+}
+
  
 // ----------------------------------------------------------------------------------
 
@@ -1579,12 +1644,12 @@ handler_t fs_file_handler = {
 	NULL,			// resolve
 	close_fd,		// close
 	fs_open,		// open
-	NULL,			// convfrom
+	convfrom,		// convfrom
 	fs_seek,		// seek
 	readfile,		// readfile
 	writefile,		// writefile
 	NULL,			// truncate
-	direntry,		// direntry
+	fs_direntry,		// direntry
 	fs_create		// create
 };
 

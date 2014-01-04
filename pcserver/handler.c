@@ -32,6 +32,7 @@
 #include "wireformat.h"
 #include "wildcard.h"
 #include "openpars.h"
+#include "os.h"
 
 
 
@@ -189,28 +190,14 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
 		// we have an empty directory
 		direntry = NULL;
-		while ((err = current_dir->handler->direntry(current_dir, &direntry, &readflag)) == CBM_ERROR_OK) {
+		while ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag)) == CBM_ERROR_OK) {
 
-			log_debug("got direntry %p (current_dir is %p)\n", direntry, current_dir);
+			log_debug("got direntry %p (%s)(current_dir is %p (%s))\n", direntry, 
+				(direntry == NULL)?NULL:direntry->filename, current_dir,
+				current_dir->filename);
 
 			if (direntry == NULL) {
 				break;
-			}
-
-			if (direntry->mode == FS_DIR_MOD_NAM || direntry->mode == FS_DIR_MOD_FRE) {
-				if (type == FS_OPEN_DR) {
-					break;
-				} else {
-					// close the directory entry, we don't need it anymore
-					// (handler de-allocates it if necessary)
-					direntry->handler->close(direntry, 0);
-					direntry = NULL;
-
-					if (readflag & READFLAG_EOF) {
-						break;
-					}
-					continue;
-				}
 			}
 
 			// default end of name (if no handler matches)
@@ -226,13 +213,6 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			// P00 files may contain their own "real" name within them
 
 			handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
-		
-//			// replace original dir entry with wrapped one	
-//			if (wrapped_direntry != NULL) {
-//				file = wrapped_direntry;
-//				// do not check any further dir entries
-//				break;
-//			}
 			direntry = wrapped_direntry;
 
 			// no handler match found, thus
@@ -256,9 +236,12 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			}
 		}
 
+		log_debug("Found entry - outname=%s, file=%p\n", outname, file);
+
 		if (err != CBM_ERROR_OK || file == NULL) {
 			break;
 		}
+
 
 		// found our directory entry and wrapped it in file
 		// now check if we have/need a container wrapper (with e.g. a ZIP file in a P00 file)
@@ -269,11 +252,18 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			break;
 		}
 
+		// save rest of pattern in sub directory
+		while (*outname == dir_separator_char()) {
+			outname++;
+		}
+		file->pattern = mem_alloc_str(outname);
+
 		// outname points to the path separator trailing the matched file name pattern
 		// From name canonicalization that is followed by at least a '*', if not further
 		// patterns
 		namep = outname + 1;
 		current_dir = file;
+		file = NULL;
 
 		// check with the container providers (i.e. endpoint providers)
 		// whether to wrap it. Here e.g. d64 or zip files are wrapped into 
@@ -443,11 +433,20 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 		file_t *parent = dir->parent;
 		if (parent != NULL) {
 			parent->handler->close(parent, 1);
+			// forget reference so we don't try to close it again
+			dir->parent = NULL;
 		}
 
 		if (err == CBM_ERROR_OK) {
-		
+	
+			err = dir->handler->open(dir, FS_OPEN_DR);	
+		}
+
+		if (err == CBM_ERROR_OK) {
 			*outdir = dir;	
+			if (file != NULL) {
+				file->handler->close(file, 0);
+			}
 		} else {
 			if (dir != NULL) {
 				dir->handler->close(dir, 0);
@@ -465,24 +464,4 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 	return err;
 }
 
-int handler_direntry(file_t *dir, file_t **direntry, int *readflag) {
-
-	int err = CBM_ERROR_OK;
-	file_t *match = NULL;
-
-	// for now, ignore header and blocks free
-	if (dir->firstmatch != NULL) {
-		match = dir->firstmatch;
-		dir->firstmatch = NULL;
-		err = CBM_ERROR_OK;
-	} else {
-		err = dir->handler->direntry(dir, &match, readflag);
-	}
-
-	if (err == CBM_ERROR_OK) {
-		*direntry = match;
-	}
-
-	return err;
-}
 

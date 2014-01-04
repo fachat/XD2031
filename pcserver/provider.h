@@ -107,7 +107,6 @@ struct _file {
 	// for traversing a directory
 	int		dirstate;	// 0 = first line, 1 = file matches, 2 = end line
 	const char	*pattern;	// pattern for dir matching
-	file_t		*firstmatch;	// first match on dir open (stored on open)
 	// file/dir attributes
 	size_t		filesize;	// size of file
 	time_t		lastmod;	// last modification timestamp
@@ -182,7 +181,7 @@ struct _handler {
 
         // -------------------------
 
-        int             (*direntry)(file_t *dirfp, file_t **outentry, int *readflag);
+        int             (*direntry)(file_t *dirfp, file_t **outentry, int isresolve, int *readflag);
                                                         // create a new file in the directory
         int             (*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype,
                                 uint16_t recordlen, int opentype);

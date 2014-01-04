@@ -549,12 +549,13 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				}
 				if (readflag & READFLAG_DENTRY) {
 					log_info("SEND DIRENTRY(%d)\n", tfd);
+				}
 					fp->handler->convfrom(fp, provider_get_ext_charset())
 							(retbuf+FSP_DATA+FS_DIR_NAME, 
 								strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
 								retbuf+FSP_DATA+FS_DIR_NAME, 
 								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
-				}
+				//}
 			    }
 			}
 		}

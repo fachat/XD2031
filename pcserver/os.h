@@ -24,6 +24,7 @@
 #define OS_H
 
 #include "log.h"
+#include "mem.h"
 
 /* 
 
@@ -55,7 +56,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include "mem.h"
 #endif
 
 // =======================================================================
@@ -77,7 +77,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include "mem.h"
 #endif
 
 // =======================================================================
@@ -98,7 +97,6 @@
 #include <errno.h>
 #include <winsock2.h>
 #include <conio.h>	// _kbhit()
-#include "mem.h"
 #endif
 
 
