@@ -305,7 +305,7 @@ int os_filename_is_legal(const char *name);
 int os_path_is_dir(const char *name);
 
 // free disk space in bytes
-signed long long os_free_disk_space (char *path);
+signed long long os_free_disk_space (const char *path);
 
 // patch dir separator sign to dir_separator_char
 char *os_patch_dir_separator (char *path);

@@ -151,7 +151,7 @@ int os_path_is_dir(const char *name) {
 }
 
 // free disk space in bytes, < 0 on errors
-signed long long os_free_disk_space (char *path) {
+signed long long os_free_disk_space (const char *path) {
 	struct statvfs buf;
 	int er;
 	unsigned long long total;

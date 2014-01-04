@@ -125,6 +125,79 @@ struct _file {
 #define	DIRSTATE_ENTRIES	1
 #define	DIRSTATE_END		2
 
+
+// file operations
+// This file defines the file type handler interface. This is used
+// to "wrap" files so that for example x00 (like P00, R00, ...) files 
+// or compressed files can be handled.
+//
+// In the long run the di_provider will become a handler as well - so
+// you can CD into a D64 file stored in a D81 image read from an FTP 
+// server...
+
+struct _handler {
+        const char      *name;                          // handler name, for debugging
+        const char      *native_charset;                // get name of the native charset for that handler
+
+                                                        // used internally by a recursive resolve
+                                                        // starting from an endpoint and continuing until
+                                                        // all name parts are used
+                                                        // Actually called by the handler registry in turn
+                                                        // until one handler returns non-null
+                                                        // type is the FS_OPEN_* command as parameter
+                                                        // may return non-null but with error (e.g.
+                                                        // write open on read-only endpoint). Error can
+                                                        // be read on file_t
+                                                        // The outname contains the start of the next 
+                                                        // path part, or NULL if the file found was
+                                                        // the last part of the given name. outname
+                                                        // can directly be given into the next 
+                                                        // (child) resolve method (i.e. path separators
+                                                        // are filtered out). 
+        int             (*resolve)(file_t *infile, file_t **outfile,
+                                uint8_t type, const char *name, const char *opts, const char **outname);
+
+                                                        // close the file; do so recursively by closing
+                                                        // parents if recurse is set
+        void            (*close)(file_t *fp, int recurse);
+
+        int             (*open)(file_t *fp, int opentype);      // open a file
+
+        // -------------------------
+                                                        // get the converter FROM the file
+        charconv_t      (*convfrom)(file_t *prov, const char *tocharset);
+
+        // -------------------------
+                                                        // position the file
+        int             (*seek)(file_t *fp, long position, int flag);
+
+                                                        // read file data
+        int             (*readfile)(file_t *fp, char *retbuf, int len, int *readflag);
+
+                                                        // write file data
+        int             (*writefile)(file_t *fp, char *buf, int len, int is_eof);
+
+                                                        // truncate to a given size
+        int             (*truncate)(file_t *fp, long size);
+
+        // -------------------------
+
+        int             (*direntry)(file_t *dirfp, file_t **outentry, int *readflag);
+                                                        // create a new file in the directory
+        int             (*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype,
+                                uint16_t recordlen, int opentype);
+};
+
+// values to be set in the out parameter readflag for readfile()
+#define READFLAG_EOF            1
+#define READFLAG_DENTRY         2
+
+// values to be set in the seek() flag parameter
+#define SEEKFLAG_ABS            0               /* count from the start */
+#define SEEKFLAG_END            1               /* count from the end of the file */
+
+
+
 int provider_assign(int drive, const char *name, const char *assign_to);
 
 /**
