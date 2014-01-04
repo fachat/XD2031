@@ -252,17 +252,17 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			break;
 		}
 
-		// save rest of pattern in sub directory
-		while (*outname == dir_separator_char()) {
-			outname++;
-		}
-		file->pattern = mem_alloc_str(outname);
-
 		// outname points to the path separator trailing the matched file name pattern
 		// From name canonicalization that is followed by at least a '*', if not further
 		// patterns
-		namep = outname + 1;
+		while (*outname == dir_separator_char()) {
+			outname++;
+		}
+		// save rest of pattern in sub directory
+		file->pattern = mem_alloc_str(outname);
+
 		current_dir = file;
+		namep = outname;
 		file = NULL;
 
 		// check with the container providers (i.e. endpoint providers)

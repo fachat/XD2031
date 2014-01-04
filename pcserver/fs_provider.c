@@ -985,7 +985,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  struct stat sbuf;
 	  const char *outpattern = NULL;
 	
-  	  *readflag = 0;
+	  *readflag = READFLAG_DENTRY;
 
 	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
@@ -1009,7 +1009,6 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_NAM;
 
-		    *readflag = READFLAG_DENTRY;
 		    rv = CBM_ERROR_OK;
 		    *outentry = (file_t*) retfile;
 		    return rv;
