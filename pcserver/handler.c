@@ -205,6 +205,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 					// (handler de-allocates it if necessary)
 					direntry->handler->close(direntry, 0);
 					direntry = NULL;
+
+					if (readflag & READFLAG_EOF) {
+						break;
+					}
 					continue;
 				}
 			}
@@ -246,6 +250,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			// (handler de-allocates it if necessary)
 			direntry->handler->close(direntry, 0);
 			direntry = NULL;
+
+			if (readflag == READFLAG_EOF) {
+				break;
+			}
 		}
 
 		if (err != CBM_ERROR_OK || file == NULL) {
@@ -320,8 +328,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	file_t *dir = NULL;
 	file_t *file = NULL;
 	const char *pattern = NULL;
-	uint16_t reclen;
-	uint8_t filetype;
+	uint16_t reclen = 0;
+	uint8_t filetype = FS_DIR_TYPE_PRG;
 
 	openpars_process_options((uint8_t*)opts, &filetype, &reclen);
 
@@ -351,7 +359,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		case FS_OPEN_OW:
 		case FS_OPEN_RW:
 			if (file == NULL) {
-				err = dir->handler->create(dir, &file, pattern, filetype, reclen);
+				err = dir->handler->create(dir, &file, pattern, filetype, reclen, type);
 				if (err != CBM_ERROR_OK) {
 					break;
 				}
@@ -377,14 +385,17 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			}
 		}
 
-		if (type == FS_OPEN_AP) {
-			err = file->handler->seek(file, 0, SEEKFLAG_END);
-		}
-
 		// we want the file here, so we can close the dir and its parents
 		dir->handler->close(dir, 1);
-		// and loose the pointer to it
-		file->parent = NULL;
+
+		if (file != NULL) {
+			if (type == FS_OPEN_AP) {
+				err = file->handler->seek(file, 0, SEEKFLAG_END);
+			}
+
+			// and loose the pointer to the parent
+			file->parent = NULL;
+		}
 
 		if (err == CBM_ERROR_OK) {
 			*outfile = file;

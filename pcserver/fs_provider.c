@@ -40,8 +40,8 @@
 #include <string.h>
 #include <strings.h>
 #include <limits.h>
-#include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <libgen.h>
 
 #include "fscmd.h"
@@ -74,7 +74,7 @@ typedef struct {
 	int		chan;		// channel for which the File is
 	FILE		*fp;
 	DIR 		*dp;
-	char		*ospath;	// full path to the file (incl. filename)
+	const char	*ospath;	// full path to the file (incl. filename)
 	struct dirent	*de;
 	char		*block;		// direct channel block buffer, 256 byte when allocated
 	unsigned char	block_ptr;
@@ -166,6 +166,18 @@ static int close_fd(File *file, int recurse) {
 	}
 	log_debug("Closing file descriptor %p for file %d\n", file, file == NULL ? -1 : file->chan);
 	int er = 0;
+
+	if (file->ospath != NULL) {
+		mem_free((void*)file->ospath);
+	}
+
+	if (file->file.pattern != NULL) {
+		mem_free((void*)file->file.pattern);
+	}
+	if (file->file.filename != NULL) {
+		mem_free((void*)file->file.filename);
+	}
+
 	if (file->fp != NULL) {
 		er = fclose(file->fp);
 		if (er < 0) {
@@ -1006,6 +1018,9 @@ static int direntry(file_t *fp, file_t **outentry, int *readflag) {
 			}
 			retfile->file.lastmod = sbuf.st_mtime;
 			retfile->file.filesize = sbuf.st_size;
+			if (S_ISDIR(sbuf.st_mode)) {
+				retfile->file.mode = FS_DIR_MOD_DIR;
+			}
         	    }
 
 	            // prepare for next read (so we know if we're done)
@@ -1165,12 +1180,14 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 	  if (n < len) {
 		// short write indicates an error
 		log_debug("Close fd=%d on short write!\n", file->chan);
+		fflush(fp);
 		fclose(fp);
 		file->fp = NULL;
 		return -CBM_ERROR_WRITE_ERROR;
 	  }
 	  if(is_eof) {
 	    log_debug("fd=%d received an EOF on write file (ignored)\n", file->chan);
+	    fflush(fp);
 	    //close_fds(ep, tfd);
 	  }
 	  return CBM_ERROR_OK;
@@ -1502,26 +1519,6 @@ static int fs_seek(file_t *fp, long position, int flag) {
 	return rv;
 }
 
-static void fs_close(file_t *fp, int recurse) {
-
-	File *file = (File*) fp;
-
-	if (file->ospath != NULL) {
-		mem_free((void*)file->ospath);
-	}
-
-	if (fp->pattern != NULL) {
-		mem_free((void*)fp->pattern);
-	}
-	if (fp->filename != NULL) {
-		mem_free((void*)fp->filename);
-	}
-
-	if (recurse && fp->parent != NULL) {
-		fp->parent->handler->close(fp->parent, recurse);
-	}
-}
-
 static int fs_open(file_t *fp, int type) {
 
 	errno_t rv = CBM_ERROR_OK;
@@ -1544,6 +1541,33 @@ static int fs_open(file_t *fp, int type) {
 	}
 	return rv;
 }
+
+static int fs_create(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype,
+                                uint16_t recordlen, int opentype) {
+
+	errno_t rv = CBM_ERROR_OK;
+	File *dir = (File*) dirfp;
+	File *retfile = NULL;
+
+	if ((rv = os_filename_is_legal(name)) == CBM_ERROR_OK) {
+
+		const char *ospath = str_concat(dir->ospath, dir_separator_string(), name);
+		
+		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint, dir->chan);
+		
+		retfile->ospath = ospath;
+		retfile->file.writable = 1;
+		retfile->file.seekable = 1;
+
+		if ((rv = fs_open(retfile, opentype)) == CBM_ERROR_OK) {
+			*outentry = (file_t*)retfile;	
+		} else {
+			close_fd(retfile, 0);
+		}
+	}
+
+	return rv;
+}
  
 // ----------------------------------------------------------------------------------
 
@@ -1551,7 +1575,7 @@ handler_t fs_file_handler = {
 	"fs_file_handler",
 	"ASCII",
 	NULL,			// resolve
-	fs_close,		// close
+	close_fd,		// close
 	fs_open,		// open
 	NULL,			// convfrom
 	fs_seek,		// seek
@@ -1559,7 +1583,7 @@ handler_t fs_file_handler = {
 	writefile,		// writefile
 	NULL,			// truncate
 	direntry,		// direntry
-	NULL			// create
+	fs_create		// create
 };
 
 provider_t fs_provider = {

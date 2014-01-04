@@ -298,6 +298,9 @@ const char *os_get_home_dir(void);
 // check a path, making sure it's something readable, not a directory
 int os_path_is_file(const char *name);
 
+// check a file name, making sure it's something creatable (i.e. no wildcards, illegal chars etc)
+int os_filename_is_legal(const char *name);
+
 // check a path, making sure it's a directory
 int os_path_is_dir(const char *name);
 

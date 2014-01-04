@@ -22,6 +22,7 @@
 
 #include "os.h"
 #include "log.h"
+#include "errors.h"
 
 #include <unistd.h>
 #include <errno.h>
@@ -59,6 +60,25 @@ char *drop_crlf(char *s) {
 	}
 	return s;
 }
+
+// check a file name, making sure it's something creatable (i.e. no wildcards, illegal chars etc)
+int os_filename_is_legal(const char *name) {
+
+	if (strchr(name, ':') != NULL) {
+		return CBM_ERROR_SYNTAX_NONAME;
+	}
+	if (strchr(name, dir_separator_char()) != NULL) {
+		return CBM_ERROR_SYNTAX_NONAME;
+	}
+	if (strchr(name, '?') != NULL) {
+		return CBM_ERROR_SYNTAX_NONAME;
+	}
+	if (strchr(name, '*') != NULL) {
+		return CBM_ERROR_SYNTAX_NONAME;
+	}
+	return CBM_ERROR_OK;
+}
+
 
 // ========================================================================
 //	POSIX
