@@ -40,9 +40,9 @@
 #include <sys/types.h>
 #include <libgen.h>
 
-#include "dir.h"
-#include "fscmd.h"
 #include "provider.h"
+#include "dir.h"
+//#include "fscmd.h"
 #include "handler.h"
 #include "errors.h"
 #include "mem.h"
@@ -80,6 +80,7 @@ typedef struct
 
 typedef struct
 {
+   file_t file;
    slot_t Slot;           // 
    uint8_t  *buf;         // direct channel block buffer
    int   chan;            // channel for which the File is
@@ -99,7 +100,7 @@ typedef struct
 typedef struct
 {                                     // derived from endpoint_t
    endpoint_t    base;                // payload
-   FILE         *Ip;                  // Image file pointer
+   file_t       *Ip;                  // Image file pointer
    char         *curpath;             // malloc'd current path
    Disk_Image_t  DI;                  // mounted disk image
    uint8_t      *BAM[4];              // Block Availability Maps
@@ -124,6 +125,22 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno);
 static int di_position(endpoint_t *ep, int tfd, int recordno);
 
+// adapter methods to handle indirection via file_t instead of FILE*
+// note: this provider reads/writes single bytes in many cases
+// always(?) preceeded by a seek, so there is room for improvements
+static inline errno_t di_fseek(file_t *file, long pos, int whence) {
+	return file->handler->seek(file, pos, whence);
+}
+
+static inline void di_fread(void *ptr, size_t size, size_t nmemb, file_t *file) {
+	int readfl;
+	file->handler->readfile(file, (char*) ptr, size * nmemb, &readfl);
+}
+
+static inline void di_fwrite(void *ptr, size_t size, size_t nmemb, file_t *file) {
+	file->handler->writefile(file, (char*) ptr, size * nmemb, 0);
+}
+
 // ************
 // di_assert_ts
 // ************
@@ -143,7 +160,7 @@ static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uin
 {
    long seekpos = ptr+256*diep->DI.LBA(track,sector);
    log_debug("seeking to position %ld for t/s/p=%d/%d/%d\n", seekpos, track, sector, ptr);
-   fseek(diep->Ip, seekpos,SEEK_SET);
+   di_fseek(diep->Ip, seekpos,SEEKFLAG_ABS);
 }
 
 // ************
@@ -152,7 +169,7 @@ static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uin
 
 static void di_fseek_pos(di_endpoint_t *diep, int pos)
 {
-   fseek(diep->Ip,pos,SEEK_SET);
+   di_fseek(diep->Ip,pos,SEEKFLAG_ABS);
 }
 
 // **********
@@ -193,7 +210,7 @@ static void di_write_slot(di_endpoint_t *diep, slot_t *slot)
 
    log_debug("di_write_slot pos %x\n",slot->pos);
    di_fseek_pos(diep,slot->pos+2);
-   fwrite(p+2,1,30,diep->Ip);
+   di_fwrite(p+2,1,30,diep->Ip);
    // di_print_block(diep,slot->pos & 0xffffff00);
 }
 
@@ -208,7 +225,7 @@ static void di_sync_BAM(di_endpoint_t *diep)
    for (i=0 ; i < diep->DI.BAMBlocks ; ++i)
    {
       di_fseek_pos(diep,diep->BAMpos[i]);
-      fwrite(diep->BAM[i],1,256,diep->Ip);
+      di_fwrite(diep->BAM[i],1,256,diep->Ip);
    }
 }
 
@@ -230,8 +247,8 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
      t = 0;
      s = f->chp+1;
      di_fseek_tsp(diep,f->cht,f->chs,0);
-     fwrite(&t,1,1,diep->Ip);
-     fwrite(&s,1,1,diep->Ip);
+     di_fwrite(&t,1,1,diep->Ip);
+     di_fwrite(&s,1,1,diep->Ip);
      log_debug("Updated chain to (%d/%d)\n",t,s);
      di_write_slot(diep,&f->Slot); // Save new status of directory entry
      log_debug("Status of directory entry saved\n");
@@ -243,12 +260,12 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   if (f->access_mode == FS_OPEN_RW) {
      p = f->chp+1;
      di_fseek_tsp(diep,f->cht,f->chs,0);
-     fread(&t,1,1,diep->Ip);
-     fread(&s,1,1,diep->Ip);
+     di_fread(&t,1,1,diep->Ip);
+     di_fread(&s,1,1,diep->Ip);
      if (t == 0 && p > s) {
 	// only update the file chain if we're not writing in the middle of it
      	di_fseek_tsp(diep,f->cht,f->chs,1);
-     	fwrite(&p,1,1,diep->Ip);
+     	di_fwrite(&p,1,1,diep->Ip);
      	log_debug("Updated chain to (%d/%d)\n",t,p);
      	di_write_slot(diep,&f->Slot); // Save new status of directory entry
      	log_debug("Status of directory entry saved\n");
@@ -292,7 +309,7 @@ static void di_read_BAM(di_endpoint_t *diep)
    {
       diep->BAM[i] = (uint8_t *)malloc(256);
       di_fseek_pos(diep,diep->BAMpos[i]);
-      fread(diep->BAM[i],1,256,diep->Ip);
+      di_fread(diep->BAM[i],1,256,diep->Ip);
    }
 }
 
@@ -303,16 +320,18 @@ static void di_read_BAM(di_endpoint_t *diep)
 static int di_load_image(di_endpoint_t *diep, const char *filename)
 {
    unsigned int filesize;
-
+   
+   // TODO: get file_t and read filesize from there
+/*
    if(!os_path_is_file(filename)) return 0;
    if (!(diep->Ip = fopen(filename, "rb+"))) {
      log_error("Unable to open %s\n", filename);
      return 0;
    }
-   fseek(diep->Ip, 0, SEEK_END);
+   di_fseek(diep->Ip, 0, SEEKFLAG_END);
    filesize = ftell(diep->Ip);
    log_debug("image size = %d\n",filesize);
-
+*/
    if (diskimg_identify(&(diep->DI), filesize)) {
 	int numbamblocks = diep->DI.BAMBlocks;
 	for (int i = 0; i < numbamblocks; i++) {
@@ -438,7 +457,7 @@ static int di_load_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
    if (!di_alloc_buffer(diep)) return 0; // OOM
    log_debug("di_load_buffer %p->%p U1(%d/%d)\n",diep,diep->buf[0],track,sector);
    di_fseek_tsp(diep,track,sector,0);
-   fread(diep->buf[0],1,256,diep->Ip);
+   di_fread(diep->buf[0],1,256,diep->Ip);
    // di_dump_block(diep->buf[0]);
    return 1; // OK
 }
@@ -451,8 +470,8 @@ static int di_save_buffer(di_endpoint_t *diep)
 {
    log_debug("di_save_buffer U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
    di_fseek_tsp(diep,diep->U2_track,diep->U2_sector,0);
-   fwrite(diep->buf[0],1,256,diep->Ip);
-   fflush(diep->Ip);
+   di_fwrite(diep->buf[0],1,256,diep->Ip);
+   //fflush(diep->Ip);
    diep->U2_track = 0;
    // di_dump_block(diep->buf[0]);
    return 1; // OK
@@ -593,7 +612,7 @@ static void di_read_slot(di_endpoint_t *diep, slot_t *slot)
    int i=0;
    uint8_t p[32];
    di_fseek_pos(diep,slot->pos);
-   fread(p,1,32,diep->Ip);
+   di_fread(p,1,32,diep->Ip);
    memset(slot->filename,0,20);
    while (i < 16 && p[i+5] != 0xa0)
    {
@@ -683,7 +702,7 @@ static void di_clear_block(di_endpoint_t *diep, int pos)
    
    memset(p,0,256);
    di_fseek_pos(diep,pos);
-   fwrite(p,1,256,diep->Ip);
+   di_fwrite(p,1,256,diep->Ip);
 }
 
 
@@ -694,8 +713,8 @@ static void di_clear_block(di_endpoint_t *diep, int pos)
 static void di_update_dir_chain(di_endpoint_t *diep, slot_t *slot, uint8_t sector)
 {
    di_fseek_pos(diep,slot->pos & 0xffff00);
-   fwrite(&diep->DI.DirTrack,1,1,diep->Ip);
-   fwrite(&sector           ,1,1,diep->Ip);
+   di_fwrite(&diep->DI.DirTrack,1,1,diep->Ip);
+   di_fwrite(&sector           ,1,1,diep->Ip);
 }
 
 // ***********
@@ -992,8 +1011,8 @@ static void di_pos_append(di_endpoint_t *diep, File *f)
       t = nt;
       s = ns;
       di_fseek_tsp(diep,t,s,0);
-      fread(&nt,1,1,diep->Ip);
-      fread(&ns,1,1,diep->Ip);
+      di_fread(&nt,1,1,diep->Ip);
+      di_fread(&ns,1,1,diep->Ip);
    }
    f->cht =  t;
    f->chs =  s;
@@ -1009,13 +1028,12 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 {
    int np,rv;
    File *file;
-   uint8_t type = FS_DIR_TYPE_UNKNOWN;	// unknown
+   openpars_t pars;
 
-   *reclen = 0;		// not set
-
-   openpars_process_options(opts, &type, reclen);
+   openpars_process_options(opts, &pars);
+   *reclen = pars.recordlen;
  
-   log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, type + 0x30, *reclen);
+   log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, pars->filetype + 0x30, *reclen);
 
    if (*reclen > 254) {
 	return CBM_ERROR_OVERFLOW_IN_RECORD;
@@ -1036,7 +1054,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
       case FS_OPEN_WR: file_must_not_exist = TRUE; break;
       case FS_OPEN_OW: break;
       case FS_OPEN_RW:
-	 if (type != FS_DIR_TYPE_REL) {
+	 if (pars.filetype != FS_DIR_TYPE_REL) {
          	log_error("Read/Write currently only supported for REL files on disk images\n");
 		return CBM_ERROR_FAULT;
 	 }
@@ -1054,11 +1072,11 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 	np=1;
    } else {
    	di_first_slot(diep,&file->Slot);
-   	np  = di_match_slot(diep,&file->Slot,filename, type);
+   	np  = di_match_slot(diep,&file->Slot,filename, pars.filetype);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
-	if ((type == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
-		type = FS_DIR_TYPE_REL;
+	if ((pars.filetype == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+		pars.filetype = FS_DIR_TYPE_REL;
 		file->access_mode = FS_OPEN_RW;
 		// check record length
 		if (!np) {
@@ -1094,17 +1112,17 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    }
    if (!np)
    {
-      if (type == FS_DIR_TYPE_UNKNOWN) {
-	type = FS_DIR_TYPE_PRG;
+      if (pars.filetype == FS_DIR_TYPE_UNKNOWN) {
+	pars.filetype = FS_DIR_TYPE_PRG;
       }
-      rv = di_create_entry(diep, tfd, filename, type, *reclen);
+      rv = di_create_entry(diep, tfd, filename, pars.filetype, *reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
 
    if (di_cmd == FS_OPEN_AP) {
 	di_pos_append(diep,file);
    }
-   return (type == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
+   return (pars.filetype == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 
 // **********
@@ -1169,16 +1187,16 @@ static int di_directory_header(char *dest, di_endpoint_t *diep)
    if (diep->DI.ID == 80 || diep->DI.ID == 82)
    {
       di_fseek_tsp(diep,39,0, 6);
-      fread(dest+FS_DIR_NAME   ,1,16,diep->Ip);
+      di_fread(dest+FS_DIR_NAME   ,1,16,diep->Ip);
       di_fseek_tsp(diep,39,0,24);
-      fread(dest+FS_DIR_NAME+16,1, 5,diep->Ip);
+      di_fread(dest+FS_DIR_NAME+16,1, 5,diep->Ip);
    }
    else if (diep->DI.ID == 81)
    {
       di_fseek_tsp(diep,40,0, 4);
-      fread(dest+FS_DIR_NAME   ,1,16,diep->Ip);
+      di_fread(dest+FS_DIR_NAME   ,1,16,diep->Ip);
       di_fseek_tsp(diep,40,0,22);
-      fread(dest+FS_DIR_NAME+16,1, 5,diep->Ip);
+      di_fread(dest+FS_DIR_NAME+16,1, 5,diep->Ip);
    }
    else
    {
@@ -1291,12 +1309,12 @@ static int di_read_byte(di_endpoint_t *diep, File *f, char *retbuf)
       di_fseek_tsp(diep,f->next_track,f->next_sector,0);
       f->cht = f->next_track;
       f->chs = f->next_sector;
-      fread(&f->next_track ,1,1,diep->Ip);
-      fread(&f->next_sector,1,1,diep->Ip);
+      di_fread(&f->next_track ,1,1,diep->Ip);
+      di_fread(&f->next_sector,1,1,diep->Ip);
       // log_debug("this block: (%d/%d)\n",f->cht,f->chs);
       // log_debug("next block: (%d/%d)\n",f->next_track,f->next_sector);
    }
-   fread(retbuf,1,1,diep->Ip);
+   di_fread(retbuf,1,1,diep->Ip);
    ++f->chp;
    // log_debug("di_read_byte %2.2x\n",(uint8_t)*retbuf);
    if (f->next_track == 0 && f->chp+1 >= f->next_sector) return READFLAG_EOF;
@@ -1320,8 +1338,8 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 		// to make sure we're not in the middle of a file
 		// check the link track number
      		di_fseek_tsp(diep,f->cht,f->chs,0);
-     		fread(&t,1,1,diep->Ip);
-     		fread(&s,1,1,diep->Ip);
+     		di_fread(&t,1,1,diep->Ip);
+     		di_fread(&s,1,1,diep->Ip);
 	}
 	if (t == 0) {
 		// only update link chain if we're not in the middle of a file
@@ -1330,11 +1348,11 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
       block = di_find_free_block(diep,f);
       if (block < 0) return CBM_ERROR_DISK_FULL;
       di_fseek_pos(diep,oldpos);
-      fwrite(&f->cht,1,1,diep->Ip);
-      fwrite(&f->chs,1,1,diep->Ip);
+      di_fwrite(&f->cht,1,1,diep->Ip);
+      di_fwrite(&f->chs,1,1,diep->Ip);
       di_fseek_tsp(diep,f->cht,f->chs,0);
-      fwrite(&zero,1,1,diep->Ip); // new link track
-      fwrite(&zero,1,1,diep->Ip); // new link sector
+      di_fwrite(&zero,1,1,diep->Ip); // new link track
+      di_fwrite(&zero,1,1,diep->Ip); // new link sector
       ++f->Slot.size; // increment filesize
       // log_debug("next block: (%d/%d)\n",f->cht,f->chs);
 	} else {
@@ -1345,7 +1363,7 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
       		di_fseek_tsp(diep,t,s,2);
 	}
    }
-   fwrite(&ch,1,1,diep->Ip);
+   di_fwrite(&ch,1,1,diep->Ip);
    ++f->chp;
    return CBM_ERROR_OK;
 }
@@ -1452,8 +1470,8 @@ static void di_delete_file(di_endpoint_t *diep, slot_t *slot)
    {
       di_block_free(diep,t,s);
       di_fseek_tsp(diep,t,s,0);
-      fread(&t,1,1,diep->Ip);
-      fread(&s,1,1,diep->Ip);
+      di_fread(&t,1,1,diep->Ip);
+      di_fread(&s,1,1,diep->Ip);
    }
    // di_print_block(diep,slot->pos & 0xffff00);
 }
@@ -1558,7 +1576,7 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f) {
 	}
 	// read the first side sector
       	di_fseek_tsp(diep,ss_track,ss_sector,0);
-      	fread(sidesector,1,256,diep->Ip);
+      	di_fread(sidesector,1,256,diep->Ip);
  
 	super = 0;
 	// number of side sector groups
@@ -1578,7 +1596,7 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f) {
 		ss_sector = sidesector[SSS_OFFSET_SSB_POINTER + (super << 1) + 1];
 	
 	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
-	      	fread(sidesector,1,256,diep->Ip);
+	      	di_fread(sidesector,1,256,diep->Ip);
 	}
 
 	// now sidesector contains the first block of the last side sector group
@@ -1593,7 +1611,7 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f) {
 		ss_sector = sidesector[SSB_OFFSET_SSG + (side << 1) + 1];
 	
 	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
-	      	fread(sidesector,1,256,diep->Ip);
+	      	di_fread(sidesector,1,256,diep->Ip);
 	}
 
 	// here we have the last side sector of the last side sector chain in the buffer.
@@ -1607,7 +1625,7 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f) {
 
 	// read the last sector of the file
       	di_fseek_tsp(diep,ss_track,ss_sector,0);
-      	fread(sidesector,1,256,diep->Ip);
+      	di_fread(sidesector,1,256,diep->Ip);
 
 	// number of bytes in this last sector
 	o = sidesector[BLK_OFFSET_NEXT_SECTOR] - 1;
@@ -1633,7 +1651,7 @@ static void di_flush_sidesectors(di_endpoint_t *diep, uint8_t *sidesectorgroup,
 	for (int i = 0; i < SSG_SIDE_SECTORS_MAX; i++) {
 		if (ssg_dirty[i]) {
 			di_fseek_tsp(diep, ssg_track[i], ssg_sector[i], 0);
-			fwrite(sidesectorgroup + (i*256), 1, 256, diep->Ip);
+			di_fwrite(sidesectorgroup + (i*256), 1, 256, diep->Ip);
 			ssg_dirty[i] = 0;
 		}
 	}
@@ -1645,7 +1663,7 @@ static void di_flush_supersector(di_endpoint_t *diep, uint8_t *supersector,
 
 	if (sss_dirty) {
 		di_fseek_tsp(diep, sss_track, sss_sector, 0);
-		fwrite(supersector, 1, 256, diep->Ip);
+		di_fwrite(supersector, 1, 256, diep->Ip);
 	}
 }
 
@@ -1661,7 +1679,7 @@ static void di_read_sidesector_group(di_endpoint_t *diep, uint8_t *sidesectorgro
 		// read sectors, but keep if already in buffer (to not overwrite dirty ones)
 		if (track > 0 && (track != ssg_track[i] || sector != ssg_sector[i])) {
 			di_fseek_tsp(diep, track, sector, 0);
-			fread(sidesectorgroup + (i*256), 1, 256, diep->Ip);
+			di_fread(sidesectorgroup + (i*256), 1, 256, diep->Ip);
 			ssg_dirty[i] = 0;
 		}
 		ssg_track[i] = track;
@@ -1772,7 +1790,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 			sss_sector = sector;
 			// read the super side sector
 			di_fseek_tsp(diep, track, sector, 0);
-			fread(supersector, 1, 256, diep->Ip);
+			di_fread(supersector, 1, 256, diep->Ip);
 		}	
 
 		// let's find the last side sector group and check if it's empty
@@ -1838,7 +1856,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 		// read the side sector
 		di_fseek_tsp(diep, track, sector, 0);
-		fread(sidesectorgroup, 1, 256, diep->Ip);
+		di_fread(sidesectorgroup, 1, 256, diep->Ip);
 	}
 
 	log_debug(" - ssg[0] is t/s: %d/%d\n", ssg_track[0], ssg_sector[0]);
@@ -1857,7 +1875,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		sector = sidesectorgroup[SSB_OFFSET_SSG + (side << 1) + 1];
 	
 	      	di_fseek_tsp(diep,track,sector,0);
-	      	fread(sidesectorgroup + (side * 256),1,256,diep->Ip);
+	      	di_fread(sidesectorgroup + (side * 256),1,256,diep->Ip);
 
 		ssg_track[side] = track;
 		ssg_sector[side] = sector;
@@ -1885,7 +1903,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	if (last_track > 0) {
 		// read the last sector of the file
 	      	di_fseek_tsp(diep,last_track,last_sector,0);
-	      	fread(datasector,1,256,diep->Ip);
+	      	di_fread(datasector,1,256,diep->Ip);
 	}
 
     	// Check if this side sector is full, allocate a new one if necessary
@@ -2041,7 +2059,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 		// write back data sector
 		di_fseek_tsp(diep, last_track, last_sector, 0);
-		fwrite(datasector, 1, 256, diep->Ip);
+		di_fwrite(datasector, 1, 256, diep->Ip);
 	}
 
     	/* Fill new sector with maximum records */
@@ -2068,7 +2086,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 	// write back data sector
 	di_fseek_tsp(diep, new_track, new_sector, 0);
-	fwrite(datasector, 1, 256, diep->Ip);
+	di_fwrite(datasector, 1, 256, diep->Ip);
 	
 	return CBM_ERROR_OK;	
 }
@@ -2162,7 +2180,7 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 	}
 	// read the first side sector
       	di_fseek_tsp(diep,ss_track,ss_sector,0);
-      	fread(sidesector,1,256,diep->Ip);
+      	di_fread(sidesector,1,256,diep->Ip);
  	
 	if (sidesector[SSB_OFFSET_SUPER_254] == 0xfe) {
 		// sector is a super side sector
@@ -2174,7 +2192,7 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 			return CBM_ERROR_RECORD_NOT_PRESENT;
 		}
 	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
-	      	fread(sidesector,1,256,diep->Ip);
+	      	di_fread(sidesector,1,256,diep->Ip);
  	} else {
 		// no super side sectors, but sector number too large for single side sector chain
 		if (super > 0) {
@@ -2192,7 +2210,7 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 			return CBM_ERROR_RECORD_NOT_PRESENT;
 		}
 	      	di_fseek_tsp(diep,ss_track,ss_sector,0);
-	      	fread(sidesector,1,256,diep->Ip);
+	      	di_fread(sidesector,1,256,diep->Ip);
 	}
 	// here we have the correct side sector in the buffer.
 	ss_track = sidesector[SSB_OFFSET_SECTOR + (offset << 1)];
@@ -2206,8 +2224,8 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
 	// record as given in the parameter
 	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-      	fread(&next_track ,1,1,diep->Ip);
-      	fread(&next_sector,1,1,diep->Ip);
+      	di_fread(&next_track ,1,1,diep->Ip);
+      	di_fread(&next_sector,1,1,diep->Ip);
 
 	// is there enough space on the last block?
 	if (next_track == 0 && next_sector < (rec_start + reclen + 1)) {
@@ -2356,6 +2374,7 @@ static void di_print_block(di_endpoint_t *diep, int pos)
 
 // ----------------------------------------------------------------------------------
 
+/*
 provider_t di_provider =
 {
   "di",
@@ -2377,5 +2396,40 @@ provider_t di_provider =
    NULL,            // int         (*rmdir    )(endpoint_t *ep, char *name);
    di_position,     // int         (*position )(endpoint_t *ep, int chan, int recordno);
    di_direct        // int         (*direct   )(endpoint_t *ep, char *buf, ...
+};
+*/
+
+// ----------------------------------------------------------------------------------
+
+handler_t di_file_handler = {
+        "fs_file_handler",
+        "ASCII",
+        NULL,                   // resolve
+        dif_close,              // close
+        dif_open,               // open
+        dif_convfrom,           // convfrom
+        dif_seek,               // seek
+        di_readfile,            // readfile
+        di_writefile,           // writefile
+        NULL,                   // truncate
+        di_direntry,            // direntry
+        di_create               // create
+};
+
+provider_t di_provider = {
+        "fs",
+        "ASCII",
+        di_init,
+        di_newep,
+        di_tempep,
+        di_freeep,
+        di_root,               // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
+        di_wrap,                   // wrap not needed on fs_provider
+        di_scratch,
+        di_rename,
+        di_cd,
+        NULL,			// mkdir not supported
+        NULL,			// rmdir not supported
+        di_direct
 };
 
