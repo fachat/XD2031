@@ -32,6 +32,8 @@
 #include "openpars.h"
 #include "wildcard.h"
 
+#define	X00_HEADER_LEN	0x1a
+
 #define	MAX_NAME_LEN	17	/* 16 chars plus zero-terminator */
 
 static handler_t x00_handler;
@@ -61,9 +63,12 @@ static type_t x00_file_type = {
 /*
  * identify whether a given file is an x00 file type
  *
+ * returns CBM_ERROR_OK even if no match found,
+ * except in case of an error
+ *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const char *opts, const char **outname) {
+static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const openpars_t *pars, const char **outname) {
 
 	(void) type;
 
@@ -82,17 +87,17 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	const char *p = name + strlen(name) - 4;
 
 	if (*p != '.') {
-		return CBM_ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_OK;
 	}
 	p++;
 	typechar = *p;
 	p++;
 	if (!isdigit(*p)) {
-		return CBM_ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_OK;
 	}
 	p++;
 	if (!isdigit(*p)) {
-		return CBM_ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_OK;
 	}
 
 	switch(typechar) {
@@ -113,7 +118,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 		ftype = FS_DIR_TYPE_REL;
 		break;
 	default:
-		return CBM_ERROR_FILE_NOT_FOUND;
+		return CBM_ERROR_OK;
 		break;
 	}
 
@@ -121,13 +126,13 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	// now make sure it actually is an x00 file
 
 	// read x00 header
-	uint8_t x00_buf[0x1a];
+	uint8_t x00_buf[X00_HEADER_LEN];
 	int flg;
 
 	// seek to start of file
 	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
-	infile->handler->readfile(infile, (char*)x00_buf, 0x1a, &flg);
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg);
 
 	if (strcmp("C64File", (char*)x00_buf) != 0) { 
 		return CBM_ERROR_FILE_NOT_FOUND;
@@ -141,20 +146,6 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	// we don't care if write, overwrite, or read etc,
 	// so there is no need to check for type
 
-	// check opts parameters
-	uint8_t open_ftype;
-	uint16_t open_reclen;
-	openpars_process_options((uint8_t*) opts, &open_ftype, &open_reclen);
-	
-	if (open_ftype != 0 && open_ftype != ftype) {
-		log_debug("Expected file type %d, found file type %d\n", open_ftype, ftype);
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-
-	if (ftype == FS_DIR_TYPE_REL && open_reclen != x00_buf[0x19]) {
-		return CBM_ERROR_RECORD_NOT_PRESENT;
-	}
-
 	if (x00_buf[0x18] != 0) {
 		// corrupt header - zero is needed here for string termination
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
@@ -163,6 +154,17 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	// now compare the original file name with the search pattern
 	if (!compare_dirpattern((char*)&(x00_buf[8]), inname, outname)) {
 		return CBM_ERROR_FILE_NOT_FOUND;
+	}
+
+	// check opts parameters
+	
+	if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != ftype) {
+		log_debug("Expected file type %d, found file type %d\n", pars->filetype, ftype);
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
+	if (ftype == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != x00_buf[0x19])) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 
 	// done, alloc x00_file and prepare for operation
@@ -178,6 +180,9 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 
 	file->file.recordlen = x00_buf[0x19];
 	file->file.type = ftype;
+
+	file->file.attr = infile->attr;
+	file->file.filesize = infile->filesize - X00_HEADER_LEN;
 
 	*outfile = (file_t*)file;
 
@@ -200,7 +205,7 @@ static int x00_seek(file_t *file, long pos, int flag) {
 	// add header offset, that's all
 	switch(flag) {
 	case SEEKFLAG_ABS:
-		return file->parent->handler->seek(file->parent, pos + 0x1a, flag );
+		return file->parent->handler->seek(file->parent, pos + X00_HEADER_LEN, flag );
 	case SEEKFLAG_END:
 		return file->parent->handler->seek(file->parent, pos, flag );
 	default:
@@ -211,7 +216,7 @@ static int x00_seek(file_t *file, long pos, int flag) {
 static int x00_truncate(file_t *file, long pos) {
 
 	// add header offset, that's all
-	return file->parent->handler->truncate(file->parent, pos + 0x1a);
+	return file->parent->handler->truncate(file->parent, pos + X00_HEADER_LEN);
 }
 
 static int x00_read(file_t *file, char *buf, int len, int *readflg) {
@@ -224,6 +229,15 @@ static int x00_write(file_t *file, char *buf, int len, int writeflg) {
 	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
 }
 
+static int x00_open(file_t *file, int opentype) {
+
+	errno_t rv = file->parent->handler->open(file->parent, opentype);
+	if (rv == CBM_ERROR_OK) {
+		rv = x00_seek(file, 0, SEEKFLAG_ABS);
+	}
+	return rv;
+}
+
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
@@ -232,7 +246,7 @@ static handler_t x00_handler = {
 
 	x00_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
-	NULL,		//int		(*open)(file_t *fp); 	// open a file
+	x00_open,	//int		(*open)(file_t *fp); 	// open a file
 
 	// -------------------------
 			// get converter for DIR entries

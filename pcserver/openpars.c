@@ -26,22 +26,24 @@
 #include "errors.h"
 #include "wireformat.h"
 #include "log.h"
+#include "openpars.h"
 
 // ************
 // process options from the optional OPEN parameter string
 // ************
 
-void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
+void openpars_process_options(const uint8_t *opts, openpars_t *pars) { 
         uint8_t *p = opts;
         uint8_t typechar;
         int reclenw;
         int n;
         uint8_t *t;
 
+	pars->filetype = FS_DIR_TYPE_UNKNOWN;
+	pars->recordlen = 0;
+
 	if (p == NULL) {
 		// no type given, so any may match
-		*type = FS_DIR_TYPE_UNKNOWN;
-		reclen = 0;
 		return;
 	}
 
@@ -55,17 +57,17 @@ void openpars_process_options(uint8_t *opts, uint8_t *type, uint16_t *reclen) {
                                 typechar = *(p++);
                                 switch(typechar) {
                                 case 'u':
-                                case 'U':       *type = FS_DIR_TYPE_USR; break;
+                                case 'U':       pars->filetype = FS_DIR_TYPE_USR; break;
                                 case 'P':
-                                case 'p':       *type = FS_DIR_TYPE_PRG; break;
+                                case 'p':       pars->filetype = FS_DIR_TYPE_PRG; break;
                                 case 'S':
-                                case 's':       *type = FS_DIR_TYPE_SEQ; break;
+                                case 's':       pars->filetype = FS_DIR_TYPE_SEQ; break;
                                 case 'L':
                                 case 'l':
-                                        *type = FS_DIR_TYPE_REL;
+                                        pars->filetype = FS_DIR_TYPE_REL;
                                         n=sscanf((char*)p, "%d", &reclenw);
                                         if (n == 1 && reclenw > 0 && reclenw < (2<<16)) {
-                                                *reclen = reclenw;
+                                                pars->recordlen = reclenw;
                                         }
                                         t = (uint8_t*) strchr((char*)p, ',');
                                         if (t == NULL) {

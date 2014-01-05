@@ -74,6 +74,7 @@ typedef struct {
 	file_t		file;
 	FILE		*fp;
 	DIR 		*dp;
+	uint8_t		temp_open;	// set when fp is temporary (for wrapper)
 	const char	*ospath;	// full path to the file (incl. filename)
 	struct dirent	*de;
 	char		*block;		// direct channel block buffer, 256 byte when allocated
@@ -90,8 +91,10 @@ static void file_init(const type_t *t, void *obj) {
 
 	fp->fp = NULL;
 	fp->dp = NULL;
+	fp->de = NULL;
 	fp->block = NULL;
 	fp->block_ptr = 0;
+	fp->temp_open = 0;
 }
 
 static type_t file_type = {
@@ -922,41 +925,6 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 	return rv;
 }
 
-/*
-static int read_dir(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
-	File *file = find_file(ep, tfd);
-
-	//log_debug("read_dir: file=%p, is_first=%d\n", file, (file == NULL) ? -1 : file->is_first);
-
-	if (file != NULL) {
-		int rv = 0;
-		*eof = READFLAG_DENTRY;
-		  if (file->is_first) {
-		    file->is_first = 0;
-		    int l = dir_fill_header(retbuf, 0, file->dirpattern);
-		    rv = l;
-		    file->de = dir_next(file->dp, file->dirpattern);
-		    return rv;
-		  }
-		  if(!file->de) {
-		    *eof |= READFLAG_EOF;
-		    int l = dir_fill_disk(retbuf, fsep->curpath);
-		    rv = l;
-		    return rv;
-		  }
-		  int l = dir_fill_entry(retbuf, fsep->curpath, file->de, len);
-		  rv = l;
-		  // prepare for next read (so we know if we're done)
-		  file->de = dir_next(file->dp, file->dirpattern);
-		  return rv;
-	}
-	return -CBM_ERROR_FAULT;
-}
-*/
-
 /**
  * return a malloc'd string with the full path of the file,
  * and the path separator char appended. if child is not NULL,
@@ -985,12 +953,15 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  struct stat sbuf;
 	  const char *outpattern = NULL;
 	  
-	  File *wrapfile = NULL;
-	  char *wrapname = NULL;
+	  file_t *wrapfile = NULL;
 	
 	  *readflag = READFLAG_DENTRY;
 
 	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
+
+	  if (fp->handler != &fs_file_handler) {
+		return CBM_ERROR_FAULT;
+	  }
 
 	  if (file->dp == NULL) {
 		rv = open_dir(file);
@@ -1031,6 +1002,8 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 				} else {
 					fp->dirstate = DIRSTATE_END;
 				}
+				// done with search
+				break;
 			} else {
 				log_debug("Got next dir entry for: %s\n", file->de->d_name);
 
@@ -1069,13 +1042,20 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 					}
 			    		rv = CBM_ERROR_OK;
 				}
-				handler_wrap(retfile, FS_OPEN_DR, fp->pattern, &wrapfile, &outpattern);
+				handler_wrap((file_t*)retfile, FS_OPEN_DR, fp->pattern, &outpattern, (file_t**)&wrapfile);
 				if (wrapfile != NULL) {
 					retfile = wrapfile;
 					wrapfile = NULL;
 				}
+		    		if(compare_dirpattern(retfile->file.filename, fp->pattern, &outpattern) != 0) {
+					// found one
+					break;
+				}
+				// cleanup
+				retfile->file.handler->close(retfile, 0);
 			}
-		    } while ((file->de != NULL) && (compare_dirpattern(retfile->file.filename, fp->pattern, &outpattern) == 0));
+			// read next entry
+		    } while (1);
 
 		    if (file->de != NULL) {
 			    *outentry = (file_t*) retfile;
@@ -1527,6 +1507,23 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 // ----------------------------------------------------------------------------------
 
+static int fs_open_temp(File *file) {
+	
+	errno_t rv = CBM_ERROR_OK;
+
+	if (file->file.mode == FS_DIR_MOD_FIL) {
+	
+		if (file->fp == NULL) {
+			file->fp = fopen(file->ospath, "rb");
+			file->temp_open = 1;
+			if (file->fp == NULL) {
+				log_errno("fopen");
+				rv = CBM_ERROR_FAULT;
+			}
+		}
+	}
+	return rv;
+}
 
 static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
@@ -1535,7 +1532,10 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 	log_debug("readfile file=%p (fp=%p, dp=%p, block=%p, *readflag=%d)\n",
 		f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *readflag);
 #endif
-	int rv = 0;
+	int rv = fs_open_temp(f);
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
 
 	if (f->dp) {
 		// read a directory entry
@@ -1578,7 +1578,9 @@ static int fs_seek(file_t *fp, long position, int flag) {
 
 	File *file = (File*) fp;
 
-	if (file->fp != NULL) {
+	rv = fs_open_temp(file);
+
+	if ((rv == CBM_ERROR_OK) && (file->fp != NULL)) {
 		if (fseek(file->fp, position, seekflag) < 0) {
 			rv = CBM_ERROR_FAULT;
 			log_errno("Seek");
@@ -1593,15 +1595,21 @@ static int fs_open(file_t *fp, int type) {
 
 	File *file = (File*) fp;
 
+	if (file->temp_open && file->fp != NULL) {
+		fclose(file->fp);
+		file->temp_open = 0;
+		file->fp = NULL;
+	}
+		
 	if (type == FS_OPEN_DR) {
 		rv = open_dir(file);
 	} else {
 		char *flags = "";
 		switch(type) {
 		case FS_OPEN_RD: flags = "rb"; break;
-		case FS_OPEN_WR: flags = "wb+"; break;
+		case FS_OPEN_WR: flags = "wb"; break;
 		case FS_OPEN_AP: flags = "ab"; break;
-		case FS_OPEN_RW: flags = "wb+"; break;
+		case FS_OPEN_RW: flags = "rb+"; break;
 		case FS_OPEN_OW: flags = "wb"; break;
 		}
 
@@ -1614,8 +1622,9 @@ static int fs_open(file_t *fp, int type) {
 	return rv;
 }
 
-static int fs_create(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype,
-                                uint16_t recordlen, int opentype) {
+
+static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars,
+                                int opentype) {
 
 	errno_t rv = CBM_ERROR_OK;
 	File *dir = (File*) dirfp;

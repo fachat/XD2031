@@ -26,7 +26,14 @@
 // process options from the optional OPEN parameter string
 // ************
 
-void openpars_process_options(const uint8_t *opts, uint8_t *type, uint16_t *reclen);
+// further possible options:
+// - ignore wrapper, so we see real names (not x00 names for example)
+typedef struct {
+	uint8_t 	filetype;
+	uint16_t	recordlen;
+} openpars_t;
+
+void openpars_process_options(const uint8_t *opts, openpars_t *pars);
 
 #endif
 

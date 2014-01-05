@@ -31,6 +31,7 @@
 #include <time.h>
 
 #include "charconvert.h"
+#include "openpars.h"
 
 //
 // Endpoint providers communicate with the outside world with their 
@@ -154,7 +155,7 @@ struct _handler {
                                                         // (child) resolve method (i.e. path separators
                                                         // are filtered out). 
         int             (*resolve)(file_t *infile, file_t **outfile,
-                                uint8_t type, const char *name, const char *opts, const char **outname);
+                                uint8_t type, const char *name, const openpars_t *pars, const char **outname);
 
                                                         // close the file; do so recursively by closing
                                                         // parents if recurse is set
@@ -183,8 +184,7 @@ struct _handler {
 
         int             (*direntry)(file_t *dirfp, file_t **outentry, int isresolve, int *readflag);
                                                         // create a new file in the directory
-        int             (*create)(file_t *dirfp, file_t **outentry, const char *name, uint8_t filetype,
-                                uint16_t recordlen, int opentype);
+        int             (*create)(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars, int opentype);
 };
 
 // values to be set in the out parameter readflag for readfile()

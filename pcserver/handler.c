@@ -62,6 +62,7 @@ void handler_init(void) {
 	reg_init(&handlers, "handlers", 10);
 }
 
+/*
 // unused as of now
 file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, const char **outname) {
 
@@ -82,13 +83,17 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 
 	return newfile;
 }
-
+*/
 
 //----------------------------------------------------------------------------
 
 
 int handler_wrap(file_t *infile, uint8_t type, const char *name,  
 		const char **outname, file_t **outfile) {
+
+	openpars_t pars;
+	pars.recordlen = 0;
+	pars.filetype = FS_DIR_TYPE_UNKNOWN;
 
 	log_debug("handler_wrap(infile=%s)\n", infile->filename);
 
@@ -101,7 +106,7 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
 			// no handler found
 			break;
 		}
-		err = handler->resolve(infile, outfile, type, name, NULL, outname);
+		err = handler->resolve(infile, outfile, type, name, &pars, outname);
 		if (err != CBM_ERROR_OK) {
 			log_error("Got %d as error from handler %s for %s\n", 
 				err, handler->name, name);
@@ -133,7 +138,7 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
  */
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
-		const char *inname, const char **outpattern, uint8_t type) {
+		const char *inname, const char **outpattern, uint8_t type, openpars_t *pars) {
 
 	log_entry("handler_resolve");
 
@@ -214,9 +219,6 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			// the handler->resolve() method also matches the name, as the
 			// P00 files may contain their own "real" name within them
 
-			//handler_wrap(direntry, type, namep, &outname, &wrapped_direntry);
-			//direntry = wrapped_direntry;
-
 			// no handler match found, thus
 			// now check if the original filename matches the pattern
 			// outname must be set either to point to the trailing '/', or the trailing 0,
@@ -276,6 +278,12 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		}
 	}
 
+	if (pars->filetype != FS_DIR_TYPE_UNKNOWN 
+		&& file != NULL
+		&& file->type != pars->filetype) {
+		err = CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
 	// here we have:
 	// - current_dir as the current directory
 	// - file, the unwrapped first pattern match in that directory, maybe NULL
@@ -306,6 +314,18 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	log_exitr(err);	
 	return err;
 }
+
+
+static void loose_parent(file_t *file, file_t *parent) {
+
+	while (file != NULL) {
+		if (file->parent == parent) {
+			file->parent = NULL;
+			return;
+		}
+		file = file->parent;
+	}
+}
 	
 /*
  * open a file, from fscmd
@@ -320,12 +340,11 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	file_t *dir = NULL;
 	file_t *file = NULL;
 	const char *pattern = NULL;
-	uint16_t reclen = 0;
-	uint8_t filetype = FS_DIR_TYPE_PRG;
+	openpars_t pars;
 
-	openpars_process_options((uint8_t*)opts, &filetype, &reclen);
+	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, type);
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, type, &pars);
 
 	if (err == CBM_ERROR_OK) {
 	
@@ -351,13 +370,13 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		case FS_OPEN_OW:
 		case FS_OPEN_RW:
 			if (file == NULL) {
-				err = dir->handler->create(dir, &file, pattern, filetype, reclen, type);
+				err = dir->handler->create(dir, &file, pattern, &pars, type);
 				if (err != CBM_ERROR_OK) {
 					break;
 				}
 			}
-			if (filetype != FS_DIR_TYPE_UNKNOWN 
-				&& file->type != filetype) {
+			if (pars.filetype != FS_DIR_TYPE_UNKNOWN 
+				&& file->type != pars.filetype) {
 				err = CBM_ERROR_FILE_TYPE_MISMATCH;
 				break; 
 			}
@@ -369,8 +388,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		}
 
 		if (err == CBM_ERROR_OK) {
-			if (reclen != 0) {
-				if (file->recordlen != reclen
+			if (pars.recordlen != 0) {
+				if (file->recordlen != pars.recordlen
 					|| file->type != FS_DIR_TYPE_REL) {
 					err = CBM_ERROR_RECORD_NOT_PRESENT;
 				}
@@ -386,7 +405,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			}
 
 			// and loose the pointer to the parent
-			file->parent = NULL;
+			loose_parent(file, dir);
 		}
 
 		if (err == CBM_ERROR_OK) {
@@ -421,12 +440,11 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 	file_t *dir = NULL;
 	file_t *file = NULL;
 	const char *pattern = NULL;
-	uint16_t reclen;
-	uint8_t filetype;
+	openpars_t pars;
 
-	openpars_process_options((uint8_t*)opts, &filetype, &reclen);
+	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR);
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR, &pars);
 
 	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p, parent=%p\n", err, dir, (dir==NULL)?NULL:dir->parent);
 
@@ -436,7 +454,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 		if (parent != NULL) {
 			parent->handler->close(parent, 1);
 			// forget reference so we don't try to close it again
-			dir->parent = NULL;
+			loose_parent(dir, dir->parent);
 		}
 
 		if (err == CBM_ERROR_OK) {
