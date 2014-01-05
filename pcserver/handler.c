@@ -19,6 +19,7 @@
 
 ****************************************************************************/
 
+#include "os.h"
 
 #include <sys/types.h>
 #include <string.h>
@@ -32,7 +33,6 @@
 #include "wireformat.h"
 #include "wildcard.h"
 #include "openpars.h"
-#include "os.h"
 
 
 
@@ -139,6 +139,8 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
 		const char *inname, const char **outpattern, uint8_t type, openpars_t *pars) {
+
+	(void) type;	// unused for now
 
 	log_entry("handler_resolve");
 

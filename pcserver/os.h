@@ -24,7 +24,6 @@
 #define OS_H
 
 #include "log.h"
-#include "mem.h"
 
 /* 
 
@@ -43,6 +42,7 @@
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #define	__USE_POSIX
+#define __USE_XOPEN	/* SuSE Linux stdlib.h fsync() */
 #define _XOPEN_SOURCE 
 #define _XOPEN_SOURCE_EXTENDED
 #define __USE_XOPEN_EXTENDED
@@ -56,6 +56,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdio.h>	/* SuSE Linux fileno() */
 #endif
 
 // =======================================================================

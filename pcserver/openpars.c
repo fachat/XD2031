@@ -33,11 +33,11 @@
 // ************
 
 void openpars_process_options(const uint8_t *opts, openpars_t *pars) { 
-        uint8_t *p = opts;
+        const uint8_t *p = opts;
         uint8_t typechar;
         int reclenw;
         int n;
-        uint8_t *t;
+        const uint8_t *t;
 
 	pars->filetype = FS_DIR_TYPE_UNKNOWN;
 	pars->recordlen = 0;

@@ -308,19 +308,6 @@ void provider_init() {
         di_provider.init();
 	provider_register(&di_provider);
 */
-        //eptable[0].epno = 0;            // drive 0
-        //eptable[0].ep = fs_provider.newep(NULL, ".");
-
-	//eptable[1].epno = 9;		// drive 9
-	//eptable[1].ep = fs_provider.newep(NULL, "../tools");
-
-        // test
-        //eptable[4].epno = 6;            // drive 6
-        //eptable[4].ep = fs_provider.newep(NULL, "..");
-
-        // test
-        //eptable[6].epno = 7;            // drive 7
-        //eptable[6].ep = ftp_provider.newep(NULL, "zimmers.net/pub/cbm");
 }
 
 endpoint_t *provider_lookup(int drive, char **name) {
