@@ -55,7 +55,7 @@ static const struct cmd_struct IN_ROM cmd_tab[] = {
 	{"RD"     , CMD_RMDIR      },
 	{"SCRATCH", CMD_SCRATCH    },
 	{"TIME"   , CMD_TIME       },
-	{"USER"   , CMD_UX         },
+	{"U"      , CMD_UX         },
 	{"X"      , CMD_EXT        },
 };
 
