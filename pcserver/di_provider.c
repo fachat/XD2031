@@ -42,7 +42,6 @@
 
 #include "provider.h"
 #include "dir.h"
-//#include "fscmd.h"
 #include "handler.h"
 #include "errors.h"
 #include "mem.h"
@@ -125,9 +124,11 @@ static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno);
 static int di_position(endpoint_t *ep, int tfd, int recordno);
 
+// ------------------------------------------------------------------
 // adapter methods to handle indirection via file_t instead of FILE*
 // note: this provider reads/writes single bytes in many cases
 // always(?) preceeded by a seek, so there is room for improvements
+
 static inline errno_t di_fseek(file_t *file, long pos, int whence) {
 	return file->handler->seek(file, pos, whence);
 }
@@ -139,6 +140,15 @@ static inline void di_fread(void *ptr, size_t size, size_t nmemb, file_t *file) 
 
 static inline void di_fwrite(void *ptr, size_t size, size_t nmemb, file_t *file) {
 	file->handler->writefile(file, (char*) ptr, size * nmemb, 0);
+}
+
+static inline void di_fflush(file_t *file) {
+	// TODO
+}
+
+static inline void di_fsync(file_t *file) {
+	// TODO
+     // if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
 }
 
 // ************
@@ -254,8 +264,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
      log_debug("Status of directory entry saved\n");
      di_sync_BAM(diep);            // Save BAM status
      log_debug("BAM saved.\n");
-     res = os_fsync(diep->Ip);
-     if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+     di_fsync(diep->Ip);
   } else 
   if (f->access_mode == FS_OPEN_RW) {
      p = f->chp+1;
@@ -271,8 +280,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
      	log_debug("Status of directory entry saved\n");
      	di_sync_BAM(diep);            // Save BAM status
      	log_debug("BAM saved.\n");
-     	res = os_fsync(diep->Ip);
-     	if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+     	di_fsync(diep->Ip);
      }
   } else {
     log_debug("Closing read only file, no sync required.\n");
@@ -471,7 +479,7 @@ static int di_save_buffer(di_endpoint_t *diep)
    log_debug("di_save_buffer U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
    di_fseek_tsp(diep,diep->U2_track,diep->U2_sector,0);
    di_fwrite(diep->buf[0],1,256,diep->Ip);
-   //fflush(diep->Ip);
+   di_fflush(diep->Ip);
    diep->U2_track = 0;
    // di_dump_block(diep->buf[0]);
    return 1; // OK

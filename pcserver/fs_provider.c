@@ -1013,21 +1013,16 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 						retfile->file.mode = FS_DIR_MOD_DIR;
 					}
 
-					handler_wrap((file_t*)retfile, FS_OPEN_DR, fp->pattern, &outpattern, (file_t**)&wrapfile);
-					if (wrapfile == NULL) {
-						wrapfile = (file_t*)retfile;
-					}
-					retfile = NULL;
-
-		 	   		if(compare_dirpattern(wrapfile->filename, fp->pattern, &outpattern) != 0) {
-						// found one
-					    	rv = CBM_ERROR_OK;
+					// wrap and/or match name
+					if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, &outpattern, &wrapfile)
+						== CBM_ERROR_OK) {
 	  	    				*outentry = wrapfile;
-	  	    				return rv;
+						rv = CBM_ERROR_OK;
+						break;
 					}
-					// cleanup
-					wrapfile->handler->close(wrapfile, 0);
-					wrapfile = NULL;
+					// cleanup, to read next dir entry
+					retfile->file.handler->close((file_t*)retfile, 0);
+					retfile = NULL;
 				}
 			}
 			// read next entry

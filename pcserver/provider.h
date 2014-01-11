@@ -33,6 +33,10 @@
 #include "charconvert.h"
 #include "openpars.h"
 
+
+// constant for provider tables (deprecated)
+#define MAXFILES        16
+
 //
 // Endpoint providers communicate with the outside world with their 
 // own protocol. Examples are local filesystem, or TCP/IP, or HTTP

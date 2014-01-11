@@ -61,10 +61,19 @@ int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile);
 
 
 /*
- * wrap a file_t (e.g. with x00* handler)
+ * Helper method for provider to be used within direntry().
+ *
+ * wrap a file_t (e.g. with x00* handler) and match the file name.
+ * returns CBM_ERROR_OK when file matches and should be returned by direntry().
+ * In that case also returns the file_t to be returned in outfile.
+ *
+ * The file name is matched to the pattern given. The outpattern points
+ * to the rest part of the pattern that has not been consumed yet, so 
+ * subdirectories or file can be matched against this part.
+ * 
  */
-int handler_wrap(file_t *infile, uint8_t type, const char *name,
-                const char **outname, file_t **outfile);
+int handler_next(file_t *infile, uint8_t type, const char *pattern,
+                const char **outpattern, file_t **outfile);
 
 /*
  * not really nice, but here's the list of existing handlers (before we do an own

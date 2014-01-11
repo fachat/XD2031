@@ -88,8 +88,8 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 //----------------------------------------------------------------------------
 
 
-int handler_wrap(file_t *infile, uint8_t type, const char *name,  
-		const char **outname, file_t **outfile) {
+int handler_next(file_t *infile, uint8_t type, const char *pattern,  
+		const char **outpattern, file_t **outfile) {
 
 	openpars_t pars;
 	pars.recordlen = 0;
@@ -97,7 +97,7 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
 
 	log_debug("handler_wrap(infile=%s)\n", infile->filename);
 
-	int err = CBM_ERROR_OK;
+	int err = CBM_ERROR_FILE_NOT_FOUND;
 	*outfile = NULL;
 
 	for (int i = 0; ; i++) {
@@ -106,15 +106,29 @@ int handler_wrap(file_t *infile, uint8_t type, const char *name,
 			// no handler found
 			break;
 		}
-		err = handler->resolve(infile, outfile, type, name, &pars, outname);
-		if (err != CBM_ERROR_OK) {
-			log_error("Got %d as error from handler %s for %s\n", 
-				err, handler->name, name);
+		if ( handler->resolve(infile, outfile, type, pattern, &pars, outpattern) == CBM_ERROR_OK) {
+			// worked ok.
+			if (*outfile != NULL) {
+				// found a handler
+				err = CBM_ERROR_OK;
+				break;
+			}
 		} else {
-			// found a handler
-			break;
+			log_error("Got %d as error from handler %s for %s\n", 
+				err, handler->name, pattern);
 		}
 	}
+
+	if (err != CBM_ERROR_OK) {
+		// no wrapper has matched
+		// check original name
+		if (compare_dirpattern(infile->filename, pattern, outpattern) != 0) {
+			// match of original 
+			err = CBM_ERROR_OK;
+			*outfile = infile;
+		}
+	}
+
 	return err;
 }
 	
