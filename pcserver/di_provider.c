@@ -122,7 +122,7 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector);
 static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno);
-static int di_position(endpoint_t *ep, int tfd, int recordno);
+static int di_position(di_endpoint_t *ep, File* fp, int recordno);
 
 // ------------------------------------------------------------------
 // adapter methods to handle indirection via file_t instead of FILE*
@@ -501,9 +501,9 @@ static void di_flag_buffer(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 // di_read_block
 // *************
 
-static int di_read_block(di_endpoint_t *diep, int tfd, char *retbuf, int len, int *eof)
+static int di_read_block(di_endpoint_t *diep, File *file, char *retbuf, int len, int *eof)
 {
-   log_debug("di_read_block: chan=%d len=%d\n", tfd, len);
+   log_debug("di_read_block: chan=%p len=%d\n", file, len);
 
    int avail = 256 - diep->bp[0];
    int n = len;
@@ -568,7 +568,7 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 	di_load_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
 
-        handler_resolve_block(ep, chan, &fp);
+        //handler_resolve_block(ep, chan, &fp);
 
         channel_set(chan, fp);
 	break;
@@ -579,7 +579,7 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 	}
 	di_flag_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
-        handler_resolve_block(ep, chan, &fp);
+        //handler_resolve_block(ep, chan, &fp);
 
         channel_set(chan, fp);
       case FS_BLOCK_BA:
@@ -1041,7 +1041,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    openpars_process_options(opts, &pars);
    *reclen = pars.recordlen;
  
-   log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, pars->filetype + 0x30, *reclen);
+   log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, pars.filetype + 0x30, *reclen);
 
    if (*reclen > 254) {
 	return CBM_ERROR_OVERFLOW_IN_RECORD;
@@ -1275,11 +1275,10 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
 // di_read_dir_entry
 // *****************
 
-static int di_read_dir_entry(di_endpoint_t *diep, int tfd, char *retbuf, int *eof)
+static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int *eof)
 {
    int rv = 0;
-   File *file = di_find_file(diep, tfd);
-   log_debug("di_read_dir_entry(%d)\n",tfd);
+   log_debug("di_read_dir_entry(%p)\n",file);
 
    if (!file) return -CBM_ERROR_FAULT;
 
@@ -1380,12 +1379,10 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 // di_read_seq
 // ***********
 
-static int di_read_seq(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof)
+static int di_read_seq(di_endpoint_t *diep, File *file, char *retbuf, int len, int *eof)
 {
    int i;
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-   log_debug("di_read_seq(chan %d, len=%d)\n",tfd,len);
-   File *file = di_find_file(diep, tfd);
+   log_debug("di_read_seq(fp %d, len=%d)\n",file,len);
 
    di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
 
@@ -1401,11 +1398,12 @@ static int di_read_seq(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof)
 // di_writefile
 // ************
 
-static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
+static int di_writefile(file_t *fp, char *buf, int len, int is_eof)
 {
    int i;
    int err;
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
+   di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
+   File *file = (File*) fp;
 
    if (diep->U2_track) // fill block for U2 command
    {
@@ -1414,20 +1412,18 @@ static int di_writefile(endpoint_t *ep, int tfd, char *buf, int len, int is_eof)
       return CBM_ERROR_OK;
    }
 
-   File *f = di_find_file(diep, tfd);
+   log_debug("write to file %p, lastpos=%d\n", file, file->lastpos);
 
-   log_debug("write to file %d, lastpos=%d\n", f->chan, f->lastpos);
-
-   if (f->lastpos > 0) {
-	err = di_expand_rel(diep, f, f->lastpos - 1);
+   if (file->lastpos > 0) {
+	err = di_expand_rel(diep, file, file->lastpos - 1);
 	if (err != CBM_ERROR_OK) {
 		return -err;
 	}
-	di_position(ep, tfd, f->lastpos - 1);
+	di_position(diep, file, file->lastpos - 1);
    }
-   di_fseek_tsp(diep,f->cht,f->chs,2+f->chp);
+   di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
    for (i=0 ; i < len ; ++i) {
-      if (di_write_byte(diep, f, (uint8_t)buf[i])) {
+      if (di_write_byte(diep, file, (uint8_t)buf[i])) {
 	return -CBM_ERROR_DISK_FULL;
       }
    }
@@ -2132,7 +2128,7 @@ static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno) {
 // of by the firmware). record 0 does always exist - it is created when the file
 // is created. That is why f->lastpos >0 can be used as flag to fill up the file
 
-static int di_position(endpoint_t *ep, int tfd, int recordno) {
+static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 
    uint8_t sidesector[256];
    uint8_t reclen = 0;
@@ -2144,10 +2140,6 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 
    uint8_t next_track, next_sector;
 
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-
-   File *f = di_find_file(diep, tfd);
-   if (f != NULL) {
 
 	log_debug("di_position: set position to record no %d\n", recordno);
 
@@ -2252,8 +2244,7 @@ static int di_position(endpoint_t *ep, int tfd, int recordno) {
 	log_debug("position -> sector %d/%d/%d\n", f->next_track, f->next_sector, rec_start);
 
 	return CBM_ERROR_OK;
-   }
-   return CBM_ERROR_FAULT;
+
 }
 
 //***********
@@ -2285,21 +2276,20 @@ static int di_direct_channel(di_endpoint_t *diep, int chan)
 // di_readfile
 // ***********
 
-static int di_readfile(endpoint_t *ep, int chan, char *retbuf, int len, int *eof)
+static int di_readfile(file_t *fp, char *retbuf, int len, int *eof)
 {
    int rv = 0;
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-   log_debug("di_readfile(%p chan=%d len=%d\n",ep,chan,len);
-   
+   di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
+   File *file = (File*) fp;
+   log_debug("di_readfile(%p fp=%p len=%d\n",diep,file,len);
+/*   
    if (di_direct_channel(diep,chan) >= 0)
    {
-      return di_read_block(diep, chan, retbuf, len, eof);
+      return di_read_block(diep, file, retbuf, len, eof);
    }
-
-   File *f = di_find_file(diep, chan);
-
-   if (f->is_first) rv = di_read_dir_entry(diep, chan, retbuf, eof);
-   else             rv = di_read_seq(ep, chan, retbuf, len, eof);
+*/
+   if (file->is_first) rv = di_read_dir_entry(diep, file, retbuf, eof);
+   else             rv = di_read_seq(diep, file, retbuf, len, eof);
    return rv;
 }
 
@@ -2380,6 +2370,22 @@ static void di_print_block(di_endpoint_t *diep, int pos)
 
 #endif
 
+static void dif_close(file_t *fp, int recurse) {
+	File *file = (File*) fp;
+
+	di_close((di_endpoint_t*) fp->endpoint, fp);
+
+	// TODO close endpoint if temp and last file
+}
+
+#if 0
+static int dif_open(file_t *fp, int opentype) {
+	File *file = (File*) fp;
+
+	// TODO
+}
+#endif
+
 // ----------------------------------------------------------------------------------
 
 /*
@@ -2413,15 +2419,15 @@ handler_t di_file_handler = {
         "fs_file_handler",
         "ASCII",
         NULL,                   // resolve
-        dif_close,              // close
-        dif_open,               // open
-        dif_convfrom,           // convfrom
-        dif_seek,               // seek
+        NULL,	//	dif_close,              // close
+        NULL,	//	dif_open,               // open
+	NULL,	//      dif_convfrom,           // convfrom
+        NULL,	//	dif_seek,               // seek
         di_readfile,            // readfile
         di_writefile,           // writefile
         NULL,                   // truncate
-        di_direntry,            // direntry
-        di_create               // create
+        NULL,	//	di_direntry,            // direntry
+        NULL,	//	di_create               // create
 };
 
 provider_t di_provider = {
@@ -2431,8 +2437,8 @@ provider_t di_provider = {
         di_newep,
         di_tempep,
         di_freeep,
-        di_root,               // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
-        di_wrap,                   // wrap not needed on fs_provider
+        NULL,	//	di_root,               // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
+        NULL,	//	di_wrap,                   // wrap not needed on fs_provider
         di_scratch,
         di_rename,
         di_cd,
