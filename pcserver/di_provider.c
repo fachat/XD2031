@@ -100,7 +100,7 @@ typedef struct
 {                                     // derived from endpoint_t
    endpoint_t    base;                // payload
    file_t       *Ip;                  // Image file pointer
-   char         *curpath;             // malloc'd current path
+   //char         *curpath;             // malloc'd current path
    Disk_Image_t  DI;                  // mounted disk image
    uint8_t      *BAM[4];              // Block Availability Maps
    int           BAMpos[4];           // File position of BAMs
@@ -123,6 +123,150 @@ static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno);
 static int di_position(di_endpoint_t *ep, File* fp, int recordno);
+static int di_close_fd(di_endpoint_t *diep, File *f);
+static void di_read_BAM(di_endpoint_t *diep);
+
+// ------------------------------------------------------------------
+// management of endpoints
+
+static void endpoint_init(const type_t *t, void *obj) {
+        (void) t;       // silence unused warning
+        di_endpoint_t *fsep = (di_endpoint_t*)obj;
+        reg_init(&(fsep->base.files), "di_endpoint_files", 16);
+        fsep->base.ptype = &di_provider;
+}
+
+static type_t endpoint_type = {
+        "di_endpoint",
+        sizeof(di_endpoint_t),
+        endpoint_init
+};
+
+// **********
+// di_init_fp
+// **********
+
+static void di_init_fp(File *fp)
+{
+  fp->chan = -1;
+  fp->buf  = NULL;
+  fp->is_first  = 0;
+  fp->cht = 0;
+  fp->chs = 0;
+  fp->chp = 0;
+}
+
+// *************
+// di_load_image
+// *************
+
+static errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
+{
+   
+   log_debug("image size = %d\n",diep->Ip->filesize);
+
+   if (diskimg_identify(&(diep->DI), diep->Ip->filesize)) {
+	int numbamblocks = diep->DI.BAMBlocks;
+	for (int i = 0; i < numbamblocks; i++) {
+		diep->BAMpos[i] = 256 * diep->DI.LBA(diep->DI.bamts[(i<<1)], diep->DI.bamts[(i<<1)+1]);
+	}
+   }
+   else 
+   {
+      log_error("Invalid/unsupported disk image\n");
+      return CBM_ERROR_FILE_TYPE_MISMATCH; // not an image file
+   }
+
+   di_read_BAM(diep);
+   log_debug("di_load_image(%s) as d%d\n",file->filename,diep->DI.ID);
+   return CBM_ERROR_OK; // success
+}
+
+// ********
+// di_newep
+// ********
+
+static endpoint_t *di_newep(endpoint_t *parent, const char *path)
+{
+   (void) parent; // silence -Wunused-parameter
+
+   int i;
+   di_endpoint_t *diep = malloc(sizeof(di_endpoint_t));
+   //diep->curpath = malloc(strlen(path)+1);
+   //strcpy(diep->curpath,path);
+   //for(int i=0;i<MAXFILES;i++) di_init_fp(&(diep->files[i]));
+   diep->base.ptype = &di_provider;
+   //if(!di_load_image(diep,path)) return NULL; // not a valid disk image
+   //for (i=0 ; i < 5 ; ++i) diep->chan[i] = -1;
+   log_debug("di_newep(%s) = %p\n",path,diep);
+   return (endpoint_t*) diep;
+}
+
+// *********
+// di_tempep
+// *********
+
+static endpoint_t *di_tempep(char **name)
+{
+   while (**name == dir_separator_char()) (*name)++;
+
+   // cut off last filename part (either file name or dir mask)
+   char *end = strrchr(*name, dir_separator_char());
+
+   di_endpoint_t *diep = NULL;
+
+   if (end != NULL) // we have a '/'
+   {
+      *end = 0;
+      diep = (di_endpoint_t*) di_newep(NULL, *name);
+      *name = end+1;  // filename part
+  }
+  else // no '/', so only mask, path is root
+  {
+    diep = (di_endpoint_t*) di_newep(NULL, ".");
+  }
+  log_debug("di_tempep(%s) = %p\n",*name,diep);
+  return (endpoint_t*) diep;
+}
+
+// *********
+// di_freeep
+// *********
+
+static void di_freeep(endpoint_t *ep)
+{
+   di_endpoint_t *cep = (di_endpoint_t*) ep;
+   int i;
+   for(i=0;i<MAXFILES;i++)
+   {
+       di_close_fd(cep, &(cep->files[i]));
+   }
+   //mem_free(cep->curpath);
+   mem_free(ep);
+}
+
+// *********
+// di_wrap
+// *********
+//
+// wrap a file_t that represents a Dxx file into a temporary endpoint, 
+// and return the root file_t of it to access the directory of the 
+// Dxx image.
+
+static errno_t di_wrap(file_t *file, file_t **wrapped)
+{
+	errno_t err = CBM_ERROR_FAULT;
+
+   	di_endpoint_t *diep = mem_alloc(&endpoint_type);
+
+	if ((err = di_load_image(diep, file)) == CBM_ERROR_OK) {
+		// image identified correctly
+	}
+	diep->Ip = file;
+
+	return err;
+}
+
 
 // ------------------------------------------------------------------
 // adapter methods to handle indirection via file_t instead of FILE*
@@ -180,20 +324,6 @@ static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uin
 static void di_fseek_pos(di_endpoint_t *diep, int pos)
 {
    di_fseek(diep->Ip,pos,SEEKFLAG_ABS);
-}
-
-// **********
-// di_init_fp
-// **********
-
-static void di_init_fp(File *fp)
-{
-  fp->chan = -1;
-  fp->buf  = NULL;
-  fp->is_first  = 0;
-  fp->cht = 0;
-  fp->chs = 0;
-  fp->chp = 0;
 }
 
 // *************
@@ -289,22 +419,6 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   return 0;
 }
 
-// *********
-// di_freeep
-// *********
-
-static void di_freeep(endpoint_t *ep)
-{
-   di_endpoint_t *cep = (di_endpoint_t*) ep;
-   int i;
-   for(i=0;i<MAXFILES;i++)
-   {
-       di_close_fd(cep, &(cep->files[i]));
-   }
-   mem_free(cep->curpath);
-   mem_free(ep);
-}
-
 // ***********
 // di_read_BAM
 // ***********
@@ -321,88 +435,6 @@ static void di_read_BAM(di_endpoint_t *diep)
    }
 }
 
-// *************
-// di_load_image
-// *************
-
-static int di_load_image(di_endpoint_t *diep, const char *filename)
-{
-   unsigned int filesize;
-   
-   // TODO: get file_t and read filesize from there
-/*
-   if(!os_path_is_file(filename)) return 0;
-   if (!(diep->Ip = fopen(filename, "rb+"))) {
-     log_error("Unable to open %s\n", filename);
-     return 0;
-   }
-   di_fseek(diep->Ip, 0, SEEKFLAG_END);
-   filesize = ftell(diep->Ip);
-   log_debug("image size = %d\n",filesize);
-*/
-   if (diskimg_identify(&(diep->DI), filesize)) {
-	int numbamblocks = diep->DI.BAMBlocks;
-	for (int i = 0; i < numbamblocks; i++) {
-		diep->BAMpos[i] = 256 * diep->DI.LBA(diep->DI.bamts[(i<<1)], diep->DI.bamts[(i<<1)+1]);
-	}
-   }
-   else 
-   {
-      log_error("Invalid/unsupported disk image\n");
-      return 0; // not an image file
-   }
-
-   di_read_BAM(diep);
-   log_debug("di_load_image(%s) as d%d\n",filename,diep->DI.ID);
-   return 1; // success
-}
-
-// ********
-// di_newep
-// ********
-
-static endpoint_t *di_newep(endpoint_t *parent, const char *path)
-{
-   (void) parent; // silence -Wunused-parameter
-
-   int i;
-   di_endpoint_t *diep = malloc(sizeof(di_endpoint_t));
-   diep->curpath = malloc(strlen(path)+1);
-   strcpy(diep->curpath,path);
-   for(int i=0;i<MAXFILES;i++) di_init_fp(&(diep->files[i]));
-   diep->base.ptype = &di_provider;
-   if(!di_load_image(diep,path)) return NULL; // not a valid disk image
-   for (i=0 ; i < 5 ; ++i) diep->chan[i] = -1;
-   log_debug("di_newep(%s) = %p\n",path,diep);
-   return (endpoint_t*) diep;
-}
-
-// *********
-// di_tempep
-// *********
-
-static endpoint_t *di_tempep(char **name)
-{
-   while (**name == dir_separator_char()) (*name)++;
-
-   // cut off last filename part (either file name or dir mask)
-   char *end = strrchr(*name, dir_separator_char());
-
-   di_endpoint_t *diep = NULL;
-
-   if (end != NULL) // we have a '/'
-   {
-      *end = 0;
-      diep = (di_endpoint_t*) di_newep(NULL, *name);
-      *name = end+1;  // filename part
-  }
-  else // no '/', so only mask, path is root
-  {
-    diep = (di_endpoint_t*) di_newep(NULL, ".");
-  }
-  log_debug("di_tempep(%s) = %p\n",*name,diep);
-  return (endpoint_t*) diep;
-}
 
 // ***************
 // di_reserve_file
@@ -449,7 +481,6 @@ static File *di_find_file(di_endpoint_t *diep, int chan)
 static int di_alloc_buffer(di_endpoint_t *diep)
 {
   log_debug("di_alloc_buffer 0\n");
-
   if (!diep->buf[0]) diep->buf[0] = (uint8_t *)calloc(256,1);
   if (!diep->buf[0]) return 0; // OOM
   diep->bp[0] = 0;
@@ -599,17 +630,6 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    return rv;
 }
 
-
-// ********
-// di_close
-// ********
-
-static void di_close(endpoint_t *ep, int tfd)
-{
-   log_debug("di_close %d\n",tfd);
-   File *file = di_find_file((di_endpoint_t *)ep, tfd);
-   if (file) di_close_fd((di_endpoint_t *)ep,file);
-}
 
 // ************
 // di_read_slot
@@ -2373,7 +2393,7 @@ static void di_print_block(di_endpoint_t *diep, int pos)
 static void dif_close(file_t *fp, int recurse) {
 	File *file = (File*) fp;
 
-	di_close((di_endpoint_t*) fp->endpoint, fp);
+	di_close_fd((di_endpoint_t*) fp->endpoint, file);
 
 	// TODO close endpoint if temp and last file
 }
@@ -2438,7 +2458,7 @@ provider_t di_provider = {
         di_tempep,
         di_freeep,
         NULL,	//	di_root,               // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
-        NULL,	//	di_wrap,                   // wrap not needed on fs_provider
+        di_wrap,                // wrap while CDing into D64 file
         di_scratch,
         di_rename,
         di_cd,

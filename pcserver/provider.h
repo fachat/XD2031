@@ -32,6 +32,7 @@
 
 #include "charconvert.h"
 #include "openpars.h"
+#include "registry.h"
 
 
 // constant for provider tables (deprecated)
@@ -72,7 +73,8 @@ typedef struct {
 							// start of a file name. If not set, then
 							// the current directory (as defined by previous
 							// chdir() is returned.
-	file_t*		(*wrap)(file_t *file);		// check if the given file is for the provider 
+	int		(*wrap)(file_t *file, file_t **wrapped); // check if the given file is for 
+							// the provider 
 							// (e.g. a d64 file for the di_provider)
 							// and wrap it into a container file_t
 							// (pointing to a new temp. endpoint created
@@ -94,6 +96,7 @@ typedef struct {
 struct _endpoint {
 	provider_t	*ptype;
 	int		is_temporary;
+	registry_t	files;
 };
 
 // base struct for a file. Is extended in the separate handlers with handler-specific

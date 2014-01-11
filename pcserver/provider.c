@@ -181,8 +181,9 @@ file_t *provider_wrap(file_t *file) {
 			return NULL;
 		}
 		if (p->provider->wrap != NULL) {
-			file_t *outfile = p->provider->wrap(file);
-			if (outfile != NULL) {
+			file_t *outfile = NULL;
+			int err = p->provider->wrap(file, &outfile);
+			if (err == CBM_ERROR_OK) {
 				return outfile;
 			}
 		}

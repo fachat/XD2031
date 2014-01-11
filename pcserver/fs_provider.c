@@ -109,13 +109,12 @@ typedef struct {
 	// payload
 	char			*basepath;			// malloc'd base path
 	char			*curpath;			// malloc'd current path
-	registry_t		files;
 } fs_endpoint_t;
 
 static void endpoint_init(const type_t *t, void *obj) {
 	(void) t;	// silence unused warning
 	fs_endpoint_t *fsep = (fs_endpoint_t*)obj;
-	reg_init(&(fsep->files), "fs_endpoint_files", 16);
+	reg_init(&(fsep->base.files), "fs_endpoint_files", 16);
 
 	fsep->basepath = NULL;
 	fsep->curpath = NULL;
@@ -154,7 +153,7 @@ static File *reserve_file(fs_endpoint_t *fsep) {
 
 	file->file.endpoint = (endpoint_t*)fsep;
 
-	reg_append(&fsep->files, file);
+	reg_append(&fsep->base.files, file);
 
 	return file;
 }
@@ -201,7 +200,7 @@ static int close_fd(File *file, int recurse) {
 	}
 
 	// remove file from endpoint registry
-	reg_remove(&(((fs_endpoint_t*)file->file.endpoint)->files), file);
+	reg_remove(&(((fs_endpoint_t*)file->file.endpoint)->base.files), file);
 	return er;
 }
 
@@ -209,7 +208,7 @@ static int close_fd(File *file, int recurse) {
 static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
 	File *f;
-	while ((f = (File*)reg_get(&cep->files, 0)) != NULL) {
+	while ((f = (File*)reg_get(&cep->base.files, 0)) != NULL) {
 		close_fd(f, 1);
 	}
 	mem_free(cep->basepath);

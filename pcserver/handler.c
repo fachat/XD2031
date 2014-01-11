@@ -205,9 +205,13 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	current_dir->pattern = mem_alloc_str(namep);
 
 	// loop as long as we have filename parts left
+	// i.e. this is the depth loop in resolving a file path, one 
+	// iteration in the loop per depth level.
 	while (current_dir != NULL && namep != NULL && *namep != 0) {
 
-		// loop over directory entries
+		// loop over directory entries within a directory level,
+		// i.e. match the file name within a directory
+		//
 		// note: loops over all directory entries, as we cannot simply match the name
 		// due to the x00 pattern matching madness
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
@@ -229,13 +233,6 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 				outname = name;
 			}
 
-			// test each dir entry against the different handlers
-			// handlers implement checks e.g. for P00 files and wrap them
-			// in another file_t level
-			// the handler->resolve() method also matches the name, as the
-			// P00 files may contain their own "real" name within them
-
-			// no handler match found, thus
 			// now check if the original filename matches the pattern
 			// outname must be set either to point to the trailing '/', or the trailing 0,
 			// but not be set to NULL itself
@@ -264,7 +261,6 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 
 
 		// found our directory entry and wrapped it in file
-		// now check if we have/need a container wrapper (with e.g. a ZIP file in a P00 file)
 		if (*outname == 0) {
 			// no more pattern left, so file should be what was required
 			// i.e. we have raw access to container files like D64 or ZIP
