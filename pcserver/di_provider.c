@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
+#include <assert.h>
 
 #include "provider.h"
 #include "dir.h"
@@ -82,9 +83,7 @@ typedef struct
    file_t file;
    slot_t Slot;           // 
    uint8_t  *buf;         // direct channel block buffer
-   int   chan;            // channel for which the File is
    uint8_t  CBM_file[20]; // filename with CBM charset
-   uint8_t  dirpattern[MAX_BUFFER_SIZE];
    uint8_t  is_first;     // is first directory entry?
    uint8_t  next_track;
    uint8_t  next_sector;
@@ -111,7 +110,6 @@ typedef struct
    uint8_t       U2_track;            // track  for U2 command
    uint8_t       U2_sector;           // sector for U2 command
    slot_t        Slot;                // directory slot
-   File          files[MAXFILES];     // files inside disk image
 }  di_endpoint_t;
 
 extern provider_t di_provider;
@@ -125,6 +123,7 @@ static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno);
 static int di_position(di_endpoint_t *ep, File* fp, int recordno);
 static int di_close_fd(di_endpoint_t *diep, File *f);
 static void di_read_BAM(di_endpoint_t *diep);
+static int di_opendir(endpoint_t *ep, const char *opts);
 
 // ------------------------------------------------------------------
 // management of endpoints
@@ -146,14 +145,36 @@ static type_t endpoint_type = {
 // di_init_fp
 // **********
 
-static void di_init_fp(File *fp)
+static void di_init_fp(const type_t *t, void *obj)
 {
-  fp->chan = -1;
+  (void) t;
+  File *fp = (File*)obj;
+
   fp->buf  = NULL;
   fp->is_first  = 0;
   fp->cht = 0;
   fp->chs = 0;
   fp->chp = 0;
+}
+
+static type_t file_type = {
+        "di_file",
+        sizeof(File),
+        di_init_fp
+};
+
+// ***************
+// di_reserve_file
+// ***************
+
+static File *di_reserve_file(di_endpoint_t *diep)
+{
+	File *file = mem_alloc(&file_type);
+        log_debug("reserving file %p\n", file);
+
+	reg_append(&diep->base.files, file);
+
+	return file;
 }
 
 // *************
@@ -190,7 +211,7 @@ static endpoint_t *di_newep(endpoint_t *parent, const char *path)
 {
    (void) parent; // silence -Wunused-parameter
 
-   int i;
+   //int i;
    di_endpoint_t *diep = malloc(sizeof(di_endpoint_t));
    //diep->curpath = malloc(strlen(path)+1);
    //strcpy(diep->curpath,path);
@@ -235,15 +256,32 @@ static endpoint_t *di_tempep(char **name)
 
 static void di_freeep(endpoint_t *ep)
 {
-   di_endpoint_t *cep = (di_endpoint_t*) ep;
-   int i;
-   for(i=0;i<MAXFILES;i++)
-   {
-       di_close_fd(cep, &(cep->files[i]));
-   }
-   //mem_free(cep->curpath);
-   mem_free(ep);
+	File *f = NULL;
+   	di_endpoint_t *cep = (di_endpoint_t*) ep;
+        while ((f = (File*)reg_get(&ep->files, 0)) != NULL) {
+                di_close_fd(cep, f);
+        }
+   	mem_free(ep);
 }
+
+// *********
+// di_wrap
+// *********
+//
+static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
+
+	int err = di_opendir(ep, NULL);
+
+	if (err == CBM_ERROR_OK) {
+		File *file = di_reserve_file((di_endpoint_t*)ep);
+
+		return file;
+	}
+
+	return NULL;
+}
+
+
 
 // *********
 // di_wrap
@@ -253,16 +291,30 @@ static void di_freeep(endpoint_t *ep)
 // and return the root file_t of it to access the directory of the 
 // Dxx image.
 
-static errno_t di_wrap(file_t *file, file_t **wrapped)
+static int di_wrap(file_t *file, file_t **wrapped)
 {
-	errno_t err = CBM_ERROR_FAULT;
+	errno_t err = CBM_ERROR_FILE_NOT_FOUND;
+
+	// first check name
+	const char *name = file->filename;
+	int l = 0;
+	if (name == NULL || (l = strlen(name)) < 4) {
+		return err;
+	}
+	
+	if (name[l - 4] != '.' || 
+		(name [l-3] != 'd' && name [l-3] != 'D')) {
+		return err;
+	}
 
    	di_endpoint_t *diep = mem_alloc(&endpoint_type);
+	diep->Ip = file;
 
 	if ((err = di_load_image(diep, file)) == CBM_ERROR_OK) {
 		// image identified correctly
+		*wrapped = di_root((endpoint_t*)diep, 1);
+		err = CBM_ERROR_OK;
 	}
-	diep->Ip = file;
 
 	return err;
 }
@@ -415,7 +467,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   } else {
     log_debug("Closing read only file, no sync required.\n");
   }
-  di_init_fp(f);
+  //di_init_fp(f);
   return 0;
 }
 
@@ -433,44 +485,6 @@ static void di_read_BAM(di_endpoint_t *diep)
       di_fseek_pos(diep,diep->BAMpos[i]);
       di_fread(diep->BAM[i],1,256,diep->Ip);
    }
-}
-
-
-// ***************
-// di_reserve_file
-// ***************
-
-static File *di_reserve_file(di_endpoint_t *diep, int chan)
-{
-   for (int i = 0; i < MAXFILES; i++)
-   {
-      if (diep->files[i].chan == chan) di_close_fd(diep,&(diep->files[i]));
-      if (diep->files[i].chan < 0)
-      {
-         File *fp = &(diep->files[i]);
-         di_init_fp(fp);
-         fp->chan = chan;
-         log_debug("reserving file %p for chan %d\n", fp, chan);
-         return &(diep->files[i]);
-      }
-   }
-   log_warn("Did not find free di session for channel=%d\n", chan);
-   return NULL;
-}
-
-// ************
-// di_find_file
-// ************
-
-static File *di_find_file(di_endpoint_t *diep, int chan)
-{
-   log_debug("findfile(%p,%d)\n",diep,chan);
-   for (int i = 0; i < MAXFILES; i++)
-   {
-      if (diep->files[i].chan == chan) return &(diep->files[i]);
-   }
-   log_warn("Did not find di session for channel=%d\n", chan);
-   return NULL;
 }
 
 
@@ -706,7 +720,7 @@ static int di_next_slot(di_endpoint_t *diep,slot_t *slot)
 // di_match_slot
 // *************
 
-static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name, uint8_t type)
+static int di_match_slot(di_endpoint_t *diep,slot_t *slot, const uint8_t *name, uint8_t type)
 {
    do
    {
@@ -992,10 +1006,10 @@ static int di_find_free_block(di_endpoint_t *diep, File *f)
 // di_create_entry 
 // ***************
 
-static int di_create_entry(di_endpoint_t *diep, int tfd, uint8_t *name, uint8_t type, uint8_t reclen)
+static int di_create_entry(di_endpoint_t *diep, File *file, uint8_t *name, uint8_t type, uint8_t reclen)
 {
    log_debug("di_create_entry(%s)\n",name);
-   File *file = di_find_file(diep, tfd);
+
    if (!file) return CBM_ERROR_FAULT;
    if (di_find_free_slot(diep,&file->Slot)) return CBM_ERROR_DISK_FULL;
    strcpy((char *)file->Slot.filename,(char *)name);
@@ -1052,7 +1066,7 @@ static void di_pos_append(di_endpoint_t *diep, File *f)
 // di_open_file
 // ************
 
-static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opts, uint16_t *reclen, int di_cmd)
+static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16_t *reclen, int di_cmd)
 {
    int np,rv;
    File *file;
@@ -1061,14 +1075,14 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    openpars_process_options(opts, &pars);
    *reclen = pars.recordlen;
  
-   log_info("OpenFile(..,%d,%s,%s,%c,%d)\n", tfd, filename, opts, pars.filetype + 0x30, *reclen);
+   log_info("OpenFile(%s,%s,%c,%d)\n", filename, opts, pars.filetype + 0x30, *reclen);
 
    if (*reclen > 254) {
 	return CBM_ERROR_OVERFLOW_IN_RECORD;
    }
 
    di_endpoint_t *diep = (di_endpoint_t*) ep;
-   file = di_reserve_file(diep, tfd);
+   file = di_reserve_file(diep);
  
    int file_required       = FALSE;
    int file_must_not_exist = FALSE;
@@ -1143,7 +1157,7 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
       if (pars.filetype == FS_DIR_TYPE_UNKNOWN) {
 	pars.filetype = FS_DIR_TYPE_PRG;
       }
-      rv = di_create_entry(diep, tfd, filename, pars.filetype, *reclen);
+      rv = di_create_entry(diep, file, filename, pars.filetype, *reclen);
       if (rv != CBM_ERROR_OK) return rv;
    }
 
@@ -1157,18 +1171,16 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
 // di_opendir
 // **********
 
-static int di_opendir(endpoint_t *ep, int tfd, const char *buf, const char *opts)
+static int di_opendir(endpoint_t *ep, const char *opts)
 {
    (void) opts;		// silence warning unused parameter
 
    di_endpoint_t *diep = (di_endpoint_t*) ep;
-   log_debug("di_opendir(%s)\n",buf);
-   File *file = di_reserve_file(diep, tfd);
+   log_debug("di_opendir()\n");
+   File *file = di_reserve_file(diep);
 
    if (file)
    {
-      if (buf && buf[0]) strcpy((char *)file->dirpattern, buf);
-      else               strcpy((char *)file->dirpattern, "*");
       file->is_first = 1;
       return CBM_ERROR_OK;
    }
@@ -1312,7 +1324,7 @@ static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int 
       return rv;
    }
 
-   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->dirpattern, FS_DIR_TYPE_UNKNOWN))
+   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->file.pattern, FS_DIR_TYPE_UNKNOWN))
    {    
       rv = di_fill_entry((uint8_t *)retbuf,&diep->Slot);
       di_next_slot(diep,&diep->Slot);
@@ -1732,7 +1744,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 	unsigned int i;
 
-	log_debug("di_rel_add_sectors f=%d to nrecords=%d\n", f->chan, nrecords);
+	log_debug("di_rel_add_sectors f=%p to nrecords=%d\n", f, nrecords);
 
 	// find the total number of blocks this file uses
 	i = f->Slot.size;
@@ -1829,7 +1841,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	// non-sss image
 	if ((diep->DI.HasSSB && super == 0) || ((!diep->DI.HasSSB) && track == 0)) {
 
-		log_debug(" - creating the first side sector group for file %d\n", f->chan);
+		log_debug(" - creating the first side sector group for file %p\n", f);
 
 		// no side sector group so far, create the first one
 		// create super side sector block
@@ -2125,7 +2137,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno) {
 
-	log_debug("di_expand_rel f=%d to recordno=%d\n", f->chan, recordno);
+	log_debug("di_expand_rel f=%p to recordno=%d\n", f, recordno);
 
 	int err = CBM_ERROR_OK;
 
@@ -2271,10 +2283,10 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 // di_open
 //***********
 
-static int di_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int type)
+static int di_open(endpoint_t *ep, const char *buf, const char *opts, int *reclen, int type)
 {
    uint16_t reclen16 = 0;
-   int rv = di_open_file(ep, tfd, (uint8_t *)buf, (uint8_t *)opts, &reclen16, type);
+   int rv = di_open_file(ep, (uint8_t *)buf, (uint8_t *)opts, &reclen16, type);
    *reclen = reclen16;
    return rv;
 }
@@ -2457,13 +2469,13 @@ provider_t di_provider = {
         di_newep,
         di_tempep,
         di_freeep,
-        NULL,	//	di_root,               // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
-        di_wrap,                // wrap while CDing into D64 file
+        di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
+        di_wrap,        // wrap while CDing into D64 file
         di_scratch,
         di_rename,
         di_cd,
-        NULL,			// mkdir not supported
-        NULL,			// rmdir not supported
+        NULL,		// mkdir not supported
+        NULL,		// rmdir not supported
         di_direct
 };
 

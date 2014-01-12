@@ -44,8 +44,8 @@
 extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
-extern provider_t di_provider;
 */
+extern provider_t di_provider;
 extern provider_t fs_provider;
 
 //------------------------------------------------------------------------------------
@@ -305,10 +305,10 @@ void provider_init() {
         tcp_provider.init();
 	provider_register(&tcp_provider);
 #endif
+*/
 
         di_provider.init();
 	provider_register(&di_provider);
-*/
 }
 
 endpoint_t *provider_lookup(int drive, char **name) {
