@@ -217,7 +217,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
 		// we have an empty directory
 		direntry = NULL;
-		while ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag)) == CBM_ERROR_OK) {
+		while (current_dir->handler->direntry != NULL 
+			&& ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag)) 
+				== CBM_ERROR_OK)
+			) {
 
 			log_debug("got direntry %p (%s)(current_dir is %p (%s))\n", direntry, 
 				(direntry == NULL)?NULL:direntry->filename, current_dir,
@@ -462,11 +465,12 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	if (dir != NULL) {
 		// we can close the parents anyway
-		file_t *parent = dir->parent;
+		file_t *parent = NULL;
+		parent = dir->handler->parent(dir);
 		if (parent != NULL) {
 			parent->handler->close(parent, 1);
 			// forget reference so we don't try to close it again
-			loose_parent(dir, dir->parent);
+			loose_parent(dir, parent);
 		}
 
 		if (err == CBM_ERROR_OK) {
@@ -495,5 +499,10 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	return err;
 }
+
+file_t *handler_parent(file_t *file) {
+	return file->parent;
+}
+
 
 

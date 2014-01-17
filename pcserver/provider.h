@@ -174,6 +174,12 @@ struct _handler {
                                                         // get the converter FROM the file
         charconv_t      (*convfrom)(file_t *prov, const char *tocharset);
 
+							// return the real parent dir; e.g. for x00_parent
+							// do not return the wrapped file, but its
+							// parent()
+	file_t		*(*parent)(file_t *fp);		
+						
+
         // -------------------------
                                                         // position the file
         int             (*seek)(file_t *fp, long position, int flag);

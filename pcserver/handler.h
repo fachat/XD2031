@@ -84,5 +84,12 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 // handles P00, S00, ... files
 void x00_handler_init();
 
+
+/*
+ * default implementations
+ */
+
+file_t *handler_parent(file_t *file);
+
 #endif
 

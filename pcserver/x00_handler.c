@@ -238,6 +238,13 @@ static int x00_open(file_t *file, int opentype) {
 	return rv;
 }
 
+static file_t* x00_parent(file_t *file) {
+	if (file->parent != NULL) {
+		return file->parent->handler->parent(file->parent);
+	}
+	return NULL;
+}
+
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
@@ -251,6 +258,8 @@ static handler_t x00_handler = {
 	// -------------------------
 			// get converter for DIR entries
 	NULL,
+
+	x00_parent,	// file_t* parent(file_t*)
 
 	// -------------------------
 	

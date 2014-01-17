@@ -1640,6 +1640,7 @@ handler_t fs_file_handler = {
 	fs_close,		// close
 	fs_open,		// open
 	convfrom,		// convfrom
+	handler_parent,		// default parent() implementation
 	fs_seek,		// seek
 	readfile,		// readfile
 	writefile,		// writefile

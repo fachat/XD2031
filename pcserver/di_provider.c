@@ -2454,6 +2454,7 @@ handler_t di_file_handler = {
         NULL,	//	dif_close,              // close
         NULL,	//	dif_open,               // open
 	NULL,	//      dif_convfrom,           // convfrom
+	handler_parent,	// 	default parent() impl
         NULL,	//	dif_seek,               // seek
         di_readfile,            // readfile
         di_writefile,           // writefile
