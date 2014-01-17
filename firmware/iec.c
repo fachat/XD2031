@@ -182,7 +182,16 @@ static int16_t iecin(uint8_t underatn)
 
 	} while (cnt > 0);
 
-	datalo();
+	// Do not handshake on LISTEN / TALK to other devices
+	// to enable checking if a device is present
+	if(underatn) {
+		if (((data >= 0x20) && (data < 0x3f)) ||	// LISTEN? ||
+		    ((data >= 0x40) && (data < 0x5f)))		// TALK?
+		{
+			if ((data & 0x1f) == bus.rtconf.device_address)
+				datalo();			// handshake only if for us
+		} else datalo();				// always handshake other cmds
+	} else datalo();					// always handshake data
 
 	return (0xff & data) | (eoi ? 0x4000 : 0);
 }

@@ -469,12 +469,16 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	
 	uint8_t rv = CBM_ERROR_SYNTAX_UNKNOWN;
 
+        // digits and letters allowed: U1 = UA etc.
 	switch(cmd & 0x0f) {
 	case 1:		// U1
 		rv = cmd_user_u12(bus, FS_BLOCK_U1, pars, error, 0);
 		break;
 	case 2:		// U2
 		rv = cmd_user_u12(bus, FS_BLOCK_U2, pars, error, 0);
+		break;
+	case 9:		// U9 / UI
+		rv = CBM_ERROR_DOSVERSION;
 		break;
 	default:
 		break;

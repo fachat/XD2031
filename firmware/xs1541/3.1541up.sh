@@ -4,6 +4,19 @@
 PORT=/dev/ttyAMA0
 default=XD2031-xs1541.hex
 
+if test ! -s $default
+then
+  if [ `ls *.hex | wc -w` = "1" ] ; then
+    default=`find . -name *.hex`
+    echo Defaulting to $default
+  else
+    printf "Error: None or more than a single .hex files found.\n"
+    printf "Please specify one with $0 <name.hex>\n"
+    exit 1
+  fi
+fi
+
+
 # If the Server is running, terminate it first to free the serial line
 if pidof fsser > /dev/null ; then
   sudo service fsser stop
