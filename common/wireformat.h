@@ -65,8 +65,8 @@
 #define   FS_WRITE       8      /* push data */
 #define   FS_REPLY       9      /* return value */
 #define   FS_EOF         10     /* as FS_WRITE, but signal EOF with */
-#define	  FS_SEEK	 11	/* seek within a file */
-#define   FS_CLOSE	 12	/* close a channel */
+#define	 FS_SEEK        11	/* seek within a file */
+#define   FS_CLOSE       12	/* close a channel */
 
 #define   FS_MOVE      	 13	/* rename a file */
 #define   FS_DELETE      14	/* delete a file */
@@ -89,6 +89,9 @@
 
 #define   FS_CHARSET 	 27	/* send to the server the name of the requested character set for
 				   file names and directory entries */
+#define   FS_COPY        28   /* copy a file or merge files */
+#define   FS_DUPLICATE   29   /* duplicate a disk image or copy a directory */
+#define   FS_INITIALIZE  30   /* initialize (e.g. free buffers and remove file locks) */
 
 /*
  * BLOCK and DIRECT commands
