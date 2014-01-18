@@ -47,6 +47,7 @@ const char IN_ROM STR_FILE_NOT_OPEN[]        = "FILE NOT OPEN";
 const char IN_ROM STR_FILE_EXISTS[]          = "FILE EXISTS";
 const char IN_ROM STR_FILE_TYPE_MISMATCH[]   = "FILE TYPE MISMATCH";
 const char IN_ROM STR_DIR_NOT_EMPTY[]        = "DIR NOT EMPTY";
+const char IN_ROM STR_DIR_NOT_FOUND[]        = "DIR NOT FOUND";
 const char IN_ROM STR_NO_PERMISSION[]        = "NO PERMISSION";
 const char IN_ROM STR_FAULT[]                = "GENERAL FAULT";
 const char IN_ROM STR_NO_CHANNEL[]           = "NO CHANNEL";
@@ -82,6 +83,7 @@ const struct err_struct IN_ROM err_tab[] = {
 	{CBM_ERROR_FILE_EXISTS          , STR_FILE_EXISTS          },
 	{CBM_ERROR_FILE_TYPE_MISMATCH   , STR_FILE_TYPE_MISMATCH   },
 	{CBM_ERROR_DIR_NOT_EMPTY        , STR_DIR_NOT_EMPTY        },
+	{CBM_ERROR_DIR_NOT_FOUND        , STR_DIR_NOT_FOUND        },
 	{CBM_ERROR_NO_PERMISSION        , STR_NO_PERMISSION        },
 	{CBM_ERROR_FAULT                , STR_FAULT                },
 	{CBM_ERROR_NO_CHANNEL           , STR_NO_CHANNEL           },

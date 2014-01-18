@@ -306,6 +306,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	// - namep pointing to the directory match pattern for the current directory
 	log_debug("current_dir=%p, file=%p, namep=%s\n", current_dir, file, namep);
 
+	if (strchr(namep, dir_separator_char()) != NULL) {
+		err = CBM_ERROR_DIR_NOT_FOUND;
+	}
+
 	*outdir = NULL;
 	*outfile = NULL;
 	if (outpattern != NULL) {
@@ -411,27 +415,28 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			}
 		}
 
-		// we want the file here, so we can close the dir and its parents
-		dir->handler->close(dir, 1);
-
 		if (file != NULL) {
 			if (type == FS_OPEN_AP) {
 				err = file->handler->seek(file, 0, SEEKFLAG_END);
 			}
 
+			*outfile = file;
+
 			// and loose the pointer to the parent
 			loose_parent(file, dir);
 		}
+	}
 
-		if (err == CBM_ERROR_OK) {
-			*outfile = file;
-		} else {
-			// on error
-			if (file != NULL) {
-				file->handler->close(file, 0);
-			}
-			*outfile = NULL;
+	if (err != CBM_ERROR_OK) {
+		// on error
+		if (file != NULL) {
+			file->handler->close(file, 0);
 		}
+		*outfile = NULL;
+	}
+	if (dir != NULL) {
+		// we want the file here, so we can close the dir and its parents
+		dir->handler->close(dir, 1);
 	}
 
 	if (pattern != NULL) {
@@ -461,7 +466,9 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR, &pars);
 
-	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p, parent=%p\n", err, dir, (dir==NULL)?NULL:dir->parent);
+	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p (%s), parent=%p, pattern=%s\n", 
+			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,
+			(pattern==NULL)?"":pattern);
 
 	if (dir != NULL) {
 		// we can close the parents anyway
