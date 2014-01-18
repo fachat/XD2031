@@ -41,24 +41,24 @@ typedef enum {
         //
         CMD_NONE,
         CMD_SYNTAX,
-	CMD_OVERWRITE = FS_OPEN_OW,
+        CMD_OVERWRITE = FS_OPEN_OW,
         CMD_DIR = FS_OPEN_DR,
         //
         // CBM DOS commands
         //
-        CMD_INITIALIZE,
-        CMD_RENAME = FS_MOVE,
-        CMD_SCRATCH = FS_DELETE,
-	CMD_POSITION,
-	//
+        CMD_INITIALIZE = FS_INITIALIZE,
+        CMD_RENAME     = FS_MOVE,
+        CMD_SCRATCH    = FS_DELETE,
+        CMD_POSITION   = FS_POSITION,
+        CMD_VALIDATE   = FS_CHKDSK,
+        CMD_COPY       = FS_COPY,
+        CMD_DUPLICATE  = FS_DUPLICATE,
+        CMD_NEW        = FS_FORMAT,
+        CMD_BLOCK      = FS_BLOCK,
+        CMD_UX         = FS_SYNC, // makes no sense but doesn't conflict
+        //
         // unsupported
         //
-        // CMD_VALIDATE,
-        // CMD_COPY,
-        // CMD_DUPLICATE,
-        // CMD_NEW,
-        CMD_BLOCK = FS_BLOCK,
-        CMD_UX = FS_SYNC, // makes no sense but doesn't conflict
         // CMD_MEM_READ,
         // CMD_MEM_WRITE,
         // CMD_MEM_EXEC,
