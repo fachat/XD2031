@@ -128,9 +128,10 @@ struct _file {
 };
 
 // note: go from FIRST to ENTRIES to END by +1
-#define	DIRSTATE_FIRST		0
-#define	DIRSTATE_ENTRIES	1
-#define	DIRSTATE_END		2
+#define	DIRSTATE_NONE		0
+#define	DIRSTATE_FIRST		1
+#define	DIRSTATE_ENTRIES	2
+#define	DIRSTATE_END		3
 
 
 // file operations

@@ -50,6 +50,10 @@ void reg_init(registry_t *reg, const char *name, int initial_capacity) {
 }
 
 
+int reg_size(registry_t *reg) {
+	return reg->numentries;
+}
+
 // adds a pre-allocated struct
 void reg_append(registry_t *reg, void *ptr) {
 

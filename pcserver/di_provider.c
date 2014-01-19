@@ -84,6 +84,7 @@ typedef struct
    slot_t Slot;           // 
    uint8_t  *buf;         // direct channel block buffer
    uint8_t  CBM_file[20]; // filename with CBM charset
+   char     *dospattern;  // directory match pattern in PETSCII
    uint8_t  is_first;     // is first directory entry?
    uint8_t  next_track;
    uint8_t  next_sector;
@@ -158,6 +159,7 @@ static void di_init_fp(const type_t *t, void *obj)
   fp->chs = 0;
   fp->chp = 0;
   fp->file.handler = &di_file_handler;
+  fp->dospattern = NULL;
 }
 
 static type_t file_type = {
@@ -263,7 +265,12 @@ static void di_freeep(endpoint_t *ep)
 {
 	File *f = NULL;
    	di_endpoint_t *cep = (di_endpoint_t*) ep;
+	if (reg_size(&ep->files)) {
+		log_warn("di_freeep(): closing endpoint with %n open files!\n", reg_size(&ep->files));
+	}
+
         while ((f = (File*)reg_get(&ep->files, 0)) != NULL) {
+		log_warn("di_freeep(): force closing file %p\n", reg_size(&ep->files));
                 di_close_fd(cep, f);
         }
    	mem_free(ep);
@@ -321,6 +328,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
    	di_endpoint_t *diep = mem_alloc(&endpoint_type);
 	diep->Ip = file;
+	diep->base.is_temporary = 1;
 
 	if ((err = di_load_image(diep, file)) == CBM_ERROR_OK) {
 		// image identified correctly
@@ -331,6 +339,8 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
 		(*wrapped)->pattern = mem_alloc_str(file->pattern);
 		err = CBM_ERROR_OK;
+	} else {
+		di_freeep((endpoint_t*)diep);
 	}
 
 	return err;
@@ -445,7 +455,6 @@ static void di_sync_BAM(di_endpoint_t *diep)
 static int di_close_fd(di_endpoint_t *diep, File *f)
 {
   uint8_t t,s,p;
-  int res;
 
   log_debug("Closing file %p access mode = %d\n", f, f->access_mode);
 
@@ -484,6 +493,11 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   } else {
     log_debug("Closing read only file, no sync required.\n");
   }
+
+  	if (f->dospattern != NULL) {
+		mem_free(f->dospattern);
+	}
+
   //di_init_fp(f);
   return 0;
 }
@@ -1080,6 +1094,31 @@ static void di_pos_append(di_endpoint_t *diep, File *f)
 }
 
 // ************
+// di_open_dir
+// ************
+// open a directory read
+static int di_open_dir(File *file) {
+
+	int er = CBM_ERROR_FAULT;
+
+        log_debug("ENTER: di_open_dr(%p (%s))\n",file,
+                        (file == NULL)?"<nil>":file->file.filename);
+
+	// crude root check
+        if(strcmp(file->file.filename, "$") == 0) {
+          file->file.dirstate = DIRSTATE_FIRST;
+
+          log_exitr(CBM_ERROR_OK);
+          return CBM_ERROR_OK;
+        } else {
+          log_error("Error opening directory");
+          log_exitr(er);
+          return er;
+        }
+}
+
+
+// ************
 // di_open_file
 // ************
 
@@ -1203,6 +1242,8 @@ static int di_fill_entry(uint8_t *dest, slot_t *slot)
    dest[FS_DIR_LEN+3] = 0;
    dest[FS_DIR_MODE]  = FS_DIR_MOD_FIL;
    
+   memset(dest+FS_DIR_YEAR,0,6);	// date+time
+
    strcpy(p,(const char *)slot->filename);
 
    dest[FS_DIR_ATTR] = ((slot->type &
@@ -1220,8 +1261,10 @@ static int di_fill_entry(uint8_t *dest, slot_t *slot)
 
 static int di_directory_header(char *dest, di_endpoint_t *diep)
 {
-   memset(dest+FS_DIR_LEN,0,4);
+   memset(dest+FS_DIR_LEN,0,4);		// length
+   memset(dest+FS_DIR_YEAR,0,6);	// date+time
    dest[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
+
    if (diep->DI.ID == 80 || diep->DI.ID == 82)
    {
       di_fseek_tsp(diep,39,0, 6);
@@ -1320,14 +1363,23 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		return rv;
 	}
 
+	rv = CBM_ERROR_OK;
+	*outentry = NULL;
+
 	di_endpoint_t *diep = (di_endpoint_t*)fp->endpoint;
-	File *entry = di_reserve_file(diep);
+	File *file = (File*) fp;
+
+	if (file->dospattern == NULL) {
+		const char *pattern = mem_alloc_str(fp->pattern);
+		provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
+		file->dospattern = pattern;
+	}
+
 	*readflag = READFLAG_DENTRY;
 	const char *outpattern;
 	file_t *wrapfile = NULL;
 
 	do {
-      		di_read_slot(diep,&diep->Slot);
 
 		if (diep->Slot.eod) {
 			*outentry = NULL;
@@ -1336,18 +1388,22 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 			break;
 		}
 
+      		di_read_slot(diep,&diep->Slot);
+
+		File *entry = di_reserve_file(diep);
+
 		entry->file.parent = fp;
 		entry->file.mode = FS_DIR_MOD_FIL;
 		entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
 		entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
-		entry->file.filename = mem_alloc_str(diep->Slot.filename);
+		entry->file.filename = mem_alloc_str((const char*)diep->Slot.filename);
 
 // TODO		
-//		if (diep->writable) {
+//		if (diep->base.writable) {
 //			entry->file.attr |= FS_DIR_ATTR_LOCKED;
 //		}
 
-		if ( handler_next((file_t*)entry, FS_OPEN_DR, fp->pattern, &outpattern, &wrapfile)
+		if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, &outpattern, &wrapfile)
 			== CBM_ERROR_OK) {
 			*outentry = wrapfile;
 			rv = CBM_ERROR_OK;
@@ -1357,6 +1413,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		// cleanup to read next entry
 		entry->file.handler->close((file_t*)entry, 0);
 		entry = NULL;
+      		di_next_slot(diep,&diep->Slot);
    	} while (1);
 
 	return rv;
@@ -1370,29 +1427,33 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int *eof)
 {
    int rv = 0;
-   log_debug("di_read_dir_entry(%p)\n",file);
+   log_debug("di_read_dir_entry(%p, dospattern=%s)\n",file,file->dospattern);
 
    if (!file) return -CBM_ERROR_FAULT;
 
    *eof = READFLAG_DENTRY;
 
-   if (file->is_first == 1)
+   if (file->file.dirstate == DIRSTATE_FIRST)
    {
-      file->is_first++;
+      file->file.dirstate ++;
       rv = di_directory_header(retbuf,diep);
       di_first_slot(diep,&diep->Slot);
       return rv;
    }
 
-   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,file->file.pattern, FS_DIR_TYPE_UNKNOWN))
+   if (!diep->Slot.eod && di_match_slot(diep,&diep->Slot,(uint8_t*)file->dospattern, FS_DIR_TYPE_UNKNOWN))
    {    
       rv = di_fill_entry((uint8_t *)retbuf,&diep->Slot);
       di_next_slot(diep,&diep->Slot);
       return rv;
    }
 
+   if (file->file.dirstate != DIRSTATE_END) {
+      file->file.dirstate = DIRSTATE_END;
+      rv = di_blocks_free(retbuf, diep);
+   }
    *eof |= READFLAG_EOF;
-   return di_blocks_free(retbuf,diep);
+   return rv;
 }
 
 // ************
@@ -2343,12 +2404,20 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 // di_open
 //***********
 
-static int di_open(endpoint_t *ep, const char *buf, const char *opts, int *reclen, int type)
+static int di_open(file_t *fp, int type) 
 {
-   uint16_t reclen16 = 0;
-   int rv = di_open_file(ep, (uint8_t *)buf, (uint8_t *)opts, &reclen16, type);
-   *reclen = reclen16;
-   return rv;
+   	uint16_t reclen16 = 0;
+	int rv = CBM_ERROR_FAULT;
+	
+	File *file = (File*) fp;
+
+	if (type == FS_OPEN_DR) {
+		rv = di_open_dir(file);
+	} else {
+   		//rv = di_open_file(ep, (uint8_t *)buf, (uint8_t *)opts, &reclen16, type);
+   		//*reclen = reclen16;
+	}
+   	return rv;
 }
 
 // *****************
@@ -2374,15 +2443,21 @@ static int di_readfile(file_t *fp, char *retbuf, int len, int *eof)
    di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
    File *file = (File*) fp;
    log_debug("di_readfile(%p fp=%p len=%d\n",diep,file,len);
+
+	if (fp->dirstate != DIRSTATE_NONE) {
+		// directory
+		rv = di_read_dir_entry(diep, file, retbuf, eof);
+	} else
+	{
 /*   
    if (di_direct_channel(diep,chan) >= 0)
    {
       return di_read_block(diep, file, retbuf, len, eof);
-   }
+   } else {
 */
-   if (file->is_first) rv = di_read_dir_entry(diep, file, retbuf, eof);
-   else             rv = di_read_seq(diep, file, retbuf, len, eof);
-   return rv;
+   		rv = di_read_seq(diep, file, retbuf, len, eof);
+	}
+   	return rv;
 }
 
 // *******
@@ -2462,21 +2537,23 @@ static void di_print_block(di_endpoint_t *diep, int pos)
 
 #endif
 
-static void dif_close(file_t *fp, int recurse) {
+static void di_close(file_t *fp, int recurse) {
 	File *file = (File*) fp;
+	di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
 
-	di_close_fd((di_endpoint_t*) fp->endpoint, file);
+	di_close_fd(diep, file);
 
-	// TODO close endpoint if temp and last file
+	reg_remove(&diep->base.files, file);
+
+	if (diep->base.is_temporary && reg_size(&diep->base.files) == 0) {
+		di_freeep(fp->endpoint);
+	}
 }
 
-#if 0
-static int dif_open(file_t *fp, int opentype) {
-	File *file = (File*) fp;
-
-	// TODO
+static charconv_t convfrom(file_t *prov, const char *tocharset) {
+        (void) tocharset; // not needed
+        return provider_convfrom(prov->endpoint->ptype);
 }
-#endif
 
 // ----------------------------------------------------------------------------------
 
@@ -2509,12 +2586,12 @@ provider_t di_provider =
 
 handler_t di_file_handler = {
         "fs_file_handler",
-        "ASCII",
-        NULL,                   // resolve
-        NULL,	//	dif_close,              // close
-        NULL,	//	dif_open,               // open
-	NULL,	//      dif_convfrom,           // convfrom
-	handler_parent,	// 	default parent() impl
+        NULL,		// charset name
+        NULL,   	// resolve - not required
+        di_close,       // close
+        di_open,        // open a file_t
+	convfrom,       // convfrom
+	handler_parent,	// default parent() impl
         NULL,	//	dif_seek,               // seek
         di_readfile,            // readfile
         di_writefile,           // writefile
@@ -2525,7 +2602,7 @@ handler_t di_file_handler = {
 
 provider_t di_provider = {
         "fs",
-        "ASCII",
+        "PETSCII",
         di_init,
         di_newep,
         di_tempep,

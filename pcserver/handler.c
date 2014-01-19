@@ -95,7 +95,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 	pars.recordlen = 0;
 	pars.filetype = FS_DIR_TYPE_UNKNOWN;
 
-	log_debug("handler_wrap(infile=%s)\n", infile->filename);
+	log_debug("handler_next(infile=%s, pattern=%s)\n", infile->filename, pattern);
 
 	int err = CBM_ERROR_FILE_NOT_FOUND;
 	*outfile = NULL;
