@@ -79,7 +79,7 @@ typedef enum {
 	CBM_ERROR_DISK_FULL		= 72,
 	CBM_ERROR_DOSVERSION		= 73,
 	CBM_ERROR_DRIVE_NOT_READY	= 74
-} errno_t;
+} cbm_errno_t;
 
 
 #endif

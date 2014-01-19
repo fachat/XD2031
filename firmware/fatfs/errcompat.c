@@ -21,7 +21,7 @@
 ***************************************************************************/
 
 
-/* ----- FatFs FRESULT errors vs CBM errno_t errors --------------------------
+/* ----- FatFs FRESULT errors vs CBM cbm_errno_t errors --------------------------
 
    Some FatFs functions depend on the error code of other internal functions,
    so making them an alias to CBM_ERROR-ones does not seem to be a good
@@ -39,7 +39,7 @@
 #error Table might be outdated
 #endif
 
-static const errno_t fresult_tbl[] IN_ROM = {
+static const cbm_errno_t fresult_tbl[] IN_ROM = {
    [FR_OK]                  = CBM_ERROR_OK,              /* (0) Succeeded */
    [FR_DISK_ERR]            = CBM_ERROR_WRITE_ERROR,     /* (1) A hard error occurred in the low level disk I/O layer */
    [FR_INT_ERR]             = CBM_ERROR_FAULT,           /* (2) Assertion failed */
@@ -62,12 +62,12 @@ static const errno_t fresult_tbl[] IN_ROM = {
    [FR_INVALID_PARAMETER]   = CBM_ERROR_SYNTAX_UNKNOWN   /* (19) Given parameter is invalid */
 };
 
-errno_t conv_fresult(FRESULT fres) {
+cbm_errno_t conv_fresult(FRESULT fres) {
 	if (fres > sizeof(fresult_tbl)) return CBM_ERROR_FAULT;
 	return rom_read_byte(&fresult_tbl[fres]);
 }
 
-errno_t combine (errno_t cres, FRESULT fres) {
+cbm_errno_t combine (cbm_errno_t cres, FRESULT fres) {
 	if (cres != CBM_ERROR_OK) return cres;
 	return conv_fresult(fres);
 }
