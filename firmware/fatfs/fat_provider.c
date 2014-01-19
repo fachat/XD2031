@@ -126,8 +126,8 @@ static struct {
 // ----- Prototypes --------------------------------------------------------
 
 // helper functions
-static errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
-static errno_t fs_move(char *buf);
+static cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
+static cbm_errno_t fs_move(char *buf);
 static void fs_delete(char *path, packet_t *p);
 
 // Copy a filename/path limited to 16 characters
@@ -181,7 +181,7 @@ static FIL *tbl_ins_file(uint8_t chan) {
    return NULL;
 }
 
-static errno_t tbl_ins_dir(int8_t chan) {
+static cbm_errno_t tbl_ins_dir(int8_t chan) {
    for(uint8_t i=0; i < FAT_MAX_FILES; i++) {
       if(tbl[i].chan == chan) {
          debug_printf("dir_state #%d := DIR_HEAD\n", i);
@@ -210,9 +210,9 @@ static FIL *tbl_find_file(uint8_t chan) {
    return &tbl[pos].f;
 }
 
-static errno_t tbl_close_file(uint8_t chan) {
+static cbm_errno_t tbl_close_file(uint8_t chan) {
    int8_t pos;
-   errno_t cres = CBM_ERROR_OK;
+   cbm_errno_t cres = CBM_ERROR_OK;
    FRESULT fres = FR_OK;
 
    if((pos = tbl_chpos(chan)) != AVAILABLE) {
@@ -571,7 +571,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 // ----- Directories -------------------------------------------------------
 
-errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
+cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
    FRESULT fres;
    int8_t tblpos = tbl_chpos(channelno);
    char *p = (char *) packet->buffer;
@@ -706,7 +706,7 @@ errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 
 // ----- Rename a file or directory ----------------------------------------
 
-static errno_t fs_move(char *buf) {
+static cbm_errno_t fs_move(char *buf) {
    // Rename/move a file or directory
    // DO NOT RENAME/MOVE OPEN OBJECTS!
    FRESULT fres;
@@ -734,7 +734,7 @@ static errno_t fs_move(char *buf) {
 
 // ----- Delete files ------------------------------------------------------
 
-errno_t _scratch(const char *path) {
+cbm_errno_t _scratch(const char *path) {
    debug_printf("Scratching '%s'\n", path);
    FRESULT fres = f_unlink(path);
    if(fres) debug_printf("f_unlink: %d\n", fres);
@@ -748,7 +748,7 @@ errno_t _scratch(const char *path) {
    in case of any errors
 */
 static void fs_delete(char *path, packet_t *packet) {
-   errno_t cres = CBM_ERROR_OK;
+   cbm_errno_t cres = CBM_ERROR_OK;
    uint16_t files_scratched = 0;
    char *pnext;
 

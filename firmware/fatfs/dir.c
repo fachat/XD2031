@@ -70,7 +70,7 @@ char *splitpath(char *path, char **dir) {
  * returns CBM_ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
  * otherwise returns CBM_ERROR_OK
  */
-errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
+cbm_errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name) {
 	if((strlen(dir) + 1 + strlen(name)) > pathmax) return CBM_ERROR_FILE_NAME_TOO_LONG;
 	strcpy(path, dir);
 	strcat(path, "/");
@@ -79,20 +79,20 @@ errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, cons
 }
 
 // just a dummy action for debug purposes
-errno_t dummy_action(const char *path) {
+cbm_errno_t dummy_action(const char *path) {
 	debug_printf("--> '%s'\n", path);
 	return CBM_ERROR_OK;
 }
 
-errno_t traverse(
+cbm_errno_t traverse(
 	char		*path,			// path string (may contain wildcards and path separators)
 	uint16_t	max_matches,		// abort if this number of matches is reached
 	uint16_t	*matches,		// count number of total matches
 	uint8_t		required_flags,		// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
 	uint8_t		forbidden_flags,	// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
-	errno_t	(*action)(const char *path)	// function called by each match
+	cbm_errno_t	(*action)(const char *path)	// function called by each match
 ) {
-	errno_t cres = CBM_ERROR_OK;
+	cbm_errno_t cres = CBM_ERROR_OK;
 	FRESULT fres;
 	char *b, *d;
 	char *filename;

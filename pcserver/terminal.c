@@ -149,7 +149,7 @@ int terminal_init (void) {
 		green	= strdup(tiparm(tigetstr("setaf"), 2));
 		yellow	= strdup(tiparm(tigetstr("setaf"), 3));
                 if(boldstr) {
-		   blue	= malloc(strlen(boldstr) + strlen(tiparm(tigetstr("setaf"))) + 1);
+		   blue	= malloc(strlen(boldstr) + strlen(tiparm(tigetstr("setaf"), 4)) + 1);
                    if(!blue) {
                       log_error("malloc failed!\n");
                       exit(1);
