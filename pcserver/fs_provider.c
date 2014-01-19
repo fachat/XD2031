@@ -1497,7 +1497,7 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
 	File *f = (File*) fp;
 #ifdef DEBUG_READ
-	log_debug("readfile file=%p (fp=%p, dp=%p, block=%p, *readflag=%d)\n",
+	log_debug("fs_readfile file=%p (fp=%p, dp=%p, block=%p, *readflag=%d)\n",
 		f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *readflag);
 #endif
 	int rv = fs_open_temp(f);
@@ -1543,6 +1543,8 @@ static int fs_seek(file_t *fp, long position, int flag) {
 	errno_t rv = CBM_ERROR_OK;
 
 	int seekflag = (flag == SEEKFLAG_END) ? SEEK_END : SEEK_SET;
+
+	log_debug("fs_seek(%p, %ld, %d)\n", fp, position, flag);
 
 	File *file = (File*) fp;
 
