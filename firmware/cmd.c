@@ -63,7 +63,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
                                 (nameinfo.file[0].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
                                 nameinfo.file[0].drive + 0x30));
         debug_printf("NAME2='%s' (%d)\n", (nameinfo.file[0].name == NULL) ? "" : (char*)nameinfo.file[0].name,
-				nameinfo.namelen2);
+				nameinfo.file[0].namelen);
         debug_puts("ACCESS="); debug_putc(isprint(nameinfo.access) ? nameinfo.access : '-'); debug_putcrlf();
         debug_puts("TYPE="); debug_putc(isprint(nameinfo.type) ? nameinfo.type : '-'); debug_putcrlf();
 #endif
