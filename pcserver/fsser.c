@@ -77,10 +77,10 @@ void usage(int rv) {
 
 
 int main(int argc, char *argv[]) {
-	serial_port_t writefd, readfd;
+	serial_port_t writefd=0, readfd=0;
 	serial_port_t fdesc;
 	int i;
-	char *dir;
+	char *dir=NULL;
 	char *device = NULL;	/* device name or NULL if stdin/out */
 	char parameter_d_given = FALSE;
 

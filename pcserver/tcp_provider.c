@@ -263,7 +263,7 @@ static void close_fds(endpoint_t *ep, int tfd) {
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
 	int ern;
 	int er = CBM_ERROR_FAULT;
-	File *file;
+	File *file=NULL;
 	struct addrinfo *addr, *ap;
 	struct addrinfo hints;
 	int sockfd;
