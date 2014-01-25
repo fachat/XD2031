@@ -59,10 +59,10 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
                                 nameinfo.drive + 0x30));
         debug_printf("NAME='%s' (%d)\n", (nameinfo.name == NULL) ? "" : (char*)nameinfo.name, 
 				nameinfo.namelen);
-        debug_printf("DRIVE2=%c\n", nameinfo.drive2 == NAMEINFO_UNUSED_DRIVE ? '-' :
-                                (nameinfo.drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
-                                nameinfo.drive2 + 0x30));
-        debug_printf("NAME2='%s' (%d)\n", (nameinfo.name2 == NULL) ? "" : (char*)nameinfo.name2,
+        debug_printf("DRIVE2=%c\n", nameinfo.file[0].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+                                (nameinfo.file[0].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+                                nameinfo.file[0].drive + 0x30));
+        debug_printf("NAME2='%s' (%d)\n", (nameinfo.file[0].name == NULL) ? "" : (char*)nameinfo.file[0].name,
 				nameinfo.namelen2);
         debug_puts("ACCESS="); debug_putc(isprint(nameinfo.access) ? nameinfo.access : '-'); debug_putcrlf();
         debug_puts("TYPE="); debug_putc(isprint(nameinfo.type) ? nameinfo.type : '-'); debug_putcrlf();
@@ -93,7 +93,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 				return -1;
 			}
 
-			if (provider_assign( nameinfo.drive, (char*) nameinfo.name, (char*) nameinfo.name2 ) < 0) {
+			if (provider_assign( nameinfo.drive, (char*) nameinfo.name, (char*) nameinfo.file[0].name ) < 0) {
 				return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer, errormsg, rtconf, callback, 1);
 			}
 			break;
