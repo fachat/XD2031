@@ -35,7 +35,7 @@
  *
  * In this case the 'name' member points to "newname", with 'namelen'=7,
  * and 'drive'=0. The "=" will be replaced by a zero byte.
- * Then 'name2' points to "oldname", with 'drive2'=UNUSED.
+ * Then 'file[0].name' points to "oldname", with 'file[0].drive'=UNUSED.
  * Here we cannot just insert the old drive number "in place" - we have to 
  * move the old name one char to the back.
  * 
@@ -43,6 +43,14 @@
  * as "0:" is more than the single drive byte.
  */
 
+#define MAX_NAMEINFO_FILES 4
+
+typedef struct {
+	uint8_t drive;        // starts from 0 (real zero, not $30 = ASCII "0")
+	uint8_t *drivename;   // name of drive ("FTP", ...)
+	uint8_t *name;        // pointer to the actual name
+	uint8_t namelen;      // length of file name
+} drive_and_name_t;
 
 typedef struct {
 	uint8_t	drive;		// starts from 0 (real zero, not $30 = ASCII "0")
@@ -53,12 +61,10 @@ typedef struct {
 	uint8_t *drivename;     // name of drive ("FTP", ...)
 	uint8_t *name;		// pointer to the actual name
 	uint8_t	namelen;	// length of file name
-	uint8_t	drive2;		// starts from 0 (real zero, not $30 = ASCII "0")
-	uint8_t *drivename2;    // name of drive ("FTP", ...)
-	uint8_t *name2;		// pointer to the actual name after the '='
-	uint8_t	namelen2;	// length of remaining file name
 	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
 	uint16_t recordno;	// record number from P command
+	uint8_t num_files;   // number of secondary drive_filenames
+	drive_and_name_t file[MAX_NAMEINFO_FILES]; // drive_name info
 } nameinfo_t;
 
 // nameinfo option bits
