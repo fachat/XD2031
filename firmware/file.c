@@ -188,8 +188,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 	// if second name does not have a drive, use drive from first,
 	// but only if it is defined
-	if (nameinfo.drive2 == NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
-		nameinfo.drive2 = nameinfo.drive;
+	if (nameinfo.file[0].drive == NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
+		nameinfo.file[0].drive = nameinfo.drive;
 	}
 
 	// here is the place to plug in other file system providers,
@@ -212,21 +212,23 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
 		((char*)nameinfo.name, strlen((char*)nameinfo.name), 
 		(char*)nameinfo.name, strlen((char*)nameinfo.name));
-	if (nameinfo.name2 != NULL) {
-		cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-			((char*)nameinfo.name2, strlen((char*)nameinfo.name2), 
-			(char*)nameinfo.name2, strlen((char*)nameinfo.name2));
+	for (uint8_t i=0 ; i < nameinfo.num_files ; ++i) {
+		if (nameinfo.file[i].name != NULL) {
+			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+				((char*)nameinfo.file[i].name, strlen((char*)nameinfo.file[i].name), 
+				(char*)nameinfo.file[i].name, strlen((char*)nameinfo.file[i].name));
+		}
 	}
 
 	if (type == FS_MOVE 
-		&& nameinfo.drive2 != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
-		&& nameinfo.drive2 != nameinfo.drive) {		// no need to check if the same
+		&& nameinfo.file[0].drive != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
+		&& nameinfo.file[0].drive != nameinfo.drive) {		// no need to check if the same
 
 		// two-name command(s) with possibly different drive numbers
-		endpoint_t *endpoint2 = provider_lookup(nameinfo.drive2, (char*) nameinfo.name2);
+		endpoint_t *endpoint2 = provider_lookup(nameinfo.file[0].drive, (char*) nameinfo.file[0].name);
 
 		if (endpoint2 != endpoint) {
-			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.drive2+0x30);
+			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.file[0].drive+0x30);
 			set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
 			return -1;
 		}
