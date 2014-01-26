@@ -84,7 +84,7 @@ typedef struct
    slot_t Slot;           // 
    uint8_t  *buf;         // direct channel block buffer
    uint8_t  CBM_file[20]; // filename with CBM charset
-   char     *dospattern;  // directory match pattern in PETSCII
+   const char *dospattern;  // directory match pattern in PETSCII
    uint8_t  is_first;     // is first directory entry?
    uint8_t  next_track;
    uint8_t  next_sector;
@@ -188,7 +188,7 @@ static File *di_reserve_file(di_endpoint_t *diep)
 // di_load_image
 // *************
 
-static errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
+static cbm_errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
 {
    
    log_debug("image size = %d\n",diep->Ip->filesize);
@@ -310,7 +310,7 @@ static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
 
 static int di_wrap(file_t *file, file_t **wrapped)
 {
-	errno_t err = CBM_ERROR_FILE_NOT_FOUND;
+	cbm_errno_t err = CBM_ERROR_FILE_NOT_FOUND;
 
 	log_debug("di_wrap:\n");
 
@@ -352,7 +352,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 // note: this provider reads/writes single bytes in many cases
 // always(?) preceeded by a seek, so there is room for improvements
 
-static inline errno_t di_fseek(file_t *file, long pos, int whence) {
+static inline cbm_errno_t di_fseek(file_t *file, long pos, int whence) {
 	return file->handler->seek(file, pos, whence);
 }
 
@@ -495,7 +495,8 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   }
 
   	if (f->dospattern != NULL) {
-		mem_free(f->dospattern);
+		// discard const
+		mem_free((char*)f->dospattern);
 	}
 
   //di_init_fp(f);
@@ -706,7 +707,7 @@ static void di_read_slot(di_endpoint_t *diep, slot_t *slot)
    slot->ss_sector    = p[22];
    slot->recordlen    = p[23];
 
-   log_debug("di_read_slot <%s>\n",slot->filename);
+   log_debug("di_read_slot <(%02x ...) %s>\n",slot->filename[0], slot->filename);
 }
 
 // *************
@@ -1357,7 +1358,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 	log_debug("di_direntry(fp=%p)\n", fp);
 
-	errno_t rv = CBM_ERROR_FAULT;
+	cbm_errno_t rv = CBM_ERROR_FAULT;
 
    	if (!fp) {
 		return rv;
@@ -1370,7 +1371,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	File *file = (File*) fp;
 
 	if (file->dospattern == NULL) {
-		const char *pattern = mem_alloc_str(fp->pattern);
+		char *pattern = mem_alloc_str(fp->pattern);
 		provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
 		file->dospattern = pattern;
 	}
@@ -1427,7 +1428,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int *eof)
 {
    int rv = 0;
-   log_debug("di_read_dir_entry(%p, dospattern=%s)\n",file,file->dospattern);
+   log_debug("di_read_dir_entry(%p, dospattern=(%02x ...) %s)\n",file,file->dospattern[0], file->dospattern);
 
    if (!file) return -CBM_ERROR_FAULT;
 

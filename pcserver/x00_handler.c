@@ -231,7 +231,7 @@ static int x00_write(file_t *file, char *buf, int len, int writeflg) {
 
 static int x00_open(file_t *file, int opentype) {
 
-	errno_t rv = file->parent->handler->open(file->parent, opentype);
+	cbm_errno_t rv = file->parent->handler->open(file->parent, opentype);
 	if (rv == CBM_ERROR_OK) {
 		rv = x00_seek(file, 0, SEEKFLAG_ABS);
 	}

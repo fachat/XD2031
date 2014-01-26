@@ -1477,7 +1477,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 
 static int fs_open_temp(File *file) {
 	
-	errno_t rv = CBM_ERROR_OK;
+	cbm_errno_t rv = CBM_ERROR_OK;
 
 	if (file->file.mode == FS_DIR_MOD_FIL) {
 	
@@ -1540,7 +1540,7 @@ static int writefile(file_t *fp, char *buf, int len, int is_eof) {
 
 static int fs_seek(file_t *fp, long position, int flag) {
 
-	errno_t rv = CBM_ERROR_OK;
+	cbm_errno_t rv = CBM_ERROR_OK;
 
 	int seekflag = (flag == SEEKFLAG_END) ? SEEK_END : SEEK_SET;
 
@@ -1561,7 +1561,7 @@ static int fs_seek(file_t *fp, long position, int flag) {
 
 static int fs_open(file_t *fp, int type) {
 
-	errno_t rv = CBM_ERROR_OK;
+	cbm_errno_t rv = CBM_ERROR_OK;
 
 	File *file = (File*) fp;
 
@@ -1598,7 +1598,7 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 
 	(void) pars;	// silence warning
 
-	errno_t rv = CBM_ERROR_OK;
+	cbm_errno_t rv = CBM_ERROR_OK;
 	File *dir = (File*) dirfp;
 	File *retfile = NULL;
 
