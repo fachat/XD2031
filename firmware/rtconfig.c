@@ -267,8 +267,8 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		break;
 	case 'W':
 		// write runtime config to EEPROM
-		nv_save_config(rtc);
-		er = CBM_ERROR_OK;
+		nv_save_common_config();
+		er = nv_save_config(rtc);
 		break;
 	case 'R':
 		if(!strncmp(ptr, "RESET", 5)) {		// ignore CR or whatever follows

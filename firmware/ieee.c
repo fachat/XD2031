@@ -336,7 +336,7 @@ void ieee_init(uint8_t deviceno) {
         ieeehw_setup();
 
 	// register bus instance
-	bus_init_bus("ieee", &bus);
+	bus_init_bus("IEEE-488", &bus);
 
 	// ignore bus when ATN is constantly pulled low, e.g. by switched off devices
 	if (atnishi()) {
