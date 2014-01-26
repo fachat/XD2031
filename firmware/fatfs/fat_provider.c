@@ -32,6 +32,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "packet.h"
 #include "wireformat.h"
@@ -81,13 +82,11 @@ provider_t fat_provider  = {
    NULL                         // channel_put
 };
 
-#define FALSE 0
-#define TRUE -1
 
 // ----- Private provider data ---------------------------------------------
 
 // fat_provider_init() called at first assign
-static uint8_t fat_provider_initialized = FALSE;
+static uint8_t fat_provider_initialized = false;
 
 static FATFS Fatfs[_VOLUMES];   // File system object for each logical drive
 
@@ -246,7 +245,7 @@ static void fat_provider_init(void) {
    res = f_mount(&Fatfs[0], "", 1);
    if(res) debug_printf("f_mount: %u\n", res);
    tbl_init();
-   fat_provider_initialized = TRUE;
+   fat_provider_initialized = true;
 }
 
 static void *prov_assign(uint8_t drive, const char *petscii_parameter) {
@@ -317,7 +316,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
    int8_t fres = FR_OK;
    int8_t cres = CBM_ERROR_OK;
-   int8_t reply_as_usual = TRUE;
+   int8_t reply_as_usual = true;
    UINT transferred = 0;
    FIL *fp;
    char *path = (char *) (txbuf->buffer + 1);
@@ -489,12 +488,12 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
          break;
 
       case FS_DELETE:
-         reply_as_usual = FALSE;
+         reply_as_usual = false;
          fs_delete(path, rxbuf); // replies via rxbuf
          break;
 
       case FS_READ:
-         reply_as_usual = FALSE;
+         reply_as_usual = false;
          debug_puts("FS_READ\n");
          int8_t ds = get_dir_state(channelno);
          if(ds < 0 ) {
@@ -538,7 +537,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
                if(fres == FR_OK) {
                   // a READ mirrors the WRITE request when ok
                   txbuf->type = FS_READ;
-                  reply_as_usual = FALSE;
+                  reply_as_usual = false;
                }
             }
          } else {

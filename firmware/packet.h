@@ -33,6 +33,7 @@
 #define	PACKET_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "wireformat.h"
 #include "delay.h"
@@ -64,8 +65,6 @@
 #define	PACKET_LEN	3
 #define	PACKET_DATA	4
 #define	PACKET_DONE	5
-
-typedef	uint8_t		bool;
 
 typedef struct {
 	uint8_t		type;		// one of the FS_* codes as packet type

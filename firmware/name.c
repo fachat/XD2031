@@ -41,9 +41,6 @@
 #include "debug.h"
 #endif
 
-#define FALSE 0
-#define TRUE  1
-
 #if defined(DEBUG_NAME) || defined(PCTEST)
 static void dump_result(nameinfo_t *result) {
 	printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
