@@ -118,7 +118,7 @@ struct {
 //------------------------------------------------------------------------------------
 // character set handling
 
-static char *ext_charset_name = "ASCII";
+static char *ext_charset_name = NULL;
 
 // get the character set for the external communication (i.e. the wireformat)
 const char *provider_get_ext_charset() {
@@ -131,7 +131,10 @@ void provider_set_ext_charset(char *charsetname) {
 
 	log_info("Setting filename communication charset to '%s'\n", charsetname);
 
-	ext_charset_name = charsetname;
+	if (ext_charset_name != NULL) {
+		mem_free(ext_charset_name );
+	}
+	ext_charset_name = mem_alloc_str(charsetname);
 
 	charset_t ext_cset_idx = cconv_getcharset(charsetname);
 

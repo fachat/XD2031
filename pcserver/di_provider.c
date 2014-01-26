@@ -1400,9 +1400,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
 		entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
 		// convert to external charset
-		tmpnamep = mem_alloc_str((const char*)diep->Slot.filename);
-		convfrom(tmpnamep, &di_provider);
-		entry->file.filename = tmpnamep;
+		entry->file.filename = conv_from_alloc((const char*)diep->Slot.filename, &di_provider); 
 
 // TODO		
 //		if (diep->base.writable) {
@@ -2556,10 +2554,6 @@ static void di_close(file_t *fp, int recurse) {
 	}
 }
 
-//static charconv_t convfrom(file_t *prov, const char *tocharset) {
-//        (void) tocharset; // not needed
-//        return provider_convfrom(prov->endpoint->ptype);
-//}
 
 // ----------------------------------------------------------------------------------
 
@@ -2596,7 +2590,6 @@ handler_t di_file_handler = {
         NULL,   	// resolve - not required
         di_close,       // close
         di_open,        // open a file_t
-//	convfrom,       // convfrom
 	handler_parent,	// default parent() impl
         NULL,	//	dif_seek,               // seek
         di_readfile,            // readfile

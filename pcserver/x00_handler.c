@@ -25,6 +25,8 @@
 
 #include "mem.h"
 #include "log.h"
+#include "provider.h"
+#include "log.h"
 #include "handler.h"
 #include "types.h"
 #include "errors.h"
@@ -75,28 +77,34 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	log_debug("x00_resolve: infile=%s\n", infile->filename);
 
 	// check the file name of the given file_t, if it actually is a Pxx file.
-	const char *name = infile->filename;
 
 	// must be at least one character, plus "." plus "x00" ending
-	if (name == NULL || strlen(name) < 5) {
+	if (infile->filename == NULL || strlen(infile->filename) < 5) {
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
+
+	const char *name = conv_to_name_alloc(infile->filename, x00_handler.native_charset);
+
+	log_debug("x00_resolve: infile converted to=%s\n", name);
 
 	char typechar = 0;
 	uint8_t ftype = 0;
 	const char *p = name + strlen(name) - 4;
 
 	if (*p != '.') {
+		mem_free((char*)name);
 		return CBM_ERROR_OK;
 	}
 	p++;
 	typechar = *p;
 	p++;
 	if (!isdigit(*p)) {
+		mem_free((char*)name);
 		return CBM_ERROR_OK;
 	}
 	p++;
 	if (!isdigit(*p)) {
+		mem_free((char*)name);
 		return CBM_ERROR_OK;
 	}
 
@@ -118,6 +126,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 		ftype = FS_DIR_TYPE_REL;
 		break;
 	default:
+		mem_free((char*)name);
 		return CBM_ERROR_OK;
 		break;
 	}
@@ -135,11 +144,15 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg);
 
 	if (strcmp("C64File", (char*)x00_buf) != 0) { 
+		mem_free((char*)name);
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
 	// ok, we found a real x00 file
 	log_info("Found %c00 file '%s' addressed as '%s'\n", typechar, x00_buf+8, name);
+
+	// clear up
+	mem_free((char*)name);
 
 	// check with the open options
 

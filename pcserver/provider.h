@@ -31,6 +31,7 @@
 #include <time.h>
 #include <string.h>
 
+#include "mem.h"
 #include "charconvert.h"
 #include "openpars.h"
 #include "registry.h"
@@ -260,10 +261,10 @@ void provider_set_ext_charset(char *charsetname);
 // modifies the conversion routines for all the providers
 const char* provider_get_ext_charset();
 
-// get the converter TO the provider
+// get the converter from external charset TO the provider charset
 charconv_t provider_convto(provider_t *prov);
 
-// get the converter FROM the provider
+// get the converter FROM the provider charset to the external charset
 charconv_t provider_convfrom(provider_t *prov);
 
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
@@ -271,16 +272,36 @@ charconv_t provider_convfrom(provider_t *prov);
 file_t *provider_wrap(file_t *file);
 
 // convert string inline from provider to external charset
-static inline void convfrom(char *str, provider_t *prov) {
+static inline void conv_from(char *str, provider_t *prov) {
 	int len = strlen(str);
 
 	provider_convfrom(prov)(str, len, str, len);
 }
 
-// convert string inline from provider to external charset
-static inline void convfroml(char *str, int len, provider_t *prov) {
+static inline char* conv_from_alloc(const char *str, provider_t *prov) {
+	int len = strlen(str);
 
-	provider_convfrom(prov)(str, len, str, len);
+	char *trg = mem_alloc_c(len + 1, "converted_from_name");
+
+	provider_convfrom(prov)(str, len, trg, len);
+
+	trg[len] = 0;
+	return trg;
+}
+
+static inline char* conv_to_name_alloc(const char *str, const char *csetname) {
+	int len = strlen(str);
+
+	log_debug("convert %s from %s to %s\n", str, provider_get_ext_charset(), csetname);
+
+	char *trg = mem_alloc_c(len + 1, "converted_to_name");
+
+	// this is horribly inefficient
+	cconv_converter(cconv_getcharset(provider_get_ext_charset()), 
+						cconv_getcharset(csetname))(str, len, trg, len);
+
+	trg[len] = 0;
+	return trg;
 }
 
 #endif

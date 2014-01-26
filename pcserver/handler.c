@@ -116,10 +116,11 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 		} else {
 			log_error("Got %d as error from handler %s for %s\n", 
 				err, handler->name, pattern);
+			return err;
 		}
 	}
 
-	if (err != CBM_ERROR_OK) {
+	if (*outfile == NULL) {
 		// no wrapper has matched
 		// check original name
 		if (compare_dirpattern(infile->filename, pattern, outpattern) != 0) {
