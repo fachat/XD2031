@@ -567,7 +567,7 @@ static void close_fds(endpoint_t *ep, int tfd) {
 // open a file for reading, writing, or appending
 static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int fs_cmd) {
 	int er = CBM_ERROR_FAULT;
-	File *file;
+	File *file=NULL;
 
 	uint16_t recordlen = 0;
 	uint8_t type;

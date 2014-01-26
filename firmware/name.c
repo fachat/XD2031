@@ -52,12 +52,12 @@ static void dump_result(nameinfo_t *result) {
 	printf("NAME='%s' (%d)\n", result->name ? (char*)result->name : nullstring, result->namelen);
 	printf("ACCESS=%c\n", result->access ? result->access : '-');
 	printf("TYPE=%c", result->type ? result->type : '-'); debug_putcrlf();
-	printf("DRIVE2=%c\n", result->drive2 == NAMEINFO_UNUSED_DRIVE ? '-' :
-				(result->drive2 == NAMEINFO_UNDEF_DRIVE ? '*' :
-				(result->drive2 == NAMEINFO_LAST_DRIVE ? 'L' :
-				result->drive2 + 0x30)));
-	printf("DRIVENAME2='%s'\n", result->drivename2 ? (char*) result->drivename2 : nullstring);
-	printf("NAME2='%s' (%d)\n", result->name2 ? (char*)result->name2 : nullstring, result->namelen2);
+	printf("DRIVE2=%c\n", result->file[0].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+				(result->file[0].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+				(result->file[0].drive == NAMEINFO_LAST_DRIVE ? 'L' :
+				result->file[0].drive + 0x30)));
+	printf("DRIVENAME2='%s'\n", result->file[0].drivename ? (char*) result->file[0].drivename : nullstring);
+	printf("NAME2='%s' (%d)\n", result->file[0].name ? (char*)result->file[0].name : nullstring, result->file[0].namelen);
 	printf("RECLEN=%d\n", result->recordlen);
 	debug_flush();
 }
@@ -80,12 +80,13 @@ nameinfo_t nameinfo;
  */
 static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, uint8_t **drivename) {
 	uint8_t *p = (uint8_t *)strchr((char*) in, ':');
+	uint8_t *c = (uint8_t *)strchr((char*) in, ',');
 	int8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
 	*drivename = NULL;
 	*filename  = in;
 	uint8_t len;
 
-	if (p) {                    // there is a colon
+	if (p && (c == NULL || c > p)) { // there is a colon (not after a comma)
 		*p = 0;             // zero-terminate drive name
 		*filename = p + 1;  // filename with drive stripped
 
@@ -109,7 +110,8 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
  *
  * - Some commands parse the raw string on their own
  * - Some commands expect every parameter in result.name
- * - Some commands use result.name and result.name2 (ASSIGN, RENAME)
+ * - Some commands use result.name and result.file[0].name (ASSIGN, RENAME)
+ * - COPY may use 1 target file name and up to 4 source file names
  *
  * @param[in]  cmdstr Raw command string
  * @param[in]  len    Length of command string
@@ -118,6 +120,7 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
 static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	uint8_t cmdlen;
 
+	result->num_files = 0; // Initialize # of secondary files
 	result->cmd = command_find(cmdstr, &cmdlen);
 	if (result->cmd == CMD_SYNTAX) return;
 
@@ -131,14 +134,26 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		return;
 	}
 	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
-		// Split cmdstr at '=' for name2
-		uint8_t *equ = (uint8_t*) strchr((char*) cmdstr, '=');
-		if (equ) {
-			*equ = 0;
-			result->drive2 = parse_drive (equ + 1, &result->name2, &result->namelen2, &result->drivename2);
+		// Split cmdstr at '=' for file[0].name
+		// and at ',' for more file names
+      uint8_t i = 0;
+		uint8_t *sep = (uint8_t*) strchr((char*) cmdstr, '=');
+		while (sep && i < MAX_NAMEINFO_FILES) {
+			*sep = 0;
+			result->file[i].drive = parse_drive (sep+1, &result->file[i].name,
+			&result->file[i].namelen, &result->file[i].drivename);
+			sep = (uint8_t*) strchr((char*) result->file[i].name, ',');
+			// Correct length of filename if comma separator found
+			if (sep) result->file[i].namelen = sep - result->file[i].name;
+			++i;
 		}
+		result->num_files = i;
 	}
 	result->drive = parse_drive (cmdstr+cmdlen, &result->name, &result->namelen, &result->drivename);
+	// set source drives to target drive if not specified
+	for (uint8_t i=0 ; i < result->num_files ; ++i) {
+		if (result->file[i].drive > 9) result->file[i].drive = result->drive;
+	}
 }
 
 
@@ -223,7 +238,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	// init output
 	memset(result, 0, sizeof(*result));
 	result->drive  = NAMEINFO_UNUSED_DRIVE;
-	result->drive2 = NAMEINFO_UNUSED_DRIVE;
+	for (uint8_t i=0; i < MAX_NAMEINFO_FILES ; ++i)
+		result->file[i].drive = NAMEINFO_UNUSED_DRIVE;
 	result->cmd    = CMD_NONE;	// no command
 
 	if (parsehint & PARSEHINT_COMMAND) parse_cmd(p, len, result);
@@ -252,6 +268,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
 	uint8_t *p = trg;
 	uint8_t len;
+	uint8_t i;
 
 	*p++ = nameinfo->drive;
 
@@ -273,18 +290,20 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	p += nameinfo->namelen + 1;
 
 	// it's either two file names (like MOVE), or one file name with parameters (for OPEN_*)
-	if (nameinfo->namelen2) {
-		// two file names
-		*p++ = nameinfo->drive2;
-		if (*nameinfo->drivename2) {
-			len = strlen((char*)nameinfo->drivename2);
-			memmove (p, nameinfo->drivename2, len);
+	// COPY accepts up to 4 comma separated source file names for merging
+	for (i=0 ; i < nameinfo->num_files ; ++i) {
+		// two or more file names
+		*p++ = nameinfo->file[i].drive;
+		if (*nameinfo->file[i].drivename) {
+			len = strlen((char*)nameinfo->file[i].drivename);
+			memmove (p, nameinfo->file[i].drivename, len);
 			p += len;
 			*p++ = ':';	// TODO: use '\0' instead of ':' as separator
 		}
-		memmove (p, nameinfo->name2, nameinfo->namelen2 + 1);
-		p += nameinfo->namelen2 + 1;
-	} else 	if (nameinfo->type) {
+		memmove (p, nameinfo->file[i].name, nameinfo->file[i].namelen + 1);
+		p += nameinfo->file[i].namelen + 1;
+	}
+	if (nameinfo->type) {
 		// parameters are comma-separated lists of "<name>'='<values>", e.g. "T=S"
 		*p++ = 'T';
 		*p++ = '=';
