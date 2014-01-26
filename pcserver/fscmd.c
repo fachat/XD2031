@@ -480,7 +480,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			provider_convto(prov)(name, convlen, name, convlen);
+			//provider_convto(prov)(name, convlen, name, convlen);
 			options = get_options(name, len - FSP_DATA - 1);
 			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 				prov->name, name);
@@ -512,7 +512,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		ep = provider_lookup(drive, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			provider_convto(prov)(name, convlen, name, convlen);
+			//provider_convto(prov)(name, convlen, name, convlen);
 			options = get_options(name, len - FSP_DATA - 1);
 			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
 			rv = handler_resolve_dir(ep, &fp, name, options);
@@ -549,11 +549,12 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				}
 				if (readflag & READFLAG_DENTRY) {
 					log_info("SEND DIRENTRY(%d)\n", tfd);
-					fp->handler->convfrom(fp, provider_get_ext_charset())
-							(retbuf+FSP_DATA+FS_DIR_NAME, 
-								strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
-								retbuf+FSP_DATA+FS_DIR_NAME, 
-								strlen(retbuf+FSP_DATA+FS_DIR_NAME));
+					//convfrom(retbuf+FSP_DATA+FS_DIR_NAME, fp->endpoint->ptype);
+					//fp->handler->convfrom(fp, provider_get_ext_charset())
+					//		(retbuf+FSP_DATA+FS_DIR_NAME, 
+					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
+					//			retbuf+FSP_DATA+FS_DIR_NAME, 
+					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME));
 				}
 			    }
 			}

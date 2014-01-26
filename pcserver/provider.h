@@ -29,6 +29,7 @@
 #define PROVIDER_H
 
 #include <time.h>
+#include <string.h>
 
 #include "charconvert.h"
 #include "openpars.h"
@@ -173,7 +174,7 @@ struct _handler {
 
         // -------------------------
                                                         // get the converter FROM the file
-        charconv_t      (*convfrom)(file_t *prov, const char *tocharset);
+//        charconv_t      (*convfrom)(file_t *prov, const char *tocharset);
 
 							// return the real parent dir; e.g. for x00_parent
 							// do not return the wrapped file, but its
@@ -268,6 +269,19 @@ charconv_t provider_convfrom(provider_t *prov);
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
 // it can be identified by one of the providers - like a d64 file, or a ZIP file
 file_t *provider_wrap(file_t *file);
+
+// convert string inline from provider to external charset
+static inline void convfrom(char *str, provider_t *prov) {
+	int len = strlen(str);
+
+	provider_convfrom(prov)(str, len, str, len);
+}
+
+// convert string inline from provider to external charset
+static inline void convfroml(char *str, int len, provider_t *prov) {
+
+	provider_convfrom(prov)(str, len, str, len);
+}
 
 #endif
 

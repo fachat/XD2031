@@ -790,6 +790,7 @@ static int open_dir(File *file) {
 
 static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
 
+	char *tmpnamep = NULL;
        	char *fullname = str_concat(fsep->curpath, dir_separator_string(), name);
 
 	log_debug("ENTER: fs_provider.open_dr(name=%s, path=%s)", name, fullname);
@@ -804,7 +805,11 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
 	File *file = reserve_file(fsep);
 
 	file->file.pattern = NULL;
-	file->file.filename = mem_alloc_str(name);
+	// convert filename to external charset
+	tmpnamep = mem_alloc_str(name);
+	convfrom(tmpnamep, &fs_provider);
+	file->file.filename = tmpnamep;
+
 	file->ospath = mem_alloc_str(fsep->curpath);
 
 	*outfile = file;
@@ -918,6 +923,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  struct stat sbuf;
 	  const char *outpattern = NULL;
 	  char *ospath = NULL;
+	  char *tmpnamep = NULL;
 
 	  file_t *wrapfile = NULL;
 	
@@ -945,7 +951,11 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
  		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
   		    retfile->file.parent = fp;
 
-		    retfile->file.filename = mem_alloc_str((fp->pattern == NULL)?"(nil)":fp->pattern);
+		    // convert filename to external charset
+		    tmpnamep = mem_alloc_str((fp->pattern == NULL)?"(nil)":fp->pattern);
+		    convfrom(tmpnamep, &fs_provider);
+		    retfile->file.filename = tmpnamep;
+
 		    retfile->ospath = get_path(file, retfile->file.filename);
 		    retfile->file.mode = FS_DIR_MOD_NAM;
 
@@ -986,7 +996,11 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		  			retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
 		  			retfile->file.parent = fp;
 
-				    	retfile->file.filename = mem_alloc_str(file->de->d_name);
+		    			// convert filename to external charset
+		    			tmpnamep = mem_alloc_str(file->de->d_name);
+		    			convfrom(tmpnamep, &fs_provider);
+		    			retfile->file.filename = tmpnamep;
+
 			    		retfile->ospath = ospath;
 			  	  	retfile->file.mode = FS_DIR_MOD_FIL;
 			    		retfile->file.type = FS_DIR_TYPE_PRG;
@@ -1623,10 +1637,10 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 	return rv;
 }
 
-static charconv_t convfrom(file_t *prov, const char *tocharset) {
-	(void) tocharset; // not needed
-	return provider_convfrom(prov->endpoint->ptype);
-}
+//static charconv_t convfrom(file_t *prov, const char *tocharset) {
+//	(void) tocharset; // not needed
+//	return provider_convfrom(prov->endpoint->ptype);
+//}
 
 static void fs_close(file_t *fp, int recurse) {
 	log_debug("fs_close(%p)", fp);
@@ -1641,7 +1655,7 @@ handler_t fs_file_handler = {
 	NULL,			// resolve
 	fs_close,		// close
 	fs_open,		// open
-	convfrom,		// convfrom
+//	convfrom,		// convfrom
 	handler_parent,		// default parent() implementation
 	fs_seek,		// seek
 	readfile,		// readfile

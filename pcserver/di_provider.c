@@ -1353,6 +1353,8 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  */
 static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
 
+	char *tmpnamep = NULL;
+
 	// here we (currently) only use it in resolve, not in read_dir_entry,
 	// so we don't care about isresolve and first/last entry
 
@@ -1397,7 +1399,10 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		entry->file.mode = FS_DIR_MOD_FIL;
 		entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
 		entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
-		entry->file.filename = mem_alloc_str((const char*)diep->Slot.filename);
+		// convert to external charset
+		tmpnamep = mem_alloc_str((const char*)diep->Slot.filename);
+		convfrom(tmpnamep, &di_provider);
+		entry->file.filename = tmpnamep;
 
 // TODO		
 //		if (diep->base.writable) {
@@ -2551,10 +2556,10 @@ static void di_close(file_t *fp, int recurse) {
 	}
 }
 
-static charconv_t convfrom(file_t *prov, const char *tocharset) {
-        (void) tocharset; // not needed
-        return provider_convfrom(prov->endpoint->ptype);
-}
+//static charconv_t convfrom(file_t *prov, const char *tocharset) {
+//        (void) tocharset; // not needed
+//        return provider_convfrom(prov->endpoint->ptype);
+//}
 
 // ----------------------------------------------------------------------------------
 
@@ -2591,7 +2596,7 @@ handler_t di_file_handler = {
         NULL,   	// resolve - not required
         di_close,       // close
         di_open,        // open a file_t
-	convfrom,       // convfrom
+//	convfrom,       // convfrom
 	handler_parent,	// default parent() impl
         NULL,	//	dif_seek,               // seek
         di_readfile,            // readfile

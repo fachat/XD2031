@@ -257,7 +257,7 @@ static handler_t x00_handler = {
 
 	// -------------------------
 			// get converter for DIR entries
-	NULL,
+//	NULL,
 
 	x00_parent,	// file_t* parent(file_t*)
 
