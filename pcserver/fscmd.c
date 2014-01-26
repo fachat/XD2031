@@ -161,7 +161,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 			}
 	
 			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
-			int rv;
+			int rv=0;
 			int drive = argv[i][2] & 0x0f;
 			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
 			char *provider_parameter;

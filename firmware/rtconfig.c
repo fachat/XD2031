@@ -204,13 +204,13 @@ void rtconfig_pullconfig() {
 /********************************************************************************/
 
 // set from an X command
-errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
+cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 
 	charset_t new_charset = -1;
 
 	debug_printf("CMD:'%s'\n", cmd);
 
-	errno_t er = CBM_ERROR_SYNTAX_UNKNOWN;
+	cbm_errno_t er = CBM_ERROR_SYNTAX_UNKNOWN;
 
 	const char *ptr = cmd;
 

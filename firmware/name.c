@@ -133,7 +133,7 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		result->namelen = len - cmdlen;
 		return;
 	}
-	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME) {
+	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
 		// Split cmdstr at '=' for name2
 		uint8_t *equ = (uint8_t*) strchr((char*) cmdstr, '=');
 		if (equ) {

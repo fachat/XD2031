@@ -25,7 +25,7 @@
 #include "cmdnames.h"
 #include "archcompat.h"
 
-#define STRLEN 7 /* max length of command name without zero-terminator */
+#define STRLEN 10 /* max length of command name without zero-terminator */
 #define TABLEN (sizeof(cmd_tab) / sizeof(struct cmd_struct))
 
 struct cmd_struct {
@@ -36,27 +36,30 @@ struct cmd_struct {
 // This table resides in flash memory
 
 static const struct cmd_struct IN_ROM cmd_tab[] = {
-	{"-"      , CMD_NONE       }, // command_to_name starts here
-	{"?"      , CMD_SYNTAX     },
-	{"@"      , CMD_OVERWRITE  },
-	{"$"      , CMD_DIR        },
-	{"ASSIGN" , CMD_ASSIGN     }, // command_find starts here
-	{"BLOCK"  , CMD_BLOCK      },
-	{"COPY"   , CMD_SYNTAX     }, // not yet supported but not to confuse with 'CD'
-	{"CD"     , CMD_CD         },
-	{"CHDIR"  , CMD_CD         },
-	{"INIT"   , CMD_INITIALIZE },
-	{"M-"     , CMD_SYNTAX     }, // not yet supported but not to confuse with 'MD'
-	{"MKDIR"  , CMD_MKDIR      },
-	{"MD"     , CMD_MKDIR      },
-	{"P"      , CMD_POSITION   },
-	{"RENAME" , CMD_RENAME     },
-	{"RMDIR"  , CMD_RMDIR      },
-	{"RD"     , CMD_RMDIR      },
-	{"SCRATCH", CMD_SCRATCH    },
-	{"TIME"   , CMD_TIME       },
-	{"U"      , CMD_UX         },
-	{"X"      , CMD_EXT        },
+	{"-"         , CMD_NONE       }, // command_to_name starts here
+	{"?"         , CMD_SYNTAX     },
+	{"@"         , CMD_OVERWRITE  },
+	{"$"         , CMD_DIR        },
+	{"ASSIGN"    , CMD_ASSIGN     }, // command_find starts here
+	{"BLOCK"     , CMD_BLOCK      },
+	{"COPY"      , CMD_COPY       },
+	{"CD"        , CMD_CD         },
+	{"CHDIR"     , CMD_CD         },
+   {"DUPLICATE" , CMD_DUPLICATE  },
+	{"INITIALIZE", CMD_INITIALIZE },
+	{"M-"        , CMD_SYNTAX     }, // not yet supported but not to confuse with 'MD'
+	{"MKDIR"     , CMD_MKDIR      },
+	{"MD"        , CMD_MKDIR      },
+   {"NEW"       , CMD_NEW        },
+	{"P"         , CMD_POSITION   },
+	{"RENAME"    , CMD_RENAME     },
+	{"RMDIR"     , CMD_RMDIR      },
+	{"RD"        , CMD_RMDIR      },
+	{"SCRATCH"   , CMD_SCRATCH    },
+	{"TIME"      , CMD_TIME       },
+	{"U"         , CMD_UX         },
+   {"VALIDATE"  , CMD_VALIDATE   },
+	{"X"         , CMD_EXT        },
 };
 
 /**************************************************************************

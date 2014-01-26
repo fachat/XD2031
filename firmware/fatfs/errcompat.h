@@ -21,7 +21,7 @@
 ***************************************************************************/
 
 
-/* ----- FatFs FRESULT errors vs CBM errno_t errors --------------------------
+/* ----- FatFs FRESULT errors vs CBM cbm_errno_t errors --------------------------
 
    Some FatFs functions depend on the error code of other internal functions,
    so making them an alias to CBM_ERROR-ones does not seem to be a good
@@ -36,7 +36,7 @@
 #include "ff.h"
 #include "errors.h"
 
-errno_t conv_fresult(FRESULT fres);
-errno_t combine (errno_t cres, FRESULT fres);
+cbm_errno_t conv_fresult(FRESULT fres);
+cbm_errno_t combine (cbm_errno_t cres, FRESULT fres);
 
 #endif
