@@ -25,6 +25,9 @@
 
 #define F_CPU                 		14745600UL
 
+// compile time default device address
+#define DEV_ADDR                        8
+
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46
