@@ -182,11 +182,8 @@ int main()
 	// show our version...
   	ListVersion();
 	// ... and some system info
-	term_printf((" %u Bytes free"), BytesFree());
-	term_printf((", %d kHz"), (int32_t)(F_CPU/1000));
+	term_printf(("%u Bytes free, %d kHz\n"), BytesFree(), (int32_t)(F_CPU/1000));
 	fuse_info();
-	term_putcrlf();
-	term_putcrlf();
 
 	while (1)  			// Mainloop-Begin
 	{
