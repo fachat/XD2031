@@ -526,7 +526,7 @@ void iec_init(uint8_t deviceno) {
         iechw_setup();
 
 	// register bus instance
-	bus_init_bus("IEC", &bus);
+	bus_init_bus("iec", &bus);
 
 	// ignore bus when it is blocked by ATN=0, e.g. when devices are switched off
 	if (satnishi()) {
