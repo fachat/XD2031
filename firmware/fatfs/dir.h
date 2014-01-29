@@ -28,8 +28,6 @@
 #ifndef DIR_H
 #define DIR_H
 
-uint8_t compare_pattern(const char *name, const char *pattern);
-
 /* splitpath
  * returns the base filename
  * dir points to the directory path

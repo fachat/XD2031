@@ -48,6 +48,7 @@
 #include "errors.h"
 #include "ff.h"
 #include "errcompat.h"
+#include "wildcard.h"
 
 #define  DEBUG_FAT
 
