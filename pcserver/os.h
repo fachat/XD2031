@@ -109,8 +109,6 @@
 
 #ifndef _WIN32
 
-enum boolean { FALSE, TRUE };
-
 typedef int serial_port_t;
 #define OS_OPEN_FAILED -1
 

@@ -39,6 +39,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
+#include <stdbool.h>
 
 #include "dir.h"
 #include "fscmd.h"
@@ -1017,16 +1018,16 @@ static int di_open_file(endpoint_t *ep, int tfd, uint8_t *filename, uint8_t *opt
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    file = di_reserve_file(diep, tfd);
  
-   int file_required       = FALSE;
-   int file_must_not_exist = FALSE;
+   int file_required       = false;
+   int file_must_not_exist = false;
 
    file->access_mode = di_cmd;
  
    switch(di_cmd)
    {
       case FS_OPEN_AP:
-      case FS_OPEN_RD: file_required       = TRUE; break;
-      case FS_OPEN_WR: file_must_not_exist = TRUE; break;
+      case FS_OPEN_RD: file_required       = true; break;
+      case FS_OPEN_WR: file_must_not_exist = true; break;
       case FS_OPEN_OW: break;
       case FS_OPEN_RW:
 	 if (type != FS_DIR_TYPE_REL) {

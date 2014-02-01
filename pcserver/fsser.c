@@ -42,6 +42,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "fscmd.h"
 #include "privs.h"
@@ -51,9 +52,6 @@
 #include "mem.h"
 #include "serial.h"
 #include "terminal.h"
-
-#define FALSE 0
-#define TRUE 1
 
 void usage(int rv) {
 	printf("Usage: fsser [options] run_directory\n"
@@ -82,7 +80,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	char *dir=NULL;
 	char *device = NULL;	/* device name or NULL if stdin/out */
-	char parameter_d_given = FALSE;
+	char parameter_d_given = false;
 
 	mem_init();
 
@@ -99,7 +97,7 @@ int main(int argc, char *argv[]) {
 		usage(EXIT_SUCCESS);	/* usage() exits already */
 		break;
 	    case 'd':
-	    	parameter_d_given = TRUE;
+		parameter_d_given = true;
 		if (i < argc-2) {
 		  i++;
 		  device = argv[i];

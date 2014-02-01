@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
+#include <stdbool.h>
 
 #include "dir.h"
 #include "fscmd.h"
@@ -625,21 +626,21 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 	char *name     = NULL;
 
 	char *options;
-	int file_required = FALSE;
-	int file_must_not_exist = FALSE;
+	int file_required = false;
+	int file_must_not_exist = false;
 
 	switch(fs_cmd) {
 		case FS_OPEN_RD:
 			options = "rb";
-			file_required = TRUE;
+			file_required = true;
 			break;
 		case FS_OPEN_WR:
 			options = "wb";
-			file_must_not_exist = TRUE;
+			file_must_not_exist = true;
 			break;
 		case FS_OPEN_AP:
 			options = "ab";
-			file_required = TRUE;
+			file_required = true;
 			break;
 		case FS_OPEN_OW:
 			options = "wb";

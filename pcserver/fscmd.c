@@ -40,6 +40,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "wireformat.h"
 #include "fscmd.h"
@@ -62,7 +63,7 @@
 static void cmd_dispatch(char *buf, serial_port_t fs);
 static void write_packet(serial_port_t fd, char *retbuf);
 
-static int user_interface_enabled = TRUE;
+static int user_interface_enabled = true;
 
 //------------------------------------------------------------------------------------
 // debug log helper
@@ -251,7 +252,7 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 }
 
 void disable_user_interface(void) {
-	user_interface_enabled = FALSE;
+	user_interface_enabled = false;
 	log_warn("User interface disabled. Abort with \"service fsser stop\".\n");
 }
 
