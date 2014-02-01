@@ -1,13 +1,13 @@
 
 # CBM Commands
 Input:  'I0'
-Parsed: cmd =   7   len =  1   <INIT>
+Parsed: cmd =  30   len =  1   <INITIALIZE>
 
 Input:  'INIT'
-Parsed: cmd =   7   len =  4   <INIT>
+Parsed: cmd =  30   len =  4   <INITIALIZE>
 
 Input:  'INI'
-Parsed: cmd =   7   len =  3   <INIT>
+Parsed: cmd =  30   len =  3   <INITIALIZE>
 
 Input:  'S1:FILE'
 Parsed: cmd =  14   len =  1   <SCRATCH>
@@ -16,7 +16,7 @@ Input:  'SCRA FILE'
 Parsed: cmd =  14   len =  4   <SCRATCH>
 
 Input:  'U1 2,0,18,0'
-Parsed: cmd = 127   len =  1   <USER>
+Parsed: cmd = 127   len =  1   <U>
 
 Input:  'RENAME NEW=OLD'
 Parsed: cmd =  13   len =  6   <RENAME>
