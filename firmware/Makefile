@@ -32,6 +32,7 @@ make clean     --> cleans object and dependencies for current device \n\
 make veryclean --> forces cleaning of all generated files            \n\
 make tests     --> perform some local tests                          \n\
 make update    --> fetch updates and compile the new code            \n\
+make doc       --> build doxygen code documentation for the firmware \n\
 make help      --> gives this help text                              \n\
 \n\n"
 
@@ -62,7 +63,7 @@ else
   V2=@echo
 endif
 
-.PHONY: clean firmware elf size zoo dumppar
+.PHONY: clean firmware elf size zoo dumppar doc
 .SUFFIXES:
 .SUFFIXES: .c .S
 all: dumppar firmware
@@ -192,6 +193,10 @@ update:
 	@printf "$(BAR)\n\nNew firmware is ready.\n\n"
 	@printf "To upload with a ISP programmer:\n\n\tmake flash\n\n"
 	@printf "To upload using USB cable/bootloader:\n\n\tmake load\n\n"
+
+doc:
+	mkdir -p ../docsrc/doxygen
+	doxygen Doxyfile
 
 help:
 	printf $(HELP)
