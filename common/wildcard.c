@@ -30,22 +30,22 @@
  * classic Commodore pattern matching:
  * 	"*" - only works as the last pattern char and matches everything
  * 	      further chars in the pattern are ignored
- * 	"?" - single character is ignored
+ * 	"?" - single character is ignored, but required
  */
 
-static int8_t classic_match(const char *x, const char *y) {
+static int8_t classic_match(const char *name, const char *pattern) {
 	int i = 0;	// current position
-	char a,b;
+	char n, p;
 
 	//printf("classic match between '%s' and '%s'\n", (char*)x, (char*)y);
 
 	while(1) {
-		a = x[i];
-		b = y[i++];
-		if (a ==  0  && b ==  0 ) return 1; // match
-		if (a == '*' || b == '*') return 1; // match
-		if (a == '?' || b == '?') continue; // wild letter
-		if (a != b) break;
+		n = name[i];
+		p = pattern[i++];
+		if (n ==  0  && p ==  0 ) return 1; // match
+		if (p == '*')             return 1; // match
+		if (p == '?' && n)        continue; // wild letter
+		if (n != p) break;
 	}
 	return 0;
 }
