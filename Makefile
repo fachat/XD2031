@@ -20,7 +20,7 @@ doc:
 clean:
 	make -C pcserver clean
 	make -C imgtool clean
-	make -C firmware clean zooclean
+	make -C firmware clean veryclean
 
 install:
 	make -C pcserver install
