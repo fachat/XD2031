@@ -21,9 +21,22 @@ MCU?=m644p
 DEFS+=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM
 
 # AVR fuses settings
-LFUSE = ff
-HFUSE = d4
-EFUSE = fc
+
+ifeq ($(strip $(MCU)),m644)
+   LFUSE = ff
+   HFUSE = d4
+   EFUSE = fc
+else ifeq ($(strip $(MCU)),m644p)
+   LFUSE = ff
+   HFUSE = d4
+   EFUSE = fc
+else ifeq ($(strip $(MCU)),m1284p)
+   LFUSE = d7
+   HFUSE = d2
+   EFUSE = fc
+else
+   $(error No fuses set for $(MCU))
+endif
 
 # SCK period
 DUDE_SPEED=-B 2.0
