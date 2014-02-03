@@ -30,9 +30,14 @@ DUDE_SPEED=-B 2.0
 
 SRC+=xs1541/ieeehw.c xs1541/iechw.c xs1541/device.c xs1541/atn.S
 
-# SD card low level routines
+# SD-card support
 ifeq ($(strip $(USE_FAT)),y)
-        CSRC+=fatfs/sdcard.c
+   # MCU sanity check
+   ifneq ($(strip $(MCU)),m1284p)
+      $(error MCU m1284p required)
+   endif
+   SRC+=fatfs/sdcard.c
+   INCPATHS+=rtc
 endif
 
 # include platform specific Makefile

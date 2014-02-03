@@ -31,7 +31,8 @@ SRC+=petSD/atn.S
 
 # SD card low level routines
 ifeq ($(strip $(USE_FAT)),y)
-	SRC+=fatfs/sdcard.c
+   SRC+=fatfs/sdcard.c
+   INCPATHS+=rtc
 endif
 
 ifeq ($(strip $(USE_RTC)),y)

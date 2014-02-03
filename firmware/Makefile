@@ -180,7 +180,7 @@ _zoo: veryclean
 	   make --no-print-directory DEVICE=$$d VERSION=$(VERSION) ;\
 	done
 	# Build devices with extra settings
-	make --no-print-directory DEVICE=xs1541 VERSION=$(VERSION) MCU=m1284p
+	make --no-print-directory DEVICE=xs1541 VERSION=$(VERSION) MCU=m1284p USE_FAT=y
 
 # Create a zip file with all binaries
 dist: zoo

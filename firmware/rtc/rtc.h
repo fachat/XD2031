@@ -72,6 +72,8 @@ static inline int8_t rtc_settime(const RTC_t* x) {
     return -1;
 }
 
+#define get_fattime() 0
+
 #endif
 
 #endif
