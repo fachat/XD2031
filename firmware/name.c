@@ -133,6 +133,14 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		result->namelen = len - cmdlen;
 		return;
 	}
+	// check for disk copy "Dt=s" or "Ct=s"
+	if ((result->cmd == CMD_DUPLICATE || result->cmd == CMD_COPY) &&
+		cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
+		isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
+		result->drive         = cmdstr[cmdlen  ] & 15; // target drive
+		result->file[0].drive = cmdstr[cmdlen+2] & 15; // source drive
+		return;
+	}
 	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
 		// Split cmdstr at '=' for file[0].name
 		// and at ',' for more file names
@@ -271,6 +279,14 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	uint8_t i;
 
 	*p++ = nameinfo->drive;
+
+	if ((nameinfo->cmd == CMD_DUPLICATE || nameinfo->cmd == CMD_COPY) &&
+		nameinfo->name == NULL) { // disk copy
+		*p++ = '*'; *p++ = 0;
+      *p++ = nameinfo->file[0].drive;
+		*p++ = '*'; *p   = 0;
+		return 6; // target,"*",source,"*"
+	}
 
 	if (!nameinfo->namelen) {
 		*p = 0;
