@@ -22,32 +22,19 @@
 ****************************************************************************/
 
 /**
- * This file implements the central communication channels between the
- * IEEE layer and the provider layers
+ * Runtime configuration per bus
+ *
  */
+
 
 #ifndef RTCONFIG_H
 #define RTCONFIG_H
-
-#include "errors.h"
-#include "provider.h"
 
 typedef struct {
 	const char	*name;
 	uint8_t		device_address;		// current unit number
 	uint8_t		last_used_drive;	// init with 0
+	bool		advanced_wildcards;
 } rtconfig_t;
-
-void rtconfig_init(endpoint_t *ep);
-
-// initialize a runtime config block
-void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr);
-
-// set from an X command
-cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
-
-// send an FS_RESET packet and pull in cmdline options
-// also tries to send the preferred character set
-void rtconfig_pullconfig(void);
 
 #endif

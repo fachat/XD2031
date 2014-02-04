@@ -28,6 +28,12 @@
 #define	DIR_H
 
 /**
+ * advanced wildcards
+ * If set to true, anything following a '*' must also match
+ */
+extern bool advanced_wildcards;
+
+/**
  * traverse a directory and find the first match for the pattern,
  * using the Commodore file search pattern matching algorithm.
  * Returns a malloc'd pathname, which has to be freed

@@ -36,6 +36,7 @@
 #include <stdbool.h>
 
 #include "wireformat.h"
+#include "rtconfig.h"
 #include "delay.h"
 
 //#include "debug.h"
@@ -73,7 +74,9 @@ typedef struct {
 	uint8_t		rp;		// read pointer (if rp<wp then read from buffer[rp], then rp++)
 	uint8_t		len;		// length of buffer
 	int8_t		chan;		// channel number
+	rtconfig_t	*rtc;		// runtime config used by providers provided by the device
 } packet_t;
+
 
 static inline int8_t packet_get_chan(packet_t *packet) {
 	return packet->chan;

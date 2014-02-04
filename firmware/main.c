@@ -45,6 +45,7 @@
 #include "uarthw.h"
 #include "device.h"
 #include "rtconfig.h"
+#include "rtconfig2.h"
 #include "nvconfig.h"
 
 // those are currently still needed for *_mainloop_iteration

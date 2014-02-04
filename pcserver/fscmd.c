@@ -268,15 +268,28 @@ int cmd_process_stdin(void) {
 
 	log_debug("stdin: %s\n", buf);
 
-	// we could interpret some fany commands here,
-	// but for now, quitting is the only option
+	// Q / QUIT
 	if((!strcasecmp(buf, "Q")) || (!strcasecmp(buf, "QUIT"))) {
 		log_info("Aborted by user request.\n");
-		return 1;
-	} else {
-		log_error("Syntax error: '%s'\n", buf);
+		return true;
 	}
-	return 0;
+
+	// Enable *=+ / disable *=- advanced wildcards
+	if ((buf[0] == '*') && (buf[1] == '=')) {
+		if (buf[2] == '+') {
+			advanced_wildcards = true;
+			log_info("Advanced wildcards enabled.\n");
+			return false;
+		}
+		if (buf[2] == '-') {
+			advanced_wildcards = false;
+			log_info("Advanced wildcards disabled.\n");
+			return false;
+		}
+	}
+
+	log_error("Syntax error: '%s'\n", buf);
+	return false;
 }
 
 /**

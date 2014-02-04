@@ -22,6 +22,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "wildcard.h"
 
@@ -52,13 +53,77 @@ static int8_t classic_match(const char *name, const char *pattern) {
 
 
 /**
+ * advanced pattern matching (CBM 1581):
+ *	"*" - matches any number of characters (including empty string)
+ *	      further chars in the pattern must also match
+ *	"?" - single character is ignored, but required
+ */
+
+static int8_t advanced_match(const char *name, const char *pattern) {
+	bool match = true;
+	const char *after_name_ptr = NULL;
+	const char *after_pattern_ptr = NULL;
+	char n, p;
+
+	while (1) {
+		n = *name;
+		p = *pattern;
+		if (!n) {
+			if (!p) break;
+			if (p == '*') {
+				pattern++;
+				continue;
+			}
+			if (after_name_ptr) {
+				if (!(*after_name_ptr)) {
+					match = false;
+					break;
+				}
+				name = after_name_ptr++;
+				pattern = after_pattern_ptr;
+				continue;
+			}
+			match = false;
+			break;
+		} else {
+			if ((n != p) && (p != '?')) {
+				if (p == '*') {
+					after_pattern_ptr = ++pattern;
+					after_name_ptr = name;
+					p = *pattern;
+					if (!p) break;
+					continue;
+				}
+				if (after_pattern_ptr) {
+					if (after_pattern_ptr != pattern) {
+						pattern = after_pattern_ptr;
+						p = *pattern;
+						if (n == p) pattern++;
+					}
+					name++;
+					continue;
+				} else {
+					match = false;
+					break;
+				}
+			}
+		}
+		name++;
+		pattern++;
+	}
+	return match;
+}
+
+
+/**
  * compares the given name to the given pattern
  * and returns true if it matches.
  * Both names are null-terminated
  */
 
-int8_t compare_pattern(const char *name, const char *pattern) {
-	// 1581 matching style not yet implemented
-	// so do always a "classic" matching:
-	return classic_match(name, pattern);
+int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wildcards) {
+	if (advanced_wildcards)
+		return advanced_match(name, pattern);
+	else
+		return classic_match(name, pattern);
 }

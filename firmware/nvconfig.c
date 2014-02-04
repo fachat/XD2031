@@ -378,6 +378,11 @@ bool nv_save_config(const rtconfig_t *rtc) {
 	bool fail = false;
 	bool common;
 
+	if (!rtc->name) {
+		debug_puts("nv_save_config: rtc->name is NULL\n");
+		return true;
+	}
+
 	nv_debug_printf("nv_save_config(%s)\n", rtc->name);
 
 	common = !strcmp(nv_common_name, rtc->name);
@@ -398,6 +403,7 @@ bool nv_save_config(const rtconfig_t *rtc) {
 	} else {
 		fail |= nv_write_byte(p++, rtc->device_address);
 		fail |= nv_write_byte(p++, rtc->last_used_drive);
+		fail |= nv_write_byte(p++, rtc->advanced_wildcards);
 		// --------------------------------------------------
 		//      ---> insert new bus dependent data here
 		// --------------------------------------------------
@@ -429,6 +435,11 @@ bool nv_restore_config(rtconfig_t *rtc) {
 	uint16_t p;			// Read pointer
         bool fail = false;
 	bool common;
+
+	if (!rtc->name) {
+		debug_puts("nv_restore_config: rtc->name is NULL\n");
+		return true;
+	}
 
 	nv_debug_printf("nv_restore_config(%s)\n", rtc->name);
 
@@ -466,10 +477,16 @@ bool nv_restore_config(rtconfig_t *rtc) {
 	} else {
 		rtc->device_address	= nv_read_byte(p++);
 		rtc->last_used_drive	= nv_read_byte(p++);
+		debug_printf("XU=%d, XD=%d", rtc->device_address, rtc->last_used_drive);
+		if (version_in_nv_mem >= 0x00090201) {
+			rtc->advanced_wildcards = nv_read_byte(p++);
+			debug_puts(", X*=");
+			debug_putc(rtc->advanced_wildcards ? '+' : '-');
+		}
 		// --------------------------------------------------
 		//      ---> insert new bus dependent data here
 		// --------------------------------------------------
-		debug_printf("XU=%d, XD=%d\n", rtc->device_address, rtc->last_used_drive);
+		debug_putcrlf();
 	}
 	nv_debug_printf("nv_restore_config: fail=%d\n", fail);
 	return fail;

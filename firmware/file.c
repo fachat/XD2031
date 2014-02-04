@@ -269,6 +269,11 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
 #endif
 	packet_init(&activeslot->txbuf, len, cmd_buffer);
+
+	// store pointer to runtime config in packet
+	// used by providers running on the device
+	activeslot->txbuf.rtc = rtconf;
+
 	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
 
 	if (!iscmd) {

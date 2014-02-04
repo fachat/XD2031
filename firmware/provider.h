@@ -34,7 +34,6 @@
 #include "packet.h"
 #include "errormsg.h"
 #include "charconvert.h"
-#include "provider.h"
 
 // all 10 drives can be used
 #define	MAX_DRIVES	10

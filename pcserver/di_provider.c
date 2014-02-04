@@ -660,7 +660,7 @@ static int di_match_slot(di_endpoint_t *diep,slot_t *slot, uint8_t *name, uint8_
       di_read_slot(diep,slot);
       if (slot->type 
 		&& ((type == FS_DIR_TYPE_UNKNOWN) || ((slot->type & FS_DIR_ATTR_TYPEMASK) == type))
-		&& compare_pattern((char*)slot->filename,(char*)name)) {
+		&& compare_pattern((char*)slot->filename,(char*)name, advanced_wildcards)) {
 		return 1; // found
       }
    }  while (di_next_slot(diep,slot));

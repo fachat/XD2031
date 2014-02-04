@@ -1137,19 +1137,19 @@ dem Unterstrich '\_' bevorzugen, da der Unterstrich auf einem CBM schwierig
 einzugeben sein kann.
 
 \subsection{Wildcards -- Dateimasken}
+\subsubsection{Was sind Wildcards?}
 \index{Wildcards}
-Wildcards funktionieren im CBM-Umfeld anders, als Sie es von DOS,
-Windows oder unixoiden Betriebssystemen gewöhnt sein werden, weshalb 
-Sie sich wenigstens den nächsten Abschnitt \glqq \nameref{starwc}\grqq\ 
-ansehen sollten.
+Wildcards (auf Deutsch gelegentlich auch \glqq{}Dateimasken\grqq{} genannt)
+sind eine Art Joker für Dateinamen, die das Arbeiten mit mehreren Dateien
+auf einmal sehr erleichtern. Sie werden beispielsweise verwendet, um die
+Ausgabe des Inhaltsverzeichnisses auf bestimmte Dateien zu begrenzen oder
+mehrere Dateien auf einmal zu kopieren oder zu löschen.
 
-Aber zunächst sei erst einmal sei erklärt, was Wildcards oder Dateimasken 
-überhaupt sind: nämlich
-eine Art Joker für Dateinamen, die das Arbeiten mit mehreren Dateien
-auf einmal sehr erleichtern.
-
-Das Fragezeichen '?' steht dabei für ein beliebiges vorhandenes einzelnes 
-Zeichen, das '*' für mehrere beliebige Zeichen oder nichts.
+Zwei Wildcards werden verwendet:
+\begin{itemize}
+\item Das Fragezeichen '?' steht für genau ein einziges beliebiges Zeichen
+\item Der Stern '*' ersetzt eine beliebe Zeichenkette, die auch leer sein kann
+\end{itemize}
 
 Angenommen, Sie hätten eine Liste von Dateien:
 
@@ -1173,14 +1173,46 @@ weiteres Zeichen enthält.
 BUDGET1979.Q1, BUDGET1979.Q2 und BUDGET1979.Q3 anzeigen, da bei
 einem Stern nicht notwendigerweise ein Zeichen folgen muss.
 
-\subsubsection*{Arbeitsweise der '*'-Wildcard}
+\clearpage
+\subsubsection{Unterschiede in der Arbeitsweise der '*'-Wildcard}
+\index{Wildcards}
 \label{starwc}
-Im Unterschied zu anderen Betriebssystem erfolgt nach '*' keine
-weitere Auswertung. Wenn Sie also versuchen würden, die Daten
-der ersten Quartale durch \texttt{*.Q1} zu kopieren, werden Sie
-feststellen, dass statt dessen \textit{alle} Dateien kopiert werden.
-Probieren Sie es aus, indem Sie sich mit \texttt{@\$:*.Q1} die
-passenden Dateien anzeigen lassen.
+Bei klassischen Commodore-Laufwerken erfolgt im Unterschied zu modernen
+Betriebssystem nach '*' keine weitere Auswertung.
+
+Wenn Sie also versuchen würden, die Daten der ersten Quartale durch
+\texttt{*.Q1} zu kopieren, werden Sie feststellen, dass statt dessen
+\textit{alle} Dateien kopiert werden.  Probieren Sie es aus, indem Sie
+sich mit \texttt{@\$:*.Q1} die passenden Dateien anzeigen lassen.
+
+Aus Gründen der Kompatibilität das alte Verhalten voreingestellt. Die
+erweiterte Auswertung findet sich bei Commodore-Laufwerken lediglich bei
+der CBM 1581.
+
+\subsubsection{Arbeitsweise der '*'-Wildcard ändern (Device)}
+\texttt{X*=+} aktiviert die erweiterte Auswertung. \\
+\texttt{X*=-} deaktiviert die erweiterte Auswertung (voreingestellt).
+
+Das gewählte Verhalten gilt nur für den Bus, über den der
+\texttt{X*}-Befehl abgesetzt wurde.  Die Konfiguration wird von
+\texttt{XW} im nicht flüchtigem Speicher abgelegt und beim Einschalten
+wieder hergestellt.
+
+Dieser Befehl beeinflusst das Verhalten der Wildcard für Provider, die
+der Adapter zur Verfügung stellt (derzeit lediglich der
+SD-Karten-Provider).
+
+\subsubsection{Arbeitsweise der '*'-Wildcard ändern (Server)}
+Bei allen Providern, die durch den Server zur Verfügung gestellt werden,
+ist das klassische Verhalten voreingestellt. Der Parameter -w aktiviert
+die erweiterte Auswertung für alle Provider des Servers.
+
+Beispiel:
+
+\begin{verbatim}
+fsser -w -A0:fs=somedir -A1:di=image.d64 .
+\end{verbatim}
+
 
 \subsection{Verzeichnisse}
 \index{Verzeichnisnamen!Trennzeichen}
@@ -1379,7 +1411,7 @@ alle vorgenannten Verzeichnisse bereits existieren. Bei der
 Angabe SOFTWARE/SPIELE/AUTORENNEN müssen also die Verzeichnisse
 SOFTWARE/SPIELE bereits existieren, damit das Verzeichnis AUTORENNEN 
 erstellt werden kann.
-
+\clearpage
 Beispiele:
 \begin{verbatim}
 @MD:SKIZZEN
@@ -1516,6 +1548,31 @@ Beispiele für Stellen von Datum und Uhrzeit:
 \label{xcommands}
 % ----------------------------------------------------------------
 
+\subsection{X* -- Erweiterte Wildcard-Auswertung}
+\index{X*}
+\index{Wildcard!Device}
+
+\texttt{X*=}\Big( \texttt{+} \Big| \texttt{-} \Big)
+
+Plus aktiviert die erweiterte Auswertung nach '*', Minus deaktiviert
+sie.
+
+Ausführlich wird dieser Befehl im Kapitel \glqq{}\ref{starwc}
+\nameref{starwc}\grqq{} ab Seite \pageref{starwc} beschrieben.
+
+Diese Einstellung gilt nur für den Bus, über den der
+\texttt{X*}-Befehl abgesetzt wurde und nur für Provider des Adapters.
+
+Soll die Einstellung dauerhaft auch nach dem Ausschalten erhalten
+bleiben, muss die Konfiguration durch den Befehl \texttt{XW} gesichert
+werden.
+
+Beispiele:
+\begin{verbatim}
+@X*=+
+OPEN 1,8,15,"X*=+" : CLOSE 1
+\end{verbatim}
+
 \subsection{XU -- Change unit -- Geräteadresse ändern}
 \index{XU}
 \index{Ger\"ateadresse!\"andern}
@@ -1582,6 +1639,7 @@ Einstellung & Befehl & Wert\\
 \midrule
 Geräteadresse		& XU= & 8 \\
 Letztes Laufwerk	& XD= & 0 \\
+Erweiterte Wildcards	& X*= & - (deaktiviert)\\
 \bottomrule
 \end{tabular}
 
@@ -1773,6 +1831,40 @@ Um beispielsweise die Geräteadresse für den IEC-Bus auf
 \begin{verbatim}
 -Xiec:U=9 -Xieee:U=10
 \end{verbatim}
+
+\subsection{Erweiterte Wildcard-Auswertung}
+\index{Wildcard!Server}
+\mbox{\Big[ \texttt{-w} \Big]}
+
+Für alle Provider des Servers ist die klassische Auswertung von
+Wildcards voreingestellt. Die Option \texttt{-w} aktiviert die
+erweiterte Auswertung für alle Provider des Servers.  Im Kapitel
+\glqq{}\ref{starwc} \nameref{starwc}\grqq{} ab Seite \pageref{starwc}
+wird diese Option näher beschrieben.
+
+\section{Interaktion mit dem Server}
+Wenn der Server nicht als Daemon läuft, sondern als normale Anwendung
+gestartet wurde, können ihm über die Tastatur (stdin) Befehle
+übermittelt werden. Groß- und Kleinschreibung wird dabei nicht
+unterschieden.
+
+\subsection{Server beenden}
+\begin{verbatim}
+Q
+QUIT
+\end{verbatim}
+Beendet den Server.
+
+\subsection{Erweiterte Wildcard-Auswertung}
+\begin{verbatim}
+*=+
+*=-
+\end{verbatim}
+Aktiviert (+) bzw. deaktiviert (-) die erweiterte Auswertung von
+Wildcards.  Eine ausführliche Erklärung ist im Kapitel
+\glqq{}\ref{starwc} \nameref{starwc}\grqq{} ab Seite \pageref{starwc}
+enthalten.
+
 
 \clearpage
 \section{Laufwerken Inhalte zuweisen}

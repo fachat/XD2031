@@ -1,9 +1,8 @@
 
-/* 
-    XD-2031 - Serial line filesystem server for CBMs
-    Copyright (C) 2012  Andre Fachat (afachat@gmx.de)
+/****************************************************************************
 
-    XD-2031 specific defines 
+    XD-2031 - Serial line filesystem server for CBMs
+    Copyright (C) 2012 Andre Fachat
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -20,20 +19,30 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA  02110-1301, USA.
 
-*/
+****************************************************************************/
 
-#ifndef VERSION_H
-#define VERSION_H
+/**
+ * Runtime configuration per bus
+ * 
+ */
 
-#define SW_NAME			"XD2031"
-#define SW_NAME_LOWER		"xd2031"
+#ifndef RTCONFIG2_H
+#define RTCONFIG2_H
 
-#define	VERSION			"0.9"		/* <--- update here	*/
-#define	LONGVERSION		".2"		/* <--- update here	*/
+#include "errors.h"
+#include "provider.h"
 
-// BCD encoded version number, last two digits are microsteps to allow
-// introducing new non volatile values without the need to increase the
-// x.y.z version
-#define VERSION_U32		0x00090201UL  	/* <--- update here	*/
+
+void rtconfig_init(endpoint_t *ep);
+
+// initialize a runtime config block
+void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr);
+
+// set from an X command
+cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
+
+// send an FS_RESET packet and pull in cmdline options
+// also tries to send the preferred character set
+void rtconfig_pullconfig(void);
 
 #endif

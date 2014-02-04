@@ -1,0 +1,66 @@
+!NAMES
+BUDGET1977
+BUDGET1978
+BUDGET1979
+BUDGET1979.Q1
+BUDGET1979.Q2
+BUDGET1979.Q3
+
+6 names read.
+
+!PATTERNS
+BUDGET197?
+BUDGET1979?
+BUDGET1979*
+*Q*
+*GET***?Q*?
+*NOTTHERE***?Q*?
+
+6 patterns read.
+
+!CLASSIC_MATCH
+Testing pattern (1/6) 'BUDGET197?': 3 matches
+	BUDGET1977
+	BUDGET1978
+	BUDGET1979
+
+Testing pattern (2/6) 'BUDGET1979?': 0 matches
+
+Testing pattern (3/6) 'BUDGET1979*': 4 matches
+	BUDGET1979
+	BUDGET1979.Q1
+	BUDGET1979.Q2
+	BUDGET1979.Q3
+
+Testing pattern (4/6) '*Q*': matches all 6 names.
+
+Testing pattern (5/6) '*GET***?Q*?': matches all 6 names.
+
+Testing pattern (6/6) '*NOTTHERE***?Q*?': matches all 6 names.
+
+!ADVANCED_MATCH
+Testing pattern (1/6) 'BUDGET197?': 3 matches
+	BUDGET1977
+	BUDGET1978
+	BUDGET1979
+
+Testing pattern (2/6) 'BUDGET1979?': 0 matches
+
+Testing pattern (3/6) 'BUDGET1979*': 4 matches
+	BUDGET1979
+	BUDGET1979.Q1
+	BUDGET1979.Q2
+	BUDGET1979.Q3
+
+Testing pattern (4/6) '*Q*': 3 matches
+	BUDGET1979.Q1
+	BUDGET1979.Q2
+	BUDGET1979.Q3
+
+Testing pattern (5/6) '*GET***?Q*?': 3 matches
+	BUDGET1979.Q1
+	BUDGET1979.Q2
+	BUDGET1979.Q3
+
+Testing pattern (6/6) '*NOTTHERE***?Q*?': 0 matches
+

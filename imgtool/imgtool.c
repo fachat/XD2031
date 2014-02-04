@@ -518,7 +518,7 @@ bool dirwalk(di_t *di, bool *weak, char *filemask, void *common,
       extract_name(f.ascii_filename,   p + 5, true);
 
       if (f.filetype) {
-         if (compare_pattern(f.ascii_filename, filemask)) {
+         if (compare_pattern(f.ascii_filename, filemask, true)) {
             matches++;
             if (action(di, weak, &f, common)) faulty = true;
          }

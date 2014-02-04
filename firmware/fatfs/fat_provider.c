@@ -123,12 +123,14 @@ static struct {
    char   headline[16 + 1];        // headline of directory listing
 } dir;
 
+static rtconfig_t *fatfs_rtc;      // stores wildcard behaviour for directory
+
 // ----- Prototypes --------------------------------------------------------
 
 // helper functions
-static cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet);
+static cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, bool advanced_wildcards, packet_t *packet);
 static cbm_errno_t fs_move(char *buf);
-static void fs_delete(char *path, packet_t *p);
+static void fs_delete(char *path, packet_t *p, bool advanced_wildcards);
 
 // Copy a filename/path limited to 16 characters
 // If the path is too long, copy only the last characters preceeded by ".."
@@ -323,7 +325,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
    char *path = (char *) (txbuf->buffer + 1);
    uint8_t len = txbuf->len - 1;
 
-
    FILINFO Finfo;  // holds file information returned by f_readdir/f_stat
                    // the long file name *lfname must be stored externally:
 #  ifdef _USE_LFN
@@ -447,6 +448,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
             no dirmask given                  --> show all directory entries
          */
          debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
+	 fatfs_rtc = txbuf->rtc;
          char *b, *d;
          if (txbuf->len > 2) { // 2 bytes: drive number and zero terminator
             debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
@@ -490,7 +492,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
       case FS_DELETE:
          reply_as_usual = false;
-         fs_delete(path, rxbuf); // replies via rxbuf
+         fs_delete(path, rxbuf, txbuf->rtc->advanced_wildcards); // replies via rxbuf
          break;
 
       case FS_READ:
@@ -503,7 +505,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
             cres = CBM_ERROR_FILE_NOT_OPEN;
          } else if(ds) {
             // Read directory
-            cres = fs_read_dir(epdata, channelno, rxbuf);
+            cres = fs_read_dir(epdata, channelno, fatfs_rtc->advanced_wildcards, rxbuf);
          } else {
             // Read file
             fp = tbl_find_file(channelno);
@@ -571,7 +573,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
 // ----- Directories -------------------------------------------------------
 
-cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
+cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, bool advanced_wildcards, packet_t *packet) {
    FRESULT fres;
    int8_t tblpos = tbl_chpos(channelno);
    char *p = (char *) packet->buffer;
@@ -625,7 +627,7 @@ cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, packet_t *packet) {
 #           if _USE_LFN
                if(Lfname[0]) filename = Lfname;
 #           endif
-            if(compare_pattern(filename, dir.mask)) break;
+            if(compare_pattern(filename, dir.mask, advanced_wildcards)) break;
          }
 
          // TODO: skip or skip not hidden files
@@ -747,7 +749,7 @@ cbm_errno_t _scratch(const char *path) {
    Returns only the error but not the number of scratched files
    in case of any errors
 */
-static void fs_delete(char *path, packet_t *packet) {
+static void fs_delete(char *path, packet_t *packet, bool advanced_wildcards) {
    cbm_errno_t cres = CBM_ERROR_OK;
    uint16_t files_scratched = 0;
    char *pnext;
@@ -758,6 +760,7 @@ static void fs_delete(char *path, packet_t *packet) {
       debug_printf("Scratching '%s'...\n", path);
 
       cres = traverse(path,
+         advanced_wildcards,
          0,                   // don't limit number of files to scratch
          &files_scratched,    // counts matches
          0,                   // no special file attributes required
