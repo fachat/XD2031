@@ -443,8 +443,8 @@ bool nv_restore_config(rtconfig_t *rtc) {
 	// If NV data is from a prior firmware version,
 	// set fail flag to force rewrite in current format
 	uint32_t version_in_nv_mem = nv_read_dword(addr + NV_VER);
-	nv_debug_printf("VERSION_U32: %08X\n", VERSION_U32);
-	nv_debug_printf("stored: %08X\n", version_in_nv_mem);
+	nv_debug_printf("VERSION_U32: %08lX\n", VERSION_U32);
+	nv_debug_printf("stored: %08lX\n", version_in_nv_mem);
 	if (VERSION_U32 > version_in_nv_mem) {
 		debug_puts("(outdated) ");
 		fail = true;
