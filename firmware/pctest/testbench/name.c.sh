@@ -33,6 +33,8 @@ FTP:TEST
 1TEST
 !PARSEHINT_COMMAND
 # RENAME
+# Please note though no drive is given for OLD, the parser reports
+# the same drive as in NEW, which makes perfect sense for RENAME
 R:NEW=OLD
 # Some CD variations
 CD 0:NAME
