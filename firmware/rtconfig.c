@@ -22,16 +22,17 @@
 ****************************************************************************/
 
 /**
- * This file implements the central communication channels between the
- * IEEE layer and the provider layers
+ * Runtime configuration per bus
  */
 
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "rtconfig.h"
+#include "rtconfig2.h"
 #include "errors.h"
 #include "provider.h"	// MAX_DRIVES
 #include "nvconfig.h"
@@ -84,6 +85,7 @@ void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr) {
 	// Default values
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
+	rtc->advanced_wildcards = false;
 
 	if(nv_restore_config(rtc)) nv_save_config(rtc);
 
@@ -227,6 +229,27 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 
 	// c now contains the actual command
 	switch(c) {
+	case '*':
+		// enable/disable the use of advanced wildcards
+		// look for *=+ || *=-
+		if (*++ptr == '=') {
+			if (*++ptr == '+') {
+				rtc->advanced_wildcards = true;
+				er = CBM_ERROR_OK;
+			} else if (*ptr == '-') {
+				rtc->advanced_wildcards = false;
+				er = CBM_ERROR_OK;
+			}
+			if (er == CBM_ERROR_OK) {
+				debug_puts("ADVANCED WILDCARDS ");
+				if (rtc->advanced_wildcards)
+					debug_puts("EN");
+				else
+					debug_puts("DIS");
+				debug_puts("ABLED\n");
+			}
+		}
+		break;
 	case 'U':
 		// look for "U=<unit number in ascii || binary>"
 		ptr++;
@@ -267,8 +290,8 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		break;
 	case 'W':
 		// write runtime config to EEPROM
-		nv_save_config(rtc);
-		er = CBM_ERROR_OK;
+		nv_save_common_config();
+		er = nv_save_config(rtc);
 		break;
 	case 'R':
 		if(!strncmp(ptr, "RESET", 5)) {		// ignore CR or whatever follows

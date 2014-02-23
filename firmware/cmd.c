@@ -27,6 +27,8 @@
 #include "file.h"
 #include "name.h"
 #include "wireformat.h"
+#include "rtconfig.h"
+#include "rtconfig2.h"
 #include "cmdnames.h"
 
 #ifdef HAS_RTC

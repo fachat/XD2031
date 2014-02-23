@@ -153,6 +153,8 @@
 #define   FS_DIR_MOD_NAM 1    	/* disk name */
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
+#define   FS_DIR_MOD_NAS 4       /* disk name  [Suppress LOAD address] */
+#define   FS_DIR_MOD_FRS 5       /* free bytes [Suppress BASIC end bytes] */
 
 /* file attribute bits - note they are like the CBM directory entry type bits,
    except for $80, which indicates a splat file, which is inverted.

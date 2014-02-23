@@ -5,7 +5,7 @@ TESTFILE=filetypes
 CFLAGS="-Wall -std=c99"
 INCLUDE="-I.. -I../.. -I../../../common"
 
-gcc -D PCTEST $INCLUDE $CFLAGS ../../../common/$TESTFILE.c ../mains/$TESTFILE.c ../../cmdnames.c -o ../bin/$TESTFILE || exit 1
+cc -D PCTEST $INCLUDE $CFLAGS ../../../common/$TESTFILE.c ../mains/$TESTFILE.c ../../cmdnames.c -o ../bin/$TESTFILE || exit 1
 
 ../bin/$TESTFILE << "EOF"
 # First parameter: filename

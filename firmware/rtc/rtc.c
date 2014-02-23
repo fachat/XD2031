@@ -302,9 +302,7 @@ void rtc_timestamp(const RTC_t* datim) {
 #include "integer.h"
 #include "ffconf.h"
 
-#if _FS_READONLY
-# define get_fattime() 0
-#else
+#if !_FS_READONLY
 /* RTC only needed for write access / time stamps */
 
 DWORD get_fattime (void)

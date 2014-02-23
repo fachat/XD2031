@@ -30,7 +30,7 @@
  * and returns true if it matches.
  * Both names are null-terminated
  */
-int8_t compare_pattern(const char *name, const char *pattern);
+int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wildcards);
 
 /**
  * compares the given name to the given pattern

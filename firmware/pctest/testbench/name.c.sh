@@ -5,7 +5,7 @@ TESTFILE=name
 CFLAGS="-Wall -std=c99"
 INCLUDE="-I.. -I../.. -I../../../common"
 
-gcc -D PCTEST $INCLUDE $CFLAGS ../../$TESTFILE.c ../mains/$TESTFILE.c ../../cmdnames.c -o ../bin/$TESTFILE || exit 1
+cc -D PCTEST $INCLUDE $CFLAGS ../../$TESTFILE.c ../mains/$TESTFILE.c ../../cmdnames.c -o ../bin/$TESTFILE || exit 1
 
 ../bin/$TESTFILE << "EOF"
 # To set the parsehint parameter, give a
@@ -33,6 +33,8 @@ FTP:TEST
 1TEST
 !PARSEHINT_COMMAND
 # RENAME
+# Please note though no drive is given for OLD, the parser reports
+# the same drive as in NEW, which makes perfect sense for RENAME
 R:NEW=OLD
 # Some CD variations
 CD 0:NAME

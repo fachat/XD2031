@@ -42,6 +42,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "fscmd.h"
 #include "privs.h"
@@ -51,9 +52,7 @@
 #include "mem.h"
 #include "serial.h"
 #include "terminal.h"
-
-#define FALSE 0
-#define TRUE 1
+#include "dir.h"
 
 void usage(int rv) {
 	printf("Usage: fsser [options] run_directory\n"
@@ -68,6 +67,7 @@ void usage(int rv) {
 		"               -Xiec:U=9\n"
 		"   -d <device>	define serial device to use\n"
 		"   -d auto     auto-detect serial device\n"
+		"   -w          Use advanced wildcards (anything following '*' must also match)\n"
 		"   -D          run as daemon, disable user interface\n"
 		"   -v          enable debug log output\n"
 		"   -?          gives you this help text\n"
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 	int i;
 	char *dir=NULL;
 	char *device = NULL;	/* device name or NULL if stdin/out */
-	char parameter_d_given = FALSE;
+	char parameter_d_given = false;
 
 	mem_init();
 
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 		usage(EXIT_SUCCESS);	/* usage() exits already */
 		break;
 	    case 'd':
-	    	parameter_d_given = TRUE;
+		parameter_d_given = true;
 		if (i < argc-2) {
 		  i++;
 		  device = argv[i];
@@ -120,6 +120,9 @@ int main(int argc, char *argv[]) {
 	    case 'D':
 		disable_user_interface();
 		break;
+            case 'w':
+                advanced_wildcards = true;
+                break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);
 		usage(EXIT_RESPAWN_NEVER);

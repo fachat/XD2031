@@ -33,8 +33,10 @@
 #define	PACKET_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "wireformat.h"
+#include "rtconfig.h"
 #include "delay.h"
 
 //#include "debug.h"
@@ -65,8 +67,6 @@
 #define	PACKET_DATA	4
 #define	PACKET_DONE	5
 
-typedef	uint8_t		bool;
-
 typedef struct {
 	uint8_t		type;		// one of the FS_* codes as packet type
 	uint8_t 	*buffer;	// address of buffer
@@ -74,7 +74,9 @@ typedef struct {
 	uint8_t		rp;		// read pointer (if rp<wp then read from buffer[rp], then rp++)
 	uint8_t		len;		// length of buffer
 	int8_t		chan;		// channel number
+	rtconfig_t	*rtc;		// runtime config used by providers provided by the device
 } packet_t;
+
 
 static inline int8_t packet_get_chan(packet_t *packet) {
 	return packet->chan;

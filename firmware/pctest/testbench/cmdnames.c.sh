@@ -5,7 +5,7 @@ TESTFILE=cmdnames
 CFLAGS="-Wall -std=c99"
 INCLUDE="-I.. -I../.. -I../../../common"
 
-gcc -D PCTEST $INCLUDE $CFLAGS ../../$TESTFILE.c ../mains/$TESTFILE.c -o ../bin/$TESTFILE || exit 1
+cc -D PCTEST $INCLUDE $CFLAGS ../../$TESTFILE.c ../mains/$TESTFILE.c -o ../bin/$TESTFILE || exit 1
 
 ../bin/$TESTFILE << "EOF"
 # CBM Commands

@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include "provider.h"
 #include "dir.h"
@@ -46,6 +47,8 @@
 #ifndef min
 #define min(a,b)        (((a)<(b))?(a):(b))
 #endif
+
+bool advanced_wildcards = false;
 
 
 /**
@@ -75,7 +78,7 @@ char *find_first_match(const char *dir, const char *pattern, int (*check)(const 
 		de = readdir(dp);
 
 		while (de != NULL) {
-			if (compare_pattern(de->d_name, pattern)) {
+			if (compare_pattern(de->d_name, pattern, advanced_wildcards)) {
 				// match
 
 				char *namebuf = malloc_path(dir, de->d_name);
@@ -136,7 +139,7 @@ int dir_call_matches(const char *dir, const char *pattern, int (*callback)(const
 		de = readdir(dp);
 
 		while (de != NULL) {
-			if (compare_pattern(de->d_name, pattern)) {
+			if (compare_pattern(de->d_name, pattern, advanced_wildcards)) {
 				// match
 				matches ++;
 
@@ -206,8 +209,7 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 	if (dirpattern != NULL && *dirpattern != 0) {
 		while (de != NULL) {
 			log_debug("dir_next:match(%s)\n", de->d_name);
-
-			if (compare_pattern(de->d_name, dirpattern)) {
+			if (compare_pattern(de->d_name, dirpattern, advanced_wildcards)) {
 				// match
 				return de;
 			}

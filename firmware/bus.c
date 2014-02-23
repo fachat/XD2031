@@ -46,6 +46,7 @@
 #include "cmd2.h"
 #include "file.h"
 #include "rtconfig.h"
+#include "rtconfig2.h"
 #include "bus.h"
 
 #include "led.h"

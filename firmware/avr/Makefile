@@ -85,7 +85,10 @@ $(HEX): $(TARGET)
 # If avrdude isn't at given location, search it in the $PATH
 DUDE=/opt/cross/bin/avrdude
 ifeq ($(wildcard $(DUDE)),)
-	DUDE = avrdude
+   DUDE = avrdude
+endif
+ifeq ($(V),1)
+   DUDE_VERBOSE=-v
 endif
 
 # Bootloader AVR programming with AVRPROG compatible bootloader from
@@ -93,15 +96,15 @@ endif
 # Do NOT use $(MCU_AVRDUDE) here. The bootloader expects m644 only
 # but flashes m644p as well.
 load: $(HEX)
-	$(DUDE) -v -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
+	$(DUDE) $(DUDE_VERBOSE) -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
 
 # ISP programming
 flash:	$(HEX)
-	$(DUDE) -v -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(MCU_AVRDUDE) \
+	$(DUDE) $(DUDE_VERBOSE) -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(MCU_AVRDUDE) \
 	        -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
 
 # Fuse programming
 fuses:
-	$(DUDE) -v -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) $(DUDE_SPEED) \
+	$(DUDE) $(DUDE_VERBOSE) -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) -B 10 \
                 -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 

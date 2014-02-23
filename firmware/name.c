@@ -41,9 +41,6 @@
 #include "debug.h"
 #endif
 
-#define FALSE 0
-#define TRUE  1
-
 #if defined(DEBUG_NAME) || defined(PCTEST)
 static void dump_result(nameinfo_t *result) {
 	printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
@@ -134,6 +131,14 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	if (result->cmd == CMD_POSITION || result->cmd == CMD_TIME) {
 		result->name = cmdstr + cmdlen;
 		result->namelen = len - cmdlen;
+		return;
+	}
+	// check for disk copy "Dt=s" or "Ct=s"
+	if ((result->cmd == CMD_DUPLICATE || result->cmd == CMD_COPY) &&
+		cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
+		isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
+		result->drive         = cmdstr[cmdlen  ] & 15; // target drive
+		result->file[0].drive = cmdstr[cmdlen+2] & 15; // source drive
 		return;
 	}
 	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
@@ -274,6 +279,14 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	uint8_t i;
 
 	*p++ = nameinfo->drive;
+
+	if ((nameinfo->cmd == CMD_DUPLICATE || nameinfo->cmd == CMD_COPY) &&
+		nameinfo->name == NULL) { // disk copy
+		*p++ = '*'; *p++ = 0;
+      *p++ = nameinfo->file[0].drive;
+		*p++ = '*'; *p   = 0;
+		return 6; // target,"*",source,"*"
+	}
 
 	if (!nameinfo->namelen) {
 		*p = 0;

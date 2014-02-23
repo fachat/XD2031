@@ -40,6 +40,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "wireformat.h"
 #include "fscmd.h"
@@ -64,7 +65,7 @@
 static void cmd_dispatch(char *buf, serial_port_t fs);
 static void write_packet(serial_port_t fd, char *retbuf);
 
-static int user_interface_enabled = TRUE;
+static int user_interface_enabled = true;
 
 //------------------------------------------------------------------------------------
 // debug log helper
@@ -257,7 +258,7 @@ static void cmd_sendreset(serial_port_t writefd, char buf[]) {
 }
 
 void disable_user_interface(void) {
-	user_interface_enabled = FALSE;
+	user_interface_enabled = false;
 	log_warn("User interface disabled. Abort with \"service fsser stop\".\n");
 }
 
@@ -273,15 +274,28 @@ int cmd_process_stdin(void) {
 
 	log_debug("stdin: %s\n", buf);
 
-	// we could interpret some fany commands here,
-	// but for now, quitting is the only option
+	// Q / QUIT
 	if((!strcasecmp(buf, "Q")) || (!strcasecmp(buf, "QUIT"))) {
 		log_info("Aborted by user request.\n");
-		return 1;
-	} else {
-		log_error("Syntax error: '%s'\n", buf);
+		return true;
 	}
-	return 0;
+
+	// Enable *=+ / disable *=- advanced wildcards
+	if ((buf[0] == '*') && (buf[1] == '=')) {
+		if (buf[2] == '+') {
+			advanced_wildcards = true;
+			log_info("Advanced wildcards enabled.\n");
+			return false;
+		}
+		if (buf[2] == '-') {
+			advanced_wildcards = false;
+			log_info("Advanced wildcards disabled.\n");
+			return false;
+		}
+	}
+
+	log_error("Syntax error: '%s'\n", buf);
+	return false;
 }
 
 /**

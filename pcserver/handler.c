@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "registry.h"
 #include "handler.h"

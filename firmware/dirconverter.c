@@ -88,7 +88,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 
 	uint16_t lineno = 0;
 
-	if (type == FS_DIR_MOD_NAM) {
+	if (type == FS_DIR_MOD_NAM || type == FS_DIR_MOD_NAS) {
 		lineno = drive;
 	} else {
 		uint16_t in[4];
@@ -178,11 +178,11 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 	*outp = lineno & 255; outp++;
 	*outp = (lineno>>8) & 255; outp++;
 
-	if (type == FS_DIR_MOD_NAM) {
+	if (type == FS_DIR_MOD_NAM || type == FS_DIR_MOD_NAS) {
 		*outp = 0x12;	// reverse for disk name
 		outp++;
 	} else {
-		if (type != FS_DIR_MOD_FRE) {
+		if (type != FS_DIR_MOD_FRE && type != FS_DIR_MOD_FRS) {
 			if (lineno < 10) { *outp = ' '; outp++; }
 			if (lineno < 100) { *outp = ' '; outp++; }
 			if (lineno < 1000) { *outp = ' '; outp++; }
@@ -190,7 +190,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		}
 	}
 
-	if (type != FS_DIR_MOD_FRE) {
+	if (type != FS_DIR_MOD_FRE && type != FS_DIR_MOD_FRS) {
 		*outp = '"'; outp++;
 		uint8_t i = FS_DIR_NAME;
 		// note the check i<16 - this is buffer overflow protection
@@ -211,7 +211,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		// note: not counted in i
 		*outp = '"'; outp++;
 
-		if (type == FS_DIR_MOD_NAM && n > l) {
+		if ((type == FS_DIR_MOD_NAM || type == FS_DIR_MOD_NAS) && n > l) {
 			*outp = ' '; outp++;
 			l = n - 16;
 			if (l > 5) {
@@ -221,7 +221,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 			outp += l;
 			i += l;
 		} else
-		if (type == FS_DIR_MOD_NAM) {
+		if (type == FS_DIR_MOD_NAM || type == FS_DIR_MOD_NAS) {
 			// file name entry
 			outp = append(asciiconv, outp, SW_NAME_LOWER);
 		} else {
@@ -252,12 +252,14 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		*outp++ = (attribs & FS_DIR_ATTR_LOCKED) ? '<' : ' ';
 		*outp++ = ' ';
 	} else
-	if (type == FS_DIR_MOD_FRE) {
+	if (type == FS_DIR_MOD_FRE || type == FS_DIR_MOD_FRS) {
 		outp = append(asciiconv, outp, "blocks free."); 
 		memset(outp, ' ', 13); outp += 13;
 
-		*outp = 0; outp++; 	// BASIC end marker (zero link address)
-		*outp = 0; outp++; 	// BASIC end marker (zero link address)
+		if (type != FS_DIR_MOD_FRS) {
+			*outp = 0; outp++; 	// BASIC end marker (zero link address)
+			*outp = 0; outp++; 	// BASIC end marker (zero link address)
+		}
 	}
 
 	*outp = 0;

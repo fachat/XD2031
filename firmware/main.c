@@ -45,6 +45,8 @@
 #include "uarthw.h"
 #include "device.h"
 #include "rtconfig.h"
+#include "rtconfig2.h"
+#include "nvconfig.h"
 
 // those are currently still needed for *_mainloop_iteration
 #ifdef HAS_IEC
@@ -157,6 +159,9 @@ int main()
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
 	// it also handles the interrupt initialization if necessary
 	device_init();
+
+	// read bus-independent settings from non volatile memory
+	nv_restore_common_config();
 
 	// enable interrupts
 	enable_interrupts();

@@ -102,6 +102,8 @@ RECLEN=0
 
 
 # RENAME
+# Please note though no drive is given for OLD, the parser reports
+# the same drive as in NEW, which makes perfect sense for RENAME
 Test: 'R:NEW=OLD'
 parsehint: PARSEHINT_COMMAND
 CMD=RENAME
@@ -110,7 +112,7 @@ DRIVENAME='<NULL>'
 NAME='NEW' (3)
 ACCESS=-
 TYPE=-
-DRIVE2=-
+DRIVE2=L
 DRIVENAME2='<NULL>'
 NAME2='OLD' (3)
 RECLEN=0

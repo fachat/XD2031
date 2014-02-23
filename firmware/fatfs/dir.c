@@ -86,6 +86,7 @@ cbm_errno_t dummy_action(const char *path) {
 
 cbm_errno_t traverse(
 	char		*path,			// path string (may contain wildcards and path separators)
+	bool		advanced_wildcards,     // continue at '*'?
 	uint16_t	max_matches,		// abort if this number of matches is reached
 	uint16_t	*matches,		// count number of total matches
 	uint8_t		required_flags,		// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
@@ -136,7 +137,7 @@ cbm_errno_t traverse(
 			continue;
 		}
 
-		if(compare_pattern(filename, b)) {
+		if(compare_pattern(filename, b, advanced_wildcards)) {
 			cres = concat_path_filename(action_path, sizeof(action_path), d, filename);
 			if(cres) return cres;
 			cres = action(action_path);

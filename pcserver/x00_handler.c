@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #include "mem.h"
 #include "log.h"

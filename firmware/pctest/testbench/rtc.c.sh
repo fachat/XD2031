@@ -5,7 +5,7 @@ TESTFILE=rtc
 CFLAGS="-Wall -std=c99 -DHAS_RTC"
 INCLUDE="-I.. -I../.. -I../../rtc"
 
-gcc -D PCTEST $INCLUDE $CFLAGS ../../rtc/$TESTFILE.c ../mains/$TESTFILE.c -o ../bin/$TESTFILE || exit 1
+cc -D PCTEST $INCLUDE $CFLAGS ../../rtc/$TESTFILE.c ../mains/$TESTFILE.c -o ../bin/$TESTFILE || exit 1
 
 ../bin/$TESTFILE << "EOF"
 # Calling without parameters should output date and time (empty line)

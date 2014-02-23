@@ -1,58 +1,53 @@
+/************************************************************************
+
+    XD-2031 - Serial line filesystem server for CBMs
+    Copyright (C) 2014 Andre Fachat, Nils Eilers
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA  02110-1301, USA.
+
+*************************************************************************/
+
+
 #ifndef NVCONFIG_H
 #define NVCONFIG_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include "rtconfig.h"
+
+// Those hw-dependent functions should get defined in
+// <arch>/nvconfighw.c || <device>/nvconfighw.c
+uint8_t nv_read_byte(uint16_t addr);
+bool nv_write_byte(uint16_t addr, uint8_t byte);
+
 
 #ifdef HAS_EEPROM
 
-void	nv_data_dump(void);
-int8_t	nv_valid_crc (void);		// returns nonzero if crc is valid
-void	nv_save_config (rtconfig_t *rtc);
-int8_t	nv_restore_config (rtconfig_t *rtc);	
-/* Restore saved config. Return
-	-1 if a valid old configuration with less data was restored
-	 0 on success
-	+1 if crc check of saved config failed 
-*/
-
-struct nv_config_data 
-{
-  /********************************************************************
-  ***   In order to maintain backwards compatibility, do not remove ***
-  ***   or change data. Add new data only at the end.               ***
-  *********************************************************************/
-
-  // backwards compatibility
-  uint32_t version;
-
-  /* We can *not* use structs here, because that would break
-     backwards compatibility when sizeof(struct) changes */
-  uint8_t device_address;	// rtconfig 0.9.1
-  uint8_t last_used_drive;	// rtconfig 0.9.1
-
-  /* ---> insert new data here <--- */
-
-} __attribute__((packed)) ;
-
-struct nv_struct {
-  uint16_t crc;
-  uint16_t size; // of all data without crc
-  union {
-    struct nv_config_data config;
-    uint8_t bytes [ sizeof(struct nv_config_data) ];
-  };
-} __attribute__((packed)) ;
-
-void debug_nvconfig(void); 
-
+bool nv_save_config (const rtconfig_t *rtc);
+bool nv_restore_config (rtconfig_t *rtc);
+bool nv_save_common_config (void);
+bool nv_restore_common_config (void);
 
 #else
 
-static inline void nv_data_dump(void) {}
-static int8_t nv_valid_crc(void) { return 0; }
-static void nv_save_config (rtconfig_t *rtc) {}
-static int8_t nvrestore_config(rtconfig_t *rtc) { return 1; }
+static bool nv_save_config (const rtconfig_t *rtc)	{ return true; }
+static bool nv_restore_config(rtconfig_t *rtc)		{ return true; }
+static bool nv_save_common_config (void)		{ return true; }
+static bool nv_restore_common_config (void)		{ return true; }
 
 #endif // HAS_EEPROM
+
 #endif // NVCONFIG_H

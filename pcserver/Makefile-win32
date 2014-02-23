@@ -87,12 +87,15 @@ doc:
 	doxygen Doxyfile
 
 dist:	distclean $(FSSER_EXE)
+	make -C ../imgtool WIN=y clean
+	make -C ../imgtool WIN=y
 	mkdir -p $(DISTDIR)
 	cp -r ../sample $(DISTDIR)
 	cp -r ../tools $(DISTDIR)
 	cp $(FSSER_EXE) $(DISTDIR)
 	cp COPYING $(DISTDIR)/COPYING.txt
 	cp StartServer.bat $(DISTDIR)
+	cp ../imgtool/imgtool.exe $(DISTDIR)
 	find $(DISTDIR) \( -iname *.txt -o -iname *.bat \) -exec unix2dos {} \;
 	zip -r $(DISTDIR)-$$(date +%Y-%m-%d).zip $(DISTDIR)
 

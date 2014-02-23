@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <libgen.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "provider.h"
 #include "dir.h"
@@ -759,7 +760,7 @@ static int di_match_slot(di_endpoint_t *diep,slot_t *slot, const uint8_t *name, 
       di_read_slot(diep,slot);
       if (slot->type 
 		&& ((type == FS_DIR_TYPE_UNKNOWN) || ((slot->type & FS_DIR_ATTR_TYPEMASK) == type))
-		&& compare_pattern((char*)slot->filename,(char*)name)) {
+		&& compare_pattern((char*)slot->filename,(char*)name, advanced_wildcards)) {
 		return 1; // found
       }
    }  while (di_next_slot(diep,slot));
@@ -1141,16 +1142,16 @@ static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    file = di_reserve_file(diep);
  
-   int file_required       = FALSE;
-   int file_must_not_exist = FALSE;
+   int file_required       = false;
+   int file_must_not_exist = false;
 
    file->access_mode = di_cmd;
  
    switch(di_cmd)
    {
       case FS_OPEN_AP:
-      case FS_OPEN_RD: file_required       = TRUE; break;
-      case FS_OPEN_WR: file_must_not_exist = TRUE; break;
+      case FS_OPEN_RD: file_required       = true; break;
+      case FS_OPEN_WR: file_must_not_exist = true; break;
       case FS_OPEN_OW: break;
       case FS_OPEN_RW:
 	 if (pars.filetype != FS_DIR_TYPE_REL) {
