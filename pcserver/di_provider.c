@@ -1124,23 +1124,19 @@ static int di_open_dir(File *file) {
 // di_open_file
 // ************
 
-static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16_t *reclen, int di_cmd)
+static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 {
    int np,rv;
-   File *file;
-   openpars_t pars;
 
-   openpars_process_options(opts, &pars);
-   *reclen = pars.recordlen;
- 
-   log_info("OpenFile(%s,%s,%c,%d)\n", filename, opts, pars.filetype + 0x30, *reclen);
+   const char *filename = file->file.filename;
 
-   if (*reclen > 254) {
+   log_info("OpenFile(%s,%c,%d)\n", filename, pars->filetype + 0x30, pars->recordlen);
+
+   if (pars->recordlen > 254) {
 	return CBM_ERROR_OVERFLOW_IN_RECORD;
    }
 
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-   file = di_reserve_file(diep);
+   di_endpoint_t *diep = (di_endpoint_t*) (file->file.endpoint);
  
    int file_required       = false;
    int file_must_not_exist = false;
@@ -1154,7 +1150,7 @@ static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16
       case FS_OPEN_WR: file_must_not_exist = true; break;
       case FS_OPEN_OW: break;
       case FS_OPEN_RW:
-	 if (pars.filetype != FS_DIR_TYPE_REL) {
+	 if (pars->filetype != FS_DIR_TYPE_REL) {
          	log_error("Read/Write currently only supported for REL files on disk images\n");
 		return CBM_ERROR_FAULT;
 	 }
@@ -1172,26 +1168,26 @@ static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16
 	np=1;
    } else {
    	di_first_slot(diep,&file->Slot);
-   	np  = di_match_slot(diep,&file->Slot,filename, pars.filetype);
+   	np  = di_match_slot(diep,&file->Slot,filename, pars->filetype);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
-	if ((pars.filetype == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
-		pars.filetype = FS_DIR_TYPE_REL;
+	if ((pars->filetype == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+		pars->filetype = FS_DIR_TYPE_REL;
 		file->access_mode = FS_OPEN_RW;
 		// check record length
 		if (!np) {
 			// does not exist yet
-			if (*reclen == 0) {
+			if (pars->recordlen == 0) {
 				return CBM_ERROR_RECORD_NOT_PRESENT;
 			}
 		} else {
-			if (*reclen == 0) {
+			if (pars->recordlen == 0) {
 				// no reclen is given in the open
-				*reclen = file->Slot.recordlen;
+				pars->recordlen = file->Slot.recordlen;
 			} else {
 				// there is a rec len in the open and in the file
 				// so they need to be the same
-				if (*reclen != file->Slot.recordlen) {
+				if (pars->recordlen != file->Slot.recordlen) {
 					return CBM_ERROR_RECORD_NOT_PRESENT;
 				}
 			}
@@ -1212,17 +1208,17 @@ static int di_open_file(endpoint_t *ep, uint8_t *filename, uint8_t *opts, uint16
    }
    if (!np)
    {
-      if (pars.filetype == FS_DIR_TYPE_UNKNOWN) {
-	pars.filetype = FS_DIR_TYPE_PRG;
+      if (pars->filetype == FS_DIR_TYPE_UNKNOWN) {
+	pars->filetype = FS_DIR_TYPE_PRG;
       }
-      rv = di_create_entry(diep, file, filename, pars.filetype, *reclen);
+      rv = di_create_entry(diep, file, filename, pars->filetype, pars->recordlen);
       if (rv != CBM_ERROR_OK) return rv;
    }
 
    if (di_cmd == FS_OPEN_AP) {
 	di_pos_append(diep,file);
    }
-   return (pars.filetype == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
+   return (pars->filetype == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 
 
@@ -1542,7 +1538,11 @@ static int di_read_seq(di_endpoint_t *diep, File *file, char *retbuf, int len, i
    int i;
    log_debug("di_read_seq(fp %d, len=%d)\n",file,len);
 
-   di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
+   // we need to seek before the actual read, to make sure a paralle access does not
+   // disturb the position. Only at the first byte of the file, cht/chs is invalid...
+   if (file->chp < 254) {
+   	di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
+   }
 
    for (i=0 ; i < len ; ++i)
    {
@@ -2411,15 +2411,18 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 
 static int di_open(file_t *fp, int type) 
 {
-   	uint16_t reclen16 = 0;
+	openpars_t pars;
 	int rv = CBM_ERROR_FAULT;
+
+	pars.filetype = FS_DIR_TYPE_UNKNOWN;
+	pars.recordlen = 0;
 	
 	File *file = (File*) fp;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
 	} else {
-   		//rv = di_open_file(ep, (uint8_t *)buf, (uint8_t *)opts, &reclen16, type);
+   		rv = di_open_file(file, &pars, type);
    		//*reclen = reclen16;
 	}
    	return rv;

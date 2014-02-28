@@ -371,6 +371,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	
 
 		log_info("File open gave %d\n", err);
+		log_debug("File open gave file=%p\n", file);
 	
 		switch (type) {
 		case FS_OPEN_RD:
