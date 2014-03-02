@@ -1184,6 +1184,8 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 
 	//log_debug("write_file: file=%p\n", file);
 
+	int err = CBM_ERROR_OK;
+
 	FILE *fp = file->fp;
 
 	if (file->file.recordlen > 0) {
@@ -1205,18 +1207,22 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 	  int n = fwrite(buf, 1, len, fp);
 	  if (n < len) {
 		// short write indicates an error
-		log_debug("Close fd=%p on short write!\n", file);
+		log_debug("Close fd=%p on short write (was %d, should be %d)!\n", file, n, len);
+		log_debug("errno=%d, ferror()=%d\n", errno, ferror(fp));
+		if (ferror(fp)) {
+			err = errno_to_error(errno);
+		}
 		fflush(fp);
 		fclose(fp);
 		file->fp = NULL;
-		return -CBM_ERROR_WRITE_ERROR;
+		return -err;
 	  }
 	  if(is_eof) {
 	    log_debug("fd=%d received an EOF on write file\n", file);
 	    fflush(fp);
 	    //close_fds(ep, tfd);
 	  }
-	  return CBM_ERROR_OK;
+	  return err;
 	}
 	return -CBM_ERROR_FAULT;
 }

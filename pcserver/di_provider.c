@@ -1039,19 +1039,19 @@ static int di_find_free_block(di_endpoint_t *diep, File *f)
 // di_create_entry 
 // ***************
 
-static int di_create_entry(di_endpoint_t *diep, File *file, uint8_t *name, uint8_t type, uint8_t reclen)
+static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, openpars_t *pars)
 {
    log_debug("di_create_entry(%s)\n",name);
 
    if (!file) return CBM_ERROR_FAULT;
    if (di_find_free_slot(diep,&file->Slot)) return CBM_ERROR_DISK_FULL;
-   strcpy((char *)file->Slot.filename,(char *)name);
-   file->Slot.type = 0x80 | type;
+   strcpy((char *)file->Slot.filename,name);
+   file->Slot.type = 0x80 | pars->filetype;
    file->chp = 0;
    file->Slot.ss_track  = 0;	// invalid, i.e. new empty file if REL
    file->Slot.ss_sector = 0;
-   file->Slot.recordlen = reclen;
-   if (type != FS_DIR_TYPE_REL) {
+   file->Slot.recordlen = pars->recordlen;
+   if (pars->filetype != FS_DIR_TYPE_REL) {
    	if (di_find_free_block(diep,file) < 0)   return CBM_ERROR_DISK_FULL;
    	file->Slot.start_track  = file->cht;
    	file->Slot.start_sector = file->chs;
@@ -1168,7 +1168,7 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 	np=1;
    } else {
    	di_first_slot(diep,&file->Slot);
-   	np  = di_match_slot(diep,&file->Slot,filename, pars->filetype);
+   	np  = di_match_slot(diep,&file->Slot,(const uint8_t*) filename, pars->filetype);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
 	if ((pars->filetype == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
@@ -1211,7 +1211,7 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
       if (pars->filetype == FS_DIR_TYPE_UNKNOWN) {
 	pars->filetype = FS_DIR_TYPE_PRG;
       }
-      rv = di_create_entry(diep, file, filename, pars->filetype, pars->recordlen);
+      rv = di_create_entry(diep, file, filename, pars);
       if (rv != CBM_ERROR_OK) return rv;
    }
 
@@ -1349,8 +1349,6 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  * TODO: move directory traversing from endpoint to file !!!!!!!!!
  */
 static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
-
-	char *tmpnamep = NULL;
 
 	// here we (currently) only use it in resolve, not in read_dir_entry,
 	// so we don't care about isresolve and first/last entry
@@ -2406,6 +2404,51 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 }
 
 //***********
+// di_create 
+//***********
+
+static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpars_t *pars, int type) 
+{
+	File *dir = (File*) dirp;
+	di_endpoint_t *diep = (di_endpoint_t*) dirp->endpoint;
+
+	// validate name for Dxx correctness
+	// note that path separators are allowed, as the CBM drives happily created
+	// files with '/' in them.
+	if (strchr(pattern, ':') != NULL) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+	if (strchr(pattern, '*') != NULL) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+	if (strchr(pattern, '?') != NULL) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+	if (strchr(pattern, ',') != NULL) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+
+	File *file = di_reserve_file(diep);
+
+	int rv = di_create_entry(diep, file, pattern, pars);
+
+	di_fflush(&file->file);
+
+	if (rv != CBM_ERROR_OK) {
+		
+		reg_remove(&diep->base.files, file);
+		mem_free(file);
+	} else {
+
+		*newfile = file;
+	}
+
+
+	return rv;
+}
+
+
+//***********
 // di_open
 //***********
 
@@ -2556,6 +2599,8 @@ static void di_close(file_t *fp, int recurse) {
 	if (diep->base.is_temporary && reg_size(&diep->base.files) == 0) {
 		di_freeep(fp->endpoint);
 	}
+
+	// mem_free(file)?
 }
 
 
@@ -2600,7 +2645,7 @@ handler_t di_file_handler = {
         di_writefile,           // writefile
         NULL,                   // truncate
         di_direntry,            // direntry
-        NULL,	//	di_create               // create
+        di_create               // create
 };
 
 provider_t di_provider = {
