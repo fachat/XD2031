@@ -549,6 +549,7 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 	di_flag_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
    	channel_set(chan,ep);
+		break;
       case FS_BLOCK_BA:
 	rv = di_block_alloc(diep, &track, &sector);
 	break;
