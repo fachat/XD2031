@@ -259,6 +259,20 @@ static file_t* x00_parent(file_t *file) {
 	return NULL;
 }
 
+static void x00_dump(file_t *file, int recurse, int indent) {
+
+	const char *prefix = dump_indent(indent);
+
+	x00_file_t *xfile = (x00_file_t*) file;
+
+	log_debug("%s// x00 file\n", prefix);
+	log_debug("%sparent={\n", prefix);
+	if (file->parent != NULL && file->parent->handler->dump != NULL) {
+		file->parent->handler->dump(file->parent, recurse, indent+1);
+	}
+	log_debug("%s}\n", prefix);
+}
+
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
@@ -292,7 +306,11 @@ static handler_t x00_handler = {
 
 	NULL,		// int direntry(file_t *fp, file_t **outentry);
 
-	NULL		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
+	NULL,		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
+
+	// -------------------------
+
+	x00_dump
 };
 
 

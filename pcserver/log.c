@@ -194,6 +194,13 @@ void log_hexdump(char *p, int len, int petscii) {
 	color_default();
 }
 
+static const char* spaces = "                                                                  ";
+
+const char* dump_indent(uint8_t n) {
+	return spaces + strlen(spaces) - n * 2;
+}
+
+
 #if 0
 void test_log(void) {
 	log_term("log_term ");

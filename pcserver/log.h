@@ -45,3 +45,5 @@ void log_hexdump(char *p, int len, int petscii);
 #define	log_exitr(rv)	log_debug("EXIT: rv=%d\n", (rv))
 #define	log_rv(rv)	log_error("ERROR RETURN: %d\n", (rv))
 
+const char* dump_indent(int n);
+

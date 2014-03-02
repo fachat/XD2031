@@ -129,6 +129,8 @@ static int di_close_fd(di_endpoint_t *diep, File *f);
 static void di_read_BAM(di_endpoint_t *diep);
 static void di_first_slot(di_endpoint_t *diep, slot_t *slot);
 
+static void di_dump_file(file_t *fp, int recurse, int indent);
+
 // ------------------------------------------------------------------
 // management of endpoints
 
@@ -2435,12 +2437,14 @@ static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpa
 	di_fflush(&file->file);
 
 	if (rv != CBM_ERROR_OK) {
-		
+	
+		di_dump_file(file, 1, 0);
+	
 		reg_remove(&diep->base.files, file);
 		mem_free(file);
 	} else {
 
-		*newfile = file;
+		*newfile = (file_t*)file;
 	}
 
 
@@ -2522,6 +2526,43 @@ static void di_init(void)
 
 // ----------------------------------------------------------------------------------
 //    Debug code
+
+static void di_dump_file(file_t *fp, int recurse, int indent) {
+	
+	const char *prefix = dump_indent(indent);
+
+	File *file = (File*) fp;
+
+       	log_debug("%shandler='%s';\n", prefix, file->file.handler->name);
+        log_debug("%sparent='%p';\n", prefix, file->file.parent);
+	if (recurse) {
+		log_debug("%s{\n", prefix);
+		if (file->file.parent != NULL && file->file.parent->handler->dump != NULL) {
+			file->file.parent->handler->dump(file->file.parent, 1, indent+1);
+		}
+		log_debug("%s}\n", prefix);
+		
+	}
+        log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
+        log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
+        log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+        log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
+        log_debug("%sfilename='%s';\n", prefix, file->file.filename);
+        log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);
+        log_debug("%smode='%d';\n", prefix, file->file.mode);
+        log_debug("%stype='%d';\n", prefix, file->file.type);
+        log_debug("%sattr='%d';\n", prefix, file->file.attr);
+        log_debug("%swritable='%d';\n", prefix, file->file.writable);
+        log_debug("%sseekable='%d';\n", prefix, file->file.seekable);
+
+        log_debug("%snext_track='%d';\n", prefix, file->next_track);
+        log_debug("%snext_sector='%d';\n", prefix, file->next_sector);
+        log_debug("%scht='%d';\n", prefix, file->cht);
+        log_debug("%schs='%d';\n", prefix, file->chs);
+        log_debug("%schp='%d';\n", prefix, file->chp);
+ 
+	
+}
 
 #if 0
 
@@ -2634,7 +2675,7 @@ provider_t di_provider =
 // ----------------------------------------------------------------------------------
 
 handler_t di_file_handler = {
-        "fs_file_handler",
+        "di_file_handler",
         NULL,		// charset name
         NULL,   	// resolve - not required
         di_close,       // close
@@ -2645,11 +2686,12 @@ handler_t di_file_handler = {
         di_writefile,           // writefile
         NULL,                   // truncate
         di_direntry,            // direntry
-        di_create               // create
+        di_create,              // create
+	di_dump_file		// dump
 };
 
 provider_t di_provider = {
-        "fs",
+        "di",
         "PETSCII",
         di_init,
         di_newep,
@@ -2662,6 +2704,7 @@ provider_t di_provider = {
         di_cd,
         NULL,		// mkdir not supported
         NULL,		// rmdir not supported
-        di_direct
+        di_direct,
+	NULL		// dump
 };
 

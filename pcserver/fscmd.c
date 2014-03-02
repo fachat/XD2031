@@ -294,6 +294,14 @@ int cmd_process_stdin(void) {
 		}
 	}
 
+	if (!strcmp(buf, "D")) {
+		// dump memory structures for analysis
+
+		// dump open endpoints, files etc
+		// maybe later compare with dump from mem to find memory leaks
+		provider_dump();
+	}
+
 	log_error("Syntax error: '%s'\n", buf);
 	return false;
 }

@@ -89,6 +89,8 @@ typedef struct {
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
+	// dump / debug
+	void		(*dump)(int indent);
 } provider_t;
 
 // values to be set in the out parameter readflag for readfile()
@@ -201,6 +203,10 @@ struct _handler {
         int             (*direntry)(file_t *dirfp, file_t **outentry, int isresolve, int *readflag);
                                                         // create a new file in the directory
         int             (*create)(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars, int opentype);
+
+        // -------------------------
+
+	void		(*dump)(file_t *fp, int recurse, int indent); // dump info for analysis / debug
 };
 
 // values to be set in the out parameter readflag for readfile()
@@ -252,6 +258,11 @@ int provider_register(provider_t *provider);
  * initialize the provider registry
  */
 void provider_init(void);
+
+/*
+ * dump the in-memory structures (for analysis / debug)
+ */
+void provider_dump();
 
 // set the character set for the external communication (i.e. the wireformat)
 // modifies the conversion routines for all the providers

@@ -372,4 +372,31 @@ endpoint_t *provider_lookup(int drive, char **name) {
         return NULL;
 }
 
+/*
+ * dump the in-memory structures (for analysis / debug)
+ */
+void provider_dump() {
+	int indent = 1;
+	const char *prefix = dump_indent(indent);
+	const char *eppref = dump_indent(indent+1);
+
+	for (int i = 0; ; i++) {
+		providers_t *p = reg_get(&providers, i);
+		if (p != NULL) {
+			log_debug("%s// Dumping provider %s\n", prefix, p->provider->name);
+			log_debug("%s{\n", prefix);
+			log_debug("%sname='%s';\n", eppref, p->provider->name);
+			log_debug("%snative_charset='%s';\n", eppref, p->provider->native_charset);
+			log_debug("%sprovider={\n", eppref);
+			if (p->provider->dump != NULL) {
+				p->provider->dump(indent+2);
+			}
+			log_debug("%s}\n", eppref);
+			log_debug("%s}\n", prefix);
+		} else {
+			// no provider left
+			break;
+		}
+	}
+}
 

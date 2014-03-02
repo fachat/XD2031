@@ -71,6 +71,8 @@
 extern provider_t fs_provider;
 extern handler_t fs_file_handler;
 
+static registry_t endpoints;
+
 typedef struct {
 	file_t		file;
 	FILE		*fp;
@@ -121,6 +123,8 @@ static void endpoint_init(const type_t *t, void *obj) {
 	fsep->curpath = NULL;
 
 	fsep->base.ptype = &fs_provider;
+
+	reg_append(&endpoints, fsep);
 }
 
 static type_t endpoint_type = {
@@ -146,6 +150,8 @@ static size_t file_get_size(FILE *fp);
 
 static void fsp_init() {
 	provider_register(&fs_provider);
+
+	reg_init(&endpoints, "fs endpoints", 10);
 }
 
 static File *reserve_file(fs_endpoint_t *fsep) {
@@ -212,6 +218,9 @@ static void fsp_free(endpoint_t *ep) {
 	while ((f = (File*)reg_get(&cep->base.files, 0)) != NULL) {
 		close_fd(f, 1);
 	}
+
+	reg_remove(&endpoints, cep);
+
 	mem_free(cep->basepath);
 	mem_free(cep->curpath);
         mem_free(ep);
@@ -1209,6 +1218,7 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 		// short write indicates an error
 		log_debug("Close fd=%p on short write (was %d, should be %d)!\n", file, n, len);
 		log_debug("errno=%d, ferror()=%d\n", errno, ferror(fp));
+		file->file.handler->dump(file, 1, 1);
 		if (ferror(fp)) {
 			err = errno_to_error(errno);
 		}
@@ -1648,6 +1658,88 @@ static void fs_close(file_t *fp, int recurse) {
 
 // ----------------------------------------------------------------------------------
 
+static void fs_dump_file(file_t *fp, int recurse, int indent) {
+
+	File *file = (File*)fp;
+	const char *prefix = dump_indent(indent);
+
+	log_debug("%shandler='%s';\n", prefix, file->file.handler->name);
+	log_debug("%sparent='%p';\n", prefix, file->file.parent);
+        if (recurse) {
+                log_debug("%s{\n", prefix);
+                if (file->file.parent != NULL && file->file.parent->handler->dump != NULL) {
+                        file->file.parent->handler->dump(file->file.parent, 1, indent+1);
+                }
+                log_debug("%s}\n", prefix);
+                
+        }
+	log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
+	log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
+	log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+	log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
+	log_debug("%sfilename='%s';\n", prefix, file->file.filename);
+	log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);
+	log_debug("%smode='%d';\n", prefix, file->file.mode);
+	log_debug("%stype='%d';\n", prefix, file->file.type);
+	log_debug("%sattr='%d';\n", prefix, file->file.attr);
+	log_debug("%swritable='%d';\n", prefix, file->file.writable);
+	log_debug("%sseekable='%d';\n", prefix, file->file.seekable);
+	log_debug("%stemp_open='%d';\n", prefix, file->temp_open);
+	log_debug("%sospath='%s';\n", prefix, file->ospath);
+	
+}
+
+static void fs_dump_ep(fs_endpoint_t *fsep, int indent) {
+
+	const char *prefix = dump_indent(indent);
+	int newind = indent + 1;
+	const char *eppref = dump_indent(newind);
+
+	log_debug("%sprovider='%s';\n", prefix, fsep->base.ptype->name);
+	log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
+	log_debug("%sbasepath='%s';\n", prefix, fsep->basepath);
+	log_debug("%scurrent_path='%s';\n", prefix, fsep->curpath);
+	log_debug("%sfiles={;\n", prefix, fsep->curpath);
+	for (int i = 0; ; i++) {
+		File *file = (File*) reg_get(&fsep->base.files, i);
+		log_debug("%s// file at %p\n", eppref, file);
+		if (file != NULL) {
+			log_debug("%s{\n", eppref, file);
+			if (file->file.handler->dump != NULL) {
+				file->file.handler->dump((file_t*)file, 0, newind+1);
+			}
+			log_debug("%s{\n", eppref, file);
+		} else {
+			break;
+		}
+	}
+	log_debug("%s}\n", prefix);
+}
+
+static void fs_dump(int indent) {
+
+	const char *prefix = dump_indent(indent);
+	int newind = indent + 1;
+	const char *eppref = dump_indent(newind);
+
+	log_debug("%s// file system provider\n", prefix);
+	log_debug("%sendpoints={\n", prefix);
+	for (int i = 0; ; i++) {
+		fs_endpoint_t *fsep = (fs_endpoint_t*) reg_get(&endpoints, i);
+		if (fsep != NULL) {
+			log_debug("%s// endpoint %p\n", eppref, fsep);
+			log_debug("%s{\n", eppref);
+			fs_dump_ep(fsep, newind+1);
+			log_debug("%s}\n", eppref);
+		} else {
+			break;
+		}
+	}
+	log_debug("%s}\n", prefix);
+}
+
+// ----------------------------------------------------------------------------------
+
 handler_t fs_file_handler = {
 	"fs_file_handler",
 	"ASCII",
@@ -1660,7 +1752,8 @@ handler_t fs_file_handler = {
 	writefile,		// writefile
 	NULL,			// truncate
 	fs_direntry,		// direntry
-	fs_create		// create
+	fs_create,		// create
+	fs_dump_file		// dump file
 };
 
 provider_t fs_provider = {
@@ -1677,7 +1770,8 @@ provider_t fs_provider = {
 	fs_cd,
 	fs_mkdir,
 	fs_rmdir,
-	fs_direct
+	fs_direct,
+	fs_dump			// dump
 };
 
 
