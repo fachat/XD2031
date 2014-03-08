@@ -222,11 +222,10 @@ static endpoint_t *di_newep(endpoint_t *parent, const char *path)
    (void) parent; // silence -Wunused-parameter
 
    //int i;
-   di_endpoint_t *diep = malloc(sizeof(di_endpoint_t));
+   di_endpoint_t *diep = mem_alloc(&endpoint_type);
    //diep->curpath = malloc(strlen(path)+1);
    //strcpy(diep->curpath,path);
    //for(int i=0;i<MAXFILES;i++) di_init_fp(&(diep->files[i]));
-   diep->base.ptype = &di_provider;
    //if(!di_load_image(diep,path)) return NULL; // not a valid disk image
    //for (i=0 ; i < 5 ; ++i) diep->chan[i] = -1;
    log_debug("di_newep(%s) = %p\n",path,diep);
@@ -292,6 +291,7 @@ static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
 	File *file = di_reserve_file(diep);
 
 	file->file.filename = mem_alloc_str("$");
+	file->file.writable = diep->Ip->writable;
 
 	// TODO: move from global to file
         di_first_slot(diep,&diep->Slot);
@@ -369,7 +369,9 @@ static inline void di_fwrite(void *ptr, size_t size, size_t nmemb, file_t *file)
 }
 
 static inline void di_fflush(file_t *file) {
-	// TODO
+	di_endpoint_t *diep = (di_endpoint_t *)file->endpoint;
+
+	diep->Ip->handler->flush(diep->Ip);
 }
 
 static inline void di_fsync(file_t *file) {
@@ -1048,8 +1050,8 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
 
    if (!file) return CBM_ERROR_FAULT;
    if (di_find_free_slot(diep,&file->Slot)) return CBM_ERROR_DISK_FULL;
-   strcpy((char *)file->Slot.filename,name);
-   file->Slot.type = 0x80 | pars->filetype;
+   strncpy((char *)file->Slot.filename,name, 16);
+   file->Slot.type = 0x80 | ((pars->filetype == FS_DIR_TYPE_UNKNOWN) ? FS_DIR_TYPE_PRG : pars->filetype);
    file->chp = 0;
    file->Slot.ss_track  = 0;	// invalid, i.e. new empty file if REL
    file->Slot.ss_sector = 0;
@@ -1070,6 +1072,8 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    	log_debug("Setting maxrecord to %d\n", file->maxrecord);
    }
    di_write_slot(diep,&file->Slot);
+
+   di_fflush(file);
    // di_print_slot(&file->Slot);
    return CBM_ERROR_OK;
 }
@@ -2431,7 +2435,15 @@ static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpa
 		return CBM_ERROR_SYNTAX_PATTERN;
 	}
 
+	if (type != FS_OPEN_RD) {
+		if (dirp->writable == 0 || diep->Ip->writable == 0) {
+			return CBM_ERROR_WRITE_PROTECT;
+		}
+	}
+
 	File *file = di_reserve_file(diep);
+	file->access_mode = type;
+	file->file.writable = (type == FS_OPEN_RD) ? 0 : 1;
 
 	int rv = di_create_entry(diep, file, pattern, pars);
 
@@ -2439,7 +2451,7 @@ static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpa
 
 	if (rv != CBM_ERROR_OK) {
 	
-		di_dump_file(file, 1, 0);
+		di_dump_file((file_t*)file, 1, 0);
 	
 		reg_remove(&diep->base.files, file);
 		mem_free(file);
@@ -2706,6 +2718,7 @@ provider_t di_provider = {
         NULL,		// mkdir not supported
         NULL,		// rmdir not supported
         di_direct,
+	di_fflush,	// flush data to disk
 	NULL		// dump
 };
 

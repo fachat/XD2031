@@ -196,7 +196,7 @@ void log_hexdump(char *p, int len, int petscii) {
 
 static const char* spaces = "                                                                  ";
 
-const char* dump_indent(uint8_t n) {
+const char* dump_indent(int n) {
 	return spaces + strlen(spaces) - n * 2;
 }
 

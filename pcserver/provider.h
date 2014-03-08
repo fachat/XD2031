@@ -206,6 +206,10 @@ struct _handler {
 
         // -------------------------
 
+	int		(*flush)(file_t *fp);		// flush data out to disk
+
+        // -------------------------
+
 	void		(*dump)(file_t *fp, int recurse, int indent); // dump info for analysis / debug
 };
 

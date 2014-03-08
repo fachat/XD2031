@@ -259,11 +259,16 @@ static file_t* x00_parent(file_t *file) {
 	return NULL;
 }
 
+static int x00_flush(file_t *file) {
+	if (file->parent != NULL) {
+		return file->parent->handler->flush(file->parent);
+	}
+	return CBM_ERROR_FAULT;
+}
+
 static void x00_dump(file_t *file, int recurse, int indent) {
 
 	const char *prefix = dump_indent(indent);
-
-	x00_file_t *xfile = (x00_file_t*) file;
 
 	log_debug("%s// x00 file\n", prefix);
 	log_debug("%sparent={\n", prefix);
@@ -309,6 +314,8 @@ static handler_t x00_handler = {
 	NULL,		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
 
 	// -------------------------
+
+	x00_flush,
 
 	x00_dump
 };

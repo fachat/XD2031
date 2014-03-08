@@ -1510,7 +1510,7 @@ static int fs_open_temp(File *file) {
 	if (file->file.mode == FS_DIR_MOD_FIL) {
 	
 		if (file->fp == NULL) {
-			file->fp = fopen(file->ospath, "rb");
+			file->fp = fopen(file->ospath, file->file.writable ? "r+b" : "rb");
 			file->temp_open = 1;
 			if (file->fp == NULL) {
 				log_errno("fopen");
@@ -1658,6 +1658,16 @@ static void fs_close(file_t *fp, int recurse) {
 
 // ----------------------------------------------------------------------------------
 
+static void fs_flush(file_t *fp) {
+	
+	File *file = (File*)fp;
+	if (file->fp != NULL) {
+		fflush(file->fp);
+	}
+}
+
+// ----------------------------------------------------------------------------------
+
 static void fs_dump_file(file_t *fp, int recurse, int indent) {
 
 	File *file = (File*)fp;
@@ -1753,6 +1763,7 @@ handler_t fs_file_handler = {
 	NULL,			// truncate
 	fs_direntry,		// direntry
 	fs_create,		// create
+	fs_flush,		// flush data out to disk
 	fs_dump_file		// dump file
 };
 

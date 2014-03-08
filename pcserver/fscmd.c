@@ -264,7 +264,7 @@ void disable_user_interface(void) {
 
 #define INBUF_SIZE 1024
 // reads stdin and returns true, if the main loop should abort
-int cmd_process_stdin(void) {
+static int cmd_process_stdin(void) {
 	char buf[INBUF_SIZE + 1];
 
 	log_debug("cmd_process_stdin()\n");
