@@ -532,9 +532,6 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 
 		if (rv != CBM_ERROR_OK) {
 			set_error_ts(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector);
-
-			// means: don't wait, error is already set
-			return -1;
 		}
 	}
         return rv;
@@ -562,16 +559,15 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	}
 	cmdbuf++;
 
-	char cchar = *cmdbuf;
+	char cchar = *cmdbuf++;
 	
-	while (*cmdbuf != 0 && *cmdbuf != ':') {
+	// skip blanks and colon before parameters
+	while (*cmdbuf == ' ' || *cmdbuf == ':') {
 		cmdbuf++;
 	}
 	if (*cmdbuf == 0) {
 		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
-	// char after the ':'
-	cmdbuf++;	
 		
 	switch(cchar) {
 	case 'A':

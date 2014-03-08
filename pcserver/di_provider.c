@@ -662,6 +662,7 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
         //handler_resolve_block(ep, chan, &fp);
 
         channel_set(chan, fp);
+	break;
       case FS_BLOCK_BA:
 	rv = di_block_alloc(diep, &track, &sector);
 	break;
