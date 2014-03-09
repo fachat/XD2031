@@ -258,7 +258,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 			}
 		}
 
-		log_debug("Found entry - outname=%s, file=%p\n", outname, file);
+		log_debug("Found entry - err=%d, outname=%s, file=%p\n", err, outname, file);
 
 		if (err != CBM_ERROR_OK || file == NULL) {
 			break;

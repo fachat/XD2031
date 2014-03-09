@@ -81,7 +81,8 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 
 	// must be at least one character, plus "." plus "x00" ending
 	if (infile->filename == NULL || strlen(infile->filename) < 5) {
-		return CBM_ERROR_FILE_NOT_FOUND;
+		// not found, but no error
+		return CBM_ERROR_OK;
 	}
 
 	const char *name = conv_to_name_alloc(infile->filename, x00_handler.native_charset);

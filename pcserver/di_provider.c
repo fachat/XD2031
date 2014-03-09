@@ -461,7 +461,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
 {
   uint8_t t,s,p;
 
-  log_debug("Closing file %p access mode = %d\n", f, f->access_mode);
+  log_debug("Closing file %p (%s) access mode = %d\n", f, f->file.filename, f->access_mode);
 
   if (f->access_mode == FS_OPEN_WR ||
       f->access_mode == FS_OPEN_OW ||
@@ -1051,7 +1051,8 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    if (!file) return CBM_ERROR_FAULT;
    if (di_find_free_slot(diep,&file->Slot)) return CBM_ERROR_DISK_FULL;
    strncpy((char *)file->Slot.filename,name, 16);
-   file->Slot.type = 0x80 | ((pars->filetype == FS_DIR_TYPE_UNKNOWN) ? FS_DIR_TYPE_PRG : pars->filetype);
+   file->file.type = ((pars->filetype == FS_DIR_TYPE_UNKNOWN) ? FS_DIR_TYPE_PRG : pars->filetype);
+   file->Slot.type = 0x80 | file->file.type;
    file->chp = 0;
    file->Slot.ss_track  = 0;	// invalid, i.e. new empty file if REL
    file->Slot.ss_sector = 0;
@@ -2700,6 +2701,7 @@ handler_t di_file_handler = {
         NULL,                   // truncate
         di_direntry,            // direntry
         di_create,              // create
+	di_fflush,	// flush data to disk
 	di_dump_file		// dump
 };
 
@@ -2718,7 +2720,6 @@ provider_t di_provider = {
         NULL,		// mkdir not supported
         NULL,		// rmdir not supported
         di_direct,
-	di_fflush,	// flush data to disk
 	NULL		// dump
 };
 
