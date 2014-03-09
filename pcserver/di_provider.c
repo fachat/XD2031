@@ -275,6 +275,8 @@ static void di_freeep(endpoint_t *ep)
 		log_warn("di_freeep(): force closing file %p\n", reg_size(&ep->files));
                 di_close_fd(cep, f);
         }
+	cep->Ip->handler->close(cep->Ip, 1);
+
    	mem_free(ep);
 }
 
@@ -368,10 +370,10 @@ static inline void di_fwrite(void *ptr, size_t size, size_t nmemb, file_t *file)
 	file->handler->writefile(file, (char*) ptr, size * nmemb, 0);
 }
 
-static inline void di_fflush(file_t *file) {
+static inline int di_fflush(file_t *file) {
 	di_endpoint_t *diep = (di_endpoint_t *)file->endpoint;
 
-	diep->Ip->handler->flush(diep->Ip);
+	return diep->Ip->handler->flush(diep->Ip);
 }
 
 static inline void di_fsync(file_t *file) {
@@ -1074,7 +1076,7 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    }
    di_write_slot(diep,&file->Slot);
 
-   di_fflush(file);
+   di_fflush((file_t*)file);
    // di_print_slot(&file->Slot);
    return CBM_ERROR_OK;
 }
@@ -2417,7 +2419,6 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 
 static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpars_t *pars, int type) 
 {
-	File *dir = (File*) dirp;
 	di_endpoint_t *diep = (di_endpoint_t*) dirp->endpoint;
 
 	// validate name for Dxx correctness
@@ -2655,7 +2656,7 @@ static void di_close(file_t *fp, int recurse) {
 		di_freeep(fp->endpoint);
 	}
 
-	// mem_free(file)?
+	mem_free(file);
 }
 
 

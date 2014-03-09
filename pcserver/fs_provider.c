@@ -71,6 +71,9 @@
 extern provider_t fs_provider;
 extern handler_t fs_file_handler;
 
+// prototype
+static void fs_dump_file(file_t *fp, int recurse, int indent);
+
 static registry_t endpoints;
 
 typedef struct {
@@ -98,6 +101,7 @@ static void file_init(const type_t *t, void *obj) {
 	fp->block = NULL;
 	fp->block_ptr = 0;
 	fp->temp_open = 0;
+	fp->ospath = NULL;
 }
 
 static type_t file_type = {
@@ -1218,7 +1222,7 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 		// short write indicates an error
 		log_debug("Close fd=%p on short write (was %d, should be %d)!\n", file, n, len);
 		log_debug("errno=%d, ferror()=%d\n", errno, ferror(fp));
-		file->file.handler->dump(file, 1, 1);
+		file->file.handler->dump((file_t*)file, 1, 1);
 		if (ferror(fp)) {
 			err = errno_to_error(errno);
 		}
@@ -1653,17 +1657,22 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 
 static void fs_close(file_t *fp, int recurse) {
 	log_debug("fs_close(%p)", fp);
+
+	//fs_dump_file(fp, 0, 1);
+
 	close_fd((File*)fp, recurse);
+
 }
 
 // ----------------------------------------------------------------------------------
 
-static void fs_flush(file_t *fp) {
+static int fs_flush(file_t *fp) {
 	
 	File *file = (File*)fp;
 	if (file->fp != NULL) {
 		fflush(file->fp);
 	}
+	return CBM_ERROR_OK;
 }
 
 // ----------------------------------------------------------------------------------

@@ -57,6 +57,8 @@ int reg_size(registry_t *reg) {
 // adds a pre-allocated struct
 void reg_append(registry_t *reg, void *ptr) {
 
+	log_debug("Adding entry %p to registry %pd (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
+
 	if (reg->numentries >= reg->capacity) {
 		int newcap = reg->capacity * 3 / 2;
 
@@ -89,16 +91,19 @@ void *reg_get(registry_t *reg, int position) {
 // Note: linear with registry size
 void reg_remove(registry_t *reg, void *ptr) {
 
+	log_debug("Removing entry %p from registry %p (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
+
 	for (int i = reg->numentries-1; i >= 0; i--) {
 		if (reg->entries[i] == ptr) {
-			int size = (reg->numentries - 1 - i) * sizeof(void*);
+			reg->numentries--;
+			int size = (reg->numentries - i) * sizeof(void*);
 			if (size > 0) {
 				memmove(reg->entries+i, reg->entries+i+1, size);
 			}
-			reg->numentries--;
+			return;
 		}
-		break;
 	}
+	log_error("Unable to remove entry %p from registry %p (%s)\n", ptr, reg, reg->name);
 }
 
 
