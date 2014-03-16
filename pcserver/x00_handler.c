@@ -279,6 +279,17 @@ static void x00_dump(file_t *file, int recurse, int indent) {
 	log_debug("%s}\n", prefix);
 }
 
+static int x00_equals(file_t *thisfile, file_t *otherfile) {
+
+        if (otherfile->handler != &x00_handler) {
+                return 1;
+        }
+
+        return thisfile->parent->handler->equals(thisfile->parent, otherfile->parent);
+
+}
+
+
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
@@ -317,6 +328,10 @@ static handler_t x00_handler = {
 	// -------------------------
 
 	x00_flush,
+
+	x00_equals,
+
+	// -------------------------
 
 	x00_dump
 };

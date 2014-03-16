@@ -1675,6 +1675,15 @@ static int fs_flush(file_t *fp) {
 	return CBM_ERROR_OK;
 }
 
+static int fs_equals(file_t *thisfile, file_t *otherfile) {
+
+	if (otherfile->handler != &fs_file_handler) {
+		return 1;
+	}
+
+	return strcmp(((File*)thisfile)->ospath, ((File*)otherfile)->ospath);
+}
+
 // ----------------------------------------------------------------------------------
 
 static void fs_dump_file(file_t *fp, int recurse, int indent) {
@@ -1773,6 +1782,7 @@ handler_t fs_file_handler = {
 	fs_direntry,		// direntry
 	fs_create,		// create
 	fs_flush,		// flush data out to disk
+        fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_dump_file		// dump file
 };
 

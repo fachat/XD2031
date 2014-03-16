@@ -116,6 +116,8 @@ typedef struct
 
 extern provider_t di_provider;
 
+static registry_t di_endpoint_registry;
+
 handler_t di_file_handler;
 
 // prototypes
@@ -219,17 +221,17 @@ static cbm_errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
 
 static endpoint_t *di_newep(endpoint_t *parent, const char *path)
 {
-   (void) parent; // silence -Wunused-parameter
+   	(void) parent; // silence -Wunused-parameter
 
-   //int i;
-   di_endpoint_t *diep = mem_alloc(&endpoint_type);
-   //diep->curpath = malloc(strlen(path)+1);
-   //strcpy(diep->curpath,path);
-   //for(int i=0;i<MAXFILES;i++) di_init_fp(&(diep->files[i]));
-   //if(!di_load_image(diep,path)) return NULL; // not a valid disk image
-   //for (i=0 ; i < 5 ; ++i) diep->chan[i] = -1;
-   log_debug("di_newep(%s) = %p\n",path,diep);
-   return (endpoint_t*) diep;
+   	di_endpoint_t *diep = mem_alloc(&endpoint_type);
+
+	// register with list of endpoints
+	// (note: early registration, but we are single-threaded...)
+	reg_append(&di_endpoint_registry, diep);
+
+   	log_debug("di_newep(%s) = %p\n",path,diep);
+
+   	return (endpoint_t*) diep;
 }
 
 // *********
@@ -275,6 +277,11 @@ static void di_freeep(endpoint_t *ep)
 		log_warn("di_freeep(): force closing file %p\n", reg_size(&ep->files));
                 di_close_fd(cep, f);
         }
+
+	// remove from list of endpoints
+	reg_remove(&di_endpoint_registry, cep);
+
+	// close/free resources
 	cep->Ip->handler->close(cep->Ip, 1);
 
    	mem_free(ep);
@@ -293,6 +300,7 @@ static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
 	File *file = di_reserve_file(diep);
 
 	file->file.filename = mem_alloc_str("$");
+	//file->file.pattern = mem_alloc_str("*");
 	file->file.writable = diep->Ip->writable;
 
 	// TODO: move from global to file
@@ -331,7 +339,33 @@ static int di_wrap(file_t *file, file_t **wrapped)
 		return err;
 	}
 
-   	di_endpoint_t *diep = mem_alloc(&endpoint_type);
+	// check existing endpoints (so we re-use them and do not confuse
+	// underlying data structures by parallel access paths
+
+	for (int i = 0; ; i++) {
+		di_endpoint_t *diep = reg_get(&di_endpoint_registry, i);
+
+		if (diep == NULL) {
+			// no more endpoint
+			break;
+		}
+
+		log_debug("checking ep %p for reuse (root=%p)\n", diep, diep->Ip);
+
+		if (!diep->Ip->handler->equals(diep->Ip, file)) {
+			// root of endpoint equals the given parent file
+			// so we reuse the endpoint
+
+			log_debug("Found ep %p to reuse with file %p\n", diep, file);
+
+			*wrapped = di_root((endpoint_t*)diep, 1);
+
+			return CBM_ERROR_OK;
+		}		
+	}
+
+	// allocate a new endpoint
+   	di_endpoint_t *diep = di_newep(NULL, name);
 	diep->Ip = file;
 	diep->base.is_temporary = 1;
 
@@ -1356,7 +1390,6 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  * get the next directory entry in the directory given as fp.
  * If isresolve is set, then the disk header and blocks free entries are skipped
  * 
- * TODO: move directory traversing from endpoint to file !!!!!!!!!
  */
 static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
 
@@ -1378,7 +1411,12 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	File *file = (File*) fp;
 
 	if (file->dospattern == NULL) {
-		char *pattern = mem_alloc_str(fp->pattern);
+		char *pattern = NULL;
+		if (fp->pattern == NULL) {
+			pattern = mem_alloc_str("*");
+		} else {
+			pattern = mem_alloc_str(fp->pattern);
+		}
 		provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
 		file->dospattern = pattern;
 	}
@@ -2536,7 +2574,9 @@ static int di_readfile(file_t *fp, char *retbuf, int len, int *eof)
 
 static void di_init(void)
 {
-   log_debug("di_init\n");
+   	log_debug("di_init\n");
+	
+   	reg_init(&di_endpoint_registry, "di_endpoint_registry", 5);
 }
 
 // ----------------------------------------------------------------------------------
@@ -2659,6 +2699,19 @@ static void di_close(file_t *fp, int recurse) {
 	mem_free(file);
 }
 
+static int di_equals(file_t *thisfile, file_t *otherfile) {
+
+        if (otherfile->handler != &di_file_handler) {
+                return 1;
+        }
+
+        if (otherfile->endpoint != thisfile->endpoint) {
+                return 1;
+        }
+
+        return ((File*)thisfile)->Slot.number - ((File*)otherfile)->Slot.number;
+}
+
 
 // ----------------------------------------------------------------------------------
 
@@ -2703,6 +2756,7 @@ handler_t di_file_handler = {
         di_direntry,            // direntry
         di_create,              // create
 	di_fflush,	// flush data to disk
+	di_equals,
 	di_dump_file		// dump
 };
 

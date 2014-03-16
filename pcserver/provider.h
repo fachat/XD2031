@@ -208,9 +208,16 @@ struct _handler {
 
 	int		(*flush)(file_t *fp);		// flush data out to disk
 
+							// check if the other file is the same
+							// as thisfile. Used to check if an opened
+							// file is part of an endpoint root
+							// returns 0 on equal, 1 on different
+	int		(*equals)(file_t *thisfile, file_t *otherfile);
+
         // -------------------------
 
 	void		(*dump)(file_t *fp, int recurse, int indent); // dump info for analysis / debug
+
 };
 
 // values to be set in the out parameter readflag for readfile()
