@@ -111,7 +111,7 @@ typedef struct
    uint8_t       CurrentTrack;        // start track for scannning of BAM
    uint8_t       U2_track;            // track  for U2 command
    uint8_t       U2_sector;           // sector for U2 command
-   slot_t        Slot;                // directory slot
+   slot_t        Slot;                // directory slot	- should be deprecated!
 }  di_endpoint_t;
 
 extern provider_t di_provider;
@@ -416,7 +416,10 @@ static inline int di_fflush(file_t *file) {
 
 static inline void di_fsync(file_t *file) {
 	// TODO
-     // if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+     	// if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
+	di_endpoint_t *diep = (di_endpoint_t *)file->endpoint;
+
+	return diep->Ip->handler->flush(diep->Ip);
 }
 
 // ************
@@ -1137,6 +1140,8 @@ static void di_pos_append(di_endpoint_t *diep, File *f)
       di_fread(&nt,1,1,diep->Ip);
       di_fread(&ns,1,1,diep->Ip);
    }
+   f->next_track = 0;
+   f->next_sector = ns;
    f->cht =  t;
    f->chs =  s;
    f->chp = ns-1;
@@ -1443,15 +1448,19 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		if (diep->Slot.type != 0) {
 			File *entry = di_reserve_file(diep);
 
+			// it is totally stupid having to do this...
+			memcpy(&entry->Slot, &diep->Slot, sizeof(slot_t));
+
 			entry->file.parent = fp;
 			entry->file.mode = FS_DIR_MOD_FIL;
-			entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
-			entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
+			entry->file.seekable = 1;
+			entry->file.type = entry->Slot.type & FS_DIR_ATTR_TYPEMASK;
+			entry->file.attr = entry->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
 			// convert to external charset
-			entry->file.filename = conv_from_alloc((const char*)diep->Slot.filename, &di_provider); 
+			entry->file.filename = conv_from_alloc((const char*)entry->Slot.filename, &di_provider); 
 
 			log_debug("converted image filename %s to %s for next check\n", 
-					(const char*)diep->Slot.filename, entry->file.filename);
+					(const char*)entry->Slot.filename, entry->file.filename);
 
 // TODO		
 //			if (diep->base.writable) {
@@ -1462,6 +1471,8 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 				== CBM_ERROR_OK) {
 				*outentry = wrapfile;
 				rv = CBM_ERROR_OK;
+	
+				// .. and this state is the reason for the stupid copy above...
       				di_next_slot(diep,&diep->Slot);
 				break;
 			}
@@ -1471,6 +1482,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 			entry->file.handler->close((file_t*)entry, 0);
 		}
 
+		// .. and this state is the reason for the stupid copy above...
       		di_next_slot(diep,&diep->Slot);
    	} while (1);
 
@@ -1595,7 +1607,7 @@ static int di_read_seq(di_endpoint_t *diep, File *file, char *retbuf, int len, i
    int i;
    log_debug("di_read_seq(fp %d, len=%d)\n",file,len);
 
-   // we need to seek before the actual read, to make sure a paralle access does not
+   // we need to seek before the actual read, to make sure a parallel access does not
    // disturb the position. Only at the first byte of the file, cht/chs is invalid...
    if (file->chp < 254) {
    	di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
@@ -2466,6 +2478,54 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 // di_create 
 //***********
 
+// this is a simple, stupid seek - just following the block chain
+
+static int di_seek(file_t *file, long position, int flag) {
+
+	if (flag != SEEKFLAG_ABS) {
+		// unsupported
+		return CBM_ERROR_FAULT;
+	}
+
+	File *f = (File*) file;
+	di_endpoint_t *diep = (di_endpoint_t*)file->endpoint;
+
+	uint8_t next_t = f->Slot.start_track;
+	uint8_t next_s = f->Slot.start_sector;
+	
+	// each block is 254 data bytes
+	do {
+		di_fseek_tsp(diep, next_t, next_s, 0);
+		f->cht = next_t;
+		f->chs = next_s;
+	     	di_fread(&next_t,1,1,diep->Ip);
+     		di_fread(&next_s,1,1,diep->Ip);
+		if (next_t == 0 || position < 254) {
+			// no next block
+			break;
+		}
+		position -= 254;
+	} while (1);
+
+	f->next_track = next_t;
+	f->next_sector = next_s;
+
+	// when position >= 254 we passed to the end of the file
+	if (position >= 254) {
+		// TODO seek behind end of file
+		// for now just fault
+		return CBM_ERROR_FAULT;
+	}
+
+	f->chp = position & 0xff;
+
+	return CBM_ERROR_OK;
+}
+
+//***********
+// di_create 
+//***********
+
 static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpars_t *pars, int type) 
 {
 	di_endpoint_t *diep = (di_endpoint_t*) dirp->endpoint;
@@ -2495,6 +2555,7 @@ static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpa
 	File *file = di_reserve_file(diep);
 	file->access_mode = type;
 	file->file.writable = (type == FS_OPEN_RD) ? 0 : 1;
+	file->file.seekable = 1;
 
 	int rv = di_create_entry(diep, file, pattern, pars);
 
@@ -2809,15 +2870,15 @@ handler_t di_file_handler = {
         di_close,       // close
         di_open,        // open a file_t
 	handler_parent,	// default parent() impl
-        NULL,	//	dif_seek,               // seek
-        di_readfile,            // readfile
-        di_writefile,           // writefile
-        NULL,                   // truncate
-        di_direntry,            // direntry
-        di_create,              // create
+        di_seek,        // seek
+        di_readfile,    // readfile
+        di_writefile,   // writefile
+        NULL,           // truncate
+        di_direntry,    // direntry
+        di_create,      // create
 	di_fflush,	// flush data to disk
-	di_equals,
-	di_dump_file		// dump
+	di_equals,	// check if two files are the same
+	di_dump_file	// dump
 };
 
 provider_t di_provider = {
