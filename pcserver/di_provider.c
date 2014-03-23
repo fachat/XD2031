@@ -2583,6 +2583,55 @@ static void di_init(void)
 // ----------------------------------------------------------------------------------
 //    Debug code
 
+static void di_dump_ep(di_endpoint_t *fsep, int indent) {
+
+        const char *prefix = dump_indent(indent);
+        int newind = indent + 1;
+        const char *eppref = dump_indent(newind);
+
+        log_debug("%sprovider='%s';\n", prefix, fsep->base.ptype->name);
+        log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
+        log_debug("%sroot_file=%p; // '%s'\n", prefix, fsep->Ip, fsep->Ip->filename);
+        log_debug("%sfiles={;\n", prefix);
+        for (int i = 0; ; i++) {
+                File *file = (File*) reg_get(&fsep->base.files, i);
+                log_debug("%s// file at %p\n", eppref, file);
+                if (file != NULL) {
+                        log_debug("%s{\n", eppref, file);
+                        if (file->file.handler->dump != NULL) {
+                                file->file.handler->dump((file_t*)file, 0, newind+1);
+                        }
+                        log_debug("%s{\n", eppref, file);
+                } else {
+                        break;
+                }
+        }
+        log_debug("%s}\n", prefix);
+}
+
+static void di_dump(int indent) {
+
+        const char *prefix = dump_indent(indent);
+        int newind = indent + 1;
+        const char *eppref = dump_indent(newind);
+
+        log_debug("%s// disk image provider\n", prefix);
+        log_debug("%sendpoints={\n", prefix);
+        for (int i = 0; ; i++) {
+                di_endpoint_t *fsep = (di_endpoint_t*) reg_get(&di_endpoint_registry, i);
+                if (fsep != NULL) {
+                        log_debug("%s// endpoint %p\n", eppref, fsep);
+                        log_debug("%s{\n", eppref);
+                        di_dump_ep(fsep, newind+1);
+                        log_debug("%s}\n", eppref);
+                } else {
+                        break;
+                }
+        }
+        log_debug("%s}\n", prefix);
+
+}
+
 static void di_dump_file(file_t *fp, int recurse, int indent) {
 	
 	const char *prefix = dump_indent(indent);
@@ -2776,6 +2825,6 @@ provider_t di_provider = {
         NULL,		// mkdir not supported
         NULL,		// rmdir not supported
         di_direct,
-	NULL		// dump
+	di_dump		// dump
 };
 

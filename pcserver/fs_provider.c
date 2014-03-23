@@ -1727,7 +1727,7 @@ static void fs_dump_ep(fs_endpoint_t *fsep, int indent) {
 	log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
 	log_debug("%sbasepath='%s';\n", prefix, fsep->basepath);
 	log_debug("%scurrent_path='%s';\n", prefix, fsep->curpath);
-	log_debug("%sfiles={;\n", prefix, fsep->curpath);
+	log_debug("%sfiles={;\n", prefix);
 	for (int i = 0; ; i++) {
 		File *file = (File*) reg_get(&fsep->base.files, i);
 		log_debug("%s// file at %p\n", eppref, file);
