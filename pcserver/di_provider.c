@@ -1440,31 +1440,37 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
       		di_read_slot(diep,&diep->Slot);
 
-		File *entry = di_reserve_file(diep);
+		if (diep->Slot.type != 0) {
+			File *entry = di_reserve_file(diep);
 
-		entry->file.parent = fp;
-		entry->file.mode = FS_DIR_MOD_FIL;
-		entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
-		entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
-		// convert to external charset
-		entry->file.filename = conv_from_alloc((const char*)diep->Slot.filename, &di_provider); 
+			entry->file.parent = fp;
+			entry->file.mode = FS_DIR_MOD_FIL;
+			entry->file.type = diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
+			entry->file.attr = diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK);
+			// convert to external charset
+			entry->file.filename = conv_from_alloc((const char*)diep->Slot.filename, &di_provider); 
+
+			log_debug("converted image filename %s to %s for next check\n", 
+					(const char*)diep->Slot.filename, entry->file.filename);
 
 // TODO		
-//		if (diep->base.writable) {
-//			entry->file.attr |= FS_DIR_ATTR_LOCKED;
-//		}
+//			if (diep->base.writable) {
+//				entry->file.attr |= FS_DIR_ATTR_LOCKED;
+//			}
 
-		if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, &outpattern, &wrapfile)
-			== CBM_ERROR_OK) {
-			*outentry = wrapfile;
-			rv = CBM_ERROR_OK;
-      			di_next_slot(diep,&diep->Slot);
-			break;
+			if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, &outpattern, &wrapfile)
+				== CBM_ERROR_OK) {
+				*outentry = wrapfile;
+				rv = CBM_ERROR_OK;
+      				di_next_slot(diep,&diep->Slot);
+				break;
+			}
+
+
+			// cleanup to read next entry
+			entry->file.handler->close((file_t*)entry, 0);
 		}
 
-		// cleanup to read next entry
-		entry->file.handler->close((file_t*)entry, 0);
-		entry = NULL;
       		di_next_slot(diep,&diep->Slot);
    	} while (1);
 
