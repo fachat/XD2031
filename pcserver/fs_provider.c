@@ -233,7 +233,12 @@ static void fsp_free(endpoint_t *ep) {
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
 	if((path == NULL) || (*path == 0)) {
-		log_error("Empty path for assign");
+		log_error("Empty path for assign\n");
+		return NULL;
+	}
+
+	if (parent != NULL && parent->ptype != &fs_provider) {
+		log_error("Parent is not file system (but %s)\n", parent->ptype->name);
 		return NULL;
 	}
 
