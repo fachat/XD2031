@@ -360,6 +360,10 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
 			*wrapped = di_root((endpoint_t*)diep, 1);
 
+			// closing original path
+			log_debug("Closing original file %p (recursive)\n", diep, file);
+			file->handler->close(file, 1);
+			
 			return CBM_ERROR_OK;
 		}		
 	}
