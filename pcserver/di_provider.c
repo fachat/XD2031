@@ -1454,6 +1454,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 			== CBM_ERROR_OK) {
 			*outentry = wrapfile;
 			rv = CBM_ERROR_OK;
+      			di_next_slot(diep,&diep->Slot);
 			break;
 		}
 
