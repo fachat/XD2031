@@ -252,7 +252,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
 				path);
 
-	// malloc's a buffer and stores the canonical real path in it
+	// mallocs a buffer and stores the canonical real path in it
 	fsep->basepath = os_realpath(dirpath);
 
 	mem_free(dirpath);
@@ -260,6 +260,12 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	if (fsep->basepath == NULL) {
 		// some problem with dirpath - maybe does not exist...
 		log_errno("Could not resolve path for assign");
+		fsp_free((endpoint_t*)fsep);
+		return NULL;
+	}
+
+	if (!os_path_is_dir(fsep->basepath)) {
+		log_error("Not a directory (%s)\n", fsep->basepath);
 		fsp_free((endpoint_t*)fsep);
 		return NULL;
 	}
