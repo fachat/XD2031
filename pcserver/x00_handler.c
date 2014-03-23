@@ -140,6 +140,11 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	uint8_t x00_buf[X00_HEADER_LEN];
 	int flg;
 
+	if (!infile->seekable) {
+		log_warn("Found x00 file '%s', but is not seekable!\n", infile->filename);
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
 	// seek to start of file
 	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
