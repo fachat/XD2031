@@ -282,7 +282,10 @@ static void di_freeep(endpoint_t *ep)
 	reg_remove(&di_endpoint_registry, cep);
 
 	// close/free resources
-	cep->Ip->handler->close(cep->Ip, 1);
+	if (cep->Ip != NULL) {
+		cep->Ip->handler->close(cep->Ip, 1);
+		cep->Ip = NULL;
+	}
 
    	mem_free(ep);
 }
@@ -298,7 +301,7 @@ static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
    	di_endpoint_t *diep = (di_endpoint_t*) ep;
 
 	File *file = di_reserve_file(diep);
-
+	file->file.endpoint = ep;
 	file->file.filename = mem_alloc_str("$");
 	//file->file.pattern = mem_alloc_str("*");
 	file->file.writable = diep->Ip->writable;
@@ -369,13 +372,13 @@ static int di_wrap(file_t *file, file_t **wrapped)
 	}
 
 	// allocate a new endpoint
-   	di_endpoint_t *diep = (di_endpoint_t*) di_newep(NULL, name);
-	diep->Ip = file;
-	diep->base.is_temporary = 1;
+   	di_endpoint_t *newep = (di_endpoint_t*) di_newep(NULL, name);
+	newep->Ip = file;
+	newep->base.is_temporary = 1;
 
-	if ((err = di_load_image(diep, file)) == CBM_ERROR_OK) {
+	if ((err = di_load_image(newep, file)) == CBM_ERROR_OK) {
 		// image identified correctly
-		*wrapped = di_root((endpoint_t*)diep, 1);
+		*wrapped = di_root((endpoint_t*)newep, 1);
 
 		log_debug("di_wrap (%p: %s w/ pattern %s) -> %p\n", 
 				file, file->filename, file->pattern, *wrapped);
@@ -383,7 +386,9 @@ static int di_wrap(file_t *file, file_t **wrapped)
 		(*wrapped)->pattern = mem_alloc_str(file->pattern);
 		err = CBM_ERROR_OK;
 	} else {
-		di_freeep((endpoint_t*)diep);
+		// we don't need to close file, so clear it here
+		newep->Ip = NULL;
+		di_freeep((endpoint_t*)newep);
 	}
 
 	return err;
@@ -1154,7 +1159,7 @@ static void di_pos_append(di_endpoint_t *diep, File *f)
 // open a directory read
 static int di_open_dir(File *file) {
 
-	int er = CBM_ERROR_FAULT;
+	int er = CBM_ERROR_FILE_TYPE_MISMATCH;
 
         log_debug("ENTER: di_open_dr(%p (%s))\n",file,
                         (file == NULL)?"<nil>":file->file.filename);
@@ -1166,7 +1171,7 @@ static int di_open_dir(File *file) {
           log_exitr(CBM_ERROR_OK);
           return CBM_ERROR_OK;
         } else {
-          log_error("Error opening directory");
+          log_error("Error opening directory\n");
           log_exitr(er);
           return er;
         }
@@ -1447,6 +1452,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 		if (diep->Slot.type != 0) {
 			File *entry = di_reserve_file(diep);
+			entry->file.endpoint = (endpoint_t*)diep;
 
 			// it is totally stupid having to do this...
 			memcpy(&entry->Slot, &diep->Slot, sizeof(slot_t));
