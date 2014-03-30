@@ -214,6 +214,8 @@ struct _handler {
 							// returns 0 on equal, 1 on different
 	int		(*equals)(file_t *thisfile, file_t *otherfile);
 
+	size_t		(*realsize)(file_t *file);	// returns the real (correct) size of the file
+
         // -------------------------
 
 	void		(*dump)(file_t *fp, int recurse, int indent); // dump info for analysis / debug

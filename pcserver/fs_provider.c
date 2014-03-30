@@ -1777,6 +1777,11 @@ static void fs_dump(int indent) {
 	log_debug("%s}\n", prefix);
 }
 
+static size_t fs_realsize(file_t *file) {
+
+	return file->filesize;
+}
+
 // ----------------------------------------------------------------------------------
 
 handler_t fs_file_handler = {
@@ -1794,6 +1799,7 @@ handler_t fs_file_handler = {
 	fs_create,		// create
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
+	fs_realsize,		// real size of file (same as file->filesize here)
 	fs_dump_file		// dump file
 };
 

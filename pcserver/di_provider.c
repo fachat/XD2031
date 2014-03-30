@@ -198,7 +198,9 @@ static cbm_errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
    
    log_debug("image size = %d\n",diep->Ip->filesize);
 
-   if (diskimg_identify(&(diep->DI), diep->Ip->filesize)) {
+   size_t filelen = file->handler->realsize(file);
+
+   if (diskimg_identify(&(diep->DI), filelen)) {
 	int numbamblocks = diep->DI.BAMBlocks;
 	for (int i = 0; i < numbamblocks; i++) {
 		diep->BAMpos[i] = 256 * diep->DI.LBA(diep->DI.bamts[(i<<1)], diep->DI.bamts[(i<<1)+1]);
@@ -370,6 +372,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 			return CBM_ERROR_OK;
 		}		
 	}
+
 
 	// allocate a new endpoint
    	di_endpoint_t *newep = (di_endpoint_t*) di_newep(NULL, name);
@@ -2491,7 +2494,7 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 //***********
 
 // this is a simple, stupid seek - just following the block chain
-
+// TODO: detect loop / break after max len
 static int di_seek(file_t *file, long position, int flag) {
 
 	if (flag != SEEKFLAG_ABS) {
@@ -2532,6 +2535,43 @@ static int di_seek(file_t *file, long position, int flag) {
 	f->chp = position & 0xff;
 
 	return CBM_ERROR_OK;
+}
+
+
+// TODO: detect loop / break after max len
+static size_t di_realsize(file_t *file) {
+
+	File *f = (File*) file;
+	di_endpoint_t *diep = (di_endpoint_t*)file->endpoint;
+
+	size_t len = 0;
+
+	uint8_t next_t = f->Slot.start_track;
+	uint8_t next_s = f->Slot.start_sector;
+	
+	// each block is 254 data bytes
+	do {
+		di_fseek_tsp(diep, next_t, next_s, 0);
+		f->cht = next_t;
+		f->chs = next_s;
+	     	di_fread(&next_t,1,1,diep->Ip);
+     		di_fread(&next_s,1,1,diep->Ip);
+		if (next_t == 0) {
+			// no next block
+			break;
+		}
+		len += 254;
+	} while (1);
+
+	f->next_track = next_t;
+	f->next_sector = next_s;
+
+	len += next_s - 1;
+
+	log_debug("Found length of %d for file %s\n", len, file->filename);
+
+	return len;
+
 }
 
 //***********
@@ -2890,6 +2930,7 @@ handler_t di_file_handler = {
         di_create,      // create
 	di_fflush,	// flush data to disk
 	di_equals,	// check if two files are the same
+	di_realsize,	// compute and return the real linear file size
 	di_dump_file	// dump
 };
 

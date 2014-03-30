@@ -294,6 +294,15 @@ static int x00_equals(file_t *thisfile, file_t *otherfile) {
 
 }
 
+static size_t x00_realsize(file_t *file) {
+
+	if (file->parent != NULL) {
+		return file->parent->handler->realsize(file->parent) - X00_HEADER_LEN;
+	}
+	return CBM_ERROR_FAULT;
+}
+
+
 
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
@@ -335,6 +344,8 @@ static handler_t x00_handler = {
 	x00_flush,
 
 	x00_equals,
+
+	x00_realsize,
 
 	// -------------------------
 
