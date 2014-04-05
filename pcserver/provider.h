@@ -65,22 +65,34 @@ typedef struct {
 	const char	*name;				// provider name, used in ASSIGN as ID
 	const char	*native_charset;		// name of the native charset for that provider
 	void		(*init)(void);			// initialization routine
-	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	// create a new endpoint instance
-	endpoint_t* 	(*tempep)(char **par);	// create a new temporary endpoint instance
-	void 		(*freeep)(endpoint_t *ep);	// free an endpoint instance
 
-	file_t*		(*root)(endpoint_t *ep, uint8_t isroot); // start directory for the endpoint 
+							// create a new endpoint instance
+							// this is used on ASSIGN calls
+	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	
+
+							// create a new temporary endpoint instance;
+							// this happens when a file with direct provider
+							// name is opened, like "ftp:host/dir"
+	endpoint_t* 	(*tempep)(char **par);	
+
+							// free an endpoint instance
+	void 		(*freeep)(endpoint_t *ep);	
+
+							// start directory for the endpoint 
 							// isroot is set when the endpoint root
 							// is required, usually through a "/" at the
 							// start of a file name. If not set, then
 							// the current directory (as defined by previous
 							// chdir() is returned.
-	int		(*wrap)(file_t *file, file_t **wrapped); // check if the given file is for 
+	file_t*		(*root)(endpoint_t *ep, uint8_t isroot); 
+
+							// check if the given file is for 
 							// the provider 
 							// (e.g. a d64 file for the di_provider)
 							// and wrap it into a container file_t
 							// (pointing to a new temp. endpoint created
 							// for it)
+	int		(*wrap)(file_t *file, file_t **wrapped); 
 
 	// command channel
 	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete
@@ -232,7 +244,7 @@ struct _handler {
 
 
 
-int provider_assign(int drive, const char *name, const char *assign_to);
+int provider_assign(int drive, const char *name, const char *assign_to, int from_cmdline);
 
 /**
  * looks up a provider like "tcp:" for "fs:" by drive number.

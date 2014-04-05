@@ -74,6 +74,7 @@ extern handler_t fs_file_handler;
 // prototype
 static void fs_dump_file(file_t *fp, int recurse, int indent);
 
+// list of endpoints
 static registry_t endpoints;
 
 typedef struct {
@@ -219,6 +220,7 @@ static int close_fd(File *file, int recurse) {
 static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
 	File *f;
+	// force closing all files
 	while ((f = (File*)reg_get(&cep->base.files, 0)) != NULL) {
 		close_fd(f, 1);
 	}
@@ -293,7 +295,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *fsp_temp(char **name) {
+static endpoint_t *fsp_tempep(char **name) {
 
 	// make path relative
 	while (**name == dir_separator_char()) {
@@ -1808,7 +1810,7 @@ provider_t fs_provider = {
 	"ASCII",
 	fsp_init,
 	fsp_new,
-	fsp_temp,
+	fsp_tempep,
 	fsp_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider

@@ -193,7 +193,7 @@ static File *di_reserve_file(di_endpoint_t *diep)
 // di_load_image
 // *************
 
-static cbm_errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
+static cbm_errno_t di_load_image(di_endpoint_t *diep, file_t *file)
 {
    
    log_debug("image size = %d\n",diep->Ip->filesize);
@@ -221,10 +221,8 @@ static cbm_errno_t di_load_image(di_endpoint_t *diep, const file_t *file)
 // di_newep
 // ********
 
-static endpoint_t *di_newep(endpoint_t *parent, const char *path)
+static endpoint_t *di_newep(const char *path)
 {
-   	(void) parent; // silence -Wunused-parameter
-
    	di_endpoint_t *diep = mem_alloc(&endpoint_type);
 
 	// register with list of endpoints
@@ -234,33 +232,6 @@ static endpoint_t *di_newep(endpoint_t *parent, const char *path)
    	log_debug("di_newep(%s) = %p\n",path,diep);
 
    	return (endpoint_t*) diep;
-}
-
-// *********
-// di_tempep
-// *********
-
-static endpoint_t *di_tempep(char **name)
-{
-   while (**name == dir_separator_char()) (*name)++;
-
-   // cut off last filename part (either file name or dir mask)
-   char *end = strrchr(*name, dir_separator_char());
-
-   di_endpoint_t *diep = NULL;
-
-   if (end != NULL) // we have a '/'
-   {
-      *end = 0;
-      diep = (di_endpoint_t*) di_newep(NULL, *name);
-      *name = end+1;  // filename part
-  }
-  else // no '/', so only mask, path is root
-  {
-    diep = (di_endpoint_t*) di_newep(NULL, ".");
-  }
-  log_debug("di_tempep(%s) = %p\n",*name,diep);
-  return (endpoint_t*) diep;
 }
 
 // *********
@@ -375,7 +346,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
 
 	// allocate a new endpoint
-   	di_endpoint_t *newep = (di_endpoint_t*) di_newep(NULL, name);
+   	di_endpoint_t *newep = (di_endpoint_t*) di_newep(name);
 	newep->Ip = file;
 	newep->base.is_temporary = 1;
 
@@ -1285,34 +1256,6 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 
 char *extension[6] = { "DEL","SEQ","PRG","USR","REL","CBM" };
 
-// *************
-// di_fill_entry
-// *************
-
-static int di_fill_entry(uint8_t *dest, slot_t *slot)
-{
-   char *p = (char *)dest + FS_DIR_NAME;
-
-   log_debug("di_fill_entry(%s, %d blocks)\n", slot->filename, slot->size);
-
-   dest[FS_DIR_LEN  ] = 0;
-   dest[FS_DIR_LEN+1] = slot->size;
-   dest[FS_DIR_LEN+2] = slot->size >> 8;
-   dest[FS_DIR_LEN+3] = 0;
-   dest[FS_DIR_MODE]  = FS_DIR_MOD_FIL;
-   
-   memset(dest+FS_DIR_YEAR,0,6);	// date+time
-
-   strcpy(p,(const char *)slot->filename);
-
-   dest[FS_DIR_ATTR] = ((slot->type &
-	(FS_DIR_ATTR_SPLAT | FS_DIR_ATTR_LOCKED
-	  | FS_DIR_ATTR_TRANS | FS_DIR_ATTR_TYPEMASK))
-	| FS_DIR_ATTR_ESTIMATE)
-	^ FS_DIR_ATTR_SPLAT;	// the other way round
-
-   return FS_DIR_NAME + strlen(p) + 1;
-}
 
 // *******************
 // di_directory_header
@@ -2938,8 +2881,8 @@ provider_t di_provider = {
         "di",
         "PETSCII",
         di_init,
-        di_newep,
-        di_tempep,
+        NULL,		// newep - not needed as only via wrap
+        NULL,		// tempep - not needed as only via wrap
         di_freeep,
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file

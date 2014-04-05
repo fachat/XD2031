@@ -200,7 +200,7 @@ file_t *provider_wrap(file_t *file) {
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  */
-int provider_assign(int drive, const char *name, const char *assign_to) {
+int provider_assign(int drive, const char *name, const char *assign_to, int from_cmdline) {
 
 	log_info("Assign provider '%s' with '%s' to drive %d\n", name, assign_to, drive);
 
@@ -241,6 +241,11 @@ int provider_assign(int drive, const char *name, const char *assign_to) {
 
 	endpoint_t *newep = NULL;
 	if (provider != NULL) {
+		if (provider->newep == NULL) {
+			log_error("Tried to assign an indirect provider %s directly\n",name);
+			return CBM_ERROR_FAULT;
+		}
+
 		// get new endpoint
 		newep = provider->newep(parent, assign_to);
 		if (newep) {

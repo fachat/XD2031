@@ -179,11 +179,11 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 					provider_parameter = p + 1;
 					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
 							provider_parameter);
-					rv = provider_assign(drive, provider_name, provider_parameter);
+					rv = provider_assign(drive, provider_name, provider_parameter, 0);
 				}
 			} else {
 				log_debug("No parameter for cmdline_assign\n");
-				rv = provider_assign(drive, argv[i] + 4, NULL);
+				rv = provider_assign(drive, argv[i] + 4, NULL, 0);
 			} 
 			if (rv < 0) {
 				log_error("Could not assign, error number is %d\n", rv);
@@ -774,7 +774,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		petsciiconv(name2, strlen(name2), name2, strlen(name2));
 
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
-		rv = provider_assign(drive, name, name2);
+		rv = provider_assign(drive, name, name2, 0);
 		if (rv != 0) {
 			log_rv(rv);
 		}
