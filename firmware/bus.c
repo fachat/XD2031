@@ -51,6 +51,7 @@
 
 #include "led.h"
 #include "debug.h"
+#include "term.h"
 
 #include "device.h"
 

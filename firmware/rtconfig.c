@@ -40,6 +40,7 @@
 #include "system.h"	// reset_mcu()
 
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 
 #define	MAX_RTCONFIG	3

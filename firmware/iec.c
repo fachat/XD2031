@@ -30,10 +30,12 @@
 #include <ctype.h>
 #include <delay.h>
 
+#include "archcompat.h"
 #include "iechw.h"
 #include "bus.h"
 #include "timer.h"
 
+#include "term.h"
 #include "debug.h"
 #include "led.h"
 #include "system.h"

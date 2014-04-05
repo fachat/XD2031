@@ -28,6 +28,7 @@
 #include "rtc.h"
 #include "diskio.h"
 #include "sdcard.h"
+#include "packet.h"
 #include "debug.h"
 
 static void i2c_init(void) {

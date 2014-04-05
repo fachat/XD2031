@@ -27,9 +27,9 @@
 #include <inttypes.h>
 #include <ctype.h>
 
+#include "packet.h"
 #include "debug.h"
 #include "petscii.h"
-#include "packet.h"
 
 #if DEBUG
 

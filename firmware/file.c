@@ -34,6 +34,7 @@
 #include "cmdnames.h"
 
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 #include "assert.h"
 

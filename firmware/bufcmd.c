@@ -30,6 +30,7 @@
 #include "packet.h"
 
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 
 

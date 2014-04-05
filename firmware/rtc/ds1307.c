@@ -28,6 +28,7 @@
 
 #include "rtc.h"
 #include "i2c.h"
+#include "packet.h"
 #include "debug.h"
 
 // Get time from real time clock

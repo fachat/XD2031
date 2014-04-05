@@ -29,6 +29,7 @@
 #include "version.h"    /* for SW_NAME */
 #include "hwdefines.h"  /* for HW_NAME */
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 
 #undef	DEBUG_ERROR

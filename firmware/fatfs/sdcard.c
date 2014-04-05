@@ -7,6 +7,7 @@
 #include "sdcard.h"
 #include "spi.h"
 #include "timer.h"
+#include "packet.h"
 #include "debug.h"
 
 #undef DEBUG_CMD
