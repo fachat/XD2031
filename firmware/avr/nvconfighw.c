@@ -28,6 +28,7 @@
 
 #include "nvconfig.h"
 #include "version.h"
+#include "packet.h"
 #include "debug.h"
 
 

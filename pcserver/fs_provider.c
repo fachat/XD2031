@@ -641,7 +641,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts,
 			// not specifying record length means reading it from the file
 			// which we don't support. So let's give 62 FILE NOT FOUND as if
 			// the file weren't there
-			return CBM_ERROR_FILE_NOT_FOUND62;
+			return CBM_ERROR_FILE_NOT_FOUND;
 		}
 	}
 

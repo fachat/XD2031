@@ -97,6 +97,7 @@
 #include "rtconfig.h"
 #include "config.h"
 #include "errors.h"
+#include "packet.h"
 #include "debug.h"
 
 #ifdef DEBUG_NV
@@ -121,6 +122,9 @@ const char *nv_common_name = "CMN";
 
 // NV_MEM_SIZE = max total size in bytes for all data stored in NV memory
 // For AVR, this is E2END which is defined in avr/io.h
+#ifdef __AVR__
+#include <avr/io.h>
+#endif
 #if !(defined NV_MEM_SIZE) && defined(E2END) && defined(__AVR__)
 #define NV_MEM_SIZE E2END
 #endif

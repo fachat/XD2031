@@ -29,10 +29,12 @@
 
 #include <ctype.h>
 
+#include "archcompat.h"
 #include "ieeehw.h"
 #include "bus.h"
 
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 
 #undef DEBUG_BUS

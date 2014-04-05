@@ -29,6 +29,7 @@
 #include "version.h"    /* for SW_NAME */
 #include "hwdefines.h"  /* for HW_NAME */
 #include "debug.h"
+#include "term.h"
 #include "led.h"
 
 #undef	DEBUG_ERROR
@@ -79,7 +80,6 @@ const struct err_struct IN_ROM err_tab[] = {
 	{CBM_ERROR_SYNTAX_DIR_SEPARATOR , STR_SYNTAX_ERROR         },
 	{CBM_ERROR_FILE_NAME_TOO_LONG   , STR_SYNTAX_ERROR         },
 	{CBM_ERROR_FILE_NOT_FOUND       , STR_FILE_NOT_FOUND       },
-	{CBM_ERROR_FILE_NOT_FOUND62     , STR_FILE_NOT_FOUND       },
 	{CBM_ERROR_FILE_NOT_OPEN        , STR_FILE_NOT_OPEN        },
 	{CBM_ERROR_FILE_EXISTS          , STR_FILE_EXISTS          },
 	{CBM_ERROR_FILE_TYPE_MISMATCH   , STR_FILE_TYPE_MISMATCH   },
