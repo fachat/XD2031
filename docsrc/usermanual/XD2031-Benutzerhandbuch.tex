@@ -64,6 +64,7 @@ citecolor = black] {hyperref}
 
 \newcommand{\beginsf}[1]{#1\begin{addmargin}[0.5cm]{0cm}}
 \newcommand{\sfend}[1]{\end{addmargin}}
+\newcommand{\zB}{z.\,B. }
 
 \input{../globals}
 
@@ -1293,6 +1294,10 @@ zutreffenden Werte ersetzen müssen. Beispiel:
 
 \texttt{LOAD"TEST",8}
 
+Anstelle der Notation in spitzen Klammern wird für ganze Zahlen wo
+es sinnvoll erscheint auch ein tiefgestellter Platzhalter verwendet, wie
+etwa \texttt{COM}\textsubscript{n}.
+
 \subsection*{Eine von mehreren Möglichkeiten wählen}
 Soll aus mehreren Möglichkeiten genau eine Auswahl getroffen werden,
 werden die Wahlmöglichkeiten in Klammern angegeben und durch einen
@@ -1726,42 +1731,36 @@ fsser
 /home/benutzer-name/Software/Commodore/CBM
 \end{verbatim}
 
-\subsection{Gerätedatei des Adapters}
+\subsection{Gerätedatei / COM-Port des Adapters}
 \index{Ger\"atedatei}
 \index{/dev/ttyUSB0}
 \index{/dev/ttyAMA0}
-\index{COM-Port}
 \index{auto (Gerätedatei)}
+\subsubsection*{Linux und OS X}
 \mbox{\Big[ \texttt{-d} \Big( \texttt{auto} \Big| 
 \textit{<device>} \Big) \Big] }
 
-Die Device-Option \texttt{-d} benennt die durch den
-Adapter verwendete Gerätedatei, wie beispielsweise
-\texttt{/dev/ttyUSB0}.
+Die Device-Option \texttt{-d} benennt die durch den Adapter verwendete
+Gerätedatei, wie etwa \texttt{/dev/ttyUSB0}.  Wird die Option ausgelassen,
+wird versucht, die entsprechende Gerätedatei automatisch zu ermitteln, was
+\texttt{-d auto} entspricht.
 
-Wird diese Option nicht angegeben, wird 
-\texttt{-d auto} verwendet.
-
-Die automatische Erkennung \texttt{-d auto}
-prüft, ob eine Reihe typischer Namen verfügbar sind, und wenn
-genau einer dieser Möglichkeiten verfügbar ist, wird
-diese verwendet. Findet der Server keine oder mehrere
-Möglichkeiten wird er nicht starten und folgende Fehlermeldung
-ausgeben:
+Unter unixartigen Systemen prüft die automatische Erkennung eine Reihe typischer
+Namen auf Verfügbarkeit. Wenn genau eine einzige dieser Möglichkeiten gefunden
+wird, wird diese verwendet. Andernfalls bricht der Server mit folgender
+Fehlermeldung ab:
 
 \begin{verbatim}
 Unable to decide which serial device it is.
 Please pick one.
 \end{verbatim}
 
-Die Benennung unterscheidet sich je nach Betriebssystem.
-Für den vom XS-1541 und petSD verwendeten Serial-over-USB Chip
-FT232RL \index{FT232} weist Linux
-fortlaufende Nummern beginnend bei \texttt{/dev/ttyUSB0} 
-zu, während
-\mbox{OS X} die im Chip gespei"-cherte Seriennummer verwendet. 
-Diese Eigenart kann unter \mbox{OS X} dazu verwendet werden, die 
-Seriennummer durch den Gerätenamen zu ersetzen.
+Linux und OS X weisen dem selben Gerät unterschiedliche Gerätenamen zu.  Für
+den vom XS-1541 und petSD verwendeten Serial-over-USB Chip FT232RL
+\index{FT232} weist Linux fortlaufende Nummern beginnend bei
+\texttt{/dev/ttyUSB0} zu, während \mbox{OS X} die im Chip gespei"-cherte
+Seriennummer verwendet.  Diese Eigenart kann unter \mbox{OS X} dazu verwendet
+werden, die Seriennummer durch den Gerätenamen zu ersetzen.
 
 \begin{tabular}[c]{l l l l}
 \toprule 
@@ -1775,6 +1774,32 @@ petSD & OS X & /dev/cu.usbserial-petSD & Seriennummer bearbeitet \\
 3.1541 & Linux & /dev/ttyAMA0 \\
 \bottomrule
 \end{tabular}
+
+\clearpage %MANFF
+\subsubsection*{Windows}
+\index{COM-Port}
+\mbox{\Big[ \texttt{-d} \Big( \texttt{auto} \Big| 
+\texttt{COM}\textsubscript{n} \Big) \Big] }
+
+Die Device-Option \texttt{-d} bezeichnet den vom Adapter verwendeten COM-Port.
+Mit Hilfe des Geräte-Managers können Sie ermitteln, welcher COM-Port dem Adapter zugewiesen wurde.
+
+Auslassen der Option sollte den verwendeten COM-Port automatisch ermitteln.
+
+Unter Windows ist allerdings die automatische Erkennung (\texttt{-d auto}) noch nicht implementiert, es
+wird immer COM5 angenommen.
+
+Ob an den Namen des COM-Ports ein Doppelpunkt angehängt wird, oder dieser in
+Groß- oder Kleinbuchstaben geschrieben wird, bleibt dem Geschmack des Benutzers
+überlassen. 
+
+Beispiele:
+\begin{verbatim}
+-d COM5
+-d COM3:
+-d com7
+\end{verbatim}
+
 
 \subsection{Ausführlichkeit der Meldungen}
 \index{verbose}
