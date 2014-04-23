@@ -113,7 +113,7 @@ void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sect
 
 	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
 	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
-	rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\n"), track, sector); // track & sector
+	rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track, sector); // track & sector
 
 	if (errornum != CBM_ERROR_OK         &&
 	    errornum != CBM_ERROR_DOSVERSION &&
