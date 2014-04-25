@@ -604,12 +604,11 @@ debug_flush();
 	uint8_t rtype = FS_REPLY;
 	uint8_t plen, p;
 	uint8_t *ptr = NULL;
-	ptr+=2;
 	cmdbuf_t *buffer = NULL;
 
 	switch(txbuf->type) {
 	case FS_OPEN_DIRECT:
-		ptr = packet_get_buffer(txbuf);
+		ptr = packet_get_buffer(txbuf) + 2;
 		if (*ptr) {
 			// name after '#' is not empty - parse buffer number
 			plen = sscanf((char*)ptr, "%d", &bufno);
