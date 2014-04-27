@@ -99,6 +99,9 @@ const char *nameofcmd(int cmdno) {
 	case FS_POSITION:	return "POSITION";
 	case FS_GETDATIM:	return "GETDATIM";
 	case FS_CHARSET:	return "CHARSET";
+	case FS_COPY:    	return "COPY";
+	case FS_DUPLICATE: return "DUPLICATE";
+	case FS_INTIALIZE: return "INITIALIZE";
 	default:		return "???";
 	}
 }
@@ -778,6 +781,19 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			retbuf[FSP_DATA] = CBM_ERROR_OK;
 		}
 		break;
+	case FS_FORMAT:
+		log_info("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+      break;
+	case FS_COPY:
+		log_info("COPY: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+      break;
+	case FS_DUPLICATE:
+		log_info("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+      break;
+	case FS_INITIALIZE:
+		log_info("INITIALIZE: %s\n", buf+FSP_DATA);
+		retbuf[FSP_DATA] = CBM_ERROR_OK;
+      break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
 	}
