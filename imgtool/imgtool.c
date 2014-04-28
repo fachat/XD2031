@@ -176,7 +176,7 @@ int merge_repair(imgset_t *imgs, char *outfilename, int preserve_table, uint8_t 
       }
    }
 
-   log_info("-------------------------------- MERGE REPAIR --------------------------------\n");
+   log_info("------------------------------ MERGE REPAIR ------------------------------\n");
    log_info("Note: further messages refer to the merged image.\n");
 
    if(!imgs->bad_images) {
