@@ -163,22 +163,27 @@ int merge_repair(imgset_t *imgs, char *outfilename, int preserve_table, uint8_t 
    int i, j, b, compares, differs, t, s;
    int rv = 0;
 
-   if(!outfilename) {
-      log_warn("No outfilename given, performing a dry-run\n");
-   }
    if(imgs->number_of_images < 2) {
       log_error("Merge repair requires at least two images\n");
       return -1;
    }
-   if(!imgs->bad_images) {
-      log_warn("All images are marked as good. If it ain't broke, don't fix it.\n");
-   }
+
    // Make sure, all images are of the same type
    for (i = 1; i < imgs->number_of_images; i++) {
       if (imgs->di[i].di.ID != imgs->di[0].di.ID) {
          log_error("Merge repair requires images of same type\n");
          return -1;
       }
+   }
+
+   log_info("-------------------------------- MERGE REPAIR --------------------------------\n");
+   log_info("Note: further messages refer to the merged image.\n");
+
+   if(!imgs->bad_images) {
+      log_warn("All images are marked as good. If it ain't broke, don't fix it.\n");
+   }
+   if(!outfilename) {
+      log_warn("No outfilename given, performing a dry-run\n");
    }
 
 /* Check equality of good blocks
