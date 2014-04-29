@@ -749,7 +749,7 @@ static void di_calculate_BAM(di_endpoint_t *diep, uint8_t Track, uint8_t **outBA
    int   BAM_Increment;
    Disk_Image_t *di = &diep->DI;
    uint8_t *fbl;            // pointer to track free blocks
-   uint8_t *bam;            // pointer to track free blocks
+   uint8_t *bam;            // pointer to BAM bit field
 
    BAM_Number    = (Track - 1) / di->TracksPerBAM;
    BAM_Offset    = di->BAMOffset; // d64=4  d80=6  d81=16
