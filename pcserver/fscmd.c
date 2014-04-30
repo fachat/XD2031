@@ -782,13 +782,13 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_FORMAT:
-		log_info("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+		log_warn("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       break;
 	case FS_COPY:
-		log_info("COPY: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+		log_warn("COPY: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       break;
 	case FS_DUPLICATE:
-		log_info("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+		log_warn("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       break;
 	case FS_INITIALIZE:
 		log_info("INITIALIZE: %s\n", buf+FSP_DATA);
