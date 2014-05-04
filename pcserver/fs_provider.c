@@ -220,10 +220,12 @@ static int close_fd(File *file, int recurse) {
 static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
 	File *f;
-	// force closing all files
-	while ((f = (File*)reg_get(&cep->base.files, 0)) != NULL) {
-		close_fd(f, 1);
-	}
+
+        if (reg_size(&ep->files)) {
+                log_warn("fsp_free(): trying to close endpoint with %n open files!\n",
+                        reg_size(&ep->files));
+                return;
+        }
 
 	reg_remove(&endpoints, cep);
 

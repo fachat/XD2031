@@ -243,13 +243,10 @@ static void di_freeep(endpoint_t *ep)
 	File *f = NULL;
    	di_endpoint_t *cep = (di_endpoint_t*) ep;
 	if (reg_size(&ep->files)) {
-		log_warn("di_freeep(): closing endpoint with %n open files!\n", reg_size(&ep->files));
+		log_warn("di_freeep(): trying to close endpoint with %n open files!\n", 
+			reg_size(&ep->files));
+		return;
 	}
-
-        while ((f = (File*)reg_get(&ep->files, 0)) != NULL) {
-		log_warn("di_freeep(): force closing file %p\n", reg_size(&ep->files));
-                di_close_fd(cep, f);
-        }
 
 	// remove from list of endpoints
 	reg_remove(&di_endpoint_registry, cep);
