@@ -76,6 +76,19 @@ void usage(int rv) {
 }
 
 
+// Assert switch is a single character
+// If somebody tries to combine options (e.g. -vD) or
+// encloses the parameter in quotes (e.g. fsser "-d COM5")
+// this function will throw an error
+void assert_single_char(char *argv) {
+	if (strlen(argv) != 2) {
+		log_error("Unexpected trailing garbage character%s '%s' (%s)\n",
+				strlen(argv) > 3 ? "s" : "", argv + 2, argv);
+		exit (EXIT_RESPAWN_NEVER);
+	}
+}
+
+
 int main(int argc, char *argv[]) {
 	serial_port_t writefd=0, readfd=0;
 	serial_port_t fdesc;
@@ -96,9 +109,11 @@ int main(int argc, char *argv[]) {
 	while(i<argc && argv[i][0]=='-') {
 	  switch(argv[i][1]) {
 	    case '?':
+		assert_single_char(argv[i]);
 		usage(EXIT_SUCCESS);	/* usage() exits already */
 		break;
 	    case 'd':
+		assert_single_char(argv[i]);
 		parameter_d_given = true;
 		if (i < argc-2) {
 		  i++;
@@ -109,6 +124,9 @@ int main(int argc, char *argv[]) {
 		  }
 		  if(!strcmp(device,"-")) device = NULL; 	// use stdin/out
 		  log_info("main: device = %s\n", device);
+		} else {
+		  log_error("-d requires <device> parameter\n");
+		  exit(EXIT_RESPAWN_NEVER);
 		}
  	     	break;
 	    case 'A':
@@ -116,11 +134,14 @@ int main(int argc, char *argv[]) {
 		// ignore these, as those will be evaluated later by cmd_...
 		break;
 	    case 'v':
+		assert_single_char(argv[i]);
 		break;
 	    case 'D':
+		assert_single_char(argv[i]);
 		disable_user_interface();
 		break;
             case 'w':
+		assert_single_char(argv[i]);
                 advanced_wildcards = true;
                 break;
 	    default:

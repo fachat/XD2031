@@ -641,9 +641,11 @@ ssize_t os_read(serial_port_t fd, void *buf, size_t count) {
 
 	if(!success) return -1;
 
+#ifdef DEBUG_OS_READ
 	if(success && (read_bytes >= 1)) {
 		log_debug("os_read bytes read: %u\n", read_bytes);
 	}
+#endif
 
 	return read_bytes;
 }
