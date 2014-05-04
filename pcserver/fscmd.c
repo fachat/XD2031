@@ -101,7 +101,7 @@ const char *nameofcmd(int cmdno) {
 	case FS_CHARSET:	return "CHARSET";
 	case FS_COPY:    	return "COPY";
 	case FS_DUPLICATE: return "DUPLICATE";
-	case FS_INTIALIZE: return "INITIALIZE";
+	case FS_INITIALIZE: return "INITIALIZE";
 	default:		return "???";
 	}
 }
