@@ -229,8 +229,13 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
 				const char *pname = p->provider->name;
 				if (!strcmp(pname, name)) {
 					// got one
-					provider = p->provider;
-					log_debug("Found provider named '%s'\n", provider->name);
+					if (p->provider->newep != NULL) {
+						provider = p->provider;
+						log_debug("Found provider named '%s'\n", provider->name);
+					} else {
+						log_warn("Ignoring assign to a non-root provider '%s'\n",
+							provider->name);
+					}
 					break;
 				}
 			} else {

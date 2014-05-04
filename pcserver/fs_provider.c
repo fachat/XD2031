@@ -226,7 +226,6 @@ static int close_fd(File *file, int recurse) {
 
 static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
-	File *f;
 
         if (reg_size(&ep->files)) {
                 log_warn("fsp_free(): trying to close endpoint with %d open files!\n",
@@ -253,15 +252,77 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 		return NULL;
 	}
 
-	log_debug("Setting fs endpoint to '%s'\n", path);
-
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
+	const char *base_path = (parentep == NULL) ? NULL : parentep->curpath;
+
+	// check each path part whether it is a file or directory.
+	// if the path part is a directory, check next. If it is not (e.g. a file),
+	// then use this part later in a resolve.
+	char *fs_path = NULL;
+	char *resolve_path = NULL;
+	char *separator = NULL;
+	char *ospath = NULL;
+	fs_path = mem_alloc_str(path);
+	resolve_path = NULL;
+	// start condition
+	separator = fs_path;
+	while (separator != NULL) {
+		separator = strchr(separator, dir_separator_char());
+
+		if (separator != NULL) {
+			// separate strings
+			*separator = 0;
+		}
+
+		char *dirpath = malloc_path(base_path, (const char*)fs_path);
+		// mallocs a buffer and stores the canonical real path in it
+		ospath = os_realpath(dirpath);
+		mem_free(dirpath);
+
+		if (!os_path_is_dir(ospath)) {
+			// cleanup
+			mem_free(ospath);
+
+			log_debug("Nok, '%s' is a file or something else\n", fs_path);
+			// this part is a file, at least not a directory
+
+			if (separator != NULL) {
+				*separator = dir_separator_char();
+			}
+			if (resolve_path != NULL) {
+				*resolve_path = NULL;
+				resolve_path++;
+			}
+			break;
+		}
+		// cleanup
+		mem_free(ospath);
+
+		log_debug("Ok, '%s' is a directory\n", fs_path);
+
+		// ok, current fs_path is a directory
+
+		// remember last check
+		resolve_path = separator;
+
+		if (separator != NULL) {
+			// connect strings again
+			*separator = dir_separator_char();
+			// set next start
+			separator++;
+		}
+	}
+			
+	// here fs_path has the (malloc'd) base path (- not OS path!)
+	// resolve_path has the last separator (or NULL)
+	// separator is NULL when no separation
+
+	log_debug("Setting fs endpoint to '%s'\n", fs_path);
 
 	// alloc and init a new endpoint struct
 	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
 
-	char *dirpath = malloc_path((parentep == NULL) ? NULL : parentep->curpath,
-				path);
+	char *dirpath = malloc_path(base_path, fs_path);
 
 	// mallocs a buffer and stores the canonical real path in it
 	fsep->basepath = os_realpath(dirpath);
@@ -272,12 +333,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 		// some problem with dirpath - maybe does not exist...
 		log_errno("Could not resolve path for assign");
 		fsp_free((endpoint_t*)fsep);
-		return NULL;
-	}
-
-	if (!os_path_is_dir(fsep->basepath)) {
-		log_error("Not a directory (%s)\n", fsep->basepath);
-		fsp_free((endpoint_t*)fsep);
+		mem_free(fs_path);
 		return NULL;
 	}
 
@@ -290,6 +346,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 			log_error("ASSIGN broke out of container (%s), was trying %s\n",
 				parentep->basepath, fsep->basepath);
 			fsp_free((endpoint_t*)fsep);
+			mem_free(fs_path);
 
 			return NULL;
 		}
@@ -299,7 +356,9 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
 	strcpy(fsep->curpath, fsep->basepath);
 
-	log_info("FS provider set to real path '%s'\n", fsep->basepath);
+	log_info("FS provider set to real path '%s' - resolve path is '%s'\n", fsep->basepath, resolve_path);
+
+	// TODO: use something like handler_resolve_dir with resolve_path and wrap into endpoint
 
 	return (endpoint_t*) fsep;
 }
