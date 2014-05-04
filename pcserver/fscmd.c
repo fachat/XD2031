@@ -1,7 +1,7 @@
 /****************************************************************************
 
     Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2012,2014 Andre Fachat, Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12

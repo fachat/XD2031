@@ -2805,7 +2805,7 @@ static void di_close(file_t *fp, int recurse) {
 
 	reg_remove(&diep->base.files, file);
 
-	if (diep->base.is_temporary && reg_size(&diep->base.files) == 0) {
+	if (reg_size(&diep->base.files) == 0) {
 		di_freeep(fp->endpoint);
 	}
 

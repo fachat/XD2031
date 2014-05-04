@@ -73,6 +73,7 @@ extern handler_t fs_file_handler;
 
 // prototype
 static void fs_dump_file(file_t *fp, int recurse, int indent);
+static void fsp_free(endpoint_t *ep);
 
 // list of endpoints
 static registry_t endpoints;
@@ -211,8 +212,14 @@ static int close_fd(File *file, int recurse) {
 		file->file.parent->handler->close(file->file.parent, recurse);
 	}
 
+	endpoint_t *ep = file->file.endpoint;
+
 	// remove file from endpoint registry
-	reg_remove(&(((fs_endpoint_t*)file->file.endpoint)->base.files), file);
+	reg_remove(&(ep->files), file);
+
+	if (reg_size(&(ep->files)) > 0) {
+		fsp_free(ep);
+	}
 	return er;
 }
 
@@ -222,7 +229,7 @@ static void fsp_free(endpoint_t *ep) {
 	File *f;
 
         if (reg_size(&ep->files)) {
-                log_warn("fsp_free(): trying to close endpoint with %n open files!\n",
+                log_warn("fsp_free(): trying to close endpoint with %d open files!\n",
                         reg_size(&ep->files));
                 return;
         }
