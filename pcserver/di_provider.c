@@ -244,7 +244,7 @@ static void di_freeep(endpoint_t *ep)
 {
    	di_endpoint_t *cep = (di_endpoint_t*) ep;
 	if (reg_size(&ep->files)) {
-		log_warn("di_freeep(): trying to close endpoint with %n open files!\n", 
+		log_warn("di_freeep(): trying to close endpoint with %d open files!\n", 
 			reg_size(&ep->files));
 		return;
 	}
