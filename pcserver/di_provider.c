@@ -242,14 +242,16 @@ static endpoint_t *di_newep(const char *path)
 
 static void di_freeep(endpoint_t *ep)
 {
+	log_debug("di_freeep(%p)\n", ep);
+
    	di_endpoint_t *cep = (di_endpoint_t*) ep;
 	if (reg_size(&ep->files)) {
-		log_warn("di_freeep(): trying to close endpoint with %d open files!\n", 
-			reg_size(&ep->files));
+		log_warn("di_freeep(): trying to close endpoint %p with %d open files!\n", 
+			ep, reg_size(&ep->files));
 		return;
 	}
 	if (ep->is_assigned > 0) {
-		log_warn("Endpoint is still assigned\n");
+		log_warn("Endpoint %p is still assigned\n", ep);
 		return;
 	}
 
@@ -372,6 +374,20 @@ static int di_wrap(file_t *file, file_t **wrapped)
 				file, file->filename, file->pattern, *wrapped);
 
 		(*wrapped)->pattern = file->pattern == NULL ? NULL : mem_alloc_str(file->pattern);
+
+		file_t *parent = file->handler->parent(file);
+		if (parent != NULL) {
+			// loose parent reference
+		        while (file != NULL) {
+                		if (file->parent == parent) {
+                        		file->parent = NULL;
+                        		break;
+                		}
+                		file = file->parent;
+        		}
+			parent->handler->close(parent, 1);
+		}
+
 		err = CBM_ERROR_OK;
 	} else {
 		// we don't need to close file, so clear it here
@@ -2857,6 +2873,8 @@ static int di_to_endpoint(file_t *file, endpoint_t **outep) {
 	*outep = ep;
 
 	ep->is_assigned++;
+
+	di_close(file, 1);
 
 	return CBM_ERROR_OK;
 }

@@ -384,8 +384,8 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 
 	log_debug("handler_resolve_assign: resolve gave err=%d, file=%p (%s), dir=%p (%s), "
 			"parent=%p, pattern=%s\n", 
-			file, (file==NULL)?"":file->filename, 
-			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,
+			err, file, (file==NULL)?"":file->filename, 
+			dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,
 			(pattern==NULL)?"":pattern);
 
 	if (err == CBM_ERROR_OK) {
@@ -394,8 +394,6 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 
 			if (wrapped_direntry != NULL) {
 				// we want the file here, so we can close the dir and its parents
-				dir->handler->close(dir, 1);
-				loose_parent(file, dir);
 				dir = NULL;
 
 				file = wrapped_direntry;

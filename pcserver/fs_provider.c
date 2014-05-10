@@ -177,7 +177,7 @@ static File *reserve_file(fs_endpoint_t *fsep) {
 // close a file descriptor
 static int close_fd(File *file, int recurse) {
 
-	log_debug("Closing file descriptor %p\n", file);
+	log_debug("Closing file descriptor %p (%s)\n", file, file->ospath);
 	int er = 0;
 
 	if (file->ospath != NULL) {
@@ -234,12 +234,12 @@ static void fsp_free(endpoint_t *ep) {
         fs_endpoint_t *cep = (fs_endpoint_t*) ep;
 
         if (reg_size(&ep->files)) {
-                log_warn("fsp_free(): trying to close endpoint with %d open files!\n",
-                        reg_size(&ep->files));
+                log_warn("fsp_free(): trying to close endpoint %p with %d open files!\n",
+                        ep, reg_size(&ep->files));
                 return;
         }
 	if (ep->is_assigned > 0) {
-		log_warn("fsp_free(): trying to free endpoint still assigned\n");
+		log_warn("fsp_free(): trying to free endpoint %p still assigned\n", ep);
 		return;
 	}
 
@@ -262,6 +262,8 @@ static void fsp_ep_free(endpoint_t *ep) {
 }
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
+
+	log_debug("fsp_new(parent=%p, path=%s\n", parent, path);
 
 	if((path == NULL) || (*path == 0)) {
 		log_error("Empty path for assign\n");
@@ -391,6 +393,9 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 		return assign_ep;
 		
 	}
+
+	fsep->base.is_assigned++;
+
 	return (endpoint_t*) fsep;
 }
 
@@ -1823,7 +1828,7 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 }
 
 static void fs_close(file_t *fp, int recurse) {
-	log_debug("fs_close(%p)", fp);
+	log_debug("fs_close(%p '%s', recurse=%d)\n", fp, ((File*)fp)->ospath, recurse);
 
 	//fs_dump_file(fp, 0, 1);
 
