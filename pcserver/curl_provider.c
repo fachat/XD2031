@@ -883,7 +883,7 @@ int do_chdir(endpoint_t *ep, char *name) {
 
 provider_t ftp_provider = {
 	"ftp",
-	"ASCII",
+	CHARSET_ASCII_NAME,
 	curl_init,
 	ftp_new,
 	ftp_temp,
@@ -906,7 +906,7 @@ provider_t ftp_provider = {
 
 provider_t http_provider = {
 	"http",
-	"ASCII",
+	CHARSET_ASCII_NAME,
 	curl_init,
 	http_new,
 	http_temp,

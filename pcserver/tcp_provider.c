@@ -461,7 +461,7 @@ static int tcp_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, 
 
 provider_t tcp_provider = {
 	"tcp",
-	"ASCII",		// not used as we don't do directories, but still
+	CHARSET_ASCII_NAME,		// not used as we don't do directories, but still
 	tnp_init,
 	tnp_new,
 	tnp_temp,

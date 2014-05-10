@@ -306,7 +306,7 @@ static size_t x00_realsize(file_t *file) {
 
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
-	"ASCII",	//const char	*native_charset;	// get name of the native charset for that handler
+	CHARSET_ASCII_NAME,	//const char	*native_charset;	// get name of the native charset for that handler
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
 

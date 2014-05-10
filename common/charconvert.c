@@ -34,7 +34,7 @@
 #define	NUM_OF_CHARSETS		2
 
 static char *charsets[] = { 
-	"ASCII", "PETSCII"
+	CHARSET_ASCII_NAME, CHARSET_PETSCII_NAME
 };
 
 // get a const pointer to the string name of the character set

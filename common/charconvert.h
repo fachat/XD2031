@@ -40,6 +40,9 @@ charset_t cconv_getcharset(const char *charsetname);
 #define	CHARSET_ASCII		0
 #define	CHARSET_PETSCII		1
 
+#define CHARSET_ASCII_NAME	"ASCII"
+#define	CHARSET_PETSCII_NAME	"PETSCII"
+
 // convert from input buffer (with length inlen) to output buffer (of length outlen)
 // must work with in = out buffer (i.e. in place conversion), zero-bytes in the input
 // that must be converted to zero in the output (so multiple strings are converted 
