@@ -92,3 +92,14 @@ void openpars_process_options(const uint8_t *opts, openpars_t *pars) {
         }
 }
 
+/**
+ * fill in default values 
+ */
+void openpars_init_options(openpars_t *pars) {
+
+	pars->filetype = FS_DIR_TYPE_UNKNOWN;
+	pars->recordlen = 0;
+}
+
+
+

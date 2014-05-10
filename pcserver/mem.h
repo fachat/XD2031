@@ -32,7 +32,8 @@
 
 void mem_init(void);
 
-void mem_free(void *ptr);
+// use const type to allow freeing immutable strings
+void mem_free(const void *ptr);
 
 // alloc single object
 void *mem_alloc_(const type_t *type, char *file, int line);

@@ -177,12 +177,20 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 					log_error("Provider name '%.8s'.. exceeds %d characters\n", argv[i] + 4,
 						  MAX_LEN_OF_PROVIDER_NAME);
 				} else {
+					// fix provider parameter character set
+					const char *orig_charset = mem_alloc_str(provider_get_ext_charset());
+					provider_set_ext_charset(CHARSET_ASCII_NAME);
+
 					strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
 					provider_name[p - argv[i] - 4] = 0;
 					provider_parameter = p + 1;
 					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
 							provider_parameter);
 					rv = provider_assign(drive, provider_name, provider_parameter, 0);
+
+					// reset character set
+					provider_set_ext_charset(orig_charset);
+					mem_free(orig_charset);
 				}
 			} else {
 				log_debug("No parameter for cmdline_assign\n");
@@ -303,6 +311,7 @@ static int cmd_process_stdin(void) {
 		// dump open endpoints, files etc
 		// maybe later compare with dump from mem to find memory leaks
 		provider_dump();
+		return false;
 	}
 
 	log_error("Syntax error: '%s'\n", buf);
@@ -555,8 +564,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_READ:
 		fp = channel_to_file(tfd);
 		if (fp != NULL) {
-			if (fp->isdir) {
-			} else {
 			    readflag = 0;	// default just in case
 			    rv = fp->handler->readfile(fp, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
 			    // TODO: handle error (rv<0)
@@ -582,7 +589,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME));
 				}
 			    }
-			}
 		}
 		break;
 	case FS_WRITE:
@@ -766,15 +772,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		// If the provider name is a real name, the path is absolute.
 		//
 		name2 = strchr(name, 0) + 2;
-
-		//FIXME: prov is still NULL here!
-		//provider_convto(prov)(name, strlen(name), name, strlen(name));
-		//provider_convto(prov)(name2, strlen(name2), name2, strlen(name2));
-		//FIXME: the following lines always do a PETSCII-->ASCII conversion
-		//       charset for command channel stored anywhere?
-		charconv_t petsciiconv = cconv_converter(CHARSET_PETSCII, CHARSET_ASCII);
-		petsciiconv(name, strlen(name), name, strlen(name));
-		petsciiconv(name2, strlen(name2), name2, strlen(name2));
 
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
 		rv = provider_assign(drive, name, name2, 0);

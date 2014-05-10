@@ -154,9 +154,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
  */
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
-		const char *inname, const char **outpattern, uint8_t type, openpars_t *pars) {
-
-	(void) type;	// unused for now
+		const char *inname, const char **outpattern, openpars_t *pars) {
 
 	log_entry("handler_resolve");
 
@@ -347,6 +345,90 @@ static void loose_parent(file_t *file, file_t *parent) {
 		file = file->parent;
 	}
 }
+
+
+/*
+ * recursively resolve a dir from an endpoint using the given inname as path
+ * and creating an endpoint for an assign from it
+ */
+int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resolve_path) {
+
+	int err = CBM_ERROR_FAULT;
+	file_t *dir = NULL;
+	file_t *file = NULL;
+	const char *pattern = NULL;
+	openpars_t pars;
+	*outep = NULL;
+
+	openpars_init_options(&pars);
+
+	int inlen = (resolve_path == NULL) ? 0 : strlen(resolve_path);
+	char *name = NULL;
+	// canonicalize the name
+	if (inlen == 0) {
+		// no name given 
+		return CBM_ERROR_FAULT;
+	}
+
+	if (resolve_path[inlen-1] != CBM_PATH_SEPARATOR_CHAR) {
+		// name ends with a path separator, add pattern
+		name = mem_alloc_c(inlen + 3, "search path");
+		strcpy(name, resolve_path);
+		strcat(name, CBM_PATH_SEPARATOR_STR "*");
+	} else {
+		// it's either a single pattern, or a path with a pattern
+		name = mem_alloc_str(resolve_path);
+	}
+
+	err = handler_resolve(ep, &dir, &file, resolve_path, &pattern, &pars);
+
+	log_debug("handler_resolve_assign: resolve gave err=%d, file=%p (%s), dir=%p (%s), "
+			"parent=%p, pattern=%s\n", 
+			file, (file==NULL)?"":file->filename, 
+			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,
+			(pattern==NULL)?"":pattern);
+
+	if (err == CBM_ERROR_OK) {
+		if (file != NULL) {
+			file_t *wrapped_direntry = provider_wrap(file);
+
+			if (wrapped_direntry != NULL) {
+				file = wrapped_direntry;
+				dir = NULL;
+			}
+
+			if (file->isdir) {
+				if (file->endpoint->ptype->to_endpoint != NULL) {
+					err = file->endpoint->ptype->to_endpoint(file, outep);
+				} else {
+					log_warn("Endpoint %s does not support assign\n", 
+									file->endpoint->ptype->name);
+					err = CBM_ERROR_FAULT;
+				}
+			} else {
+				err = CBM_ERROR_FILE_TYPE_MISMATCH;
+			}
+		} else {
+			err = CBM_ERROR_FAULT;
+		}	
+	}
+
+	if (err != CBM_ERROR_OK) {
+		*outep = NULL;
+		// on error
+		if (file != NULL) {
+			file->handler->close(file, 0);
+		}
+	}
+	if (dir != NULL) {
+		// we want the file here, so we can close the dir and its parents
+		dir->handler->close(dir, 1);
+	}
+
+	mem_free(name);
+
+	return err;
+}
 	
 /*
  * open a file, from fscmd
@@ -365,7 +447,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, type, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, &pars);
 
 	if (err == CBM_ERROR_OK) {
 	
@@ -467,7 +549,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, FS_OPEN_DR, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, &pattern, &pars);
 
 	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p (%s), parent=%p, pattern=%s\n", 
 			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,

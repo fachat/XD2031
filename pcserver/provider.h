@@ -75,6 +75,8 @@ typedef struct {
 							// name is opened, like "ftp:host/dir"
 	endpoint_t* 	(*tempep)(char **par);	
 
+							// convert dir to endpoint for assign
+	int		(*to_endpoint)(file_t *f, endpoint_t **outep);	
 							// free an endpoint instance
 	void 		(*freeep)(endpoint_t *ep);	
 
@@ -112,6 +114,7 @@ typedef struct {
 struct _endpoint {
 	provider_t	*ptype;
 	int		is_temporary;
+	int 		is_assigned;
 	registry_t	files;
 };
 
@@ -291,10 +294,9 @@ void provider_dump();
 
 // set the character set for the external communication (i.e. the wireformat)
 // modifies the conversion routines for all the providers
-void provider_set_ext_charset(char *charsetname);
+void provider_set_ext_charset(const char *charsetname);
 
 // get the character set for the external communication (i.e. the wireformat)
-// modifies the conversion routines for all the providers
 const char* provider_get_ext_charset();
 
 // get the converter from external charset TO the provider charset

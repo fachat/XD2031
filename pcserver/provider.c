@@ -127,7 +127,7 @@ const char *provider_get_ext_charset() {
 
 // set the character set for the external communication (i.e. the wireformat)
 // caches the to_provider and from_provider values in the providers[] table
-void provider_set_ext_charset(char *charsetname) {
+void provider_set_ext_charset(const char *charsetname) {
 
 	log_info("Setting filename communication charset to '%s'\n", charsetname);
 
@@ -200,17 +200,22 @@ file_t *provider_wrap(file_t *file) {
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  */
-int provider_assign(int drive, const char *name, const char *assign_to, int from_cmdline) {
+int provider_assign(int drive, const char *wirename, const char *assign_to, int from_cmdline) {
 
-	log_info("Assign provider '%s' with '%s' to drive %d\n", name, assign_to, drive);
+	log_info("Assign provider '%s' with '%s' to drive %d\n", wirename, assign_to, drive);
 
 	endpoint_t *parent = NULL;
 	provider_t *provider = NULL;
 
+	const char *ascname = mem_alloc_str(wirename);
+	int len = strlen(ascname);
+	cconv_converter(cconv_getcharset(provider_get_ext_charset()), CHARSET_ASCII)
+			(wirename, len, ascname, len);
+
 	// check if it is a drive
-	if ((isdigit(name[0])) && (strlen(name) == 1)) {
+	if ((isdigit(ascname[0])) && (len == 1)) {
 		// we have a drive number
-		int drv = name[0] & 0x0f;
+		int drv = ascname[0] & 0x0f;
 		parent = provider_lookup(drv, NULL);
 		if (parent != NULL) {
 			provider = parent->ptype;
@@ -227,7 +232,7 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
 			if (p != NULL) {
 				log_debug("Compare to provider %s\n", p->provider->name);
 				const char *pname = p->provider->name;
-				if (!strcmp(pname, name)) {
+				if (!strcmp(pname, ascname)) {
 					// got one
 					if (p->provider->newep != NULL) {
 						provider = p->provider;
@@ -244,10 +249,12 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
 		}
 	}
 
+	mem_free(ascname);
+
 	endpoint_t *newep = NULL;
 	if (provider != NULL) {
 		if (provider->newep == NULL) {
-			log_error("Tried to assign an indirect provider %s directly\n",name);
+			log_error("Tried to assign an indirect provider %s directly\n",wirename);
 			return CBM_ERROR_FAULT;
 		}
 

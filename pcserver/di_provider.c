@@ -141,6 +141,8 @@ static void endpoint_init(const type_t *t, void *obj) {
         di_endpoint_t *fsep = (di_endpoint_t*)obj;
         reg_init(&(fsep->base.files), "di_endpoint_files", 16);
         fsep->base.ptype = &di_provider;
+	fsep->base.is_assigned = 0;
+	fsep->base.is_temporary = 0;
 }
 
 static type_t endpoint_type = {
@@ -246,6 +248,10 @@ static void di_freeep(endpoint_t *ep)
 			reg_size(&ep->files));
 		return;
 	}
+	if (ep->is_assigned > 0) {
+		log_warn("Endpoint is still assigned\n");
+		return;
+	}
 
 	// remove from list of endpoints
 	reg_remove(&di_endpoint_registry, cep);
@@ -274,6 +280,7 @@ static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
 	file->file.filename = mem_alloc_str("$");
 	//file->file.pattern = mem_alloc_str("*");
 	file->file.writable = diep->Ip->writable;
+	file->file.isdir = 1;
 
 	// TODO: move from global to file
         di_first_slot(diep,&diep->Slot);
@@ -353,7 +360,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 		log_debug("di_wrap (%p: %s w/ pattern %s) -> %p\n", 
 				file, file->filename, file->pattern, *wrapped);
 
-		(*wrapped)->pattern = mem_alloc_str(file->pattern);
+		(*wrapped)->pattern = file->pattern == NULL ? NULL : mem_alloc_str(file->pattern);
 		err = CBM_ERROR_OK;
 	} else {
 		// we don't need to close file, so clear it here
@@ -392,9 +399,8 @@ static inline int di_fflush(file_t *file) {
 static inline void di_fsync(file_t *file) {
 	// TODO
      	// if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
-	di_endpoint_t *diep = (di_endpoint_t *)file->endpoint;
 
-	diep->Ip->handler->flush(diep->Ip);
+	file->handler->flush(file);
 }
 
 // ************
@@ -2653,6 +2659,7 @@ static void di_dump_ep(di_endpoint_t *fsep, int indent) {
 
         log_debug("%sprovider='%s';\n", prefix, fsep->base.ptype->name);
         log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
+        log_debug("%sis_assigned='%d';\n", prefix, fsep->base.is_assigned);
         log_debug("%sroot_file=%p; // '%s'\n", prefix, fsep->Ip, fsep->Ip->filename);
         log_debug("%sfiles={;\n", prefix);
         for (int i = 0; ; i++) {
@@ -2824,6 +2831,25 @@ static int di_equals(file_t *thisfile, file_t *otherfile) {
         return ((File*)thisfile)->Slot.number - ((File*)otherfile)->Slot.number;
 }
 
+/**
+ * make an endpoint from the root directory for an assign
+ * (handler_resolve_assign only calls this on isdir=1 which is root dir here only
+ */
+static int di_to_endpoint(file_t *file, endpoint_t **outep) {
+
+	if (file->handler != &di_file_handler) {
+		log_error("Wrong file type (unexpected)\n");
+		return CBM_ERROR_FAULT;
+	}
+
+	endpoint_t *ep = file->endpoint;
+	*outep = ep;
+
+	ep->is_assigned++;
+
+	return CBM_ERROR_OK;
+}
+
 
 // ----------------------------------------------------------------------------------
 
@@ -2879,6 +2905,7 @@ provider_t di_provider = {
         di_init,
         NULL,		// newep - not needed as only via wrap
         NULL,		// tempep - not needed as only via wrap
+	di_to_endpoint,	// to_endpoint
         di_freeep,
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file

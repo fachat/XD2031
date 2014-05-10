@@ -130,6 +130,9 @@ static void endpoint_init(const type_t *t, void *obj) {
 
 	fsep->base.ptype = &fs_provider;
 
+	fsep->base.is_temporary = 0;
+	fsep->base.is_assigned = 0;
+
 	reg_append(&endpoints, fsep);
 }
 
@@ -220,6 +223,9 @@ static int close_fd(File *file, int recurse) {
 	if (reg_size(&(ep->files)) > 0) {
 		fsp_free(ep);
 	}
+
+	mem_free(file);
+
 	return er;
 }
 
@@ -232,6 +238,10 @@ static void fsp_free(endpoint_t *ep) {
                         reg_size(&ep->files));
                 return;
         }
+	if (ep->is_assigned > 0) {
+		log_warn("fsp_free(): trying to free endpoint still assigned\n");
+		return;
+	}
 
 	reg_remove(&endpoints, cep);
 
@@ -290,7 +300,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 				*separator = dir_separator_char();
 			}
 			if (resolve_path != NULL) {
-				*resolve_path = NULL;
+				*resolve_path = 0;
 				resolve_path++;
 			}
 			break;
@@ -353,13 +363,23 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	}
 
 	// copy into current path
-	fsep->curpath = malloc(strlen(fsep->basepath) + 1);
-	strcpy(fsep->curpath, fsep->basepath);
+	fsep->curpath = mem_alloc_str(fsep->basepath);
 
+	// TODO: check whether we have a duplicate endpoint
 	log_info("FS provider set to real path '%s' - resolve path is '%s'\n", fsep->basepath, resolve_path);
 
-	// TODO: use something like handler_resolve_dir with resolve_path and wrap into endpoint
 
+	if (resolve_path != NULL && strlen(resolve_path) > 0) {
+		// use handler_resolve_file with resolve_path and wrap into endpoint
+		endpoint_t *assign_ep = NULL;
+		int err = handler_resolve_assign((endpoint_t*)fsep, &assign_ep, resolve_path);
+		if (err != CBM_ERROR_OK || assign_ep == NULL) {
+			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
+			return NULL;
+		}
+		return assign_ep;
+		
+	}
 	return (endpoint_t*) fsep;
 }
 
@@ -391,6 +411,49 @@ static endpoint_t *fsp_tempep(char **name) {
 	fsep->basepath = getcwd(NULL, 0);
 
 	return (endpoint_t*) fsep;
+}
+
+/**
+ *make a dir into an endpoint (only called with isdir=1)
+ */
+static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
+
+        if (file->handler != &fs_file_handler) {
+                log_error("Wrong file type (unexpected)\n");
+                return CBM_ERROR_FAULT;
+        }
+
+	File *fp = (File*) file;
+	fs_endpoint_t *parentep = (fs_endpoint_t*) file->endpoint;
+
+	const char *basepath = mem_alloc_str(fp->ospath);
+
+	// alloc and init a new endpoint struct
+	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
+
+	// mallocs a buffer and stores the canonical real path in it
+	fsep->basepath = basepath;
+
+	if (parentep != NULL) {
+		// if we have a parent, make sure we do not
+		// escape the parent container, i.e. basepath
+		if (strstr(fsep->basepath, parentep->basepath) != fsep->basepath) {
+			// the parent base path is not at the start of the new base path
+			// so we throw an error
+			log_error("ASSIGN broke out of container (%s), was trying %s\n",
+				parentep->basepath, fsep->basepath);
+			fsp_free((endpoint_t*)fsep);
+
+			return CBM_ERROR_FAULT;
+		}
+	}
+
+	// copy into current path
+	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->base.is_assigned++;
+
+	*outep = fsep;
+	return CBM_ERROR_OK;
 }
 
 // ----------------------------------------------------------------------------------
@@ -1097,6 +1160,15 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 			  	  	retfile->file.mode = FS_DIR_MOD_FIL;
 			    		retfile->file.type = FS_DIR_TYPE_PRG;
 			    		retfile->file.attr = 0;
+
+			    		retfile->file.seekable = 0;
+					if (S_ISREG(sbuf.st_mode)) {
+						retfile->file.seekable = 1;
+					}
+					retfile->file.isdir = 0;
+					if (S_ISDIR(sbuf.st_mode)) {
+						retfile->file.isdir = 1;
+					}
 
 			        	// TODO: error handling
                 			int writecheck = access(retfile->ospath, W_OK);
@@ -1856,7 +1928,7 @@ static size_t fs_realsize(file_t *file) {
 
 handler_t fs_file_handler = {
 	"fs_file_handler",
-	"ASCII",
+	CHARSET_ASCII_NAME,
 	NULL,			// resolve
 	fs_close,		// close
 	fs_open,		// open
@@ -1875,10 +1947,11 @@ handler_t fs_file_handler = {
 
 provider_t fs_provider = {
 	"fs",
-	"ASCII",
+	CHARSET_ASCII_NAME,
 	fsp_init,
 	fsp_new,
 	fsp_tempep,
+	fsp_to_endpoint,	// to_endpoint
 	fsp_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider

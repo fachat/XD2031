@@ -55,6 +55,12 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
                 const char *inname, const char *opts);
 
 /*
+ * recursively resolve a dir from an endpoint using the given inname as path
+ * and creating an endpoint for an assign from it
+ */
+int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resolve_path);
+
+/*
  * resolve a file_t from an endpoint, for a block operation
  */
 int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile);

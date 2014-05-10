@@ -136,9 +136,9 @@ void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, 
 	return ptr;
 }
 
-void mem_free(void* ptr) {
+void mem_free(const void* ptr) {
 
-	free(ptr);
+	free((void*)ptr);
 
 }
 
