@@ -393,13 +393,19 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 			file_t *wrapped_direntry = provider_wrap(file);
 
 			if (wrapped_direntry != NULL) {
-				file = wrapped_direntry;
+				// we want the file here, so we can close the dir and its parents
+				dir->handler->close(dir, 1);
+				loose_parent(file, dir);
 				dir = NULL;
+
+				file = wrapped_direntry;
 			}
 
 			if (file->isdir) {
 				if (file->endpoint->ptype->to_endpoint != NULL) {
+					// to_endpoint must take care of parent dir(s)
 					err = file->endpoint->ptype->to_endpoint(file, outep);
+					dir = NULL;
 				} else {
 					log_warn("Endpoint %s does not support assign\n", 
 									file->endpoint->ptype->name);
@@ -413,16 +419,17 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 		}	
 	}
 
+	if (dir != NULL) {
+		// we want the file here, so we can close the dir and its parents
+		dir->handler->close(dir, 1);
+		loose_parent(file, dir);
+	}
 	if (err != CBM_ERROR_OK) {
 		*outep = NULL;
 		// on error
 		if (file != NULL) {
 			file->handler->close(file, 0);
 		}
-	}
-	if (dir != NULL) {
-		// we want the file here, so we can close the dir and its parents
-		dir->handler->close(dir, 1);
 	}
 
 	mem_free(name);

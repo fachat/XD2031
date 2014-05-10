@@ -463,6 +463,9 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	fsep->curpath = mem_alloc_str(fsep->basepath);
 	fsep->base.is_assigned++;
 
+	// free resources
+	close_fd(fp, 1);
+
 	*outep = (endpoint_t*)fsep;
 	return CBM_ERROR_OK;
 }
@@ -1889,6 +1892,7 @@ static void fs_dump_ep(fs_endpoint_t *fsep, int indent) {
 
 	log_debug("%sprovider='%s';\n", prefix, fsep->base.ptype->name);
 	log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
+	log_debug("%sis_assigned='%d';\n", prefix, fsep->base.is_assigned);
 	log_debug("%sbasepath='%s';\n", prefix, fsep->basepath);
 	log_debug("%scurrent_path='%s';\n", prefix, fsep->curpath);
 	log_debug("%sfiles={;\n", prefix);
