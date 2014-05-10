@@ -220,7 +220,7 @@ static int close_fd(File *file, int recurse) {
 	// remove file from endpoint registry
 	reg_remove(&(ep->files), file);
 
-	if (reg_size(&(ep->files)) > 0) {
+	if (reg_size(&(ep->files)) == 0) {
 		fsp_free(ep);
 	}
 
