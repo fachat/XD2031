@@ -250,6 +250,17 @@ static void fsp_free(endpoint_t *ep) {
         mem_free(ep);
 }
 
+static void fsp_ep_free(endpoint_t *ep) {
+
+	if (ep->is_assigned > 0) {
+		ep->is_assigned--;
+	}
+
+	if (ep->is_assigned == 0) {
+		fsp_free(ep);
+	}
+}
+
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 
 	if((path == NULL) || (*path == 0)) {
@@ -426,7 +437,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	File *fp = (File*) file;
 	fs_endpoint_t *parentep = (fs_endpoint_t*) file->endpoint;
 
-	const char *basepath = mem_alloc_str(fp->ospath);
+	char *basepath = mem_alloc_str(fp->ospath);
 
 	// alloc and init a new endpoint struct
 	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
@@ -452,7 +463,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	fsep->curpath = mem_alloc_str(fsep->basepath);
 	fsep->base.is_assigned++;
 
-	*outep = fsep;
+	*outep = (endpoint_t*)fsep;
 	return CBM_ERROR_OK;
 }
 
@@ -1952,7 +1963,7 @@ provider_t fs_provider = {
 	fsp_new,
 	fsp_tempep,
 	fsp_to_endpoint,	// to_endpoint
-	fsp_free,
+	fsp_ep_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider
 	fs_delete,

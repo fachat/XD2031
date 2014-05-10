@@ -35,6 +35,7 @@
 #include "types.h"
 #include "registry.h"
 #include "mem.h"
+#include "handler.h"
 
 #include "charconvert.h"
 
@@ -202,68 +203,80 @@ file_t *provider_wrap(file_t *file) {
  */
 int provider_assign(int drive, const char *wirename, const char *assign_to, int from_cmdline) {
 
+	int err = CBM_ERROR_FAULT;
+
 	log_info("Assign provider '%s' with '%s' to drive %d\n", wirename, assign_to, drive);
 
 	endpoint_t *parent = NULL;
 	provider_t *provider = NULL;
+	endpoint_t *newep = NULL;
 
-	const char *ascname = mem_alloc_str(wirename);
-	int len = strlen(ascname);
-	cconv_converter(cconv_getcharset(provider_get_ext_charset()), CHARSET_ASCII)
-			(wirename, len, ascname, len);
+	int len = strlen(wirename);
 
 	// check if it is a drive
-	if ((isdigit(ascname[0])) && (len == 1)) {
+	// (works as long as isdigit() is the same for all available char sets)
+	if ((isdigit(wirename[0])) && (len == 1)) {
 		// we have a drive number
-		int drv = ascname[0] & 0x0f;
+		int drv = wirename[0] & 0x0f;
 		parent = provider_lookup(drv, NULL);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
+
+			err = handler_resolve_assign(parent, &newep, assign_to);
+	                if (err != CBM_ERROR_OK || newep == NULL) {
+        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
+                	        return err;
+                	}
 		}
-	}
+	} else {
 
-	log_debug("Provider=%p\n", provider);
+		const char *ascname = mem_alloc_str(wirename);
+		cconv_converter(cconv_getcharset(provider_get_ext_charset()), CHARSET_ASCII)
+				(wirename, len, ascname, len);
 
-	if (provider == NULL) {
-		// check each of the providers in turn
-		for (int i = 0; ; i++) {
-			providers_t *p = reg_get(&providers, i);
-			if (p != NULL) {
-				log_debug("Compare to provider %s\n", p->provider->name);
-				const char *pname = p->provider->name;
-				if (!strcmp(pname, ascname)) {
-					// got one
-					if (p->provider->newep != NULL) {
-						provider = p->provider;
-						log_debug("Found provider named '%s'\n", provider->name);
-					} else {
-						log_warn("Ignoring assign to a non-root provider '%s'\n",
-							provider->name);
+		log_debug("Provider=%p\n", provider);
+
+		if (provider == NULL) {
+			// check each of the providers in turn
+			for (int i = 0; ; i++) {
+				providers_t *p = reg_get(&providers, i);
+				if (p != NULL) {
+					log_debug("Compare to provider %s\n", p->provider->name);
+					const char *pname = p->provider->name;
+					if (!strcmp(pname, ascname)) {
+						// got one
+						if (p->provider->newep != NULL) {
+							provider = p->provider;
+							log_debug("Found provider named '%s'\n", 
+									provider->name);
+						} else {
+							log_warn("Ignoring assign to a non-root "
+									"provider '%s'\n", provider->name);
+						}
+						break;
 					}
+				} else {
 					break;
 				}
-			} else {
-				break;
 			}
 		}
-	}
 
-	mem_free(ascname);
+		mem_free(ascname);
+	
+		if (provider != NULL) {
+			if (provider->newep == NULL) {
+				log_error("Tried to assign an indirect provider %s directly\n",wirename);
+				return CBM_ERROR_FAULT;
+			}
 
-	endpoint_t *newep = NULL;
-	if (provider != NULL) {
-		if (provider->newep == NULL) {
-			log_error("Tried to assign an indirect provider %s directly\n",wirename);
-			return CBM_ERROR_FAULT;
-		}
-
-		// get new endpoint
-		newep = provider->newep(parent, assign_to);
-		if (newep) {
-			newep->is_temporary = 0;
-		} else {
-			return CBM_ERROR_FAULT;
+			// get new endpoint
+			newep = provider->newep(parent, assign_to);
+			if (newep) {
+				newep->is_temporary = 0;
+			} else {
+				return CBM_ERROR_FAULT;
+			}
 		}
 	}
 

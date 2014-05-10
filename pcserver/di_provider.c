@@ -265,6 +265,17 @@ static void di_freeep(endpoint_t *ep)
    	mem_free(ep);
 }
 
+static void di_ep_free(endpoint_t *ep) {
+
+	if (ep->is_assigned > 0) {
+		ep->is_assigned--;
+	}
+
+	if (ep->is_assigned == 0) {
+		di_freeep(ep);
+	}
+}
+
 // *********
 // di_root
 // *********
@@ -2906,7 +2917,7 @@ provider_t di_provider = {
         NULL,		// newep - not needed as only via wrap
         NULL,		// tempep - not needed as only via wrap
 	di_to_endpoint,	// to_endpoint
-        di_freeep,
+        di_ep_free,	// unassign
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file
         di_scratch,
