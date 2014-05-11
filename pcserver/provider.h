@@ -215,7 +215,7 @@ struct _handler {
 
         // -------------------------
 
-        int             (*direntry)(file_t *dirfp, file_t **outentry, int isresolve, int *readflag);
+        int             (*direntry)(file_t *dirfp, file_t **outentry, int isresolve, int *readflag, const char **outpattern);
                                                         // create a new file in the directory
         int             (*create)(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars, int opentype);
 

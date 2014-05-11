@@ -217,8 +217,8 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// note: may return NULL in direntry and still err== CBM_ERROR_OK, in case
 		// we have an empty directory
 		direntry = NULL;
-		while (current_dir->handler->direntry != NULL 
-			&& ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag)) 
+		if (current_dir->handler->direntry != NULL 
+			&& ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag, &outname)) 
 				== CBM_ERROR_OK)
 			) {
 
@@ -226,33 +226,8 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 				(direntry == NULL)?NULL:direntry->filename, current_dir,
 				current_dir->filename);
 
-			if (direntry == NULL) {
-				break;
-			}
-
-			// default end of name (if no handler matches)
-			outname = strchr(name, CBM_PATH_SEPARATOR_CHAR);	
-			if (outname == NULL) {
-				outname = name;
-			}
-
-			// now check if the original filename matches the pattern
-			// outname must be set either to point to the trailing '/', or the trailing 0,
-			// but not be set to NULL itself
-			if (compare_dirpattern(direntry->filename, namep, &outname)) {
-				// matches, so go on with it
+			if (direntry != NULL) {
 				file = direntry;
-				// do not check any further dir entries
-				break;
-			}
-
-			// close the directory entry, we don't need it anymore
-			// (handler de-allocates it if necessary)
-			direntry->handler->close(direntry, 0);
-			direntry = NULL;
-
-			if (readflag == READFLAG_EOF) {
-				break;
 			}
 		}
 

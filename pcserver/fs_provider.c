@@ -1044,9 +1044,10 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 	int rv = CBM_ERROR_OK;
 	log_entry("fs_provider.read_dir");
 
+	const char *outpattern;
 	file_t *entry = NULL;
 
-	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag);
+	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag, &outpattern);
 
 	log_debug("read_dir: process entry %p (parent=%p) for %s\n", entry, 
 		(entry == NULL)?NULL:entry->parent,
@@ -1093,12 +1094,11 @@ static char *get_path(File *parent, const char *child) {
  * get the next directory entry in the directory given as fp.
  * If isresolve is set, then the disk header and blocks free entries are skipped
  */
-static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
+static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 	  File *file = (File*) fp;
 	  File *retfile = NULL;
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
-	  const char *outpattern = NULL;
 	  char *ospath = NULL;
 
 	  file_t *wrapfile = NULL;
@@ -1210,7 +1210,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 					}
 
 					// wrap and/or match name
-					if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, &outpattern, &wrapfile)
+					if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, outpattern, &wrapfile)
 						== CBM_ERROR_OK) {
 	  	    				*outentry = wrapfile;
 						rv = CBM_ERROR_OK;

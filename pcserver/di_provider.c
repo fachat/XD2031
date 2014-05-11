@@ -1380,7 +1380,7 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  * If isresolve is set, then the disk header and blocks free entries are skipped
  * 
  */
-static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag) {
+static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 
 	// here we (currently) only use it in resolve, not in read_dir_entry,
 	// so we don't care about isresolve and first/last entry
@@ -1411,7 +1411,6 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	}
 
 	*readflag = READFLAG_DENTRY;
-	const char *outpattern;
 	file_t *wrapfile = NULL;
 
 	do {
@@ -1448,7 +1447,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 				entry->file.attr |= FS_DIR_ATTR_LOCKED;
 			}
 
-			if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, &outpattern, &wrapfile)
+			if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, outpattern, &wrapfile)
 				== CBM_ERROR_OK) {
 				*outentry = wrapfile;
 				rv = CBM_ERROR_OK;
@@ -1478,6 +1477,8 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int len, int *eof)
 {
    int rv = 0;
+   const char *outpattern;
+
    log_debug("di_read_dir_entry(%p, dospattern=(%02x ...) %s)\n",file,file->dospattern[0], file->dospattern);
 
    if (!file) return -CBM_ERROR_FAULT;
@@ -1496,7 +1497,7 @@ static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int 
 	File *direntry = NULL;
 	int readflg = 0;
 
-	rv = -di_direntry((file_t*)file, (file_t**)&direntry, 0, &readflg);
+	rv = -di_direntry((file_t*)file, (file_t**)&direntry, 0, &readflg, &outpattern);
 
 	if (rv == CBM_ERROR_OK && direntry != NULL) {
 		rv = dir_fill_entry_from_file(retbuf, (file_t*)direntry, len);
