@@ -2674,6 +2674,8 @@ static int di_readfile(file_t *fp, char *retbuf, int len, int *eof)
 static void di_init(void)
 {
    	log_debug("di_init\n");
+
+        provider_register(&di_provider);
 	
    	reg_init(&di_endpoint_registry, "di_endpoint_registry", 5);
 }

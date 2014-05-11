@@ -120,6 +120,9 @@ typedef struct {
 	char			*curpath;			// malloc'd current path
 } fs_endpoint_t;
 
+// root endpoint (for resolves without parent)
+static fs_endpoint_t *root_endpoint = NULL;
+
 static void endpoint_init(const type_t *t, void *obj) {
 	(void) t;	// silence unused warning
 	fs_endpoint_t *fsep = (fs_endpoint_t*)obj;
@@ -158,9 +161,33 @@ static int expand_relfile(File *file, long cursize, long curpos);
 static size_t file_get_size(FILE *fp);
 
 static void fsp_init() {
-	provider_register(&fs_provider);
 
+	// ---------------------
+	// init endpoint registry
 	reg_init(&endpoints, "fs endpoints", 10);
+
+	// ---------------------
+	// root endpoint for non-parent resolves
+
+	// alloc and init a new endpoint struct
+	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
+
+	// mallocs a buffer and stores the canonical real path in it
+	// might get into os.c (Linux (m)allocates the buffer automatically in the right size)
+	fsep->basepath = getcwd(NULL, 0);
+
+	// copy into current path
+	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->base.is_assigned++;
+
+	reg_append(&endpoints, fsep);
+
+	root_endpoint = fsep;
+
+	// ---------------------
+	// register provider
+
+	provider_register(&fs_provider);
 }
 
 static File *reserve_file(fs_endpoint_t *fsep) {
@@ -276,7 +303,8 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	}
 
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
-	const char *base_path = (parentep == NULL) ? NULL : parentep->curpath;
+
+	const char *base_path = parentep == NULL ? NULL : parentep->curpath;
 
 	// check each path part whether it is a file or directory.
 	// if the path part is a directory, check next. If it is not (e.g. a file),
@@ -390,6 +418,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
 			return NULL;
 		}
+		assign_ep->is_assigned++;
 		return assign_ep;
 		
 	}
@@ -406,27 +435,28 @@ static endpoint_t *fsp_tempep(char **name) {
 		(*name)++;
 	}
 
+	char *path = *name;
+
 	// cut off last filename part (either file name or dir mask)
 	char *end = strrchr(*name, dir_separator_char());
-
-	fs_endpoint_t *fsep = NULL;
 
 	if (end != NULL) {
 		// we have a '/'
 		*end = 0;
-		fsep = (fs_endpoint_t*) fsp_new(NULL, *name);
 		*name = end+1;	// filename part
 	} else {
 		// no '/', so only mask, path is root
-		fsep = (fs_endpoint_t*) fsp_new(NULL, ".");
+		path = ".";
 	}
 
-	// replace computed base path with current working dir to ensure no breakout
-	free(fsep->basepath);
-	// might get into os.c (Linux (m)allocates the buffer automatically in the right size)
-	fsep->basepath = getcwd(NULL, 0);
-
-	return (endpoint_t*) fsep;
+	endpoint_t *assign_ep = NULL;
+	int err = handler_resolve_assign((endpoint_t*)root_endpoint, &assign_ep, path);
+	if (err != CBM_ERROR_OK || assign_ep == NULL) {
+		log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
+		return NULL;
+	}
+	assign_ep->is_temporary++;
+	return assign_ep;
 }
 
 /**
@@ -466,7 +496,6 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 
 	// copy into current path
 	fsep->curpath = mem_alloc_str(fsep->basepath);
-	fsep->base.is_assigned++;
 
 	// free resources
 	close_fd(fp, 1);

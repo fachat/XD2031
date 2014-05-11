@@ -340,8 +340,8 @@ void provider_init() {
 #endif
 */
 
+	// registers itself
         di_provider.init();
-	provider_register(&di_provider);
 }
 
 endpoint_t *provider_lookup(int drive, char **name) {
@@ -360,6 +360,7 @@ endpoint_t *provider_lookup(int drive, char **name) {
 		}
 		log_debug("Trying to find provider for: %s\n", *name);
 
+		const char *provname = conv_to_name_alloc(*name, CHARSET_ASCII_NAME);
 		unsigned int l = p-(*name);
 		p++; // first char after ':'
 		for (int i = 0; ; i++) {
@@ -369,7 +370,7 @@ endpoint_t *provider_lookup(int drive, char **name) {
 			}
 			provider_t *prov = pp->provider;
 			if (prov != NULL && (strlen(prov->name) == l)
-				&& (strncmp(prov->name, *name, l) == 0)) {
+				&& (strncmp(prov->name, provname, l) == 0)) {
 				// we got a provider, but no endpoint yet
 
 				log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
@@ -382,14 +383,17 @@ endpoint_t *provider_lookup(int drive, char **name) {
 						log_debug("Created temporary endpoint %p\n", ep);
 						ep->is_temporary = 1;
 					}
+					mem_free(provname);
 					return ep;
 				} else {
 					log_error("Provider '%s' does not support temporary drives\n",
 						prov->name);
 				}
+				mem_free(provname);
 				return NULL;
 			}
 		}
+		mem_free(provname);
 		log_error("Did not find provider for %s\n", *name);
 		return NULL;
 	}
