@@ -1406,7 +1406,9 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		} else {
 			pattern = mem_alloc_str(fp->pattern);
 		}
-		provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
+		// pattern will be in wireformat and out reference, 
+		// so we never convert the pattern, only the file name
+		//provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
 		file->dospattern = pattern;
 	}
 
