@@ -128,11 +128,65 @@ void cmd_init() {
 	provider_set_ext_charset("PETSCII");
 }
 
+static int cmd_assign(const char *assign_str) {
+
+	log_debug("Assigning from server: '%s'\n", assign_str);
+
+			if (!isdigit(assign_str[0])) {
+				log_error("Could not identify %c as drive number!\n", assign_str[0]);
+				return CBM_ERROR_FAULT;
+			}
+
+			if (assign_str[1] != ':') {
+				log_error("Could not identify %s as ASSIGN parameter\n", assign_str);
+				return CBM_ERROR_FAULT;
+			}
+	
+			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
+			int rv=0;
+			int drive = assign_str[0] & 0x0f;
+			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
+			char *provider_parameter;
+
+			// provider name followed by parameter?
+			char *p = strchr(assign_str, '=');
+			if (p) {
+				if ((p - assign_str - 2) > MAX_LEN_OF_PROVIDER_NAME) {
+					log_error("Provider name '%.8s'.. exceeds %d characters\n", assign_str + 2,
+						  MAX_LEN_OF_PROVIDER_NAME);
+				} else {
+					// fix provider parameter character set
+					const char *orig_charset = mem_alloc_str(provider_get_ext_charset());
+					provider_set_ext_charset(CHARSET_ASCII_NAME);
+
+					strncpy (provider_name, assign_str + 2, p - assign_str +1);
+					provider_name[p - assign_str - 2] = 0;
+					provider_parameter = p + 1;
+					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
+							provider_parameter);
+					rv = provider_assign(drive, provider_name, provider_parameter, 0);
+
+					// reset character set
+					provider_set_ext_charset(orig_charset);
+					mem_free(orig_charset);
+				}
+			} else {
+				log_debug("No parameter for cmdline_assign\n");
+				rv = provider_assign(drive, assign_str + 2, NULL, 0);
+			} 
+			if (rv < 0) {
+				log_error("Could not assign, error number is %d\n", rv);
+			}
+	return rv;
+}
+
 /**
  * take the command line, search for "-A<driv>=<name>" parameters and assign
  * the value
  */
 void cmd_assign_from_cmdline(int argc, char *argv[]) {
+
+	int err = CBM_ERROR_OK;
 
 	for (int i = 0; i < argc; i++) {
 
@@ -154,51 +208,12 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 		if ((strlen(argv[i]) >4) 
 			&& argv[i][1] == 'A') {
 
-			if (!isdigit(argv[i][2])) {
-				log_error("Could not identify %c as drive number!\n", argv[i][2]);
-				continue;
+			err = cmd_assign(argv[i]+2);
+
+			if (err != CBM_ERROR_OK) {
+				log_error("%d Error assigning %s\n", err, argv[i]+2);
 			}
-
-			if (argv[i][3] != ':') {
-				log_error("Could not identify %s as ASSIGN parameter\n", argv[i]);
-				continue;
-			}
-	
-			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
-			int rv=0;
-			int drive = argv[i][2] & 0x0f;
-			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
-			char *provider_parameter;
-
-			// provider name followed by parameter?
-			char *p = strchr(argv[i], '=');
-			if (p) {
-				if ((p - argv[i] - 4) > MAX_LEN_OF_PROVIDER_NAME) {
-					log_error("Provider name '%.8s'.. exceeds %d characters\n", argv[i] + 4,
-						  MAX_LEN_OF_PROVIDER_NAME);
-				} else {
-					// fix provider parameter character set
-					const char *orig_charset = mem_alloc_str(provider_get_ext_charset());
-					provider_set_ext_charset(CHARSET_ASCII_NAME);
-
-					strncpy (provider_name, argv[i] + 4, p - argv[i] +1);
-					provider_name[p - argv[i] - 4] = 0;
-					provider_parameter = p + 1;
-					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
-							provider_parameter);
-					rv = provider_assign(drive, provider_name, provider_parameter, 0);
-
-					// reset character set
-					provider_set_ext_charset(orig_charset);
-					mem_free(orig_charset);
-				}
-			} else {
-				log_debug("No parameter for cmdline_assign\n");
-				rv = provider_assign(drive, argv[i] + 4, NULL, 0);
-			} 
-			if (rv < 0) {
-				log_error("Could not assign, error number is %d\n", rv);
-			}
+			continue;
 		}
 	}
 }
@@ -276,6 +291,8 @@ void disable_user_interface(void) {
 #define INBUF_SIZE 1024
 // reads stdin and returns true, if the main loop should abort
 static int cmd_process_stdin(void) {
+
+	int err;
 	char buf[INBUF_SIZE + 1];
 
 	log_debug("cmd_process_stdin()\n");
@@ -311,6 +328,15 @@ static int cmd_process_stdin(void) {
 		// dump open endpoints, files etc
 		// maybe later compare with dump from mem to find memory leaks
 		provider_dump();
+		return false;
+	}
+
+	if (buf[0] == 'A' || buf[0] == 'a') {
+		// assign from stdin control
+		err = cmd_assign(buf+1);
+                if (err != CBM_ERROR_OK) {
+                        log_error("%d Error assigning %s\n", err, buf+1);
+                }
 		return false;
 	}
 
