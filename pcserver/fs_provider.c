@@ -1120,6 +1120,7 @@ static char *get_path(File *parent, const char *child) {
 	} else {
 		path = mem_alloc_str(parent->ospath);
 	}
+
 	return path;
 }
 
@@ -1133,6 +1134,8 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  int rv = CBM_ERROR_FAULT;
 	  struct stat sbuf;
 	  char *ospath = NULL;
+	  char *path = NULL;
+	  fs_endpoint_t *fsep = (fs_endpoint_t*) fp->endpoint;
 
 	  file_t *wrapfile = NULL;
 	
@@ -1143,6 +1146,16 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  if (fp->handler != &fs_file_handler) {
 		return CBM_ERROR_FAULT;
 	  }
+
+          // make sure we do not
+          // escape the parent container, i.e. basepath
+          if (strstr(file->ospath, fsep->basepath) != file->ospath) {
+          	// the parent base path is not at the start of the new base path
+          	// so we throw an error
+          	log_error("ASSIGN broke out of container (%s), was trying %s\n",
+                                fsep->basepath, file->ospath);
+          	return CBM_ERROR_FAULT;
+          }
 
 	  if (file->dp == NULL) {
 		rv = open_dir(file);
@@ -1191,8 +1204,11 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 			} else {
 				log_debug("Got next dir entry for: %s\n", file->de->d_name);
 
-			    	ospath = get_path(file, file->de->d_name);
-				
+			    	path = get_path(file, file->de->d_name);
+				ospath = os_realpath(path);
+				free(path);
+				path = NULL;
+					
 		            	int rvx = stat(ospath, &sbuf);
         		    	if (rvx < 0) {
 					rv = errno_to_error(errno);

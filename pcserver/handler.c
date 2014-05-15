@@ -300,6 +300,9 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// this should close all parents as well
 		if (file != NULL) {
 			file->handler->close(file, 1);
+		} else
+		if (current_dir != NULL) {
+			current_dir->handler->close(current_dir, 1);
 		}
 	}
 	mem_free(name);
