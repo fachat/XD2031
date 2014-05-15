@@ -123,6 +123,7 @@ typedef struct {
 // root endpoint (for resolves without parent)
 static fs_endpoint_t *root_endpoint = NULL;
 
+
 static void endpoint_init(const type_t *t, void *obj) {
 	(void) t;	// silence unused warning
 	fs_endpoint_t *fsep = (fs_endpoint_t*)obj;
@@ -288,7 +289,7 @@ static void fsp_ep_free(endpoint_t *ep) {
 	}
 }
 
-static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
+static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdline) {
 
 	log_debug("fsp_new(parent=%p, path=%s\n", parent, path);
 
@@ -303,6 +304,12 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 	}
 
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
+
+	// when no parent given (i.e. path without base), and from client
+	// (i.e. not from command line / server stdin), use root endpoint as base
+	if (parentep == NULL && !from_cmdline) {
+		parentep = root_endpoint;
+	}
 
 	const char *base_path = parentep == NULL ? NULL : parentep->curpath;
 
@@ -418,12 +425,9 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
 			return NULL;
 		}
-		assign_ep->is_assigned++;
 		return assign_ep;
 		
 	}
-
-	fsep->base.is_assigned++;
 
 	return (endpoint_t*) fsep;
 }

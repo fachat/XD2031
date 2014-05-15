@@ -271,7 +271,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 			}
 
 			// get new endpoint
-			newep = provider->newep(parent, assign_to);
+			newep = provider->newep(parent, assign_to, from_cmdline);
 			if (newep) {
 				newep->is_temporary = 0;
 			} else {
@@ -293,6 +293,8 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 				break;
                 	}
         	}
+
+		newep->is_assigned++;
 
 		// register new endpoint
 	        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {

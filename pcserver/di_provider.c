@@ -2877,8 +2877,6 @@ static int di_to_endpoint(file_t *file, endpoint_t **outep) {
 	endpoint_t *ep = file->endpoint;
 	*outep = ep;
 
-	ep->is_assigned++;
-
 	di_close(file, 1);
 
 	return CBM_ERROR_OK;

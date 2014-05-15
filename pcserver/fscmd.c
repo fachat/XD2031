@@ -128,7 +128,7 @@ void cmd_init() {
 	provider_set_ext_charset("PETSCII");
 }
 
-static int cmd_assign(const char *assign_str) {
+static int cmd_assign(const char *assign_str, int from_cmdline) {
 
 	log_debug("Assigning from server: '%s'\n", assign_str);
 
@@ -164,7 +164,8 @@ static int cmd_assign(const char *assign_str) {
 					provider_parameter = p + 1;
 					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
 							provider_parameter);
-					rv = provider_assign(drive, provider_name, provider_parameter, 0);
+					rv = provider_assign(drive, provider_name, provider_parameter, 
+												from_cmdline);
 
 					// reset character set
 					provider_set_ext_charset(orig_charset);
@@ -208,7 +209,7 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 		if ((strlen(argv[i]) >4) 
 			&& argv[i][1] == 'A') {
 
-			err = cmd_assign(argv[i]+2);
+			err = cmd_assign(argv[i]+2, 1);
 
 			if (err != CBM_ERROR_OK) {
 				log_error("%d Error assigning %s\n", err, argv[i]+2);
@@ -333,7 +334,7 @@ static int cmd_process_stdin(void) {
 
 	if (buf[0] == 'A' || buf[0] == 'a') {
 		// assign from stdin control
-		err = cmd_assign(buf+1);
+		err = cmd_assign(buf+1, 1);
                 if (err != CBM_ERROR_OK) {
                         log_error("%d Error assigning %s\n", err, buf+1);
                 }

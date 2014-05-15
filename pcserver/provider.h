@@ -68,7 +68,7 @@ typedef struct {
 
 							// create a new endpoint instance
 							// this is used on ASSIGN calls
-	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par);	
+	endpoint_t* 	(*newep)(endpoint_t *parent, const char *par, int from_cmdline);	
 
 							// create a new temporary endpoint instance;
 							// this happens when a file with direct provider
@@ -308,6 +308,7 @@ charconv_t provider_convfrom(provider_t *prov);
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
 // it can be identified by one of the providers - like a d64 file, or a ZIP file
 file_t *provider_wrap(file_t *file);
+
 
 // convert string inline from provider to external charset
 static inline void conv_from(char *str, provider_t *prov) {
