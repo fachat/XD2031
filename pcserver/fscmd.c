@@ -61,6 +61,7 @@
 #undef DEBUG_WRITE
 
 #define	MAX_BUFFER_SIZE			64
+#define	RET_BUFFER_SIZE			200
 
 static void cmd_dispatch(char *buf, serial_port_t fs);
 static void write_packet(serial_port_t fd, char *retbuf);
@@ -445,6 +446,41 @@ char *get_options(char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
+int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
+	int rv = CBM_ERROR_FAULT;
+	provider_t *prov = NULL;
+	int outdeleted = 0;
+
+	int drive = name[0]&255;
+	name++;
+
+	endpoint_t *ep = provider_lookup(drive, &name);
+	if (ep != NULL) {
+		prov = (provider_t*) ep->ptype;
+		if (prov->scratch != NULL) {
+			// convert in place 
+			provider_convto(prov)(name, namelen, name, namelen);
+			log_info("DELETE(%s)\n", name);
+
+			rv = prov->scratch(ep, name, &outdeleted);
+			if (rv == CBM_ERROR_SCRATCHED) {
+				outbuf[0] = outdeleted > 99 ? 99 :outdeleted;
+				// one extra data byte
+				*outlen = 1;
+			} else {
+				if (rv != 0) {
+					log_rv(rv);
+				}
+			}
+			// cleanup temp ep when not needed anymore
+			provider_cleanup(ep);
+		}
+	}
+	return rv;
+}
+
+// ----------------------------------------------------------------------------------
+
 /**
  * This function executes a single packet from the device.
  * 
@@ -457,13 +493,14 @@ char *get_options(char *name, int len) {
 static void cmd_dispatch(char *buf, serial_port_t fd) {
 	int tfd, cmd;
 	unsigned int len;
-	char retbuf[200];
+	char retbuf[RET_BUFFER_SIZE];
 	int rv;
 	char *name2;
+	int outlen;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
-
+	
 	if (cmd == FS_TERM) {
 #ifdef DEBUG_CMD_TERM
 		{
@@ -520,7 +557,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	retbuf[FSP_DATA] = CBM_ERROR_FAULT;
 
 	int readflag = 0;
-	int outdeleted = 0;
 	int retlen = 0;
 	int sendreply = 1;
 	char *name = buf+FSP_DATA+1;
@@ -658,26 +694,12 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 
 		// command operations
 	case FS_DELETE:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->scratch != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				log_info("DELETE(%s)\n", name);
-
-				rv = prov->scratch(ep, name, &outdeleted);
-				if (rv == CBM_ERROR_SCRATCHED) {
-					retbuf[FSP_DATA + 1] = outdeleted > 99 ? 99 :outdeleted;
-					retbuf[FSP_LEN] = FSP_DATA + 2;
-				} else 
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup temp ep when not needed anymore
-			provider_cleanup(ep);
-		}
+		outlen = 0;
+		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
+		log_debug("cmd_delete (name='%s' len=%d) -> outlen=%d, retbuf=%02x %02x\n",
+				buf+FSP_DATA+1, len-FSP_DATA, outlen, retbuf[0], retbuf[1]);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_MOVE:
 		ep = provider_lookup(drive, &name);
