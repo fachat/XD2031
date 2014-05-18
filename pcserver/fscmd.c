@@ -448,36 +448,71 @@ char *get_options(char *name, int len) {
 
 int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 	int rv = CBM_ERROR_FAULT;
-	provider_t *prov = NULL;
 	int outdeleted = 0;
+	file_t *file = NULL;
+	file_t *dir = NULL;
+	int readflag;
+	const char *outname;
 
 	int drive = name[0]&255;
 	name++;
 
 	endpoint_t *ep = provider_lookup(drive, &name);
 	if (ep != NULL) {
-		prov = (provider_t*) ep->ptype;
-		if (prov->scratch != NULL) {
-			// convert in place 
-			provider_convto(prov)(name, namelen, name, namelen);
-			log_info("DELETE(%s)\n", name);
+		rv = handler_resolve_dir(ep, &dir, name, NULL);
 
-			rv = prov->scratch(ep, name, &outdeleted);
-			if (rv == CBM_ERROR_SCRATCHED) {
-				outbuf[0] = outdeleted > 99 ? 99 :outdeleted;
-				// one extra data byte
-				*outlen = 1;
-			} else {
-				if (rv != 0) {
-					log_rv(rv);
+		if (rv == CBM_ERROR_OK && file != NULL) {
+
+			if (dir->handler->direntry != NULL) {
+
+				while (rv == CBM_ERROR_OK 
+					&& ((rv = dir->handler->direntry(dir, &file, 1, &readflag, &outname))
+							== CBM_ERROR_OK)
+					&& file != NULL) {
+
+					log_debug("scratch matched %s\n", file->filename);
+
+					rv = file->handler->scratch(file);
+
+					outdeleted++;
 				}
+
+				if (rv == CBM_ERROR_OK) {
+					outbuf[0] = outdeleted > 99 ? 99 : outdeleted;
+					*outlen = 1;
+					rv = CBM_ERROR_SCRATCHED;
+				}
+			} else {
+				rv = CBM_ERROR_FAULT;
 			}
-			// cleanup temp ep when not needed anymore
-			provider_cleanup(ep);
 		}
 	}
 	return rv;
 }
+
+
+//		prov = (provider_t*) ep->ptype;
+//		if (prov->scratch != NULL) {
+//			// convert in place 
+//			provider_convto(prov)(name, namelen, name, namelen);
+//			log_info("DELETE(%s)\n", name);
+//
+//			rv = prov->scratch(ep, name, &outdeleted);
+//			if (rv == CBM_ERROR_SCRATCHED) {
+//				outbuf[0] = outdeleted > 99 ? 99 :outdeleted;
+//				// one extra data byte
+//				*outlen = 1;
+//			} else {
+//				if (rv != 0) {
+//					log_rv(rv);
+//				}
+//			}
+//			// cleanup temp ep when not needed anymore
+//			provider_cleanup(ep);
+//		}
+//	}
+//	return rv;
+//}
 
 // ----------------------------------------------------------------------------------
 
@@ -696,8 +731,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_DELETE:
 		outlen = 0;
 		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
-		log_debug("cmd_delete (name='%s' len=%d) -> outlen=%d, retbuf=%02x %02x\n",
-				buf+FSP_DATA+1, len-FSP_DATA, outlen, retbuf[0], retbuf[1]);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;

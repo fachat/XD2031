@@ -97,7 +97,6 @@ typedef struct {
 	int		(*wrap)(file_t *file, file_t **wrapped); 
 
 	// command channel
-	int		(*scratch)(endpoint_t *ep, char *name, int *outdeleted);// delete
 	int		(*rename)(endpoint_t *ep, char *nameto, char *namefrom); // rename a file or dir
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
 	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
@@ -230,6 +229,8 @@ struct _handler {
 	int		(*equals)(file_t *thisfile, file_t *otherfile);
 
 	size_t		(*realsize)(file_t *file);	// returns the real (correct) size of the file
+
+	int		(*scratch)(file_t *file);	// delete resp. rmdir
 
         // -------------------------
 

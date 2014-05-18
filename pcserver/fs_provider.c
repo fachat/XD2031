@@ -1513,50 +1513,66 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 // ----------------------------------------------------------------------------------
 // command channel
 
-static int _delete_callback(const int num_of_match, const char *name) {
+static int fs_delete(file_t *file) {
 
-	log_debug("%d: Calling DELETE on: %s\n", num_of_match, name);
+	log_debug("fs_delete '%s' (%p -> %s)\n", file->filename, file, ((File*)file)->ospath);
+ 
+	File *fp = (File*) file;
 
-	if (unlink(name) < 0) {
+	if (unlink(fp->ospath) < 0) {
 		// error handling
-		log_errno("While trying to unlink");
+		log_errno("While trying to unlink %s", fp->ospath);
 
-		return -errno_to_error(errno);
+		return errno_to_error(errno);
 	}
 	return CBM_ERROR_OK;
 }
 
-static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
-
-	int matches = 0;
-	char *p = buf;
-
-	os_patch_dir_separator(buf);
-
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
-	do {
-		// comma is file pattern separator
-		char *pnext = strchr(p, ',');
-		if (pnext != NULL) {
-			*pnext = 0;	// write file name terminator (replacing the ',')
-		}
-
-		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);
-		if (rv < 0) {
-			// error happened
-			return -rv;
-		}
-		matches += rv;
-
-		p = (pnext == NULL) ? NULL : pnext+1;
-	}
-	while (p != NULL);
-
-	*outdeleted = matches;
-
-	return CBM_ERROR_SCRATCHED;	// FILES SCRATCHED message
-}
+//static int _delete_callback(const int num_of_match, const char *name) {
+//
+//	log_debug("%d: Calling DELETE on: %s\n", num_of_match, name);
+//
+//	if (unlink(name) < 0) {
+//		// error handling
+//		log_errno("While trying to unlink");
+//
+//		return -errno_to_error(errno);
+//	}
+//	return CBM_ERROR_OK;
+//}
+//
+//
+//static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
+//
+//	int matches = 0;
+//	char *p = buf;
+//
+//	os_patch_dir_separator(buf);
+//
+//	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+//
+//	do {
+//		// comma is file pattern separator
+//		char *pnext = strchr(p, ',');
+//		if (pnext != NULL) {
+//			*pnext = 0;	// write file name terminator (replacing the ',')
+//		}
+//
+//		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);
+//		if (rv < 0) {
+//			// error happened
+//			return -rv;
+//		}
+//		matches += rv;
+//
+//		p = (pnext == NULL) ? NULL : pnext+1;
+//	}
+//	while (p != NULL);
+//
+//	*outdeleted = matches;
+//
+//	return CBM_ERROR_SCRATCHED;	// FILES SCRATCHED message
+//}
 
 static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 
@@ -2011,6 +2027,7 @@ handler_t fs_file_handler = {
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
+	fs_delete,		// delete resp. rmdir
 	fs_dump_file		// dump file
 };
 
@@ -2024,7 +2041,6 @@ provider_t fs_provider = {
 	fsp_ep_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider
-	fs_delete,
 	fs_rename,
 	fs_cd,
 	fs_mkdir,

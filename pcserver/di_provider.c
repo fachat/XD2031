@@ -1701,28 +1701,34 @@ static void di_delete_file(di_endpoint_t *diep, slot_t *slot)
 // di_scratch
 // **********
 
-static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
-{
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-   slot_t slot;
-   int found;
-   int l = strlen(buf);
-   if (l && buf[l-1] == 13) buf[l-1] = 0; // remove CR
-   log_debug("di_scratch(%s)\n",buf);
+static int di_scratch(file_t *file) {
+	// TODO
 
-   *outdeleted = 0;
-   di_first_slot(diep,&slot);
-   do
-   {
-      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf, FS_DIR_TYPE_UNKNOWN)))
-      {
-         di_delete_file(diep,&slot);
-         ++(*outdeleted);
-      }
-   }  while (found && di_next_slot(diep,&slot));
-   di_sync_BAM(diep);
-   return CBM_ERROR_SCRATCHED;  // FILES SCRATCHED message
+	return CBM_ERROR_FAULT;
 }
+
+//static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
+//{
+//   di_endpoint_t *diep = (di_endpoint_t*) ep;
+//   slot_t slot;
+//   int found;
+//   int l = strlen(buf);
+//   if (l && buf[l-1] == 13) buf[l-1] = 0; // remove CR
+//   log_debug("di_scratch(%s)\n",buf);
+//
+//   *outdeleted = 0;
+//   di_first_slot(diep,&slot);
+//   do
+//   {
+//      if ((found = di_match_slot(diep,&slot,(uint8_t *)buf, FS_DIR_TYPE_UNKNOWN)))
+//      {
+//         di_delete_file(diep,&slot);
+//         ++(*outdeleted);
+//      }
+//   }  while (found && di_next_slot(diep,&slot));
+//   di_sync_BAM(diep);
+//   return CBM_ERROR_SCRATCHED;  // FILES SCRATCHED message
+//}
 
 // *********
 // di_rename
@@ -2928,6 +2934,7 @@ handler_t di_file_handler = {
 	di_fflush,	// flush data to disk
 	di_equals,	// check if two files are the same
 	di_realsize,	// compute and return the real linear file size
+        di_scratch,	// scratch
 	di_dump_file	// dump
 };
 
@@ -2941,7 +2948,6 @@ provider_t di_provider = {
         di_ep_free,	// unassign
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file
-        di_scratch,
         di_rename,
         di_cd,
         NULL,		// mkdir not supported
