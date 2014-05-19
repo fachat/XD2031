@@ -258,6 +258,18 @@ static int x00_open(file_t *file, int opentype) {
 	return rv;
 }
 
+static int x00_scratch(file_t *file) {
+
+	cbm_errno_t rv = file->parent->handler->scratch(file->parent);
+
+	if (rv == CBM_ERROR_OK) {	
+		// parent file is closed
+		mem_free(file);
+	}
+
+	return rv;
+}
+
 static file_t* x00_parent(file_t *file) {
 	if (file->parent != NULL) {
 		return file->parent->handler->parent(file->parent);
@@ -346,6 +358,8 @@ static handler_t x00_handler = {
 	x00_equals,
 
 	x00_realsize,
+
+	x00_scratch,
 
 	// -------------------------
 
