@@ -35,6 +35,17 @@
 #include "log.h"
 #include "mem.h"
 
+
+#define	DEBUG_MEM
+
+#ifdef DEBUG_MEM
+#define	MEM_MAGIC	0xbadc0de
+#define	MEM_OFFSET	(sizeof(int))
+#else
+#define	MEM_OFFSET	0
+#endif
+
+
 void mem_init (void) {
 }
 
@@ -57,10 +68,17 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 		len = n;
 	}
 
+	len+=MEM_OFFSET;
+
 	char *ptr = malloc(len+1);
 
 	check_alloc(ptr, file, line);		
-	
+
+#ifdef DEBUG_MEM
+	((int*)ptr)[0] = MEM_MAGIC;
+#endif
+	ptr+=MEM_OFFSET;
+
 	strncpy(ptr, orig, len);
 
 	ptr[len] = 0;
@@ -73,10 +91,15 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 char *mem_alloc_str_(const char *orig, char *file, int line) {
 
 	int len = strlen(orig);
+	len+=MEM_OFFSET;
 
 	char *ptr = malloc(len+1);
 
 	check_alloc(ptr, file, line);		
+#ifdef DEBUG_MEM
+	((int*)ptr)[0] = MEM_MAGIC;
+#endif
+	ptr+=MEM_OFFSET;
 	
 	strcpy(ptr, orig);
 
@@ -87,13 +110,18 @@ char *mem_alloc_str_(const char *orig, char *file, int line) {
 void *mem_alloc_(const type_t *type, char *file, int line) {
 	// for now just malloc()
 
-	void *ptr = malloc(type->sizeoftype);
+	void *ptr = malloc(type->sizeoftype + MEM_OFFSET);
 
 	check_alloc(ptr, file, line);
 
 	// malloc returns "non-initialized" memory! 
 	memset(ptr, 0, type->sizeoftype);
 
+#ifdef DEBUG_MEM
+	((int*)ptr)[0] = MEM_MAGIC;
+#endif
+	ptr = ((char*)ptr) + MEM_OFFSET;
+	
 	if (type->constructor != NULL) {
 		type->constructor(type, ptr);
 	}
@@ -107,9 +135,14 @@ void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 
 	(void) name; // name not used at the moment, silence warning
 
-	void *ptr = malloc(n);
+	void *ptr = malloc(n + MEM_OFFSET);
 
 	check_alloc(ptr, file, line);
+
+#ifdef DEBUG_MEM
+	((int*)ptr)[0] = MEM_MAGIC;
+#endif
+	ptr = ((char*)ptr) + MEM_OFFSET;
 
 	return ptr;
 }
@@ -118,9 +151,14 @@ void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 	// for now just malloc()
 
-	void *ptr = calloc(n, type->sizeoftype);
+	void *ptr = calloc(n + ((MEM_OFFSET == 0) ? 0 : 1), type->sizeoftype);
 
 	check_alloc(ptr, file, line);
+
+#ifdef DEBUG_MEM
+	((int*)ptr)[0] = MEM_MAGIC;
+	ptr = ((char*)ptr) + MEM_OFFSET;
+#endif
 
 	return ptr;
 }
@@ -129,15 +167,29 @@ void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 // NOTE: this does currently not zero-fill the added area when the array size is increased
 void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, int line) {
 
-	ptr = realloc(ptr, n * type->sizeoftype);
-
+#ifdef DEBUG_MEM
+	ptr = realloc(((char*)ptr) - MEM_OFFSET, (n + 1) * type->sizeoftype);
 	check_alloc(ptr, file, line);
+	ptr = ((char*)ptr) + MEM_OFFSET;
+#else
+	ptr = realloc(ptr, n * type->sizeoftype);
+	check_alloc(ptr, file, line);
+#endif
 
 	return ptr;
 }
 
 void mem_free(const void* ptr) {
 
+#ifdef DEBUG_MEM
+	if (ptr != NULL) {
+		ptr = ((char*)ptr) - MEM_OFFSET;
+		if ( ((int*)ptr)[0] != MEM_MAGIC ) {
+			log_error("Trying to free memory at %p that is not allocated\n", ptr);
+			return;
+		}
+	}
+#endif
 	free((void*)ptr);
 
 }

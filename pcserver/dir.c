@@ -374,7 +374,7 @@ char *malloc_path(const char *base, const char *name) {
         l += (name == NULL) ? 0 : strlen(name);
         l += 3; // dir separator, terminating zero, optional "."
 
-        char *dirpath = malloc(l);
+        char *dirpath = mem_alloc_c(l, "malloc_path");
         dirpath[0] = 0;
         if (base != NULL) {
                 strcat(dirpath, base);

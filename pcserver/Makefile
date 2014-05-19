@@ -69,6 +69,7 @@ runv2d:
 rungdb:
 	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A3:fs=../sample/test.d64 -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test2.d64 ." ./fsser
 	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A3:fs=../sample/test.d64 -A0:fs=../sample -A1:fs=../tools ." ./fsser
+	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample -A1:fs=../tools ." ./fsser
 
 run9:
 	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .

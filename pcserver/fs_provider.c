@@ -273,7 +273,9 @@ static void fsp_free(endpoint_t *ep) {
 
 	reg_remove(&endpoints, cep);
 
-	mem_free(cep->basepath);
+	// basepath is malloc'd
+	free(cep->basepath);
+	// others are mem_alloc'd
 	mem_free(cep->curpath);
         mem_free(ep);
 }
@@ -334,12 +336,13 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 
 		char *dirpath = malloc_path(base_path, (const char*)fs_path);
 		// mallocs a buffer and stores the canonical real path in it
+		// note: real malloc(), not mem_alloc_*
 		ospath = os_realpath(dirpath);
 		mem_free(dirpath);
 
 		if (!os_path_is_dir(ospath)) {
 			// cleanup
-			mem_free(ospath);
+			free(ospath);
 
 			log_debug("Nok, '%s' is a file or something else\n", fs_path);
 			// this part is a file, at least not a directory
@@ -354,7 +357,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 			break;
 		}
 		// cleanup
-		mem_free(ospath);
+		free(ospath);
 
 		log_debug("Ok, '%s' is a directory\n", fs_path);
 
@@ -476,7 +479,8 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	File *fp = (File*) file;
 	fs_endpoint_t *parentep = (fs_endpoint_t*) file->endpoint;
 
-	char *basepath = mem_alloc_str(fp->ospath);
+	// basepath is real malloc'd, not mem_alloc_*'d
+	char *basepath = os_realpath(fp->ospath);
 
 	// alloc and init a new endpoint struct
 	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
@@ -625,9 +629,11 @@ static int path_under_base(const char *path, const char *base) {
 		log_error("Path '%s' is not in base dir '%s'\n", path_realpathc, base_dirc);
 	}
 exit:
-	mem_free(base_realpathc);
+	// *_realpathc are malloc'd
+	free(base_realpathc);
+	free(path_realpathc);
+	// others are mem_alloc'd
 	mem_free(base_dirc);
-	mem_free(path_realpathc);
 	mem_free(path_dname);
 	return res;
 }
@@ -1281,7 +1287,8 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
   		    retfile->file.parent = fp;
 
 		    retfile->file.filename = NULL;
-		    retfile->ospath = mem_alloc_str(file->ospath);
+		    // ospath is malloc'd
+		    retfile->ospath = os_realpath(file->ospath);
 		    retfile->file.mode = FS_DIR_MOD_FRE;
 		    unsigned long long total = os_free_disk_space(file->ospath);
 		    if (total > SSIZE_MAX) {
@@ -1620,8 +1627,9 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 		}
 	}
 	mem_free(topath);
-	mem_free(toreal);
-	mem_free(fromreal);
+	// from/toreal are malloc'd
+	free(toreal);
+	free(fromreal);
 
 	return er;
 }
@@ -1645,13 +1653,15 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
+
 	// free buffer so we don't forget it
 	mem_free(newpath);
 
 	// check if the new path is still under the base path
 	if(path_under_base(newreal, fsep->basepath)) {
 		// -> security error
-		mem_free(newreal);
+		// newreal is malloc'd
+		free(newreal);
 		return CBM_ERROR_NO_PERMISSION;
 	}
 
@@ -1659,15 +1669,18 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	struct stat path;
 	if(stat(newreal, &path) < 0) {
 		log_error("Could not stat '%s'\n", newreal);
+		free(newreal);
 		return CBM_ERROR_DIR_ERROR;
 	}
 	if(!S_ISDIR(path.st_mode)) {
 		log_error("CHDIR: '%s' is not a directory\n", newreal);
+		free(newreal);
 		return CBM_ERROR_DIR_ERROR;
 	}
 
 	mem_free(fsep->curpath);
-	fsep->curpath = newreal;
+	fsep->curpath = mem_alloc_str(newreal);
+	free(newreal);
 	return CBM_ERROR_OK;
 }
 
@@ -1700,7 +1713,7 @@ static int fs_mkdir(endpoint_t *ep, char *buf) {
 		}
 	}
 	mem_free(newpath);
-	mem_free(newreal);
+	free(newreal);
 	return er;
 }
 
@@ -1736,7 +1749,7 @@ static int fs_rmdir(endpoint_t *ep, char *buf) {
 			er = CBM_ERROR_OK;
 		}
 	}
-	mem_free(newreal);
+	free(newreal);
 	return er;
 }
 
