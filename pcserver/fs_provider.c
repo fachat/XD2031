@@ -209,7 +209,8 @@ static int close_fd(File *file, int recurse) {
 	int er = 0;
 
 	if (file->ospath != NULL) {
-		mem_free((void*)file->ospath);
+		// ospath is malloc'd
+		free((void*)file->ospath);
 	}
 
 	if (file->file.pattern != NULL) {
@@ -1026,7 +1027,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
 	conv_from(tmpnamep, &fs_provider);
 	file->file.filename = tmpnamep;
 
-	file->ospath = mem_alloc_str(fsep->curpath);
+	file->ospath = os_realpath(fsep->curpath);
 
 	*outfile = file;
 
@@ -1183,7 +1184,9 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		    retfile->file.filename = conv_from_alloc(
 				(fp->pattern == NULL)?"(nil)":fp->pattern, &fs_provider);
 
-		    retfile->ospath = get_path(file, retfile->file.filename);
+		    path = get_path(file, retfile->file.filename);
+		    retfile->ospath = os_realpath(path);
+		    mem_free(path);
 		    retfile->file.mode = FS_DIR_MOD_NAM;
 
 		    rv = CBM_ERROR_OK;
@@ -1212,7 +1215,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 			    	path = get_path(file, file->de->d_name);
 				ospath = os_realpath(path);
-				free(path);
+				mem_free(path);
 				path = NULL;
 					
 		            	int rvx = stat(ospath, &sbuf);
@@ -1890,7 +1893,7 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 		
 		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
-		retfile->ospath = ospath;
+		retfile->ospath = os_realpath(ospath);
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
 
