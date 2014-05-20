@@ -1147,6 +1147,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	  file_t *wrapfile = NULL;
 	
 	  *readflag = READFLAG_DENTRY;
+	  *outentry = NULL;
 
 	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 

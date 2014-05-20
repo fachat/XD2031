@@ -461,12 +461,11 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 	if (ep != NULL) {
 		rv = handler_resolve_dir(ep, &dir, name, NULL);
 
-		if (rv == CBM_ERROR_OK && file != NULL) {
+		if (rv == CBM_ERROR_OK) {
 
 			if (dir->handler->direntry != NULL) {
 
-				while (rv == CBM_ERROR_OK 
-					&& ((rv = dir->handler->direntry(dir, &file, 1, &readflag, &outname))
+				while (((rv = dir->handler->direntry(dir, &file, 1, &readflag, &outname))
 							== CBM_ERROR_OK)
 					&& file != NULL) {
 
@@ -474,6 +473,9 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 
 					rv = file->handler->scratch(file);
 
+					if (rv != CBM_ERROR_OK) {
+						break;
+					}
 					outdeleted++;
 				}
 
