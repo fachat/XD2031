@@ -1167,9 +1167,13 @@ static int di_open_dir(File *file) {
         log_debug("ENTER: di_open_dr(%p (%s))\n",file,
                         (file == NULL)?"<nil>":file->file.filename);
 
+	di_endpoint_t *diep = (di_endpoint_t*) file->file.endpoint;
+
 	// crude root check
         if(strcmp(file->file.filename, "$") == 0) {
           file->file.dirstate = DIRSTATE_FIRST;
+
+          di_first_slot(diep,&diep->Slot);
 
           log_exitr(CBM_ERROR_OK);
           return CBM_ERROR_OK;
@@ -1702,9 +1706,12 @@ static void di_delete_file(di_endpoint_t *diep, slot_t *slot)
 // **********
 
 static int di_scratch(file_t *file) {
-	// TODO
+	File *fp = (File*) file;
+	di_endpoint_t *diep = (di_endpoint_t*) file->endpoint;
 
-	return CBM_ERROR_FAULT;
+	di_delete_file(diep, &fp->Slot);
+
+	return CBM_ERROR_SCRATCHED;
 }
 
 //static int di_scratch(endpoint_t *ep, char *buf, int *outdeleted)
