@@ -1160,7 +1160,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
           if (strstr(file->ospath, fsep->basepath) != file->ospath) {
           	// the parent base path is not at the start of the new base path
           	// so we throw an error
-          	log_error("ASSIGN broke out of container (%s), was trying %s\n",
+          	log_error("DIR broke out of container (%s), was trying %s\n",
                                 fsep->basepath, file->ospath);
           	return CBM_ERROR_FAULT;
           }
@@ -1692,8 +1692,9 @@ static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
 
 	int er = CBM_ERROR_FAULT;
 
+	(void) pars;	// silence unused warning
+
 	fs_endpoint_t *fsep = (fs_endpoint_t*) file->endpoint;
-	File *fp = (File*) file;
 
 	if (strchr(name, dir_separator_char()) != NULL) {
 		// no separator char
@@ -1733,38 +1734,23 @@ static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
 }
 
 
-static int fs_rmdir(endpoint_t *ep, char *buf) {
+static int fs_rmdir(file_t *dir) {
 
 	int er = CBM_ERROR_FAULT;
 
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+	fs_endpoint_t *fsep = (fs_endpoint_t*) dir->endpoint;
+	File *fp = (File*) dir;
 
-	os_patch_dir_separator(buf);
+	int rv = rmdir(fp->ospath);
 
-	char *newpath = malloc_path(fsep->curpath, buf);
-
-	char *newreal = os_realpath(newpath);
-	mem_free(newpath);
-
-	if (newreal == NULL) {
-		// directory does not exist
-		er = CBM_ERROR_FILE_NOT_FOUND;
-	} else
-	if (strstr(newreal, fsep->basepath) == newreal) {
-		// current path is still at the start of new path
-		// so it is not broken out of the container
-
-		int rv = rmdir(newreal);
-
-		if (rv < 0) {
-			er = errno_to_error(errno);
-			log_errno("Error trying to remove a directory");
-		} else {
-			// ok
-			er = CBM_ERROR_OK;
-		}
+	if (rv < 0) {
+		er = errno_to_error(errno);
+		log_errno("Error trying to remove a directory");
+	} else {
+		// ok
+		er = CBM_ERROR_OK;
 	}
-	free(newreal);
+	dir->handler->close(dir, 0);
 	return er;
 }
 
@@ -2057,6 +2043,7 @@ handler_t fs_file_handler = {
 	fs_realsize,		// real size of file (same as file->filesize here)
 	fs_delete,		// delete resp. rmdir
 	fs_mkdir,		// create a directory
+	fs_rmdir,		// remove a directory
 	fs_dump_file		// dump file
 };
 
@@ -2072,7 +2059,6 @@ provider_t fs_provider = {
 	NULL,			// wrap not needed on fs_provider
 	fs_rename,
 	fs_cd,
-	fs_rmdir,
 	fs_direct,
 	fs_dump			// dump
 };

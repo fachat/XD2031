@@ -99,7 +99,6 @@ typedef struct {
 	// command channel
 	int		(*rename)(endpoint_t *ep, char *nameto, char *namefrom); // rename a file or dir
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
-	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
 	// dump / debug
 	void		(*dump)(int indent);
@@ -232,6 +231,8 @@ struct _handler {
 	int		(*scratch)(file_t *file);	// delete resp. rmdir
 
 	int		(*mkdir)(file_t *dir, const char *name, openpars_t *pars);	// make directory
+
+	int		(*rmdir)(file_t *dir);		// remove directory
 
         // -------------------------
 

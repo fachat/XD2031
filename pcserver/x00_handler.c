@@ -363,6 +363,8 @@ static handler_t x00_handler = {
 
 	NULL,		// mkdir not supported
 
+	NULL,		// rmdir not supported
+
 	// -------------------------
 
 	x00_dump

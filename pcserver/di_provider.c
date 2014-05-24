@@ -2943,6 +2943,7 @@ handler_t di_file_handler = {
 	di_realsize,	// compute and return the real linear file size
         di_scratch,	// scratch
 	NULL,		// mkdir not supported
+	NULL,		// rmdir not supported
 	di_dump_file	// dump
 };
 
@@ -2958,7 +2959,6 @@ provider_t di_provider = {
         di_wrap,        // wrap while CDing into D64 file
         di_rename,
         di_cd,
-        NULL,		// rmdir not supported
         di_direct,
 	di_dump		// dump
 };

@@ -446,7 +446,7 @@ char *get_options(char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
+int cmd_delete(char *name, int namelen, char *outbuf, int *outlen, int isrmdir) {
 	int rv = CBM_ERROR_FAULT;
 	int outdeleted = 0;
 	file_t *file = NULL;
@@ -473,7 +473,17 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 
 					log_info("DELETE(%s)\n", file->filename);
 
-					rv = file->handler->scratch(file);
+					if (isrmdir) {
+						if (file->handler->rmdir != NULL) {
+							// supports RMDIR
+							rv = file->handler->rmdir(file);
+						} else {
+							log_warn("File %s does not support RMDIR\n", 
+									file->filename);
+						}
+					} else {
+						rv = file->handler->scratch(file);
+					}
 
 					if (rv != CBM_ERROR_OK) {
 						break;
@@ -489,6 +499,7 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 			} else {
 				rv = CBM_ERROR_FAULT;
 			}
+			dir->handler->close(dir, 1);
 		}
 		// provider_cleanup(ep) - still needed?
 	}
@@ -730,7 +741,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 
 		// command operations
 	case FS_DELETE:
-		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
+		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, 0);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
@@ -792,21 +803,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_RMDIR:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->rmdir != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				log_info("RMDIR(%s)\n", name);
-				rv = prov->rmdir(ep, name);
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
+		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, 1);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_BLOCK:
 		// not file-related, so no file descriptor (tfd)
