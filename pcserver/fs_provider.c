@@ -1688,21 +1688,32 @@ static int fs_cd(endpoint_t *ep, char *buf) {
 	return CBM_ERROR_OK;
 }
 
-static int fs_mkdir(endpoint_t *ep, char *buf) {
+static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
 
-	int er = CBM_ERROR_DIR_ERROR;
+	int er = CBM_ERROR_FAULT;
 
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
+	fs_endpoint_t *fsep = (fs_endpoint_t*) file->endpoint;
+	File *fp = (File*) file;
 
-	os_patch_dir_separator(buf);
+	if (strchr(name, dir_separator_char()) != NULL) {
+		// no separator char
+		log_error("target file name contained dir separator\n");
+		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
+	}
 
-	char *newpath = malloc_path(fsep->curpath, buf);
+        // convert filename to external charset
+        const char *tmpnamep = conv_to_alloc(name, &fs_provider);
+
+	char *newpath = malloc_path(fsep->curpath, tmpnamep);
+
+	mem_free(tmpnamep);
 
 	char *newreal = os_realpath(newpath);
 
 	if (newreal != NULL) {
 		// file or directory exists
-		er = CBM_ERROR_FILE_EXISTS;
+		log_errno("Error finding directory path %s", newpath);
+		er = errno_to_error(errno);
 	} else {
 		mode_t oldmask=umask(0);
 		int rv = os_mkdir(newpath, 0755);
@@ -2045,6 +2056,7 @@ handler_t fs_file_handler = {
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
 	fs_delete,		// delete resp. rmdir
+	fs_mkdir,		// create a directory
 	fs_dump_file		// dump file
 };
 
@@ -2060,7 +2072,6 @@ provider_t fs_provider = {
 	NULL,			// wrap not needed on fs_provider
 	fs_rename,
 	fs_cd,
-	fs_mkdir,
 	fs_rmdir,
 	fs_direct,
 	fs_dump			// dump

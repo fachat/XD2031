@@ -361,6 +361,8 @@ static handler_t x00_handler = {
 
 	x00_scratch,
 
+	NULL,		// mkdir not supported
+
 	// -------------------------
 
 	x00_dump

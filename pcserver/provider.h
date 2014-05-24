@@ -99,7 +99,6 @@ typedef struct {
 	// command channel
 	int		(*rename)(endpoint_t *ep, char *nameto, char *namefrom); // rename a file or dir
 	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
-	int		(*mkdir)(endpoint_t *ep, char *name);			// make directory
 	int		(*rmdir)(endpoint_t *ep, char *name);			// remove directory
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
 	// dump / debug
@@ -232,6 +231,8 @@ struct _handler {
 
 	int		(*scratch)(file_t *file);	// delete resp. rmdir
 
+	int		(*mkdir)(file_t *dir, const char *name, openpars_t *pars);	// make directory
+
         // -------------------------
 
 	void		(*dump)(file_t *fp, int recurse, int indent); // dump info for analysis / debug
@@ -339,6 +340,17 @@ static inline char* conv_to_name_alloc(const char *str, const char *csetname) {
 	// this is horribly inefficient
 	cconv_converter(cconv_getcharset(provider_get_ext_charset()), 
 						cconv_getcharset(csetname))(str, len, trg, len);
+
+	trg[len] = 0;
+	return trg;
+}
+
+static inline char* conv_to_alloc(const char *str, provider_t *prov) {
+	int len = strlen(str);
+
+	char *trg = mem_alloc_c(len + 1, "converted_to_name");
+
+	provider_convto(prov)(str, len, trg, len);
 
 	trg[len] = 0;
 	return trg;

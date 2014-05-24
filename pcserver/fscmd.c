@@ -454,6 +454,8 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 	int readflag;
 	const char *outname;
 
+	(void) namelen;	// silence unused warning
+
 	int drive = name[0]&255;
 	name++;
 
@@ -488,10 +490,30 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 				rv = CBM_ERROR_FAULT;
 			}
 		}
+		// provider_cleanup(ep) - still needed?
 	}
 	return rv;
 }
 
+int cmd_mkdir(char *name, int namelen) {
+
+	int rv = CBM_ERROR_FAULT;
+	file_t *newdir = NULL;
+
+	(void) namelen;	// silence unused warning
+
+	int drive = name[0]&255;
+	name++;
+
+	endpoint_t *ep = provider_lookup(drive, &name);
+	if (ep != NULL) {
+		log_info("MKDIR(%s)\n", name);
+		rv = handler_resolve_file(ep, &newdir, name, NULL, FS_MKDIR);
+
+		// provider_cleanup(ep) - still needed?
+	}
+	return rv;
+}
 
 // ----------------------------------------------------------------------------------
 
@@ -510,7 +532,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	char retbuf[RET_BUFFER_SIZE];
 	int rv;
 	char *name2;
-	int outlen;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -577,6 +598,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	int drive = buf[FSP_DATA]&255;
 	int convlen = len - FSP_DATA-1;
 	int record = 0;
+	int outlen = 0;
 
 	// options string just in case
 	char *options = NULL;
@@ -708,7 +730,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 
 		// command operations
 	case FS_DELETE:
-		outlen = 0;
 		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
@@ -766,21 +787,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_MKDIR:
-		ep = provider_lookup(drive, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->mkdir != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				log_info("MKDIR(%s)\n", name);
-				rv = prov->mkdir(ep, name);
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
+		rv = cmd_mkdir(buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_RMDIR:
 		ep = provider_lookup(drive, &name);

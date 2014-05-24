@@ -63,6 +63,7 @@ typedef enum {
 	CBM_ERROR_OVERFLOW_IN_RECORD	= 51,
 	CBM_ERROR_TOO_LARGE		= 52,
 
+	CBM_ERROR_DIR_NOT_SUPPORTED	= 55,	// new when path traversing
 	CBM_ERROR_DIR_NOT_FOUND		= 56,	// new when path traversing
 	CBM_ERROR_DIR_NOT_EMPTY		= 57,	// new for ENOTEMPTY
 	CBM_ERROR_NO_PERMISSION		= 58,	// new for EACCESS

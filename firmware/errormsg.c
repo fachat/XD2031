@@ -47,6 +47,7 @@ const char IN_ROM STR_FILE_NOT_FOUND[]       = "FILE NOT FOUND";
 const char IN_ROM STR_FILE_NOT_OPEN[]        = "FILE NOT OPEN";
 const char IN_ROM STR_FILE_EXISTS[]          = "FILE EXISTS";
 const char IN_ROM STR_FILE_TYPE_MISMATCH[]   = "FILE TYPE MISMATCH";
+const char IN_ROM STR_DIR_NOT_SUPPORTED[]    = "DIR NOT SUPPORTED";
 const char IN_ROM STR_DIR_NOT_EMPTY[]        = "DIR NOT EMPTY";
 const char IN_ROM STR_DIR_NOT_FOUND[]        = "DIR NOT FOUND";
 const char IN_ROM STR_NO_PERMISSION[]        = "NO PERMISSION";
@@ -83,6 +84,7 @@ const struct err_struct IN_ROM err_tab[] = {
 	{CBM_ERROR_FILE_NOT_OPEN        , STR_FILE_NOT_OPEN        },
 	{CBM_ERROR_FILE_EXISTS          , STR_FILE_EXISTS          },
 	{CBM_ERROR_FILE_TYPE_MISMATCH   , STR_FILE_TYPE_MISMATCH   },
+	{CBM_ERROR_DIR_NOT_SUPPORTED    , STR_DIR_NOT_SUPPORTED    },
 	{CBM_ERROR_DIR_NOT_EMPTY        , STR_DIR_NOT_EMPTY        },
 	{CBM_ERROR_DIR_NOT_FOUND        , STR_DIR_NOT_FOUND        },
 	{CBM_ERROR_NO_PERMISSION        , STR_NO_PERMISSION        },

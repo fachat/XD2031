@@ -439,13 +439,6 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		log_debug("File open gave file=%p\n", file);
 	
 		switch (type) {
-		case FS_DELETE:
-			if (file == NULL) {
-				err = CBM_ERROR_FILE_NOT_FOUND;
-			} else {
-				*outfile = file;
-			}
-			break;
 		case FS_OPEN_RD:
 			if (file == NULL) {
 				err = CBM_ERROR_FILE_NOT_FOUND;
@@ -477,6 +470,17 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			if (!file->writable) {
 				err = CBM_ERROR_WRITE_PROTECT;
 				break;
+			}
+			break;
+		case FS_MKDIR:
+			if (file != NULL) {
+				err = CBM_ERROR_FILE_EXISTS;
+			} else  {
+				if (dir->handler->mkdir != NULL) {
+					err = dir->handler->mkdir(dir, pattern, &pars);
+				} else {
+					err = CBM_ERROR_DIR_NOT_SUPPORTED;
+				}
 			}
 			break;
 		}
