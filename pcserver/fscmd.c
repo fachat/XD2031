@@ -469,7 +469,7 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 							== CBM_ERROR_OK)
 					&& file != NULL) {
 
-					log_debug("scratch matched %s\n", file->filename);
+					log_info("DELETE(%s)\n", file->filename);
 
 					rv = file->handler->scratch(file);
 
@@ -492,29 +492,6 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen) {
 	return rv;
 }
 
-
-//		prov = (provider_t*) ep->ptype;
-//		if (prov->scratch != NULL) {
-//			// convert in place 
-//			provider_convto(prov)(name, namelen, name, namelen);
-//			log_info("DELETE(%s)\n", name);
-//
-//			rv = prov->scratch(ep, name, &outdeleted);
-//			if (rv == CBM_ERROR_SCRATCHED) {
-//				outbuf[0] = outdeleted > 99 ? 99 :outdeleted;
-//				// one extra data byte
-//				*outlen = 1;
-//			} else {
-//				if (rv != 0) {
-//					log_rv(rv);
-//				}
-//			}
-//			// cleanup temp ep when not needed anymore
-//			provider_cleanup(ep);
-//		}
-//	}
-//	return rv;
-//}
 
 // ----------------------------------------------------------------------------------
 
