@@ -1410,7 +1410,7 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		} else {
 			pattern = mem_alloc_str(fp->pattern);
 		}
-		// pattern will be in wireformat and out reference, 
+		// pattern will be in wireformat and our reference, 
 		// so we never convert the pattern, only the file name
 		//provider_convto(diep->base.ptype)(pattern, strlen(pattern), pattern, strlen(pattern));
 		file->dospattern = pattern;
@@ -1741,14 +1741,14 @@ static int di_scratch(file_t *file) {
 // di_rename
 // *********
 
-static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
+static int di_rename(endpoint_t *ep, const char *nameto, const char *namefrom)
 {
    int n;
    di_endpoint_t *diep = (di_endpoint_t*) ep;
    slot_t slot;
    int found;
-   int l = strlen(namefrom);
-   if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
+   //int l = strlen(namefrom);
+   //if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
    log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
 
    // check if target exists
@@ -1776,7 +1776,7 @@ static int di_rename(endpoint_t *ep, char *nameto, char *namefrom)
 // di_cd
 // *****
 
-static int di_cd(endpoint_t *ep, char *buf)
+static int di_cd(endpoint_t *ep, const char *buf)
 {
    log_debug("di_cd %p %s\n",ep,buf);
    return CBM_ERROR_OK;
@@ -2850,6 +2850,8 @@ static void di_print_block(di_endpoint_t *diep, int pos)
 
 static void di_close(file_t *fp, int recurse) {
 	File *file = (File*) fp;
+	(void) recurse;	// unused, as we have no subdirs
+
 	di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
 
 	di_close_fd(diep, file);

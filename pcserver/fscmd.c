@@ -436,7 +436,7 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 }
 
 
-char *get_options(char *name, int len) {
+const char *get_options(const char *name, int len) {
 	int l = strlen(name);
 	if ((l + 1) < len) {
 		return name + l + 1;
@@ -446,20 +446,18 @@ char *get_options(char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_delete(char *name, int namelen, char *outbuf, int *outlen, int isrmdir) {
+int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int isrmdir) {
 	int rv = CBM_ERROR_FAULT;
 	int outdeleted = 0;
 	file_t *file = NULL;
 	file_t *dir = NULL;
 	int readflag;
+	const char *name;
 	const char *outname;
 
 	(void) namelen;	// silence unused warning
 
-	int drive = name[0]&255;
-	name++;
-
-	endpoint_t *ep = provider_lookup(drive, &name);
+	endpoint_t *ep = provider_lookup(inname, namelen, &name);
 	if (ep != NULL) {
 		rv = handler_resolve_dir(ep, &dir, name, NULL);
 
@@ -501,27 +499,27 @@ int cmd_delete(char *name, int namelen, char *outbuf, int *outlen, int isrmdir) 
 			}
 			dir->handler->close(dir, 1);
 		}
+		mem_free(name);
 		// provider_cleanup(ep) - still needed?
 	}
 	return rv;
 }
 
-int cmd_mkdir(char *name, int namelen) {
+int cmd_mkdir(const char *inname, int namelen) {
 
 	int rv = CBM_ERROR_FAULT;
 	file_t *newdir = NULL;
+	const char *name = NULL;
 
 	(void) namelen;	// silence unused warning
 
-	int drive = name[0]&255;
-	name++;
-
-	endpoint_t *ep = provider_lookup(drive, &name);
+	endpoint_t *ep = provider_lookup(inname, namelen, &name);
 	if (ep != NULL) {
 		log_info("MKDIR(%s)\n", name);
 		rv = handler_resolve_file(ep, &newdir, name, NULL, FS_MKDIR);
 
 		// provider_cleanup(ep) - still needed?
+		mem_free(name);
 	}
 	return rv;
 }
@@ -605,14 +603,16 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	int readflag = 0;
 	int retlen = 0;
 	int sendreply = 1;
-	char *name = buf+FSP_DATA+1;
+	const char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
 	int convlen = len - FSP_DATA-1;
 	int record = 0;
 	int outlen = 0;
+	char *inname = buf + FSP_DATA;
+	int namelen = len - FSP_DATA;
 
 	// options string just in case
-	char *options = NULL;
+	const char *options = NULL;
 
 	switch(cmd) {
 		// file-oriented commands
@@ -621,11 +621,11 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		ep = provider_lookup(drive, &name);
+		ep = provider_lookup(inname, namelen, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			//provider_convto(prov)(name, convlen, name, convlen);
-			options = get_options(name, len - FSP_DATA - 1);
+			options = get_options(inname + 1, namelen - 1);
 			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 				prov->name, name);
 			rv = handler_resolve_file(ep, &fp, name, options, cmd);
@@ -649,15 +649,15 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
+			mem_free(name);
 		}
 		break;
 	case FS_OPEN_DR:
 		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(drive, &name);
+		ep = provider_lookup(inname, namelen, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
-			//provider_convto(prov)(name, convlen, name, convlen);
-			options = get_options(name, len - FSP_DATA - 1);
+			options = get_options(inname, namelen - 1);
 			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
 			rv = handler_resolve_dir(ep, &fp, name, options);
 			retbuf[FSP_DATA] = rv;
@@ -669,6 +669,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
+			mem_free(name);
 		}
 		break;
 	case FS_READ:
@@ -746,7 +747,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_MOVE:
-		ep = provider_lookup(drive, &name);
+		ep = provider_lookup(inname, namelen, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->rename != NULL) {
@@ -778,10 +779,11 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
+			mem_free(name);
 		}
 		break;
 	case FS_CHDIR:
-		ep = provider_lookup(drive, &name);
+		ep = provider_lookup(inname, namelen, &name);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->cd != NULL) {
@@ -795,6 +797,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			}
 			// cleanup when not needed anymore
 			provider_cleanup(ep);
+			mem_free(name);
 		}
 		break;
 	case FS_MKDIR:
@@ -810,7 +813,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_BLOCK:
 		// not file-related, so no file descriptor (tfd)
 		// we only support mapped drives (thus name is NULL)
-		ep = provider_lookup(drive, NULL);
+		ep = provider_lookup(inname, namelen, NULL);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->block != NULL) {
@@ -865,17 +868,17 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		break;
 	case FS_FORMAT:
 		log_warn("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
-      break;
+      		break;
 	case FS_COPY:
 		log_warn("COPY: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
-      break;
+      		break;
 	case FS_DUPLICATE:
 		log_warn("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
-      break;
+      		break;
 	case FS_INITIALIZE:
 		log_info("INITIALIZE: %s\n", buf+FSP_DATA);
 		retbuf[FSP_DATA] = CBM_ERROR_OK;
-      break;
+      		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
 	}

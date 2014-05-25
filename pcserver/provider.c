@@ -113,6 +113,7 @@ static int provider_index(provider_t *prov) {
 struct {
         int             epno;
         endpoint_t      *ep;
+	const char	*cdpath;
 } eptable[MAX_NUMBER_OF_ENDPOINTS];
 
 
@@ -211,14 +212,15 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 	provider_t *provider = NULL;
 	endpoint_t *newep = NULL;
 
-	int len = strlen(wirename);
+	// first byte could be zero
+	int len = 1 + strlen(wirename + 1);
 
 	// check if it is a drive
 	// (works as long as isdigit() is the same for all available char sets)
 	if ((isdigit(wirename[0])) && (len == 1)) {
 		// we have a drive number
-		int drv = wirename[0] & 0x0f;
-		parent = provider_lookup(drv, NULL);
+		int drv = wirename[0];
+		parent = provider_lookup(wirename, len, NULL);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
@@ -290,6 +292,10 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 				prevprov->freeep(eptable[i].ep);
                         	eptable[i].ep = NULL;
 				eptable[i].epno = -1;
+				if (eptable[i].cdpath != NULL) {
+					mem_free(eptable[i].cdpath);
+					eptable[i].cdpath = NULL;
+				}
 				break;
                 	}
         	}
@@ -301,6 +307,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
                 	if (eptable[i].epno == -1) {
 				eptable[i].ep = newep;
 				eptable[i].epno = drive;
+				eptable[i].cdpath = mem_alloc_str("/");
 				break;
                 	}
         	}
@@ -324,6 +331,7 @@ void provider_init() {
         int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
           eptable[i].epno = -1;
+	  eptable[i].cdpath = NULL;
         }
 
         // manually handle the initial provider
@@ -346,24 +354,38 @@ void provider_init() {
         di_provider.init();
 }
 
-endpoint_t *provider_lookup(int drive, char **name) {
+/**
+ * provider_lookup uses the XD2031 name format, i.e. first byte is drive
+ * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
+ * It then identifies the drive, puts the CD path before the name if it
+ * is not absolute, and allocates the new name that it returns
+ */
+endpoint_t *provider_lookup(const char *inname, int namelen, const char **outname) {
         int i;
 
+	int drive = inname[0];
+	inname++;
+	namelen--;
+
+	if (namelen <= 0) {
+		inname = NULL;
+	}
+
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
-		if (name == NULL) {
+		if (inname == NULL) {
 			// no name specified, so return NULL (no provider found)
 			return NULL;
 		}
 		// the drive is not specified by number, but by provider name
-		char *p = strchr(*name, ':');
+		char *p = strchr(inname, ':');
 		if (p == NULL) {
-			log_error("No provider name given for undef'd drive '%s'\n", *name);
+			log_error("No provider name given for undef'd drive '%s'\n", inname);
 			return NULL;
 		}
-		log_debug("Trying to find provider for: %s\n", *name);
+		log_debug("Trying to find provider for: %s\n", inname);
 
-		const char *provname = conv_to_name_alloc(*name, CHARSET_ASCII_NAME);
-		unsigned int l = p-(*name);
+		const char *provname = conv_to_name_alloc(inname, CHARSET_ASCII_NAME);
+		unsigned int l = p-(inname);
 		p++; // first char after ':'
 		for (int i = 0; ; i++) {
 			providers_t *pp = reg_get(&providers, i);
@@ -381,7 +403,9 @@ endpoint_t *provider_lookup(int drive, char **name) {
 				if (prov->tempep != NULL) {
 					endpoint_t *ep = prov->tempep(&p);
 					if (ep != NULL) {
-						*name = p;
+						if (outname != NULL) {
+							*outname = mem_alloc_str(p);
+						}
 						log_debug("Created temporary endpoint %p\n", ep);
 						ep->is_temporary = 1;
 					}
@@ -396,12 +420,17 @@ endpoint_t *provider_lookup(int drive, char **name) {
 			}
 		}
 		mem_free(provname);
-		log_error("Did not find provider for %s\n", *name);
+		log_error("Did not find provider for %s\n", inname);
 		return NULL;
 	}
 
+	log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);
+
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                 if (eptable[i].epno == drive) {
+			if (outname != NULL) {
+				*outname = malloc_path(eptable[i].cdpath, inname);
+			}
                         return eptable[i].ep;
                 }
         }

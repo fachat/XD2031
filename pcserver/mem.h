@@ -59,4 +59,11 @@ char *mem_alloc_str_(const char *orig, char *file, int line);
 char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line);
 #define mem_alloc_strn(s,n) mem_alloc_strn_(s, n, __FILE__, __LINE__)
 
+/**
+ * malloc a new path, and copy the given base path and name to it,
+ * with a separating char
+ */
+char *malloc_path(const char *base, const char *name);
+
+
 #endif

@@ -1585,7 +1585,7 @@ static int fs_delete(file_t *file) {
 //	return CBM_ERROR_SCRATCHED;	// FILES SCRATCHED message
 //}
 
-static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
+static int fs_rename(endpoint_t *ep, const char *nameto, const char *namefrom) {
 
 	int er = CBM_ERROR_FAULT;
 
@@ -1639,10 +1639,10 @@ static int fs_rename(endpoint_t *ep, char *nameto, char *namefrom) {
 }
 
 
-static int fs_cd(endpoint_t *ep, char *buf) {
+static int fs_cd(endpoint_t *ep, const char *buf) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
-	os_patch_dir_separator(buf);
+	os_patch_dir_separator((char*)buf);	// TODO
 
 	log_debug("Change dir to: %s\n", buf);
 
@@ -1738,7 +1738,6 @@ static int fs_rmdir(file_t *dir) {
 
 	int er = CBM_ERROR_FAULT;
 
-	fs_endpoint_t *fsep = (fs_endpoint_t*) dir->endpoint;
 	File *fp = (File*) dir;
 
 	int rv = rmdir(fp->ospath);

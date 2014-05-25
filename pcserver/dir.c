@@ -361,31 +361,4 @@ int dir_fill_disk(char *dest, char *curpath) {
 	return FS_DIR_NAME + 1;
 }
 
-/**
- * malloc a new path and copy the given base path and name, concatenating
- * them with the path separator. Ignore base for absolute paths in name.
- */
-char *malloc_path(const char *base, const char *name) {
-
-	log_debug("malloc_path: base=%s, name=%s\n", base, name);
-
-	if(name[0] == '/' || name[0]=='\\') base=NULL;	// omit base for absolute paths
-        int l = (base == NULL) ? 0 : strlen(base);
-        l += (name == NULL) ? 0 : strlen(name);
-        l += 3; // dir separator, terminating zero, optional "."
-
-        char *dirpath = mem_alloc_c(l, "malloc_path");
-        dirpath[0] = 0;
-        if (base != NULL) {
-                strcat(dirpath, base);
-                strcat(dirpath, "/");   // TODO dir separator char
-        }
-        if (name != NULL) {
-                strcat(dirpath, name);
-        }
-
-        log_debug("Calculated new dir path: %s\n", dirpath);
-
-        return dirpath;
-}
 

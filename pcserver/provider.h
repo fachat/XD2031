@@ -97,9 +97,12 @@ typedef struct {
 	int		(*wrap)(file_t *file, file_t **wrapped); 
 
 	// command channel
-	int		(*rename)(endpoint_t *ep, char *nameto, char *namefrom); // rename a file or dir
-	int		(*cd)(endpoint_t *ep, char *name);			// change into new dir
-	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); // B-A/B-F
+							// rename a file or dir
+	int		(*rename)(endpoint_t *ep, const char *nameto, const char *namefrom); 
+							// change into new dir
+	int		(*cd)(endpoint_t *ep, const char *name);			
+							// B-A/B-F
+	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); 
 	// dump / debug
 	void		(*dump)(int indent);
 } provider_t;
@@ -271,7 +274,7 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
  * The endpoint will be closed once the operation is done or the opened file
  * is closed.
  */
-endpoint_t* provider_lookup(int drive, char **name);
+endpoint_t* provider_lookup(const char *inname, int namelen, const char **outname);
 
 /**
  * cleans up a temporary provider after it has been done with,
