@@ -491,15 +491,13 @@ int provider_chdir(const char *inname, int namelen) {
 	}
 
 	const char *newpath = malloc_path(ept->cdpath, inname);
+	const char *path = NULL;
 
-	file_t *dir = NULL;
-	int rv = handler_resolve_file(ept->ep, &dir, newpath, NULL, FS_OPEN_RD);
+	int rv = handler_resolve_path(ept->ep, newpath, &path);
 
 	if (rv == CBM_ERROR_OK) {
-		dir->handler->close(dir, 1);
-
 		mem_free(ept->cdpath);
-		ept->cdpath = newpath;
+		ept->cdpath = path;
 	}
 	return rv;
 }

@@ -227,3 +227,24 @@ char *malloc_path(const char *base, const char *name) {
         return dirpath;
 }
 
+/**
+ * take all the variable arg chars and append them to the string
+ * given to in the first parameter. The string originally pointed
+ * to by baseptr will be mem_free'd!
+ */
+void mem_append_str2(char **baseptr, const char *s1, const char *s2) {
+
+	int newlen = strlen(*baseptr) + strlen(s1) + strlen(s2) + 1;
+
+	char *base = mem_alloc_c(newlen, "mem_append");
+
+	strcpy(base, *baseptr);
+	strcat(base, s1);
+	strcat(base, s2);
+	
+	mem_free(*baseptr);
+	*baseptr = base;
+}
+
+
+

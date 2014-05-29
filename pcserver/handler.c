@@ -86,6 +86,25 @@ file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char 
 }
 */
 
+void path_append(char **path, const char *filename) {
+	// construct path
+	if (strcmp(".", filename) != 0) {
+		// not the "same directory"
+		if (strcmp("..", filename) == 0) {
+			// "up"
+			char *p = strrchr(*path, dir_separator_char());
+			if (p != NULL) {
+				// not on root yet - shorten path
+				p[0] = 0;
+			}
+		} else {
+			// mem_append_str2 re-allocs the path
+			mem_append_str2(path, dir_separator_string(), filename);
+		}
+	}
+	log_error("path_append(%s) -> %s\n", filename, *path);
+}
+
 //----------------------------------------------------------------------------
 
 
@@ -154,7 +173,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
  */
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
-		const char *inname, const char **outpattern, openpars_t *pars) {
+		const char *inname, const char **outdirpath, const char **outpattern, openpars_t *pars) {
 
 	log_entry("handler_resolve");
 
@@ -164,6 +183,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	file_t *file = NULL;
 	file_t *direntry = NULL;
 
+	char *path = NULL;
 
 	int inlen = (inname == NULL) ? 0 : strlen(inname);
 	char *name = NULL;
@@ -194,6 +214,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		namep++;
 	}
 
+	path = mem_alloc_str("");
 	current_dir = ep->ptype->root(ep);
 
 
@@ -254,6 +275,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// save rest of pattern in sub directory
 		file->pattern = mem_alloc_str(outname);
 
+		// append path, reduce "." and ".." in the process
+		path_append(&path, file->filename);
+
+
 		current_dir = file;
 		namep = outname;
 		file = NULL;
@@ -278,7 +303,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	// - file, the unwrapped first pattern match in that directory, maybe NULL
 	// - a possibly large list of opened files, reachable through current_dir->parent etc
 	// - namep pointing to the directory match pattern for the current directory
-	log_debug("current_dir=%p, file=%p, namep=%s\n", current_dir, file, namep);
+	log_debug("current_dir=%p, file=%p, namep=%s, path=%s\n", current_dir, file, namep, path);
 
 	if (strchr(namep, dir_separator_char()) != NULL) {
 		err = CBM_ERROR_DIR_NOT_FOUND;
@@ -289,11 +314,20 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	if (outpattern != NULL) {
 		*outpattern = NULL;
 	}
+	if (outdirpath != NULL) {
+		*outdirpath = NULL;
+	}
+
 	if (err == CBM_ERROR_OK) {
 		*outdir = current_dir;
 		*outfile = file;
 		if (outpattern != NULL) {
 			*outpattern = mem_alloc_str(namep);
+		}
+		if (outdirpath != NULL) {
+			*outdirpath = path;
+			// prevent it from being freed
+			path = NULL;
 		}
 	} else {
 		// this should close all parents as well
@@ -305,8 +339,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		}
 	}
 	mem_free(name);
+	mem_free(path);
 
-	log_debug("outdir=%p, outfile=%p, outpattern=%s\n", *outdir, *outfile, *outpattern);
+	log_debug("outdir=%p, outfile=%p, outpattern=%s, outdirpath=%s\n", 
+				*outdir, *outfile, *outpattern, (outdirpath == NULL) ? "" :*outdirpath);
 	log_exitr(err);	
 	return err;
 }
@@ -357,7 +393,7 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 		name = mem_alloc_str(resolve_path);
 	}
 
-	err = handler_resolve(ep, &dir, &file, resolve_path, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, resolve_path, NULL, &pattern, &pars);
 
 	log_debug("handler_resolve_assign: resolve gave err=%d, file=%p (%s), dir=%p (%s), "
 			"parent=%p, pattern=%s\n", 
@@ -413,6 +449,60 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 }
 	
 /*
+ * resolve a path, for CHDIR
+ *
+ * Uses handler_resolve() from above to do the bulk work
+ */
+int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpath) {
+
+	int err = CBM_ERROR_FAULT;
+	file_t *dir = NULL;
+	file_t *file = NULL;
+	const char *pattern = NULL;
+	openpars_t pars;
+	const char *path = NULL;
+
+	int inlen = strlen(inname);
+	int ends_with_sep = (inlen != 0) && (inname[inlen - 1] == dir_separator_char());
+
+	openpars_process_options(NULL, &pars);
+
+	err = handler_resolve(ep, &dir, &file, inname, &path, &pattern, &pars);
+
+	if (err == CBM_ERROR_OK && file != NULL) {
+	
+		log_info("Path resolve gave %d\n", err);
+		log_debug("Path resolve gave file=%p, path=%s\n", file, path);
+
+		if (!ends_with_sep) {
+			path_append(&path, file->filename);
+		}
+
+		*outpath = path;
+	} else {
+		if (path != NULL) {
+			mem_free(path);
+		}
+		err = CBM_ERROR_FILE_NOT_FOUND;
+	}
+
+	if (file != NULL) {
+		// we want the file here, so we can close the dir and its parents
+		file->handler->close(file, 1);
+	} else
+	if (dir != NULL) {
+		// we want the file here, so we can close the dir and its parents
+		dir->handler->close(dir, 1);
+	}
+
+	if (pattern != NULL) {
+		mem_free((char*)pattern);
+	}
+
+	return err;
+}
+
+/*
  * open a file, from fscmd
  *
  * Uses handler_resolve() from above to do the bulk work
@@ -429,7 +519,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, NULL, &pattern, &pars);
 
 	if (err == CBM_ERROR_OK) {
 	
@@ -542,7 +632,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, NULL, &pattern, &pars);
 
 	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p (%s), parent=%p, pattern=%s\n", 
 			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,

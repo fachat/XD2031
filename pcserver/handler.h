@@ -61,6 +61,13 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resolve_path);
 
 /*
+ * resolve a path, for CHDIR
+ *
+ * Uses handler_resolve() from above to do the bulk work
+ */
+int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpath);
+
+/*
  * resolve a file_t from an endpoint, for a block operation
  */
 int handler_resolve_block(endpoint_t *ep, int chan, file_t **outfile);

@@ -65,5 +65,11 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line);
  */
 char *malloc_path(const char *base, const char *name);
 
+/**
+ * take all the variable arg chars and append them to the string
+ * given to in the first parameter. The string originally pointed
+ * to by baseptr will be mem_free'd!
+ */
+void mem_append_str2(char **baseptr, const char *s1, const char *s2);
 
 #endif

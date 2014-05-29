@@ -527,7 +527,6 @@ int cmd_mkdir(const char *inname, int namelen) {
 int cmd_chdir(const char *inname, int namelen) {
 
 	int rv = CBM_ERROR_FAULT;
-	const char *name = NULL;
 
 	log_info("CHDIR(%s)\n", inname);
 
