@@ -365,6 +365,8 @@ static handler_t x00_handler = {
 
 	NULL,		// rmdir not supported
 
+	NULL,		// move not supported
+
 	// -------------------------
 
 	x00_dump

@@ -457,9 +457,9 @@ int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int i
 
 	(void) namelen;	// silence unused warning
 
-	endpoint_t *ep = provider_lookup(inname, namelen, &name);
+	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 	if (ep != NULL) {
-		rv = handler_resolve_dir(ep, &dir, name, NULL);
+		rv = handler_resolve_dir(ep, &dir, name, NULL, NULL);
 
 		if (rv == CBM_ERROR_OK) {
 
@@ -513,7 +513,7 @@ int cmd_mkdir(const char *inname, int namelen) {
 
 	(void) namelen;	// silence unused warning
 
-	endpoint_t *ep = provider_lookup(inname, namelen, &name);
+	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 	if (ep != NULL) {
 		log_info("MKDIR(%s)\n", name);
 		rv = handler_resolve_file(ep, &newdir, name, NULL, FS_MKDIR);
@@ -533,6 +533,55 @@ int cmd_chdir(const char *inname, int namelen) {
 	rv = provider_chdir(inname, namelen);
 
 	return rv;
+}
+
+int cmd_move(const char *inname, int namelen) {
+
+	int err = CBM_ERROR_FAULT;
+
+	const char *fromname = NULL;
+	const char *toname = NULL;
+	endpoint_t *epto = provider_lookup(inname, namelen, &toname, NAMEINFO_UNDEF_DRIVE);
+	if (epto != NULL) {
+		const char *name2 = strchr(toname+1, 0);	// points to null byte after name
+		name2++;					// first byte of second name
+		endpoint_t *epfrom = provider_lookup(name2, namelen, &fromname, NAMEINFO_UNDEF_DRIVE);
+
+		if (epfrom != NULL) {
+			file_t *fromfile = NULL;
+			
+			err = handler_resolve_file(epfrom, &fromfile, fromname, NULL, FS_MOVE);
+			
+			if (err == CBM_ERROR_OK) {
+				file_t *todir = NULL;
+				const char *topattern = NULL;
+	
+				err = handler_resolve_dir(epto, &todir, toname, &topattern, NULL);
+
+				if (err == CBM_ERROR_OK && todir != NULL) {
+
+					// TODO check if that is really working (with those temp provs...)
+					if (fromfile->endpoint == todir->endpoint) {
+						// we can just forward it to the provider proper
+
+						if (fromfile->handler->move != NULL) {
+							fromfile->handler->move(fromfile, todir, topattern);
+						} else {
+							// e.g. x00 does not support it now
+							log_warn("File type spec not supported\n");
+							err = CBM_ERROR_DRIVE_NOT_READY;
+						}	
+					} else {
+						// TODO some kind of copy/remove stuff...
+						log_warn("Drive spec combination not supported\n");
+						err = CBM_ERROR_DRIVE_NOT_READY;
+					}
+				}
+			}
+			provider_cleanup(epfrom);
+		}
+		provider_cleanup(epto);
+	}
 }
 
 // ----------------------------------------------------------------------------------
@@ -632,7 +681,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		ep = provider_lookup(inname, namelen, &name);
+		ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			//provider_convto(prov)(name, convlen, name, convlen);
@@ -665,12 +714,12 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		break;
 	case FS_OPEN_DR:
 		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(inname, namelen, &name);
+		ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			options = get_options(inname, namelen - 1);
 			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-			rv = handler_resolve_dir(ep, &fp, name, options);
+			rv = handler_resolve_dir(ep, &fp, name, NULL, options);
 			retbuf[FSP_DATA] = rv;
 			if (rv == 0) {
 				channel_set(tfd, fp);
@@ -758,40 +807,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_MOVE:
-		ep = provider_lookup(inname, namelen, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->rename != NULL) {
-				char *namefrom = strchr(name, 0);	// points to null byte
-				int drivefrom = namefrom[1] & 255;	// from drive after null byte
-				namefrom += 2;				// points to name after drive
-
-				provider_convto(prov)(name, strlen(name), name, strlen(name));
-				provider_convto(prov)(namefrom, strlen(namefrom), namefrom, strlen(namefrom));
-
-				if (drivefrom != drive
-					&& drivefrom != NAMEINFO_UNUSED_DRIVE) {
-					// currently not supported
-					// R <prov>:<name1>=<prov>:<name2>
-					// drivefrom is UNUSED, then same as driveto
-					log_warn("Drive spec combination not supported\n");
-
-					rv = CBM_ERROR_DRIVE_NOT_READY;
-				} else {
-				
-					log_info("RENAME(%s -> %s)\n", namefrom, name);
-	
-					rv = prov->rename(ep, name, namefrom);
-					if (rv != 0) {
-						log_rv(rv);
-					}
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-			mem_free(name);
-		}
+		rv = cmd_move(buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_CHDIR:
 		rv = cmd_chdir(buf+FSP_DATA, len-FSP_DATA);
@@ -811,7 +829,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_BLOCK:
 		// not file-related, so no file descriptor (tfd)
 		// we only support mapped drives (thus name is NULL)
-		ep = provider_lookup(inname, namelen, NULL);
+		ep = provider_lookup(inname, namelen, NULL, NAMEINFO_UNDEF_DRIVE);
 		if (ep != NULL) {
 			prov = (provider_t*) ep->ptype;
 			if (prov->block != NULL) {

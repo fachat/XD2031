@@ -1538,104 +1538,62 @@ static int fs_delete(file_t *file) {
 	return CBM_ERROR_OK;
 }
 
-//static int _delete_callback(const int num_of_match, const char *name) {
+
+static int fs_move(file_t *fromfile, file_t *todir, const char *toname) {
+}
+
+//static int fs_rename(endpoint_t *ep, const char *nameto, const char *namefrom) {
 //
-//	log_debug("%d: Calling DELETE on: %s\n", num_of_match, name);
-//
-//	if (unlink(name) < 0) {
-//		// error handling
-//		log_errno("While trying to unlink");
-//
-//		return -errno_to_error(errno);
-//	}
-//	return CBM_ERROR_OK;
-//}
-//
-//
-//static int fs_delete(endpoint_t *ep, char *buf, int *outdeleted) {
-//
-//	int matches = 0;
-//	char *p = buf;
-//
-//	os_patch_dir_separator(buf);
+//	int er = CBM_ERROR_FAULT;
 //
 //	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 //
-//	do {
-//		// comma is file pattern separator
-//		char *pnext = strchr(p, ',');
-//		if (pnext != NULL) {
-//			*pnext = 0;	// write file name terminator (replacing the ',')
-//		}
+//#ifdef DEBUG_CMD
+//	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
+//#endif
 //
-//		int rv = dir_call_matches(fsep->curpath, p, _delete_callback);
-//		if (rv < 0) {
-//			// error happened
-//			return -rv;
-//		}
-//		matches += rv;
-//
-//		p = (pnext == NULL) ? NULL : pnext+1;
+//	if ((strchr(nameto, '/') != NULL) || (strchr(nameto,'\\') != NULL)) {
+//		// no separator char
+//		log_error("target file name contained dir separator\n");
+//		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
 //	}
-//	while (p != NULL);
 //
-//	*outdeleted = matches;
+//	char *frompath = malloc_path(fsep->curpath, namefrom);
+//	char *topath = malloc_path(fsep->curpath, nameto);
 //
-//	return CBM_ERROR_SCRATCHED;	// FILES SCRATCHED message
+//	char *fromreal = os_realpath(frompath);
+//	mem_free(frompath);
+//	char *toreal = os_realpath(topath);
+//
+//	if (toreal != NULL) {
+//		// target already exists
+//		er = CBM_ERROR_FILE_EXISTS;
+//	} else
+//	if (fromreal == NULL) {
+//		er = CBM_ERROR_FILE_NOT_FOUND;
+//	} else {
+//		// check both paths against container boundaries
+//		if ((strstr(fromreal, fsep->basepath) == fromreal)
+//			&& (strstr(topath, fsep->basepath) == topath)) {
+//			// ok
+//
+//			int rv = rename(fromreal, topath);
+//
+//			if (rv < 0) {
+//				er = errno_to_error(errno);
+//				log_errno("Error renaming a file\n");
+//			} else {
+//				er = CBM_ERROR_OK;
+//			}
+//		}
+//	}
+//	mem_free(topath);
+//	// from/toreal are malloc'd
+//	free(toreal);
+//	free(fromreal);
+//
+//	return er;
 //}
-
-static int fs_rename(endpoint_t *ep, const char *nameto, const char *namefrom) {
-
-	int er = CBM_ERROR_FAULT;
-
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
-#ifdef DEBUG_CMD
-	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
-#endif
-
-	if ((strchr(nameto, '/') != NULL) || (strchr(nameto,'\\') != NULL)) {
-		// no separator char
-		log_error("target file name contained dir separator\n");
-		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
-	}
-
-	char *frompath = malloc_path(fsep->curpath, namefrom);
-	char *topath = malloc_path(fsep->curpath, nameto);
-
-	char *fromreal = os_realpath(frompath);
-	mem_free(frompath);
-	char *toreal = os_realpath(topath);
-
-	if (toreal != NULL) {
-		// target already exists
-		er = CBM_ERROR_FILE_EXISTS;
-	} else
-	if (fromreal == NULL) {
-		er = CBM_ERROR_FILE_NOT_FOUND;
-	} else {
-		// check both paths against container boundaries
-		if ((strstr(fromreal, fsep->basepath) == fromreal)
-			&& (strstr(topath, fsep->basepath) == topath)) {
-			// ok
-
-			int rv = rename(fromreal, topath);
-
-			if (rv < 0) {
-				er = errno_to_error(errno);
-				log_errno("Error renaming a file\n");
-			} else {
-				er = CBM_ERROR_OK;
-			}
-		}
-	}
-	mem_free(topath);
-	// from/toreal are malloc'd
-	free(toreal);
-	free(fromreal);
-
-	return er;
-}
 
 
 static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
@@ -1989,9 +1947,10 @@ handler_t fs_file_handler = {
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
-	fs_delete,		// delete resp. rmdir
+	fs_delete,		// delete file
 	fs_mkdir,		// create a directory
 	fs_rmdir,		// remove a directory
+	fs_move,		// move a file or directory
 	fs_dump_file		// dump file
 };
 
@@ -2005,7 +1964,6 @@ provider_t fs_provider = {
 	fsp_ep_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider
-	fs_rename,
 	fs_direct,
 	fs_dump			// dump
 };

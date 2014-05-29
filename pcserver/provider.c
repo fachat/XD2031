@@ -239,7 +239,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 	if ((isdigit(wirename[0])) && (len == 1)) {
 		// we have a drive number
 		int drv = wirename[0];
-		parent = provider_lookup(wirename, len, NULL);
+		parent = provider_lookup(wirename, len, NULL, NAMEINFO_UNDEF_DRIVE);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
@@ -378,7 +378,7 @@ void provider_init() {
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
  */
-endpoint_t *provider_lookup(const char *inname, int namelen, const char **outname) {
+endpoint_t *provider_lookup(const char *inname, int namelen, const char **outname, int default_drive) {
 
 	int drive = inname[0];
 	inname++;
@@ -395,50 +395,59 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 		}
 		// the drive is not specified by number, but by provider name
 		char *p = strchr(inname, ':');
-		if (p == NULL) {
-			log_error("No provider name given for undef'd drive '%s'\n", inname);
-			return NULL;
-		}
-		log_debug("Trying to find provider for: %s\n", inname);
+		if (p != NULL) {
+			// found provider separator
 
-		const char *provname = conv_to_name_alloc(inname, CHARSET_ASCII_NAME);
-		unsigned int l = p-(inname);
-		p++; // first char after ':'
-		for (int i = 0; ; i++) {
-			providers_t *pp = reg_get(&providers, i);
-			if (pp == NULL) {
-				break;
-			}
-			provider_t *prov = pp->provider;
-			if (prov != NULL && (strlen(prov->name) == l)
-				&& (strncmp(prov->name, provname, l) == 0)) {
-				// we got a provider, but no endpoint yet
+			log_debug("Trying to find provider for: %s\n", inname);
 
-				log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
-					prov->name, p);
+			const char *provname = conv_to_name_alloc(inname, CHARSET_ASCII_NAME);
+			unsigned int l = p-(inname);
+			p++; // first char after ':'
+			for (int i = 0; ; i++) {
+				providers_t *pp = reg_get(&providers, i);
+				if (pp == NULL) {
+					break;
+				}
+				provider_t *prov = pp->provider;
+				if (prov != NULL && (strlen(prov->name) == l)
+					&& (strncmp(prov->name, provname, l) == 0)) {
+					// we got a provider, but no endpoint yet
 
-				if (prov->tempep != NULL) {
-					endpoint_t *ep = prov->tempep(&p);
-					if (ep != NULL) {
-						if (outname != NULL) {
-							*outname = mem_alloc_str(p);
+					log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
+						prov->name, p);
+	
+					if (prov->tempep != NULL) {
+						endpoint_t *ep = prov->tempep(&p);
+						if (ep != NULL) {
+							if (outname != NULL) {
+								*outname = mem_alloc_str(p);
+							}
+							log_debug("Created temporary endpoint %p\n", ep);
+							ep->is_temporary = 1;
 						}
-						log_debug("Created temporary endpoint %p\n", ep);
-						ep->is_temporary = 1;
+						mem_free(provname);
+						return ep;
+					} else {
+						log_error("Provider '%s' does not support temporary drives\n",
+							prov->name);
 					}
 					mem_free(provname);
-					return ep;
-				} else {
-					log_error("Provider '%s' does not support temporary drives\n",
-						prov->name);
+					return NULL;
 				}
-				mem_free(provname);
+			}
+			mem_free(provname);
+			log_error("Did not find provider for %s\n", inname);
+			return NULL;
+		} else {
+			log_info("No provider name given for undef'd drive '%s', trying default %d\n", 
+									inname, default_drive);
+			if (default_drive == NAMEINFO_UNDEF_DRIVE) {
+				log_error("No provider found\n");
 				return NULL;
 			}
+			// continue checking the assigned list for this drive
+			drive = default_drive;
 		}
-		mem_free(provname);
-		log_error("Did not find provider for %s\n", inname);
-		return NULL;
 	}
 
 	log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);

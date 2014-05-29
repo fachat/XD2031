@@ -572,6 +572,14 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 				}
 			}
 			break;
+		case FS_MOVE:
+			// just check for existence
+			if (file == NULL) {
+				err = CBM_ERROR_FILE_NOT_FOUND;
+			} else {
+				*outfile = file;
+			}
+			break;
 		}
 
 		if (err == CBM_ERROR_OK) {
@@ -622,13 +630,17 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
  */
 
 int handler_resolve_dir(endpoint_t *ep, file_t **outdir, 
-		const char *inname, const char *opts) {
+		const char *inname, const char **outpattern, const char *opts) {
 
 	int err = CBM_ERROR_FAULT;
 	file_t *dir = NULL;
 	file_t *file = NULL;
 	const char *pattern = NULL;
 	openpars_t pars;
+
+	if (outpattern != NULL) {
+		*outpattern = NULL;
+	}
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
@@ -668,7 +680,11 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 		}
 		
 		if (pattern != NULL) {
-			mem_free((char*)pattern);
+			if (outpattern != NULL) {
+				*outpattern = pattern;
+			} else {
+				mem_free((char*)pattern);
+			}
 		}
 	}
 

@@ -1738,40 +1738,44 @@ static int di_scratch(file_t *file) {
 //}
 
 // *********
-// di_rename
+// di_move
 // *********
 
-static int di_rename(endpoint_t *ep, const char *nameto, const char *namefrom)
-{
-   int n;
-   di_endpoint_t *diep = (di_endpoint_t*) ep;
-   slot_t slot;
-   int found;
-   //int l = strlen(namefrom);
-   //if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
-   log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
 
-   // check if target exists
-
-   di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)))
-   {
-      return CBM_ERROR_FILE_EXISTS;
-   }
-
-   di_first_slot(diep,&slot);
-   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom, FS_DIR_TYPE_UNKNOWN)))
-   {
-      n = strlen(nameto);
-      if (n > 16) n = 16;
-      memset(slot.filename,0xA0,16); // fill filename with $A0
-      memcpy(slot.filename,nameto,n);
-      di_write_slot(diep,&slot);
-      return CBM_ERROR_OK;
-   }
-   return CBM_ERROR_FILE_NOT_FOUND;
+static int di_move(file_t *fromfile, file_t *todir, const char *toname) {
 }
 
+//static int di_rename(endpoint_t *ep, const char *nameto, const char *namefrom)
+//{
+//   int n;
+//   di_endpoint_t *diep = (di_endpoint_t*) ep;
+//   slot_t slot;
+//   int found;
+//   //int l = strlen(namefrom);
+//   //if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
+//   log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
+//
+//   // check if target exists
+//
+//   di_first_slot(diep,&slot);
+//   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)))
+//   {
+//      return CBM_ERROR_FILE_EXISTS;
+//   }
+//
+//   di_first_slot(diep,&slot);
+//   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom, FS_DIR_TYPE_UNKNOWN)))
+//   {
+//      n = strlen(nameto);
+//      if (n > 16) n = 16;
+//      memset(slot.filename,0xA0,16); // fill filename with $A0
+//      memcpy(slot.filename,nameto,n);
+//      di_write_slot(diep,&slot);
+//      return CBM_ERROR_OK;
+//   }
+//   return CBM_ERROR_FILE_NOT_FOUND;
+//}
+//
 
 //***********
 // di_rel_record_max
@@ -2909,6 +2913,7 @@ handler_t di_file_handler = {
         di_scratch,	// scratch
 	NULL,		// mkdir not supported
 	NULL,		// rmdir not supported
+	di_move,	// move a file
 	di_dump_file	// dump
 };
 
@@ -2922,7 +2927,6 @@ provider_t di_provider = {
         di_ep_free,	// unassign
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file
-        di_rename,
         di_direct,
 	di_dump		// dump
 };

@@ -92,8 +92,6 @@ typedef struct {
 	int		(*wrap)(file_t *file, file_t **wrapped); 
 
 	// command channel
-							// rename a file or dir
-	int		(*rename)(endpoint_t *ep, const char *nameto, const char *namefrom); 
 							// B-A/B-F
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); 
 	// dump / debug
@@ -208,11 +206,13 @@ struct _handler {
 
 	size_t		(*realsize)(file_t *file);	// returns the real (correct) size of the file
 
-	int		(*scratch)(file_t *file);	// delete resp. rmdir
+	int		(*scratch)(file_t *file);	// delete file
 
 	int		(*mkdir)(file_t *dir, const char *name, openpars_t *pars);	// make directory
 
 	int		(*rmdir)(file_t *dir);		// remove directory
+
+	int		(*move)(file_t *fromfile, file_t *todir, const char *toname);	// move file
 
         // -------------------------
 
@@ -250,8 +250,11 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
  * as the rest of the filename.
  * The endpoint will be closed once the operation is done or the opened file
  * is closed.
+ *
+ * If a default drive is given, and no named provider could be found, the default drive
+ * is used instead.
  */
-endpoint_t* provider_lookup(const char *inname, int namelen, const char **outname);
+endpoint_t* provider_lookup(const char *inname, int namelen, const char **outname, int default_drive);
 
 /**
  * change directory for an endpoint

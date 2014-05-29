@@ -52,7 +52,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
  * recursively resolve a dir from an endpoint using the given inname as path
  */
 int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
-                const char *inname, const char *opts);
+                const char *inname, const char **outpattern, const char *opts);
 
 /*
  * recursively resolve a dir from an endpoint using the given inname as path
