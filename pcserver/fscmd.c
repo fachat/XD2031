@@ -539,13 +539,14 @@ int cmd_move(const char *inname, int namelen) {
 
 	int err = CBM_ERROR_FAULT;
 
+	int todrive = inname[0];
 	const char *fromname = NULL;
 	const char *toname = NULL;
 	endpoint_t *epto = provider_lookup(inname, namelen, &toname, NAMEINFO_UNDEF_DRIVE);
 	if (epto != NULL) {
-		const char *name2 = strchr(toname+1, 0);	// points to null byte after name
+		const char *name2 = strchr(inname+1, 0);	// points to null byte after name
 		name2++;					// first byte of second name
-		endpoint_t *epfrom = provider_lookup(name2, namelen, &fromname, NAMEINFO_UNDEF_DRIVE);
+		endpoint_t *epfrom = provider_lookup(name2, namelen, &fromname, todrive);
 
 		if (epfrom != NULL) {
 			file_t *fromfile = NULL;
@@ -565,7 +566,7 @@ int cmd_move(const char *inname, int namelen) {
 						// we can just forward it to the provider proper
 
 						if (fromfile->handler->move != NULL) {
-							fromfile->handler->move(fromfile, todir, topattern);
+							err = fromfile->handler->move(fromfile, todir, topattern);
 						} else {
 							// e.g. x00 does not support it now
 							log_warn("File type spec not supported\n");
@@ -576,12 +577,15 @@ int cmd_move(const char *inname, int namelen) {
 						log_warn("Drive spec combination not supported\n");
 						err = CBM_ERROR_DRIVE_NOT_READY;
 					}
+					todir->handler->close(todir, 1);
 				}
+				fromfile->handler->close(fromfile, 1);
 			}
 			provider_cleanup(epfrom);
 		}
 		provider_cleanup(epto);
 	}
+	return err;
 }
 
 // ----------------------------------------------------------------------------------

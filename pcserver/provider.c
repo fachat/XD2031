@@ -388,6 +388,10 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 		inname = NULL;
 	}
 
+	if (drive == NAMEINFO_LAST_DRIVE) {
+		drive = default_drive;
+	}
+
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
 		if (inname == NULL) {
 			// no name specified, so return NULL (no provider found)

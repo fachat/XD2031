@@ -1540,60 +1540,49 @@ static int fs_delete(file_t *file) {
 
 
 static int fs_move(file_t *fromfile, file_t *todir, const char *toname) {
-}
+#ifdef DEBUG_CMD
+	log_debug("fs_rename: '%s' -> '%s%s'\n", fromfile->filename, todir->filename, toname);
+#endif
+	int er = CBM_ERROR_FAULT;
 
-//static int fs_rename(endpoint_t *ep, const char *nameto, const char *namefrom) {
-//
-//	int er = CBM_ERROR_FAULT;
-//
-//	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-//
-//#ifdef DEBUG_CMD
-//	log_debug("fs_rename: '%s' -> '%s'\n", namefrom, nameto);
-//#endif
-//
-//	if ((strchr(nameto, '/') != NULL) || (strchr(nameto,'\\') != NULL)) {
-//		// no separator char
-//		log_error("target file name contained dir separator\n");
-//		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
-//	}
-//
-//	char *frompath = malloc_path(fsep->curpath, namefrom);
-//	char *topath = malloc_path(fsep->curpath, nameto);
-//
-//	char *fromreal = os_realpath(frompath);
-//	mem_free(frompath);
-//	char *toreal = os_realpath(topath);
-//
-//	if (toreal != NULL) {
-//		// target already exists
-//		er = CBM_ERROR_FILE_EXISTS;
-//	} else
-//	if (fromreal == NULL) {
-//		er = CBM_ERROR_FILE_NOT_FOUND;
-//	} else {
-//		// check both paths against container boundaries
-//		if ((strstr(fromreal, fsep->basepath) == fromreal)
-//			&& (strstr(topath, fsep->basepath) == topath)) {
-//			// ok
-//
-//			int rv = rename(fromreal, topath);
-//
-//			if (rv < 0) {
-//				er = errno_to_error(errno);
-//				log_errno("Error renaming a file\n");
-//			} else {
-//				er = CBM_ERROR_OK;
-//			}
-//		}
-//	}
-//	mem_free(topath);
-//	// from/toreal are malloc'd
-//	free(toreal);
-//	free(fromreal);
-//
-//	return er;
-//}
+	// both are resolved, so they are valid
+	// endpoints should be the same
+	// so it gets real easy...
+
+	if (strchr(toname, dir_separator_char()) != NULL) {
+		return CBM_ERROR_DIR_ERROR;
+	}
+
+	File *fromfp = (File*) fromfile;
+	const char *frompath = fromfp->ospath;
+
+        // convert filename to external charset
+        const char *tmpname = conv_to_alloc(toname, &fs_provider);
+
+	File *tofp = (File*) todir;
+	const char *topath = malloc_path(tofp->ospath, tmpname);
+
+	char *newreal = os_realpath(topath);
+
+	if (newreal != NULL) {
+		// file or directory exists
+		log_errno("File exists %s", topath);
+		er = CBM_ERROR_FILE_EXISTS;
+	} else {
+		int rv = rename(frompath, newreal);
+		if (rv < 0) {
+			er = errno_to_error(errno);
+			log_errno("Error renaming a file\n");
+		} else {
+			er = CBM_ERROR_OK;
+		}
+	}
+
+	free(newreal);
+	mem_free(topath);
+
+	return er;
+}
 
 
 static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
