@@ -282,7 +282,7 @@ static void di_ep_free(endpoint_t *ep) {
 // di_root
 // *********
 //
-static file_t* di_root(endpoint_t *ep, uint8_t isroot) {
+static file_t* di_root(endpoint_t *ep) {
 
 	log_debug("di_root:\n");
 
@@ -350,7 +350,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
 			log_debug("Found ep %p to reuse with file %p\n", diep, file);
 
-			*wrapped = di_root((endpoint_t*)diep, 1);
+			*wrapped = di_root((endpoint_t*)diep);
 
 			// closing original path
 			log_debug("Closing original file %p (recursive)\n", diep, file);
@@ -368,7 +368,7 @@ static int di_wrap(file_t *file, file_t **wrapped)
 
 	if ((err = di_load_image(newep, file)) == CBM_ERROR_OK) {
 		// image identified correctly
-		*wrapped = di_root((endpoint_t*)newep, 1);
+		*wrapped = di_root((endpoint_t*)newep);
 
 		log_debug("di_wrap (%p: %s w/ pattern %s) -> %p\n", 
 				file, file->filename, file->pattern, *wrapped);

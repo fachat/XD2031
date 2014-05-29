@@ -191,11 +191,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	// initial file struct, corresponds to root directory of endpoint
 	//err = ep_create(ep, chan, outfile, inname, &outname);
 	if (*namep == '/') {
-		current_dir = ep->ptype->root(ep, 1);
 		namep++;
-	} else {
-		current_dir = ep->ptype->root(ep, 0);
 	}
+
+	current_dir = ep->ptype->root(ep);
 
 
 	log_debug("current_dir (i.e. root) is %p, namep=%s\n", current_dir, namep);

@@ -1036,8 +1036,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
 
 
 // root directory
-static file_t *fsp_root(endpoint_t *ep, uint8_t isroot) {
-	(void) isroot; // silence
+static file_t *fsp_root(endpoint_t *ep) {
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 

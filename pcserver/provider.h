@@ -81,12 +81,7 @@ typedef struct {
 	void 		(*freeep)(endpoint_t *ep);	
 
 							// start directory for the endpoint 
-							// isroot is set when the endpoint root
-							// is required, usually through a "/" at the
-							// start of a file name. If not set, then
-							// the current directory (as defined by previous
-							// chdir() is returned.
-	file_t*		(*root)(endpoint_t *ep, uint8_t isroot); 
+	file_t*		(*root)(endpoint_t *ep); 
 
 							// check if the given file is for 
 							// the provider 
