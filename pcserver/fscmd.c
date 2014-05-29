@@ -500,7 +500,7 @@ int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int i
 			dir->handler->close(dir, 1);
 		}
 		mem_free(name);
-		// provider_cleanup(ep) - still needed?
+		provider_cleanup(ep);
 	}
 	return rv;
 }
@@ -518,10 +518,36 @@ int cmd_mkdir(const char *inname, int namelen) {
 		log_info("MKDIR(%s)\n", name);
 		rv = handler_resolve_file(ep, &newdir, name, NULL, FS_MKDIR);
 
-		// provider_cleanup(ep) - still needed?
+		provider_cleanup(ep);
 		mem_free(name);
 	}
 	return rv;
+}
+
+int cmd_chdir(const char *inname, int namelen) {
+
+	int rv = CBM_ERROR_FAULT;
+	const char *name = NULL;
+	endpoint_t *ep = provider_lookup(inname, namelen, &name);
+
+	if (ep != NULL) {
+		
+		provider_cleanup(ep);
+	}
+	return rv;
+//			prov = (provider_t*) ep->ptype;
+//			if (prov->cd != NULL) {
+//				provider_convto(prov)(name, convlen, name, convlen);
+//				log_info("CHDIR(%s)\n", name);
+//				rv = prov->cd(ep, name);
+//				if (rv != 0) {
+//					log_rv(rv);
+//				}
+//				retbuf[FSP_DATA] = rv;
+//			}
+//			// cleanup when not needed anymore
+//			provider_cleanup(ep);
+//			mem_free(name);
 }
 
 // ----------------------------------------------------------------------------------
@@ -783,22 +809,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_CHDIR:
-		ep = provider_lookup(inname, namelen, &name);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->cd != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				log_info("CHDIR(%s)\n", name);
-				rv = prov->cd(ep, name);
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-			mem_free(name);
-		}
+		rv = cmd_chdir(buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_MKDIR:
 		rv = cmd_mkdir(buf+FSP_DATA, len-FSP_DATA);

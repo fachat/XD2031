@@ -110,14 +110,33 @@ static int provider_index(provider_t *prov) {
 	return -1;
 }
 
-struct {
-        int             epno;
+// -----------------------------------------------------------------
+
+typedef struct {
+        int             drive;
         endpoint_t      *ep;
 	const char	*cdpath;
-} eptable[MAX_NUMBER_OF_ENDPOINTS];
+} ept_t;
 
+static void endpoints_init(const type_t *type, void *obj) {
+	(void)type; // silence unused warning
 
-//------------------------------------------------------------------------------------
+	ept_t *p = (ept_t*) obj;
+
+	p->drive = -1;
+	p->ep = NULL;
+	p->cdpath = NULL;	
+}
+
+static type_t endpoints_type = {
+	"endpoints",
+	sizeof(ept_t),
+	endpoints_init
+};
+
+static registry_t endpoints;
+
+// -----------------------------------------------------------------
 // character set handling
 
 static char *ext_charset_name = NULL;
@@ -284,33 +303,36 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 
 	if (newep != NULL) {
 		// check if the drive is already in use and free it if necessary
-		 int i;
-
-	        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-                	if (eptable[i].epno == drive) {
-				provider_t *prevprov = eptable[i].ep->ptype;
-				prevprov->freeep(eptable[i].ep);
-                        	eptable[i].ep = NULL;
-				eptable[i].epno = -1;
-				if (eptable[i].cdpath != NULL) {
-					mem_free(eptable[i].cdpath);
-					eptable[i].cdpath = NULL;
+		// NOTE: a Map construct would be nice here...
+		ept_t *ept = NULL;
+	        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
+                	if (ept->drive == drive) {
+				// remove from list
+				reg_remove(&endpoints, ept);
+				// clean up
+				provider_t *prevprov = ept->ep->ptype;
+				prevprov->freeep(ept->ep);
+				if (ept->cdpath != NULL) {
+					mem_free(ept->cdpath);
 				}
+				// free it
+				mem_free(ept);
+				ept = NULL;
 				break;
                 	}
         	}
 
 		newep->is_assigned++;
 
+		// build endpoint list entry
+		ept = mem_alloc(&endpoints_type);
+		ept->drive = drive;
+		ept->ep = newep;
+		ept->cdpath = mem_alloc_str("/");
+
 		// register new endpoint
-	        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-                	if (eptable[i].epno == -1) {
-				eptable[i].ep = newep;
-				eptable[i].epno = drive;
-				eptable[i].cdpath = mem_alloc_str("/");
-				break;
-                	}
-        	}
+		reg_append(&endpoints, ept);
+
 		return CBM_ERROR_OK;
 	}
 	return CBM_ERROR_FAULT;
@@ -328,11 +350,7 @@ void provider_init() {
 
 	reg_init(&providers, "providers", 10);
 
-        int i;
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-          eptable[i].epno = -1;
-	  eptable[i].cdpath = NULL;
-        }
+	reg_init(&endpoints, "endpoints", 10);
 
         // manually handle the initial provider
         fs_provider.init();
@@ -361,7 +379,6 @@ void provider_init() {
  * is not absolute, and allocates the new name that it returns
  */
 endpoint_t *provider_lookup(const char *inname, int namelen, const char **outname) {
-        int i;
 
 	int drive = inname[0];
 	inname++;
@@ -426,12 +443,13 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 
 	log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);
 
-        for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
-                if (eptable[i].epno == drive) {
+	ept_t *ept = NULL;
+	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
+                if (ept->drive == drive) {
 			if (outname != NULL) {
-				*outname = malloc_path(eptable[i].cdpath, inname);
+				*outname = malloc_path(ept->cdpath, inname);
 			}
-                        return eptable[i].ep;
+                        return ept->ep;
                 }
         }
         return NULL;
