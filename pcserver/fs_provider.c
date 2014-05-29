@@ -1638,55 +1638,6 @@ static int fs_rename(endpoint_t *ep, const char *nameto, const char *namefrom) {
 }
 
 
-static int fs_cd(endpoint_t *ep, const char *buf) {
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
-	os_patch_dir_separator((char*)buf);	// TODO
-
-	log_debug("Change dir to: %s\n", buf);
-
-	//  concat new path to current path
-	char *newpath = malloc_path(fsep->curpath, buf);
-
-	// canonicalize it
-	char *newreal = os_realpath(newpath);
-	if (newreal == NULL) {
-		// target does not exist
-		log_error("Unable to change dir to '%s'\n", newpath);
-		return CBM_ERROR_FILE_NOT_FOUND;
-	}
-
-
-	// free buffer so we don't forget it
-	mem_free(newpath);
-
-	// check if the new path is still under the base path
-	if(path_under_base(newreal, fsep->basepath)) {
-		// -> security error
-		// newreal is malloc'd
-		free(newreal);
-		return CBM_ERROR_NO_PERMISSION;
-	}
-
-	// check if the new path really is a directory
-	struct stat path;
-	if(stat(newreal, &path) < 0) {
-		log_error("Could not stat '%s'\n", newreal);
-		free(newreal);
-		return CBM_ERROR_DIR_ERROR;
-	}
-	if(!S_ISDIR(path.st_mode)) {
-		log_error("CHDIR: '%s' is not a directory\n", newreal);
-		free(newreal);
-		return CBM_ERROR_DIR_ERROR;
-	}
-
-	mem_free(fsep->curpath);
-	fsep->curpath = mem_alloc_str(newreal);
-	free(newreal);
-	return CBM_ERROR_OK;
-}
-
 static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
 
 	int er = CBM_ERROR_FAULT;
@@ -2025,7 +1976,6 @@ static size_t fs_realsize(file_t *file) {
 
 handler_t fs_file_handler = {
 	"fs_file_handler",
-	CHARSET_ASCII_NAME,
 	NULL,			// resolve
 	fs_close,		// close
 	fs_open,		// open
@@ -2056,7 +2006,6 @@ provider_t fs_provider = {
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider
 	fs_rename,
-	fs_cd,
 	fs_direct,
 	fs_dump			// dump
 };

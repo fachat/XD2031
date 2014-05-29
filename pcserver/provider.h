@@ -94,8 +94,6 @@ typedef struct {
 	// command channel
 							// rename a file or dir
 	int		(*rename)(endpoint_t *ep, const char *nameto, const char *namefrom); 
-							// change into new dir
-	int		(*cd)(endpoint_t *ep, const char *name);			
 							// B-A/B-F
 	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); 
 	// dump / debug
@@ -159,23 +157,7 @@ struct _file {
 
 struct _handler {
         const char      *name;                          // handler name, for debugging
-        const char      *native_charset;                // get name of the native charset for that handler
 
-                                                        // used internally by a recursive resolve
-                                                        // starting from an endpoint and continuing until
-                                                        // all name parts are used
-                                                        // Actually called by the handler registry in turn
-                                                        // until one handler returns non-null
-                                                        // type is the FS_OPEN_* command as parameter
-                                                        // may return non-null but with error (e.g.
-                                                        // write open on read-only endpoint). Error can
-                                                        // be read on file_t
-                                                        // The outname contains the start of the next 
-                                                        // path part, or NULL if the file found was
-                                                        // the last part of the given name. outname
-                                                        // can directly be given into the next 
-                                                        // (child) resolve method (i.e. path separators
-                                                        // are filtered out). 
         int             (*resolve)(file_t *infile, file_t **outfile,
                                 uint8_t type, const char *name, const openpars_t *pars, const char **outname);
 

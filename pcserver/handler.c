@@ -460,14 +460,14 @@ int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpat
 	file_t *file = NULL;
 	const char *pattern = NULL;
 	openpars_t pars;
-	const char *path = NULL;
+	char *path = NULL;
 
 	int inlen = strlen(inname);
 	int ends_with_sep = (inlen != 0) && (inname[inlen - 1] == dir_separator_char());
 
 	openpars_process_options(NULL, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, &path, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, (const char**)&path, &pattern, &pars);
 
 	if (err == CBM_ERROR_OK && file != NULL) {
 	

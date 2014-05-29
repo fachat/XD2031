@@ -1772,16 +1772,6 @@ static int di_rename(endpoint_t *ep, const char *nameto, const char *namefrom)
    return CBM_ERROR_FILE_NOT_FOUND;
 }
 
-// *****
-// di_cd
-// *****
-
-static int di_cd(endpoint_t *ep, const char *buf)
-{
-   log_debug("di_cd %p %s\n",ep,buf);
-   return CBM_ERROR_OK;
-}
-
 
 //***********
 // di_rel_record_max
@@ -2898,38 +2888,11 @@ static int di_to_endpoint(file_t *file, endpoint_t **outep) {
 }
 
 
-// ----------------------------------------------------------------------------------
-
-/*
-provider_t di_provider =
-{
-  "di",
-  "PETSCII",
-   di_init,         // void        (*init     )(void);
-   di_newep,        // endpoint_t* (*newep    )(endpoint_t *parent, ...
-   di_tempep,       // endpoint_t* (*tempep   )(char **par); 
-   di_freeep,       // void        (*freeep   )(endpoint_t *ep); 
-   NULL,	    // file_t*	   (*wrap     )(file_t *infile);
-   di_close,        // void        (*close    )(endpoint_t *ep, int chan);
-   di_open,         // int         (*open_rd  )(endpoint_t *ep, int chan, ...
-   di_opendir,      // int         (*opendir  )(endpoint_t *ep, int chan, ...
-   di_readfile,     // int         (*readfile )(endpoint_t *ep, int chan, ...
-   di_writefile,    // int         (*writefile)(endpoint_t *ep, int chan, ...
-   di_scratch,      // int         (*scratch  )(endpoint_t *ep, char *name, ...
-   di_rename,       // int         (*rename   )(endpoint_t *ep, char *nameto, ...
-   di_cd,           // int         (*cd       )(endpoint_t *ep, char *name); 
-   NULL,            // int         (*mkdir    )(endpoint_t *ep, char *name); 
-   NULL,            // int         (*rmdir    )(endpoint_t *ep, char *name);
-   di_position,     // int         (*position )(endpoint_t *ep, int chan, int recordno);
-   di_direct        // int         (*direct   )(endpoint_t *ep, char *buf, ...
-};
-*/
 
 // ----------------------------------------------------------------------------------
 
 handler_t di_file_handler = {
         "di_file_handler",
-        NULL,		// charset name
         NULL,   	// resolve - not required
         di_close,       // close
         di_open,        // open a file_t
@@ -2960,7 +2923,6 @@ provider_t di_provider = {
         di_root,        // file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
         di_wrap,        // wrap while CDing into D64 file
         di_rename,
-        di_cd,
         di_direct,
 	di_dump		// dump
 };
