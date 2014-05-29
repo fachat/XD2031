@@ -1737,45 +1737,45 @@ static int di_scratch(file_t *file) {
 //   return CBM_ERROR_SCRATCHED;  // FILES SCRATCHED message
 //}
 
+
 // *********
 // di_move
 // *********
 
-
 static int di_move(file_t *fromfile, file_t *todir, const char *toname) {
+
+	di_endpoint_t *diep = (di_endpoint_t*) fromfile->endpoint;
+
+	slot_t *slot;
+	slot_t newslot;
+
+	log_debug("di_rename (%s) to (%s)\n",fromfile->filename,toname);
+
+	const char *nameto = conv_to_alloc(toname, &di_provider);
+
+	// check if target exists
+	di_first_slot(diep,&newslot);
+	if (di_match_slot(diep,&newslot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)) {
+		mem_free(nameto);
+		return CBM_ERROR_FILE_EXISTS;
+	}
+
+	// fromfile is known and we have the slot already
+	File *fp = (File*) fromfile;
+	slot = &fp->Slot;
+
+	int n = strlen(nameto);
+	if (n > 16) {
+		n = 16;
+	}
+	memset(slot->filename,0xA0,16); // fill filename with $A0
+	memcpy(slot->filename,nameto,n);
+	di_write_slot(diep,slot);
+
+	mem_free(nameto);
+	return CBM_ERROR_OK;
 }
 
-//static int di_rename(endpoint_t *ep, const char *nameto, const char *namefrom)
-//{
-//   int n;
-//   di_endpoint_t *diep = (di_endpoint_t*) ep;
-//   slot_t slot;
-//   int found;
-//   //int l = strlen(namefrom);
-//   //if (l && namefrom[l-1] == 13) namefrom[l-1] = 0; // remove CR
-//   log_debug("di_rename (%s) to (%s)\n",namefrom,nameto);
-//
-//   // check if target exists
-//
-//   di_first_slot(diep,&slot);
-//   if ((found = di_match_slot(diep,&slot,(uint8_t *)nameto, FS_DIR_TYPE_UNKNOWN)))
-//   {
-//      return CBM_ERROR_FILE_EXISTS;
-//   }
-//
-//   di_first_slot(diep,&slot);
-//   if ((found = di_match_slot(diep,&slot,(uint8_t *)namefrom, FS_DIR_TYPE_UNKNOWN)))
-//   {
-//      n = strlen(nameto);
-//      if (n > 16) n = 16;
-//      memset(slot.filename,0xA0,16); // fill filename with $A0
-//      memcpy(slot.filename,nameto,n);
-//      di_write_slot(diep,&slot);
-//      return CBM_ERROR_OK;
-//   }
-//   return CBM_ERROR_FILE_NOT_FOUND;
-//}
-//
 
 //***********
 // di_rel_record_max
