@@ -588,6 +588,76 @@ int cmd_move(const char *inname, int namelen) {
 	return err;
 }
 
+int cmd_copy(const char *inname, int namelen) {
+
+	int err = CBM_ERROR_FAULT;
+
+	int todrive = inname[0];
+	const char *fromname = NULL;
+	const char *toname = NULL;
+	const char *p = inname+1;
+	endpoint_t *epto = provider_lookup(inname, namelen, &toname, NAMEINFO_UNDEF_DRIVE);
+	if (epto != NULL) {
+		file_t *tofile = NULL;
+		err = handler_resolve_file(epto, &tofile, toname, NULL, FS_OPEN_WR);
+		if (err == CBM_ERROR_OK) {
+			// file is opened for writing...
+			// now iterate over the source files
+
+			file_t *fromfile = NULL;
+
+			// find next name
+			fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
+			int thislen = namelen - (fromname - inname);
+			while ((err == CBM_ERROR_OK) && (thislen > 0)) {
+				p = fromname + 1;
+				endpoint_t *fromep = provider_lookup(fromname, thislen, &fromname, todrive);
+				if (fromep != NULL) {
+					err = handler_resolve_file(fromep, &fromfile, fromname, 
+										NULL, FS_OPEN_RD);
+					if (err == CBM_ERROR_OK) {
+						// read file is open, can do the copy
+						char buffer[8192];
+						int readflag = 0;
+						int rlen = 0;
+						int wlen = 0;
+						int nwritten = 0;
+
+						do {
+							rlen = fromfile->handler->readfile(fromfile, 
+									buffer, 8192, &readflag);
+							if (rlen < 0) {
+								err = -rlen;
+								break;
+							}
+							nwritten = 0;
+							while (rlen > nwritten) {
+								wlen = tofile->handler->writefile(tofile,
+									buffer + nwritten, rlen - nwritten, 
+									readflag & READFLAG_EOF);
+								if (wlen < 0) {
+									err = -wlen;
+									break;
+								}
+								nwritten += wlen;
+							}
+						} while ((err == CBM_ERROR_OK) 
+								&& ((readflag & READFLAG_EOF) == 0));	
+						
+						fromfile->handler->close(fromfile, 1);
+					}
+					provider_cleanup(fromep);
+				}
+				fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
+				thislen = namelen - (fromname - inname);
+			}				
+			tofile->handler->close(tofile, 1);
+		}
+		provider_cleanup(epto);
+	}
+	return err;
+}
+
 // ----------------------------------------------------------------------------------
 
 /**
@@ -744,7 +814,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			    // TODO: handle error (rv<0)
 			    if (rv < 0) {
 				// an error is sent as REPLY with error code
-				retbuf[FSP_DATA] = rv;
+				retbuf[FSP_DATA] = -rv;
 				log_rv(-rv);
 			    } else {
 				// a WRITE mirrors the READ request when ok 
@@ -830,6 +900,11 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
+	case FS_COPY:
+		rv = cmd_copy(buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
+      		break;
 	case FS_BLOCK:
 		// not file-related, so no file descriptor (tfd)
 		// we only support mapped drives (thus name is NULL)
@@ -888,9 +963,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		break;
 	case FS_FORMAT:
 		log_warn("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
-      		break;
-	case FS_COPY:
-		log_warn("COPY: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       		break;
 	case FS_DUPLICATE:
 		log_warn("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);

@@ -1461,6 +1461,8 @@ static int write_file(File *file, char *buf, int len, int is_eof) {
 		fclose(fp);
 		file->fp = NULL;
 		return -err;
+	  } else {
+		err = n;
 	  }
 	  if(is_eof) {
 	    log_debug("fd=%d received an EOF on write file\n", file);
@@ -1781,13 +1783,17 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 	File *dir = (File*) dirfp;
 	File *retfile = NULL;
 
-	if ((rv = os_filename_is_legal(name)) == CBM_ERROR_OK) {
+        const char *tmpname = conv_to_alloc(name, &fs_provider);
 
-		const char *ospath = str_concat(dir->ospath, dir_separator_string(), name);
+	if ((rv = os_filename_is_legal(tmpname)) == CBM_ERROR_OK) {
+
+		const char *ospath = str_concat(dir->ospath, dir_separator_string(), tmpname);
 		
 		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
-		retfile->ospath = os_realpath(ospath);
+		retfile->ospath = malloc(strlen(ospath)+1);
+		strcpy(retfile->ospath, ospath);
+
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
 
@@ -1798,6 +1804,8 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 			close_fd(retfile, 0);
 		}
 	}
+
+	mem_free(tmpname);
 
 	return rv;
 }

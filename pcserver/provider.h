@@ -180,6 +180,9 @@ struct _handler {
         int             (*seek)(file_t *fp, long position, int flag);
 
                                                         // read file data
+							// if return value >= 0 then is number of bytes read,
+							// <0 means -CBM_ERROR_*
+							// readflag returns READFLAG_* values
         int             (*readfile)(file_t *fp, char *retbuf, int len, int *readflag);
 
                                                         // write file data
