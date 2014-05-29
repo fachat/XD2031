@@ -455,6 +455,55 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
         return NULL;
 }
 
+
+/**
+ * provider_chdir uses the XD2031 name format, i.e. first byte is drive
+ * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
+ * It then identifies the drive, puts the CD path before the name if it
+ * is not absolute, and allocates the new name that it returns
+ */
+int provider_chdir(const char *inname, int namelen) {
+
+	int drive = inname[0];
+	inname++;
+	namelen--;
+
+	if (namelen <= 0) {
+		inname = NULL;
+	}
+
+	if (drive == NAMEINFO_UNDEF_DRIVE) {
+		return CBM_ERROR_FAULT;
+	}
+
+	log_debug("Trying to resolve drive %d with path '%s'\n", drive, inname);
+
+	ept_t *ept = NULL;
+	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
+                if (ept->drive == drive) {
+			break;	// found it
+                }
+        }
+
+	if (ept == NULL) {
+		// drive number not found
+		return CBM_ERROR_DRIVE_NOT_READY;
+	}
+
+	const char *newpath = malloc_path(ept->cdpath, inname);
+
+	file_t *dir = NULL;
+	int rv = handler_resolve_file(ept->ep, &dir, newpath, NULL, FS_OPEN_RD);
+
+	if (rv == CBM_ERROR_OK) {
+		dir->handler->close(dir, 1);
+
+		mem_free(ept->cdpath);
+		ept->cdpath = newpath;
+	}
+	return rv;
+}
+
 /*
  * dump the in-memory structures (for analysis / debug)
  */

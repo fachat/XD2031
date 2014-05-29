@@ -277,6 +277,11 @@ int provider_assign(int drive, const char *name, const char *assign_to, int from
 endpoint_t* provider_lookup(const char *inname, int namelen, const char **outname);
 
 /**
+ * change directory for an endpoint
+ */
+int provider_chdir(const char *inname, int namelen);
+
+/**
  * cleans up a temporary provider after it has been done with,
  * i.e. after a command, or after an opened file has been closed.
  * Also after error on open.

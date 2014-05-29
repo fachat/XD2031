@@ -528,26 +528,12 @@ int cmd_chdir(const char *inname, int namelen) {
 
 	int rv = CBM_ERROR_FAULT;
 	const char *name = NULL;
-	endpoint_t *ep = provider_lookup(inname, namelen, &name);
 
-	if (ep != NULL) {
-		
-		provider_cleanup(ep);
-	}
+	log_info("CHDIR(%s)\n", inname);
+
+	rv = provider_chdir(inname, namelen);
+
 	return rv;
-//			prov = (provider_t*) ep->ptype;
-//			if (prov->cd != NULL) {
-//				provider_convto(prov)(name, convlen, name, convlen);
-//				log_info("CHDIR(%s)\n", name);
-//				rv = prov->cd(ep, name);
-//				if (rv != 0) {
-//					log_rv(rv);
-//				}
-//				retbuf[FSP_DATA] = rv;
-//			}
-//			// cleanup when not needed anymore
-//			provider_cleanup(ep);
-//			mem_free(name);
 }
 
 // ----------------------------------------------------------------------------------
