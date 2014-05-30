@@ -446,6 +446,69 @@ const char *get_options(const char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
+int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *outlen, int cmd) {
+	
+	int rv = CBM_ERROR_FAULT;
+	const char *name = NULL;
+	file_t *fp = NULL;
+	*outlen = 0;
+
+	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
+	if (ep != NULL) {
+		provider_t *prov = (provider_t*) ep->ptype;
+		//provider_convto(prov)(name, convlen, name, convlen);
+		const char *options = get_options(inname + 1, namelen - 1);
+		log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
+			prov->name, name);
+		rv = handler_resolve_file(ep, &fp, name, options, cmd);
+		if (rv == CBM_ERROR_OK && fp->recordlen > 0) {
+			int record = fp->recordlen;
+			outbuf[0] = record & 0xff;
+			outbuf[1] = (record >> 8) & 0xff;
+			*outlen = 2;
+			rv = CBM_ERROR_OPEN_REL;
+		}
+		if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+			channel_set(tfd, fp);
+		} else {
+			if (fp != NULL) {
+				fp->handler->close(fp, 1);
+				fp = NULL;
+			}
+			log_rv(rv);
+		}
+		// cleanup when not needed anymore
+		provider_cleanup(ep);
+		mem_free(name);
+	}
+	return rv;
+}
+
+int cmd_open_dir(int tfd, const char *inname, int namelen) {
+
+	int rv = CBM_ERROR_FAULT;
+	const char *name = NULL;
+	file_t *fp = NULL;
+
+	//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
+	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
+	if (ep != NULL) {
+		provider_t *prov = (provider_t*) ep->ptype;
+		const char *options = get_options(inname, namelen - 1);
+		log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
+		rv = handler_resolve_dir(ep, &fp, name, NULL, options);
+		if (rv == 0) {
+			channel_set(tfd, fp);
+		} else {
+			log_rv(rv);
+		}
+		// cleanup when not needed anymore
+		provider_cleanup(ep);
+		mem_free(name);
+	}
+	return rv;
+}
+
 int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int isrmdir) {
 	int rv = CBM_ERROR_FAULT;
 	int outdeleted = 0;
@@ -745,8 +808,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	char *inname = buf + FSP_DATA;
 	int namelen = len - FSP_DATA;
 
-	// options string just in case
-	const char *options = NULL;
 
 	switch(cmd) {
 		// file-oriented commands
@@ -755,56 +816,14 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			//provider_convto(prov)(name, convlen, name, convlen);
-			options = get_options(inname + 1, namelen - 1);
-			log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
-				prov->name, name);
-			rv = handler_resolve_file(ep, &fp, name, options, cmd);
-			if (rv == CBM_ERROR_OK && fp->recordlen > 0) {
-				record = fp->recordlen;
-				retbuf[FSP_DATA+1] = record & 0xff;
-				retbuf[FSP_DATA+2] = (record >> 8) & 0xff;
-				retbuf[FSP_LEN] = FSP_DATA + 3;	
-				rv = CBM_ERROR_OPEN_REL;
-			}
-			retbuf[FSP_DATA] = rv;
-			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-				channel_set(tfd, fp);
-				break; // out of switch() to escape provider_cleanup()
-			} else {
-				if (fp != NULL) {
-					fp->handler->close(fp, 1);
-					fp = NULL;
-				}
-				log_rv(rv);
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-			mem_free(name);
-		}
+		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, cmd);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_OPEN_DR:
-		//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-		ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			options = get_options(inname, namelen - 1);
-			log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-			rv = handler_resolve_dir(ep, &fp, name, NULL, options);
-			retbuf[FSP_DATA] = rv;
-			if (rv == 0) {
-				channel_set(tfd, fp);
-				break; // out of switch() to escape provider_cleanup()
-			} else {
-				log_rv(rv);
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-			mem_free(name);
-		}
+		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_READ:
 		fp = channel_to_file(tfd);
