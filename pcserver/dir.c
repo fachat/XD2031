@@ -222,64 +222,6 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 
 
 /**
- * fill in the buffer with a directory entry
- */
-int dir_fill_entry(char *dest, char *curpath, struct dirent *de, int maxsize) {
-	struct stat sbuf;
-	struct tm *tp;
-
-	char *realname = malloc_path(curpath, de->d_name);
-
-        /* TODO: check return value */
-	int writecheck = -EACCES;
-	int rv = stat(realname, &sbuf);
-	if (rv < 0) {
-		log_error("Failed stat'ing entry %s\n", de->d_name);
-		log_errno("Problem stat'ing dir entry");
-	} else {
-		writecheck = access(realname, W_OK);
-		if ((writecheck < 0) && (errno != EACCES)) {
-			writecheck = -errno;
-			log_error("Could not get write access to %s\n", de->d_name);
-			log_errno("Reason");
-		}
-	}
-	free(realname);
-
-        dest[FS_DIR_LEN] = sbuf.st_size & 255;
-        dest[FS_DIR_LEN+1] = (sbuf.st_size >> 8) & 255;
-        dest[FS_DIR_LEN+2] = (sbuf.st_size >> 16) & 255;
-        dest[FS_DIR_LEN+3] = (sbuf.st_size >> 24) & 255;
-
-        tp = localtime(&sbuf.st_mtime);
-        dest[FS_DIR_YEAR]  = tp->tm_year;
-        dest[FS_DIR_MONTH] = tp->tm_mon;
-        dest[FS_DIR_DAY]   = tp->tm_mday;
-        dest[FS_DIR_HOUR]  = tp->tm_hour;
-        dest[FS_DIR_MIN]   = tp->tm_min;
-        dest[FS_DIR_SEC]   = tp->tm_sec;
-
-	dest[FS_DIR_ATTR]  = FS_DIR_TYPE_PRG;
-	if (writecheck < 0) {
-		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
-	}
-	// test
-	//if (sbuf.st_size & 1) {
-	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
-	//}
-
-        dest[FS_DIR_MODE]  = S_ISDIR(sbuf.st_mode) ? FS_DIR_MOD_DIR : FS_DIR_MOD_FIL;
-        // de->d_name is 0-terminated (see readdir man page)
-        int l = strlen(de->d_name);
-        strncpy(dest+FS_DIR_NAME, de->d_name,
-                  min(l+1, maxsize-1-FS_DIR_NAME));
-	// make sure we're still null-terminated
-	dest[maxsize-1] = 0;
-
-	return FS_DIR_NAME + strlen(dest+FS_DIR_NAME) + 1;
-}
-
-/**
  * fill in the buffer with a directory entry from a file_t struct
  */
 int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize) {
@@ -332,33 +274,5 @@ int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize) {
 	return FS_DIR_NAME + l + 1;
 }
 
-
-/**
- * fill in the buffer with the final disk info entry
- */
-int dir_fill_disk(char *dest, char *curpath) {
-	signed long long total;
-
-	total = os_free_disk_space(curpath);
-	if (total > 0) {
-		if (total > 0xffffffff) {
-			// max in FS_DIR stuff
-			total = 0xffffffff;
-		}
-	        dest[FS_DIR_LEN] = total & 255;
-	        dest[FS_DIR_LEN+1] = (total >> 8) & 255;
-	        dest[FS_DIR_LEN+2] = (total >> 16) & 255;
-	        dest[FS_DIR_LEN+3] = (total >> 24) & 255;
-	} else {
-		log_errno("Could not get free disk space for '%s'\n", curpath);
-	        dest[FS_DIR_LEN] = 1;
-	        dest[FS_DIR_LEN+1] = 0;
-	        dest[FS_DIR_LEN+2] = 0;
-	        dest[FS_DIR_LEN+3] = 0;
-	}
-       	dest[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
-       	dest[FS_DIR_NAME] = 0;
-	return FS_DIR_NAME + 1;
-}
 
 
