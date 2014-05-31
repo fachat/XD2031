@@ -294,6 +294,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 
 	if (pars->filetype != FS_DIR_TYPE_UNKNOWN 
 		&& file != NULL
+		&& file->type != FS_DIR_TYPE_UNKNOWN
 		&& file->type != pars->filetype) {
 		err = CBM_ERROR_FILE_TYPE_MISMATCH;
 	}
@@ -532,8 +533,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			if (file == NULL) {
 				err = CBM_ERROR_FILE_NOT_FOUND;
 			} else {
-				*outfile = file;
-				err = file->handler->open(file, type);
+				err = file->handler->open(file, &pars, type);
 			}
 			break;
 		case FS_OPEN_WR:
@@ -550,6 +550,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 				if (err != CBM_ERROR_OK) {
 					break;
 				}
+			} else {
+				err = file->handler->open(file, &pars, type);
 			}
 			if (pars.filetype != FS_DIR_TYPE_UNKNOWN 
 				&& file->type != pars.filetype) {
@@ -662,7 +664,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 		if (err == CBM_ERROR_OK) {
 	
-			err = dir->handler->open(dir, FS_OPEN_DR);	
+			err = dir->handler->open(dir, &pars, FS_OPEN_DR);	
 		}
 
 		if (err == CBM_ERROR_OK) {

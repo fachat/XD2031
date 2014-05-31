@@ -2615,21 +2615,16 @@ static int di_create(file_t *dirp, file_t **newfile, const char *pattern, openpa
 // di_open
 //***********
 
-static int di_open(file_t *fp, int type) 
+static int di_open(file_t *fp, openpars_t *pars, int type) 
 {
-	openpars_t pars;
 	int rv = CBM_ERROR_FAULT;
 
-	pars.filetype = FS_DIR_TYPE_UNKNOWN;
-	pars.recordlen = 0;
-	
 	File *file = (File*) fp;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
 	} else {
-   		rv = di_open_file(file, &pars, type);
-   		//*reclen = reclen16;
+   		rv = di_open_file(file, pars, type);
 	}
    	return rv;
 }

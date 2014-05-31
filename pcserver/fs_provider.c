@@ -96,6 +96,7 @@ static void file_init(const type_t *t, void *obj) {
 	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
 	fp->file.handler = &fs_file_handler;
+	fp->file.recordlen = 0;
 
 	fp->fp = NULL;
 	fp->dp = NULL;
@@ -1098,6 +1099,10 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 			// TODO: drive number
 			rv = dir_fill_header(retbuf, 0, entry->filename);
 		} else {
+			// replace unknown type with PRG
+			if (entry->type == FS_DIR_TYPE_UNKNOWN) {
+				entry->type = FS_DIR_TYPE_PRG;
+			}
 			rv = dir_fill_entry_from_file(retbuf, entry, len);
 		}
 /*
@@ -1235,7 +1240,8 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 			    		retfile->ospath = ospath;
 			  	  	retfile->file.mode = FS_DIR_MOD_FIL;
-			    		retfile->file.type = FS_DIR_TYPE_PRG;
+					// we don't know the type yet for sure
+			    		retfile->file.type = FS_DIR_TYPE_UNKNOWN;
 			    		retfile->file.attr = 0;
 
 			    		retfile->file.seekable = 0;
@@ -1740,10 +1746,9 @@ static int fs_seek(file_t *fp, long position, int flag) {
 	return rv;
 }
 
-static int fs_open(file_t *fp, int type) {
+static int fs_open(file_t *fp, openpars_t *pars, int type) {
 
 	cbm_errno_t rv = CBM_ERROR_OK;
-
 	File *file = (File*) fp;
 
 	if (file->temp_open && file->fp != NULL) {
@@ -1751,23 +1756,80 @@ static int fs_open(file_t *fp, int type) {
 		file->temp_open = 0;
 		file->fp = NULL;
 	}
-		
+
+	int file_required = false;
+	int file_must_not_exist = false;
+	
 	if (type == FS_OPEN_DR) {
 		rv = open_dir(file);
 	} else {
-		char *flags = "";
-		switch(type) {
-		case FS_OPEN_RD: flags = "rb"; break;
-		case FS_OPEN_WR: flags = "wb"; break;
-		case FS_OPEN_AP: flags = "ab"; break;
-		case FS_OPEN_RW: flags = "rb+"; break;
-		case FS_OPEN_OW: flags = "wb"; break;
+		if (type == FS_OPEN_RW) {
+			// TODO check open block?
+
+			// RW is only supported for REL files at the moment
+			if (pars->filetype != FS_DIR_TYPE_REL) {
+				return CBM_ERROR_FILE_TYPE_MISMATCH;
+			}
 		}
 
-		file->fp = fopen(file->ospath, flags);
-		if (file->fp == NULL) {
-			log_errno("fopen");
-			rv = CBM_ERROR_FAULT;
+		file->file.recordlen = pars->recordlen;
+		if (pars->filetype != FS_DIR_TYPE_REL) {
+			// without REL files there is no record len
+			file->file.recordlen = 0;
+		} else {
+			if (file->file.recordlen == 0) {
+				// not specifying a record length means reading it 
+				// from the file, which we do not support
+				return CBM_ERROR_DRIVE_NOT_READY;
+			}
+		}
+
+		int file_exists = !access(file->ospath, F_OK);
+
+		char *flags = "";
+		switch(type) {
+		case FS_OPEN_RD: 
+			flags = "rb";
+			file_required = true;
+			break;
+		case FS_OPEN_WR: 
+			flags = "wb"; 
+			file_must_not_exist = true;
+			break;
+		case FS_OPEN_AP: 
+			flags = "ab"; 
+			file_required = true;
+			break;
+		case FS_OPEN_RW: 
+			if (file_exists) {
+				flags = "rb+"; 
+			} else {
+				flags = "wb+"; 
+			}
+			break;
+		case FS_OPEN_OW: 
+			flags = "wb"; 
+			break;
+		}
+
+		if (file_required && !file_exists) {
+			log_error("Unable to open '%s': file not found\n", file->ospath);
+			rv = CBM_ERROR_FILE_NOT_FOUND;
+		} else 
+		if (file_must_not_exist && file_exists) {
+			log_error("Unable to open '%s': file exists\n", file->ospath);
+			rv = CBM_ERROR_FILE_EXISTS;
+		} else {
+			file->fp = fopen(file->ospath, flags);
+			if (pars->filetype != FS_DIR_TYPE_UNKNOWN) {
+				// set file type (we cross-match, as we don't save the file type
+				// in the file system
+				file->file.type = pars->filetype;
+			}
+			if (file->fp == NULL) {
+				rv = errno_to_error(errno);
+				log_errno("Error opening file '%s'\n", file->ospath);
+			}
 		}
 	}
 	return rv;
@@ -1776,8 +1838,6 @@ static int fs_open(file_t *fp, int type) {
 
 static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars,
                                 int opentype) {
-
-	(void) pars;	// silence warning
 
 	cbm_errno_t rv = CBM_ERROR_OK;
 	File *dir = (File*) dirfp;
@@ -1791,13 +1851,14 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 		
 		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
-		retfile->ospath = malloc(strlen(ospath)+1);
-		strcpy(retfile->ospath, ospath);
+		char *mospath = malloc(strlen(ospath)+1);
+		strcpy(mospath, ospath);
+		retfile->ospath = mospath;
 
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
 
-		if ((rv = fs_open((file_t*)retfile, opentype)) == CBM_ERROR_OK) {
+		if ((rv = fs_open((file_t*)retfile, pars, opentype)) == CBM_ERROR_OK) {
 			*outentry = (file_t*)retfile;	
 		} else {
 			log_debug("close on failing open (%p)", retfile);
