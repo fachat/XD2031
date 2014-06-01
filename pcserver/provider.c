@@ -263,9 +263,25 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 
 	int len = strlen(wirename);
 
-	// check if it is a drive
-	// (works as long as isdigit() is the same for all available char sets)
+	if (len == 0) {
+		// we don't actually have a provider name - use the default provider
+		parent = fs_root_endpoint();
+		if (parent != NULL) {
+			provider = parent->ptype;
+			log_debug("Got default provider %p ('%s')\n", provider, provider->name);
+
+			err = handler_resolve_assign(parent, &newep, assign_to);
+	                if (err != CBM_ERROR_OK || newep == NULL) {
+        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
+                	        return err;
+                	}
+		}
+		// if not found, something's clearly wrong, as the default provider "fs"
+		// should be there. So return FAULT...
+	} else
 	if ((isdigit(wirename[0])) && (len == 1)) {
+		// check if it is a drive
+		// (works as long as isdigit() is the same for all available char sets)
 		// we have a drive number
 		int drv = wirename[0] & 0x0f;
 		char drvname[2];
@@ -281,6 +297,9 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
         	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
                 	        return err;
                 	}
+		} else {
+			// did not find drive number on lookup
+			err = CBM_ERROR_DRIVE_NOT_READY;
 		}
 	} else {
 

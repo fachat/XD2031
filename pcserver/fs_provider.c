@@ -190,6 +190,11 @@ static void fsp_init() {
 	provider_register(&fs_provider);
 }
 
+// default endpoint if none given in assign
+endpoint_t *fs_root_endpoint() {
+	return (endpoint_t*) root_endpoint;
+}
+
 static File *reserve_file(fs_endpoint_t *fsep) {
 
 	File *file = mem_alloc(&file_type);

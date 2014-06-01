@@ -303,6 +303,8 @@ charconv_t provider_convfrom(provider_t *prov);
 // it can be identified by one of the providers - like a d64 file, or a ZIP file
 file_t *provider_wrap(file_t *file);
 
+// default endpoint if none given in assign
+endpoint_t *fs_root_endpoint();
 
 // convert string inline from provider to external charset
 static inline void conv_from(char *str, provider_t *prov) {
