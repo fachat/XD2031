@@ -417,9 +417,9 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 				if (file->endpoint->ptype->to_endpoint != NULL) {
 					// to_endpoint must take care of parent dir(s)
 					err = file->endpoint->ptype->to_endpoint(file, outep);
-					if (*outep != NULL) {
-						(*outep)->is_assigned ++;
-					}
+					//if (*outep != NULL) {
+					//	(*outep)->is_assigned ++;
+					//}
 					dir = NULL;
 				} else {
 					log_warn("Endpoint %s does not support assign\n", 
