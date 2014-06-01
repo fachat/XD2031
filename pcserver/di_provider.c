@@ -2881,7 +2881,14 @@ static int di_to_endpoint(file_t *file, endpoint_t **outep) {
 	endpoint_t *ep = file->endpoint;
 	*outep = ep;
 
+	// prevent it from being closed here
+	ep->is_assigned++;
+
 	di_close(file, 1);
+
+	// reset counter
+	ep->is_assigned--;
+
 
 	return CBM_ERROR_OK;
 }

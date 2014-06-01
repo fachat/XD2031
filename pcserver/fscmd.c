@@ -146,8 +146,9 @@ static int cmd_assign(const char *assign_str, int from_cmdline) {
 			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
 			int rv=0;
 			int drive = assign_str[0] & 0x0f;
-			char provider_name[MAX_LEN_OF_PROVIDER_NAME + 1];
 			char *provider_parameter;
+			const char *provider_name;
+			int provider_len;
 
 			// provider name followed by parameter?
 			char *p = strchr(assign_str, '=');
@@ -157,17 +158,34 @@ static int cmd_assign(const char *assign_str, int from_cmdline) {
 						  MAX_LEN_OF_PROVIDER_NAME);
 				} else {
 					// fix provider parameter character set
-					const char *orig_charset = mem_alloc_str(provider_get_ext_charset());
+					const char *orig_charset = mem_alloc_str(
+									provider_get_ext_charset());
 					provider_set_ext_charset(CHARSET_ASCII_NAME);
 
-					strncpy (provider_name, assign_str + 2, p - assign_str +1);
-					provider_name[p - assign_str - 2] = 0;
+					provider_name = assign_str + 2;
+					provider_len = p - assign_str - 2;
 					provider_parameter = p + 1;
-					log_debug("cmdline_assign '%s' = '%s'\n", provider_name, 
-							provider_parameter);
-					rv = provider_assign(drive, provider_name, provider_parameter, 
-												from_cmdline);
 
+					char *pname = mem_alloc_c(provider_len + 2, "provider_name");
+					strncpy (pname, provider_name, provider_len+1);
+					pname[provider_len] = 0;
+
+//					pname[0] = NAMEINFO_UNDEF_DRIVE;
+
+//					if (isdigit(provider_name[0]) && provider_len == 1) {
+//						// just a digit as provider name
+//						pname[0] = provider_name[0] & 0x0f;
+//						pname[1] = 0;
+//					} else {
+//						strncpy (pname + 1, provider_name, provider_len+1);
+//						pname[provider_len + 1] = 0;
+//					}
+					log_debug("cmdline_assign '%d:%s' = '%s'\n", pname[0], pname+1, 
+						provider_parameter);
+					rv = provider_assign(drive, pname, 
+						provider_parameter, from_cmdline);
+
+					mem_free(pname);
 					// reset character set
 					provider_set_ext_charset(orig_charset);
 					mem_free(orig_charset);

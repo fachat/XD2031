@@ -238,8 +238,11 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 	// (works as long as isdigit() is the same for all available char sets)
 	if ((isdigit(wirename[0])) && (len == 1)) {
 		// we have a drive number
-		int drv = wirename[0];
-		parent = provider_lookup(wirename, len, NULL, NAMEINFO_UNDEF_DRIVE);
+		int drv = wirename[0] & 0x0f;
+		char drvname[2];
+		drvname[0] = drv;
+		drvname[1] = 0;
+		parent = provider_lookup(drvname, len, NULL, NAMEINFO_UNDEF_DRIVE);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
@@ -267,8 +270,8 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 					const char *pname = p->provider->name;
 					if (!strcmp(pname, ascname)) {
 						// got one
+						provider = p->provider;
 						if (p->provider->newep != NULL) {
-							provider = p->provider;
 							log_debug("Found provider named '%s'\n", 
 									provider->name);
 						} else {
@@ -393,7 +396,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 	}
 
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
-		if (inname == NULL) {
+		if (inname == NULL || inname[0] == 0) {
 			// no name specified, so return NULL (no provider found)
 			return NULL;
 		}
@@ -465,6 +468,8 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
                         return ept->ep;
                 }
         }
+	log_warn("Drive %d is not assigned!\n", drive);
+
         return NULL;
 }
 
