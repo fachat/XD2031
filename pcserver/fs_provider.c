@@ -182,8 +182,6 @@ static void fsp_init() {
 	fsep->curpath = mem_alloc_str(fsep->basepath);
 	fsep->base.is_assigned++;
 
-	reg_append(&endpoints, fsep);
-
 	root_endpoint = fsep;
 
 	// ---------------------

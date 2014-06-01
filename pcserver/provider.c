@@ -136,6 +136,29 @@ static type_t endpoints_type = {
 
 static registry_t endpoints;
 
+static int unassign(int drive) {
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	ept_t *ept = NULL;
+        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
+               	if (ept->drive == drive) {
+			// remove from list
+			reg_remove(&endpoints, ept);
+			// clean up
+			provider_t *prevprov = ept->ep->ptype;
+			prevprov->freeep(ept->ep);
+			if (ept->cdpath != NULL) {
+				mem_free(ept->cdpath);
+			}
+			// free it
+			mem_free(ept);
+			ept = NULL;
+			rv = CBM_ERROR_OK;
+			break;
+               	}
+       	}
+	return rv;
+}
+
 // -----------------------------------------------------------------
 // character set handling
 
@@ -220,6 +243,9 @@ file_t *provider_wrap(file_t *file) {
 /**
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
+ * 
+ * of the "A0:fs=foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
+ * and "foo/bar" becomes the assign_to.
  */
 int provider_assign(int drive, const char *wirename, const char *assign_to, int from_cmdline) {
 
@@ -231,8 +257,11 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 	provider_t *provider = NULL;
 	endpoint_t *newep = NULL;
 
-	// first byte could be zero
-	int len = 1 + strlen(wirename + 1);
+	if (assign_to == NULL) {
+		return unassign(drive);
+	}
+
+	int len = strlen(wirename);
 
 	// check if it is a drive
 	// (works as long as isdigit() is the same for all available char sets)
@@ -307,28 +336,13 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 	if (newep != NULL) {
 		// check if the drive is already in use and free it if necessary
 		// NOTE: a Map construct would be nice here...
-		ept_t *ept = NULL;
-	        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
-                	if (ept->drive == drive) {
-				// remove from list
-				reg_remove(&endpoints, ept);
-				// clean up
-				provider_t *prevprov = ept->ep->ptype;
-				prevprov->freeep(ept->ep);
-				if (ept->cdpath != NULL) {
-					mem_free(ept->cdpath);
-				}
-				// free it
-				mem_free(ept);
-				ept = NULL;
-				break;
-                	}
-        	}
+
+		unassign(drive);
 
 		newep->is_assigned++;
 
 		// build endpoint list entry
-		ept = mem_alloc(&endpoints_type);
+		ept_t *ept = mem_alloc(&endpoints_type);
 		ept->drive = drive;
 		ept->ep = newep;
 		ept->cdpath = mem_alloc_str("/");
@@ -528,6 +542,20 @@ void provider_dump() {
 	const char *prefix = dump_indent(indent);
 	const char *eppref = dump_indent(indent+1);
 
+	for (int i = 0; ; i++) {
+		ept_t *ept = reg_get(&endpoints, i);
+		if (ept != NULL) {
+			log_debug("%s// Dumping endpoint for drive %d\n", prefix, ept->drive);
+			log_debug("%s{\n", prefix);
+			log_debug("%sdrive=%d;\n", eppref, ept->drive);
+			log_debug("%scdpath='%s';\n", eppref, ept->cdpath);
+			log_debug("%sendpoint=%p ('%s');\n", eppref, ept->ep, 
+								ept->ep->ptype->name);
+			log_debug("%s}\n", prefix);
+		} else {
+			break;
+		}
+	}
 	for (int i = 0; ; i++) {
 		providers_t *p = reg_get(&providers, i);
 		if (p != NULL) {

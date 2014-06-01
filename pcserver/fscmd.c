@@ -166,21 +166,11 @@ static int cmd_assign(const char *assign_str, int from_cmdline) {
 					provider_len = p - assign_str - 2;
 					provider_parameter = p + 1;
 
-					char *pname = mem_alloc_c(provider_len + 2, "provider_name");
+					char *pname = mem_alloc_c(provider_len + 1, "provider_name");
 					strncpy (pname, provider_name, provider_len+1);
 					pname[provider_len] = 0;
 
-//					pname[0] = NAMEINFO_UNDEF_DRIVE;
-
-//					if (isdigit(provider_name[0]) && provider_len == 1) {
-//						// just a digit as provider name
-//						pname[0] = provider_name[0] & 0x0f;
-//						pname[1] = 0;
-//					} else {
-//						strncpy (pname + 1, provider_name, provider_len+1);
-//						pname[provider_len + 1] = 0;
-//					}
-					log_debug("cmdline_assign '%d:%s' = '%s'\n", pname[0], pname+1, 
+					log_debug("cmdline_assign '%s' = '%s'\n", pname, 
 						provider_parameter);
 					rv = provider_assign(drive, pname, 
 						provider_parameter, from_cmdline);
@@ -466,7 +456,7 @@ const char *get_options(const char *name, int len) {
 
 int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *outlen, int cmd) {
 	
-	int rv = CBM_ERROR_FAULT;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
 	file_t *fp = NULL;
 	*outlen = 0;
@@ -504,7 +494,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 
 int cmd_open_dir(int tfd, const char *inname, int namelen) {
 
-	int rv = CBM_ERROR_FAULT;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
 	file_t *fp = NULL;
 
@@ -528,7 +518,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen) {
 }
 
 int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int isrmdir) {
-	int rv = CBM_ERROR_FAULT;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	int outdeleted = 0;
 	file_t *file = NULL;
 	file_t *dir = NULL;
@@ -588,7 +578,7 @@ int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int i
 
 int cmd_mkdir(const char *inname, int namelen) {
 
-	int rv = CBM_ERROR_FAULT;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *newdir = NULL;
 	const char *name = NULL;
 
@@ -618,7 +608,7 @@ int cmd_chdir(const char *inname, int namelen) {
 
 int cmd_move(const char *inname, int namelen) {
 
-	int err = CBM_ERROR_FAULT;
+	int err = CBM_ERROR_DRIVE_NOT_READY;
 
 	int todrive = inname[0];
 	const char *fromname = NULL;
@@ -671,7 +661,7 @@ int cmd_move(const char *inname, int namelen) {
 
 int cmd_copy(const char *inname, int namelen) {
 
-	int err = CBM_ERROR_FAULT;
+	int err = CBM_ERROR_DRIVE_NOT_READY;
 
 	int todrive = inname[0];
 	const char *fromname = NULL;
@@ -975,8 +965,12 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		name2 = strchr(name, 0) + 2;
-
+		name2 = strchr(name, 0) + 2; // skips the drive number of the name2
+		if ((name2 - name) > namelen) {
+			// name2 is behind packet - so it's invalid
+			// name2 being NULL means unassign
+			name2 = NULL;
+		}
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
 		rv = provider_assign(drive, name, name2, 0);
 		if (rv != 0) {
