@@ -469,7 +469,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 		log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
 			prov->name, name);
 		rv = handler_resolve_file(ep, &fp, name, options, cmd);
-		if (rv == CBM_ERROR_OK && fp->recordlen > 0) {
+		if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
 			int record = fp->recordlen;
 			outbuf[0] = record & 0xff;
 			outbuf[1] = (record >> 8) & 0xff;

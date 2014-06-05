@@ -612,7 +612,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		}
 	}
 
-	if (err != CBM_ERROR_OK) {
+	if (err != CBM_ERROR_OK && err != CBM_ERROR_OPEN_REL) {
 		// on error
 		if (file != NULL) {
 			file->handler->close(file, 0);
