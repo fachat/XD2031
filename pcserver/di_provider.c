@@ -441,6 +441,7 @@ static int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
    return CBM_ERROR_OK;
 }
 
+
 // ************
 // di_fseek_tsp
 // ************
@@ -459,6 +460,32 @@ static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uin
 static void di_fseek_pos(di_endpoint_t *diep, int pos)
 {
    di_fseek(diep->Ip,pos,SEEKFLAG_ABS);
+}
+
+// ************
+// check position - make sure cht/chs are valid
+// ************
+
+static int di_update_chx(di_endpoint_t *diep, File *f, int seek) {
+   if (f->chp > 253)
+   {
+      f->chp = 0;
+      if (f->next_track == 0) {
+		return READFLAG_EOF; // EOF
+      }
+      di_fseek_tsp(diep,f->next_track,f->next_sector,0);
+      f->cht = f->next_track;
+      f->chs = f->next_sector;
+      di_fread(&f->next_track ,1,1,diep->Ip);
+      di_fread(&f->next_sector,1,1,diep->Ip);
+      // log_debug("this block: (%d/%d)\n",f->cht,f->chs);
+      // log_debug("next block: (%d/%d)\n",f->next_track,f->next_sector);
+   } else {
+      if (seek) {
+   	di_fseek_tsp(diep,f->cht,f->chs,2+f->chp);
+      }
+   }
+   return 0;
 }
 
 // *************
@@ -514,6 +541,10 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
 
   log_debug("Closing file %p (%s) access mode = %d\n", f, f->file.filename, f->access_mode);
 
+  // make sure cht/chs are valid
+  if (!di_update_chx(diep, f, 0)) {
+    // not EOF, i.e. cht is not zero
+
   if (f->access_mode == FS_OPEN_WR ||
       f->access_mode == FS_OPEN_OW ||
       f->access_mode == FS_OPEN_AP)
@@ -549,6 +580,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   } else {
     log_debug("Closing read only file, no sync required.\n");
   }
+  } // end if update_chx
 
   	if (f->dospattern != NULL) {
 		// discard const
@@ -1122,6 +1154,8 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
 	// expand file to at least one record (which extends to the first block)
 	di_expand_rel(diep, file, 1);
    	log_debug("Setting maxrecord to %d\n", file->maxrecord);
+
+	file->file.recordlen = pars->recordlen;
    }
    di_write_slot(diep,&file->Slot);
 
@@ -1439,9 +1473,9 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 			entry->file.parent = fp;
 			entry->file.mode = FS_DIR_MOD_FIL;
-			entry->file.seekable = 1;
 			entry->file.filesize = entry->Slot.size * 254;
 			entry->file.type = entry->Slot.type & FS_DIR_ATTR_TYPEMASK;
+			entry->file.seekable = (entry->file.type == FS_DIR_TYPE_REL);
 			entry->file.attr = (entry->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^ FS_DIR_ATTR_SPLAT;
 			// convert to external charset
 			entry->file.filename = conv_from_alloc((const char*)entry->Slot.filename, &di_provider); 
@@ -1451,6 +1485,8 @@ static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 			if (!diep->Ip->writable) {
 				entry->file.attr |= FS_DIR_ATTR_LOCKED;
+			} else {
+				entry->file.writable = 1;
 			}
 
 			if ( handler_next((file_t*)entry, FS_OPEN_DR, file->dospattern, outpattern, &wrapfile)
@@ -1526,22 +1562,15 @@ static int di_read_dir_entry(di_endpoint_t *diep, File *file, char *retbuf, int 
 
 static int di_read_byte(di_endpoint_t *diep, File *f, char *retbuf)
 {
-   if (f->chp > 253)
-   {
-      f->chp = 0;
-      if (f->next_track == 0) return READFLAG_EOF; // EOF
-      di_fseek_tsp(diep,f->next_track,f->next_sector,0);
-      f->cht = f->next_track;
-      f->chs = f->next_sector;
-      di_fread(&f->next_track ,1,1,diep->Ip);
-      di_fread(&f->next_sector,1,1,diep->Ip);
-      // log_debug("this block: (%d/%d)\n",f->cht,f->chs);
-      // log_debug("next block: (%d/%d)\n",f->next_track,f->next_sector);
+   if (di_update_chx(diep, f, 0)) {
+	return READFLAG_EOF;
    }
    di_fread(retbuf,1,1,diep->Ip);
    ++f->chp;
    // log_debug("di_read_byte %2.2x\n",(uint8_t)*retbuf);
-   if (f->next_track == 0 && f->chp+1 >= f->next_sector) return READFLAG_EOF;
+   if (f->next_track == 0 && f->chp+1 >= f->next_sector) {
+	return READFLAG_EOF;
+   }
    return 0;
 }
 
@@ -1567,18 +1596,20 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 	}
 	if (t == 0) {
 		// only update link chain if we're not in the middle of a file
-      f->chp = 0;
-      oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
-      block = di_find_free_block(diep,f);
-      if (block < 0) return CBM_ERROR_DISK_FULL;
-      di_fseek_pos(diep,oldpos);
-      di_fwrite(&f->cht,1,1,diep->Ip);
-      di_fwrite(&f->chs,1,1,diep->Ip);
-      di_fseek_tsp(diep,f->cht,f->chs,0);
-      di_fwrite(&zero,1,1,diep->Ip); // new link track
-      di_fwrite(&zero,1,1,diep->Ip); // new link sector
-      ++f->Slot.size; // increment filesize
-      // log_debug("next block: (%d/%d)\n",f->cht,f->chs);
+      		f->chp = 0;
+      		oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
+      		block = di_find_free_block(diep,f);
+      		if (block < 0) {
+			return CBM_ERROR_DISK_FULL;
+		}
+      		di_fseek_pos(diep,oldpos);
+      		di_fwrite(&f->cht,1,1,diep->Ip);
+      		di_fwrite(&f->chs,1,1,diep->Ip);
+      		di_fseek_tsp(diep,f->cht,f->chs,0);
+      		di_fwrite(&zero,1,1,diep->Ip); // new link track
+      		di_fwrite(&zero,1,1,diep->Ip); // new link sector
+      		++f->Slot.size; // increment filesize
+      		// log_debug("next block: (%d/%d)\n",f->cht,f->chs);
 	} else {
 		// position at next (existing) block
       		f->chp = 0;
@@ -1603,8 +1634,9 @@ static int di_read_seq(di_endpoint_t *diep, File *file, char *retbuf, int len, i
 
    // we need to seek before the actual read, to make sure a parallel access does not
    // disturb the position. Only at the first byte of the file, cht/chs is invalid...
-   if (file->chp < 254) {
-   	di_fseek_tsp(diep,file->cht,file->chs,2+file->chp);
+   if (di_update_chx(diep, file, 1)) {
+	*eof = READFLAG_EOF;
+	return 0;
    }
 
    for (i=0 ; i < len ; ++i)
