@@ -1146,6 +1146,7 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    	file->Slot.start_sector = file->chs;
    	file->Slot.size = 1;
    } else {
+   	file->Slot.size = 0;
    	file->Slot.start_track  = 0;
    	file->Slot.start_sector = 0;
 
