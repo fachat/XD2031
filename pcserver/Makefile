@@ -12,6 +12,7 @@ AR=$(CROSS)ar
 PKG_CONFIG=$(CROSS)pkg-config
 
 FSSER_EXE=fsser
+FSSOCK_EXE=fssock
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
 #COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c
@@ -35,7 +36,7 @@ endif
 # fstcp builds a version that listens on a TCP/IP port - but there is not
 # device (yet) to use it
 #all: fstcp fsser
-all: fsser
+all: fsser fssock
 
 fsser: fsser.c $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
@@ -48,8 +49,12 @@ else
 	@echo 'fsser opens the serial device with user rights.'
 endif
 
+fssock: fssock.c $(COMMONC) $(COMMONH)
+	# Note: LIBS must be at the end for curl/libs to be found
+	${CC} ${CFLAGS} fssock.c $(COMMONC) -o $(FSSOCK_EXE) ${LIBS}
+
 clean:
-	rm -f fsser curltest
+	rm -f fsser fssock curltest
 
 
 run:
