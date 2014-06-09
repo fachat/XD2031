@@ -30,6 +30,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
@@ -43,6 +44,8 @@
 #include "types.h"
 #include "registry.h"
 #include "mem.h"
+
+#define	FS_SYNC		127
 
 void usage(int rv) {
         printf("Usage: fsser [options] run_directory\n"
@@ -101,6 +104,7 @@ int socket_open(const char *socketname) {
 
 typedef struct {
 	int		cmd;		// command for the line
+	int		num;
 	char 		*buffer;	// pointer to malloc'd line buffer
 	int		length;		// length of buffer (amount of data in it, NOT capacity)
 	registry_t	scriptlets;
@@ -162,7 +166,7 @@ static const struct {
 	const int outlen;
 	int (*exec)(line_t *line, scriptlet_t *scr);
 } scriptlets[] = {
-	{ "len", 6, 1, scr_len },
+	{ "len", 3, 1, scr_len },
 	{ NULL, 0, 0, NULL }
 };
 
@@ -215,7 +219,10 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 	int outp = 0;
 	const char *p = in;
 
+	log_debug("parse_buf(%s)\n", in);
+
 	do {
+
 		while (isspace(*p)) { p++; }
 
 		if (isxdigit(*p)) {
@@ -237,8 +244,9 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 					// found
 					break;
 				}
+				cmd++;
 			}
-			if (scriptlets[ch].name == NULL) {
+			if (scriptlets[cmd].name == NULL) {
 				log_error("Could not parse line scriptlet ('%s')!\n", p);
 				return -1;
 			}
@@ -250,16 +258,16 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 			reg_append(&line->scriptlets, scr);
 			outp += scriptlets[cmd].outlen;
 		} else {
-			log_error("Could not parse buffer at '%s'\n", p);
+			log_error("Could not parse buffer at line %d: '%s'\n", line->num, p);
 			return -1;
 		}
 
-	} while (*p);
+	} while (*p && ((*p) != '\n'));
 
 	*outbuf = mem_alloc_c(outp, "parse_buf_outbuf");
 	*outlen = outp;	
 	memcpy(*outbuf, buffer, outp);
-	return -1;
+	return 0;
 }
 
 static int parse_msg(line_t *line, const char *in, char **outbuf, int *outlen) {
@@ -279,19 +287,21 @@ static const struct {
 	{ "send", 4, parse_buf },
 	{ "message", 7, parse_msg },
 	{ "errmsg", 6, parse_msg },
+	{ "init", 4, NULL },
 	{ NULL, 0, NULL }
 };
 
-#define CMD_EXPECT	1
-#define CMD_SEND	2
-#define CMD_MESSAGE	3
-#define CMD_ERRMSG	4
+#define CMD_EXPECT	0
+#define CMD_SEND	1
+#define CMD_MESSAGE	2
+#define CMD_ERRMSG	3
+#define CMD_INIT	4
 
 
 /**
  * parse the null-terminated input buffer into a line_t struct
  */
-int parse_line(const char *buffer, int n, line_t **linep) {
+int parse_line(const char *buffer, int n, line_t **linep, int num) {
 	*linep = NULL;
 
 	int rv = 0;
@@ -299,11 +309,17 @@ int parse_line(const char *buffer, int n, line_t **linep) {
 	char *outbuf = NULL;
 	int outlen = 0;
 
+	log_debug("parse_line(%s)\n", buffer);
+
 	// leading space
 	while (isspace(*p)) { p++; }
 
 	if (*p == '#') {
 		// ignore, comment
+		return 0;
+	}
+
+	if (!(*p)) {
 		return 0;
 	}
 
@@ -319,8 +335,9 @@ int parse_line(const char *buffer, int n, line_t **linep) {
 			// found
 			break;
 		}
+		cmd++;
 	}
-	if (cmds[ch].name == NULL) {
+	if (cmds[cmd].name == NULL) {
 		log_error("Could not parse line %d ('%s') - did not find command!\n", n, buffer);
 		return -1;
 	}
@@ -330,11 +347,14 @@ int parse_line(const char *buffer, int n, line_t **linep) {
 	
 	line_t *line = mem_alloc(&line_type);
 	line->cmd = cmd;
+	line->num = num;
 
-	rv = cmds[cmd].parser(line, p, &outbuf, &outlen);
-	if (rv < 0) {
-		mem_free(line);
-		return -1;
+	if (cmds[cmd].parser != NULL) {
+		rv = cmds[cmd].parser(line, p, &outbuf, &outlen);
+		if (rv < 0) {
+			mem_free(line);
+			return -1;
+		}
 	}
 
 	line->buffer = outbuf;
@@ -349,6 +369,7 @@ registry_t* load_script(FILE *fp) {
 	registry_t *script = mem_alloc_c(sizeof(registry_t), "script");
 
 	int rv = 0;
+	int num = 1;
 	ssize_t len = 0;
 	size_t n;
 	char *lineptr = NULL;
@@ -358,7 +379,7 @@ registry_t* load_script(FILE *fp) {
 
 	while ( (len = getline(&lineptr, &n, fp)) != -1) {
 
-		rv = parse_line(lineptr, len, &line);
+		rv = parse_line(lineptr, len, &line, num);
 
 		if (rv < 0) {
 			break;
@@ -367,13 +388,14 @@ registry_t* load_script(FILE *fp) {
 			reg_append(script, line);
 		}
 		lineptr = NULL;
+		num++;
 	}
 
 	if (feof(fp)) {
 		return script;
 	}
 
-	log_errno("Error loading script\n");
+	log_errno("Error loading script");
 
 	reg_free(script, free_line);
 	mem_free(script);
@@ -382,15 +404,23 @@ registry_t* load_script(FILE *fp) {
 
 registry_t* load_script_from_file(const char *filename) {
 
-	FILE *fp = fopen(filename, "r");
+	FILE *fp = NULL;
+
+	if (!strcmp("-", filename)) {
+		fp = stdin;
+	} else {
+		fp = fopen(filename, "r");
+	}
 	if (fp == NULL) {
-		log_errno("Could not open script file '%s'\n", filename);
+		log_errno("Could not open script file '%s'", filename);
 		return NULL;
 	}
 
 	registry_t* script = load_script(fp);
 
-	fclose(fp);
+	if (fp != stdin) {
+		fclose(fp);
+	}
 
 	return script;
 }
@@ -399,7 +429,74 @@ registry_t* load_script_from_file(const char *filename) {
 
 void execute_script(int sockfd, registry_t *script) {
 
-	
+	// current "pc" pointer to script line
+	int curpos = 0;	
+	line_t *line = NULL;
+
+	int err = 0;
+	ssize_t size = 0;
+	ssize_t cnt = 0;
+	line_t *errmsg = NULL;
+	scriptlet_t *scr = NULL;
+	char *buffer = NULL;
+	char fs_sync = FS_SYNC;
+	char inbyte = 0;
+
+	while ( (err == 0) && (line = reg_get(script, curpos)) != NULL) {
+
+		switch (line->cmd) {
+		case CMD_MESSAGE:
+			log_info("> %s\n", line->buffer);
+			curpos++;
+			break;
+		case CMD_ERRMSG:
+			errmsg = line;
+			curpos++;
+			break;
+		case CMD_SEND:
+			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
+				scr->exec(line, scr);
+			}
+			size = write(sockfd, line->buffer, line->length);
+			if (size < 0) {
+				log_errno("Error writing to socket at line %d\n", curpos);
+				err = -1;
+			}
+			curpos++;
+			break;
+		case CMD_EXPECT:
+			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
+				scr->exec(line, scr);
+			}
+			buffer = mem_alloc_c(line->length, "expect_buffer");
+			size = 0;
+			cnt = 0;
+			while ((cnt = read(sockfd, buffer + size, line->length - size)) > 0) {
+				size += cnt;
+			}
+			if (cnt < 0) {
+				log_errno("Error reading from socket at line %d\n", curpos);
+				err = -1;
+			} else
+			if (memcmp(line->buffer, buffer, line->length)) {
+				if (errmsg != NULL) {
+					log_error("> %d: %s\n", curpos, errmsg->buffer);
+				} else {
+					log_error("Detected mismatch at line %d\n", curpos);
+				}
+			}
+			curpos++;
+		case CMD_INIT:
+			for (int i = 0; i < 128; i++) {
+				size = write(sockfd, &fs_sync, 1);
+			}
+			do {
+				size = read(sockfd, &inbyte, 1);
+			} while ((size == 1) && (inbyte == FS_SYNC));
+			curpos++;
+			break;
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -412,7 +509,7 @@ int main(int argc, char *argv[]) {
 
 
         int i=1;
-        while(i<argc && argv[i][0]=='-') {
+        while(i<argc && argv[i][0]=='-' && argv[i][1] != 0) {
           	switch(argv[i][1]) {
             	case '?':
                 	assert_single_char(argv[i]);
@@ -420,7 +517,7 @@ int main(int argc, char *argv[]) {
                 	break;
             	case 'd':
                 	assert_single_char(argv[i]);
-                	if (i < argc-2) {
+                	if (i < argc-1) {
                   		i++;
                   		device = argv[i];
                   		log_info("main: device = %s\n", device);
@@ -429,6 +526,9 @@ int main(int argc, char *argv[]) {
                   		exit(1);
                 	}
                 	break;
+		case 'D':
+			set_verbose();
+			break;
             	default:
                 	log_error("Unknown command line option %s\n", argv[i]);
                 	usage(1);

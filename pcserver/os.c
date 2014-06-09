@@ -139,7 +139,7 @@ int os_path_is_dir(const char *name) {
 	log_info("checking dir with name %s\n",name);
 
 	if (lstat(name, &sbuf) < 0) {
-		log_errno("Error stat'ing file\n");
+		log_errno("Error stat'ing dir");
 		isdir = 0;
 	} else {
 		if (!S_ISDIR(sbuf.st_mode)) {

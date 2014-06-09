@@ -212,12 +212,7 @@ int main(int argc, char *argv[]) {
 		fdesc = socket_open(device);
 		if (os_open_failed(fdesc)) {
 		  /* error */
-		  log_error("Could not open device %s, errno=%d (%s)\n",
-			device, os_errno(), os_strerror(os_errno()));
-		  exit(EXIT_RESPAWN_NEVER);
-		}
-		if(config_ser(fdesc)) {
-		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
+		  log_error("Could not open socket %s, errno=%d (%s)\n",
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
