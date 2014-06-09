@@ -60,8 +60,11 @@ void reg_append(registry_t *reg, void *ptr) {
 	log_debug("Adding entry %p to registry %pd (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
 
 	if (reg->numentries >= reg->capacity) {
-		int newcap = reg->capacity * 3 / 2;
-
+		int newcap = reg->capacity * 3. / 2.;
+		// just in case reg->capacity is 1 and 1.5 is rounded to 1
+		if (newcap <= reg->capacity) {
+			newcap = 2 * reg->capacity;
+		}
 		void **newp = mem_realloc_n(newcap, &entries_t, reg->entries);
 
 		if (newp == NULL) {
@@ -104,6 +107,23 @@ void reg_remove(registry_t *reg, void *ptr) {
 		}
 	}
 	log_error("Unable to remove entry %p from registry %p (%s)\n", ptr, reg, reg->name);
+}
+
+
+// clear out the registry, and free all allocated memory
+// Use the given function on each entry left if not NULL
+void reg_free(registry_t *reg, void (*entry_free)(registry_t *reg, void *entry)) {
+
+	if (entry_free != NULL) {
+		for (int i = reg->numentries-1; i >= 0; i--) {
+			if (reg->entries[i] != NULL) {
+				entry_free(reg, reg->entries[i]);
+			}
+		}		
+	}
+	mem_free(reg->entries);
+	reg->entries = NULL;
+	reg->numentries = 0;
 }
 
 

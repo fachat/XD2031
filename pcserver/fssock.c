@@ -90,7 +90,7 @@ int socket_open(const char *socketname) {
 		return -1;
 	}
 
-	bzero((char *) &server_addr, sizeof(server_addr));
+	memset((char *) &server_addr, 0, sizeof(server_addr));
    	server_addr.sun_family = AF_UNIX;
    	strcpy(server_addr.sun_path, socketname);
    	servlen=strlen(server_addr.sun_path) + 

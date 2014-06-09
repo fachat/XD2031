@@ -57,4 +57,8 @@ void reg_remove(registry_t *reg, void *ptr);
 // return the number of entries in the registry
 int reg_size(registry_t *reg);
 
+// clear out the registry, and free all allocated memory
+// Use the given function on each entry left if not NULL
+void reg_free(registry_t *reg, void (*entry_free)(registry_t *reg, void *entry));
+
 #endif
