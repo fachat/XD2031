@@ -29,6 +29,7 @@
  * commands, resp. receive replies and check whether they are correct
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -44,8 +45,8 @@
 #include "types.h"
 #include "registry.h"
 #include "mem.h"
+#include "wireformat.h"
 
-#define	FS_SYNC		127
 
 void usage(int rv) {
         printf("Usage: fsser [options] run_directory\n"
@@ -278,6 +279,18 @@ static int parse_msg(line_t *line, const char *in, char **outbuf, int *outlen) {
 	return 0;
 }
 
+static int parse_init(line_t *line, const char *in, char **outbuf, int *outlen) {
+	(void) in; // silence
+	(void) line; // silence
+	*outlen = 3;
+	*outbuf = mem_alloc_c(3, "init_reset_response_buffer");
+	(*outbuf)[0] = 0x16;
+	(*outbuf)[1] = 0x03;
+	(*outbuf)[2] = 0x7d;
+
+	return 0;
+}
+
 static const struct {
 	const char *name;
 	const int namelen;
@@ -287,7 +300,7 @@ static const struct {
 	{ "send", 4, parse_buf },
 	{ "message", 7, parse_msg },
 	{ "errmsg", 6, parse_msg },
-	{ "init", 4, NULL },
+	{ "init", 4, parse_init },
 	{ NULL, 0, NULL }
 };
 
@@ -427,7 +440,121 @@ registry_t* load_script_from_file(const char *filename) {
  
 // -----------------------------------------------------------------------
 
-void execute_script(int sockfd, registry_t *script) {
+
+void send_sync(int fd) {
+	log_debug("send sync\n");
+
+	char buf[128];
+
+	for (int i = sizeof(buf)-1; i >= 0; i--) {
+		buf[i] = FS_SYNC;
+	}
+
+	write(fd, buf, sizeof(buf));
+}
+
+
+char buf[8192];
+int wrp = 0;
+int rdp = 0;
+
+int read_packet(int fd, char *outbuf, int buflen) {
+
+        int plen, cmd;
+        int n;
+
+	wrp = 0;
+	rdp = 0;
+
+        for(;;) {
+
+              // as long as we have more than FSP_LEN bytes in the buffer
+              // i.e. 2 or more, we loop and process packets
+              // FSP_LEN is the position of the packet length
+              while(wrp-rdp > FSP_LEN) {
+                // first byte in packet is command, second is length of packet
+                plen = 255 & buf[rdp+FSP_LEN];  //  AND with 255 to fix sign
+                cmd = 255 & buf[rdp+FSP_CMD];   //  AND with 255 to fix sign
+                // full packet received already?
+                if (cmd == FS_SYNC) {
+                  // the byte is the FS_SYNC command
+		  // mirror it back
+log_debug("X(%d)", rdp);
+		  write(fd, buf+rdp+FSP_CMD, 1);
+                  rdp++;
+		} else 
+		if (plen < FSP_DATA) {
+                  // a packet is at least 3 bytes (when with zero data length)
+                  // so ignore byte and shift one in buffer position
+                  rdp++;
+                } else
+                if(wrp-rdp >= plen) {
+                  // did we already receive the full packet?
+                  // yes, then execute
+                  //printf("dispatch @rdp=%d [%02x %02x ... ]\n", rdp, buf[rdp], buf[rdp+1]);
+		  memcpy(outbuf, buf+rdp, plen);
+                  rdp +=plen;
+		  return plen;
+                } else {
+                  // no, then break out of the while, to read more data
+                  break;
+                }
+              }
+
+              n = read(fd, buf+wrp, 8192-wrp);
+log_debug("read->%d\n", n);
+	      if (n == 0) {
+		return 0;
+	      }
+
+              if(n < 0) {
+                log_error("testrunner: read error %d (%s)\n",
+                        errno,strerror(errno));
+                return -1;
+              }
+
+              wrp+=n;
+              if(rdp && (wrp==8192 || rdp==wrp)) {
+                if(rdp!=wrp) {
+                  memmove(buf, buf+rdp, wrp-rdp);
+                }
+                wrp -= rdp;
+                rdp = 0;
+              }
+
+            }
+}
+
+// -----------------------------------------------------------------------
+
+int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos) {
+	char buffer[8192];
+	ssize_t cnt = 0;
+	int err = 0;
+
+	cnt = read_packet(fd, buffer, sizeof(buffer));
+	if (cnt < 0) {
+		log_errno("Error reading from socket at line %d\n", curpos);
+		err = 2;
+	} else
+	if (memcmp(inbuffer, buffer, inbuflen)) {
+		log_error("Detected mismatch at line %d\n", curpos);
+		log_info("Expected: ");
+		log_hexdump(buffer, inbuflen, 0);
+		log_info("Found   : ");
+		log_hexdump(inbuffer, inbuflen, 0);
+		err = 1;
+	}
+	return err;
+}
+
+
+/**
+ * returns the status of the execution
+ *  0 = normal end
+ *  1 = expect mismatch
+ */
+int execute_script(int sockfd, registry_t *script) {
 
 	// current "pc" pointer to script line
 	int curpos = 0;	
@@ -435,12 +562,8 @@ void execute_script(int sockfd, registry_t *script) {
 
 	int err = 0;
 	ssize_t size = 0;
-	ssize_t cnt = 0;
 	line_t *errmsg = NULL;
 	scriptlet_t *scr = NULL;
-	char *buffer = NULL;
-	char fs_sync = FS_SYNC;
-	char inbyte = 0;
 
 	while ( (err == 0) && (line = reg_get(script, curpos)) != NULL) {
 
@@ -468,40 +591,37 @@ void execute_script(int sockfd, registry_t *script) {
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
 				scr->exec(line, scr);
 			}
-			buffer = mem_alloc_c(line->length, "expect_buffer");
-			size = 0;
-			cnt = 0;
-			while ((cnt = read(sockfd, buffer + size, line->length - size)) > 0) {
-				size += cnt;
-			}
-			if (cnt < 0) {
-				log_errno("Error reading from socket at line %d\n", curpos);
-				err = -1;
-			} else
-			if (memcmp(line->buffer, buffer, line->length)) {
+			err = compare_packet(sockfd, line->buffer, line->length, curpos);
+			if (err != 0) {
 				if (errmsg != NULL) {
-					log_error("> %d: %s\n", curpos, errmsg->buffer);
-				} else {
-					log_error("Detected mismatch at line %d\n", curpos);
+					log_error("> %d: %s -> %d\n", curpos, errmsg->buffer, err);
 				}
+				return err;
 			}
 			curpos++;
+			break;
 		case CMD_INIT:
-			for (int i = 0; i < 128; i++) {
-				size = write(sockfd, &fs_sync, 1);
+			send_sync(sockfd);
+			err = compare_packet(sockfd, line->buffer, line->length, curpos);
+			if (err != 0) {
+				if (errmsg != NULL) {
+					log_error("> %d: %s -> %d\n", curpos, errmsg->buffer, err);
+				}
+				return err;
 			}
-			do {
-				size = read(sockfd, &inbyte, 1);
-			} while ((size == 1) && (inbyte == FS_SYNC));
 			curpos++;
 			break;
 		}
 	}
+
+	return 0;
 }
 
 // -----------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
+
+	int rv = -1;
 
 	const char *device = NULL;
 	const char *scriptname = NULL;
@@ -554,11 +674,11 @@ int main(int argc, char *argv[]) {
 	
 		if (sockfd >= 0) {
 
-			execute_script(sockfd, script);
+			rv = execute_script(sockfd, script);
 		}
 	}
 
 	
-	return 0;
+	return rv;
 }
 
