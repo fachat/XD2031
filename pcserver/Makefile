@@ -63,7 +63,7 @@ run:
 runv:
 	# I'm lazy...
 	#MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample/sample1.d64 -A1:fs=../sample .
-	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample/sample1.d64 -A1:fs=../sample ." ./fsser
+	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../../xs1541/sample/sample1.d64 -A1:fs=../sample ." ./fsser
 
 runv2:
 	# I'm lazy...

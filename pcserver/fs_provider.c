@@ -121,8 +121,10 @@ typedef struct {
 	char			*curpath;			// malloc'd current path
 } fs_endpoint_t;
 
-// root endpoint (for resolves without parent)
+// root endpoint ("/" for resolves without parent from command line)
 static fs_endpoint_t *root_endpoint = NULL;
+// home endpoint (run directory for resolves without parent from server)
+static fs_endpoint_t *home_endpoint = NULL;
 
 
 static void endpoint_init(const type_t *t, void *obj) {
@@ -162,12 +164,9 @@ static type_t record_type = {
 static int expand_relfile(File *file, long cursize, long curpos);
 static size_t file_get_size(FILE *fp);
 
-static void fsp_init() {
 
-	// ---------------------
-	// init endpoint registry
-	reg_init(&endpoints, "fs endpoints", 10);
 
+static fs_endpoint_t *create_home_ep() {
 	// ---------------------
 	// root endpoint for non-parent resolves
 
@@ -182,7 +181,34 @@ static void fsp_init() {
 	fsep->curpath = mem_alloc_str(fsep->basepath);
 	fsep->base.is_assigned++;
 
-	root_endpoint = fsep;
+	return fsep;
+}
+
+static fs_endpoint_t *create_root_ep() {
+	// ---------------------
+	// root endpoint for non-parent resolves
+
+	// alloc and init a new endpoint struct
+	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
+
+	// malloc the root path "/"
+	fsep->basepath = strdup(dir_separator_string());
+
+	// copy into current path
+	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->base.is_assigned++;
+
+	return fsep;
+}
+
+static void fsp_init() {
+
+	// ---------------------
+	// init endpoint registry
+	reg_init(&endpoints, "fs endpoints", 10);
+
+	root_endpoint = create_root_ep();
+	home_endpoint = create_home_ep();
 
 	// ---------------------
 	// register provider
@@ -191,8 +217,19 @@ static void fsp_init() {
 }
 
 // default endpoint if none given in assign
-endpoint_t *fs_root_endpoint() {
-	return (endpoint_t*) root_endpoint;
+endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, int from_cmdline) {
+	if (from_cmdline) {
+		if (assign_path[0] == dir_separator_char()) {
+			// is root path
+			*new_assign_path = mem_alloc_str(assign_path);
+		} else {
+			*new_assign_path = malloc_path(home_endpoint->basepath, assign_path);
+		}
+		return (endpoint_t*) root_endpoint;
+	} else {
+		*new_assign_path = mem_alloc_str(assign_path);
+		return (endpoint_t*) home_endpoint;
+	}
 }
 
 static File *reserve_file(fs_endpoint_t *fsep) {
@@ -298,6 +335,8 @@ static void fsp_ep_free(endpoint_t *ep) {
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdline) {
 
+	char *new_assign_path = NULL;
+
 	log_debug("fsp_new(parent=%p, path=%s\n", parent, path);
 
 	if((path == NULL) || (*path == 0)) {
@@ -312,123 +351,17 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 
 	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
 
-	// when no parent given (i.e. path without base), and from client
-	// (i.e. not from command line / server stdin), use root endpoint as base
-	if (parentep == NULL && !from_cmdline) {
-		parentep = root_endpoint;
+	// when no parent given (i.e. path without base), use root endpoint as base
+	if (parentep == NULL) {
+		parentep = (endpoint_t*) fs_root_endpoint(path, &new_assign_path, from_cmdline);
 	}
 
-	const char *base_path = parentep == NULL ? NULL : parentep->curpath;
 
-	// check each path part whether it is a file or directory.
-	// if the path part is a directory, check next. If it is not (e.g. a file),
-	// then use this part later in a resolve.
-	char *fs_path = NULL;
-	char *resolve_path = NULL;
-	char *separator = NULL;
-	char *ospath = NULL;
-	fs_path = mem_alloc_str(path);
-	resolve_path = NULL;
-	// start condition
-	separator = fs_path;
-	while (separator != NULL) {
-		separator = strchr(separator, dir_separator_char());
-
-		if (separator != NULL) {
-			// separate strings
-			*separator = 0;
-		}
-
-		char *dirpath = malloc_path(base_path, (const char*)fs_path);
-		// mallocs a buffer and stores the canonical real path in it
-		// note: real malloc(), not mem_alloc_*
-		ospath = os_realpath(dirpath);
-		mem_free(dirpath);
-
-		if (!os_path_is_dir(ospath)) {
-			// cleanup
-			free(ospath);
-
-			log_debug("Nok, '%s' is a file or something else\n", fs_path);
-			// this part is a file, at least not a directory
-
-			if (separator != NULL) {
-				*separator = dir_separator_char();
-			}
-			if (resolve_path != NULL) {
-				*resolve_path = 0;
-				resolve_path++;
-			}
-			break;
-		}
-		// cleanup
-		free(ospath);
-
-		log_debug("Ok, '%s' is a directory\n", fs_path);
-
-		// ok, current fs_path is a directory
-
-		// remember last check
-		resolve_path = separator;
-
-		if (separator != NULL) {
-			// connect strings again
-			*separator = dir_separator_char();
-			// set next start
-			separator++;
-		}
-	}
-			
-	// here fs_path has the (malloc'd) base path (- not OS path!)
-	// resolve_path has the last separator (or NULL)
-	// separator is NULL when no separation
-
-	log_debug("Setting fs endpoint to '%s'\n", fs_path);
-
-	// alloc and init a new endpoint struct
-	fs_endpoint_t *fsep = mem_alloc(&endpoint_type);
-
-	char *dirpath = malloc_path(base_path, fs_path);
-
-	// mallocs a buffer and stores the canonical real path in it
-	fsep->basepath = os_realpath(dirpath);
-
-	mem_free(dirpath);
-
-	if (fsep->basepath == NULL) {
-		// some problem with dirpath - maybe does not exist...
-		log_errno("Could not resolve path for assign");
-		fsp_free((endpoint_t*)fsep);
-		mem_free(fs_path);
-		return NULL;
-	}
-
-	if (parentep != NULL) {
-		// if we have a parent, make sure we do not
-		// escape the parent container, i.e. basepath
-		if (strstr(fsep->basepath, parentep->basepath) != fsep->basepath) {
-			// the parent base path is not at the start of the new base path
-			// so we throw an error
-			log_error("ASSIGN broke out of container (%s), was trying %s\n",
-				parentep->basepath, fsep->basepath);
-			fsp_free((endpoint_t*)fsep);
-			mem_free(fs_path);
-
-			return NULL;
-		}
-	}
-
-	// copy into current path
-	fsep->curpath = mem_alloc_str(fsep->basepath);
-
-	// TODO: check whether we have a duplicate endpoint
-	log_info("FS provider set to real path '%s' - resolve path is '%s'\n", fsep->basepath, resolve_path);
-
-
-	if (resolve_path != NULL && strlen(resolve_path) > 0) {
+	if (new_assign_path != NULL) {
 		// use handler_resolve_file with resolve_path and wrap into endpoint
 		endpoint_t *assign_ep = NULL;
-		int err = handler_resolve_assign((endpoint_t*)fsep, &assign_ep, resolve_path);
+		int err = handler_resolve_assign((endpoint_t*)parentep, &assign_ep, new_assign_path);
+		mem_free(new_assign_path);
 		if (err != CBM_ERROR_OK || assign_ep == NULL) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
 			return NULL;
@@ -437,7 +370,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 		
 	}
 
-	return (endpoint_t*) fsep;
+	return (endpoint_t*) parentep;
 }
 
 static endpoint_t *fsp_tempep(char **name) {
@@ -462,7 +395,7 @@ static endpoint_t *fsp_tempep(char **name) {
 	}
 
 	endpoint_t *assign_ep = NULL;
-	int err = handler_resolve_assign((endpoint_t*)root_endpoint, &assign_ep, path);
+	int err = handler_resolve_assign((endpoint_t*)home_endpoint, &assign_ep, path);
 	if (err != CBM_ERROR_OK || assign_ep == NULL) {
 		log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
 		return NULL;

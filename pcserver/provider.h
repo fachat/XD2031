@@ -303,8 +303,11 @@ charconv_t provider_convfrom(provider_t *prov);
 // it can be identified by one of the providers - like a d64 file, or a ZIP file
 file_t *provider_wrap(file_t *file);
 
-// default endpoint if none given in assign
-endpoint_t *fs_root_endpoint();
+// default endpoint if none given in assign. Assign path may be adapted in case
+// we are from comand line and have relative path, in which case the root path as
+// prepended. *new_assign_path is mem_alloc'd and always set.
+endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, int from_cmdline);
+
 
 // convert string inline from provider to external charset
 static inline void conv_from(char *str, provider_t *prov) {

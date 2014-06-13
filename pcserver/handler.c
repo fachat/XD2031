@@ -102,7 +102,7 @@ void path_append(char **path, const char *filename) {
 			mem_append_str2(path, dir_separator_string(), filename);
 		}
 	}
-	log_error("path_append(%s) -> %s\n", filename, *path);
+	log_debug("path_append(%s) -> %s\n", filename, *path);
 }
 
 //----------------------------------------------------------------------------
