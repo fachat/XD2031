@@ -54,9 +54,12 @@ char *os_patch_dir_separator(char *path) {
 // Remove trailing line end characters
 char *drop_crlf(char *s) {
 	char *p = s + strlen(s) - 1;
-	while(p > s) {
-		if((*p == 10) || (*p == 13)) *p--=0; 	// remove CR or LF
-		else break;
+	while(p >= s) {
+		if((*p == 10) || (*p == 13)) {
+			*(p--)=0; 	// remove CR or LF
+		} else { 
+			break;
+		}
 	}
 	return s;
 }

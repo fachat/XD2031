@@ -310,6 +310,11 @@ static int cmd_process_stdin(void) {
 	fgets(buf, INBUF_SIZE, stdin);
 	drop_crlf(buf);
 
+	// ignore empty line
+	if (buf[0] == 0) {
+		return false;
+	}
+
 	log_debug("stdin: %s\n", buf);
 
 	// Q / QUIT
