@@ -136,49 +136,6 @@ static type_t line_type = {
 };
 
 
-// scriptlet (within a parsed line)
-
-typedef struct _scriptlet scriptlet_t;
-
-struct _scriptlet {
-	int 		type;
-	int		pos;
-	int		(*exec)(line_t *line, scriptlet_t *scr);
-};
-
-static void scriptlet_init(const type_t *type, void *obj) {
-	(void) type; // silence
-	scriptlet_t *scr = (scriptlet_t*) obj;
-
-	scr->pos = 0;
-}
-
-static type_t scriptlet_type = {
-	"line_scriptlet",
-	sizeof(scriptlet_t),
-	scriptlet_init
-};
-
-// parse a buffer line (i.e. a series of hex numbers and strings, possibly with scriplets)
-
-int scr_len(line_t *line, scriptlet_t *scr) {
-
-	line->buffer[scr->pos] = line->length;
-
-	return 0;
-}
-
-// scriplets
-static const struct {
-	const char *name;
-	const int namelen;
-	const int outlen;
-	int (*exec)(line_t *line, scriptlet_t *scr);
-} scriptlets[] = {
-	{ "len", 3, 1, scr_len },
-	{ NULL, 0, 0, NULL }
-};
-
 // parse a hex byte
 static const char* parse_hexbyte(const char *inp, char *out) {
 	
@@ -206,6 +163,86 @@ static const char* parse_hexbyte(const char *inp, char *out) {
 	*out = val;
 	return p;
 }
+
+// scriptlet (within a parsed line)
+
+typedef struct _scriptlet scriptlet_t;
+
+struct _scriptlet {
+	int 		type;
+	int		pos;
+	int		(*exec)(line_t *line, scriptlet_t *scr);
+};
+
+static void scriptlet_init(const type_t *type, void *obj) {
+	(void) type; // silence
+	scriptlet_t *scr = (scriptlet_t*) obj;
+
+	scr->pos = 0;
+}
+
+static type_t scriptlet_type = {
+	"line_scriptlet",
+	sizeof(scriptlet_t),
+	scriptlet_init
+};
+
+// parse a buffer line (i.e. a series of hex numbers and strings, possibly with scriplets)
+// return length of out bytes
+
+int scr_len(line_t *line, scriptlet_t *scr) {
+
+	line->buffer[scr->pos] = line->length;
+
+	return 1;
+}
+
+int scr_dsb(char *trg, int trglen, const char **parseptr) {
+
+	char len = 0;
+	char fill = 0;
+	const char *p = *parseptr;
+
+	while (isspace(*p)) { p++; }
+
+	p = parse_hexbyte(p, &len);
+	if (p != NULL) {	
+
+		while (isspace(*p)) { p++; }
+
+		if (*p == ',') {
+			// fillbyte is given
+			p++;
+
+			while (isspace(*p)) { p++; }
+
+			p = parse_hexbyte(p, &fill);
+		}
+	}
+	*parseptr = p;
+
+	if (trglen < len) {
+		log_error("dsb has fill %d larger than remaining buffer %d\n", len, trglen);
+		return -1;
+	}
+
+	memset(trg, fill, len);
+
+	return len;
+}
+
+// scriplets
+static const struct {
+	const char *name;
+	const int namelen;
+	const int outlen;
+	int (*parse)(char *trg, int trglen, const char **parseptr);
+	int (*exec)(line_t *line, scriptlet_t *scr);
+} scriptlets[] = {
+	{ "len", 3, 1, NULL, scr_len },
+	{ "dsb", 3, 0, scr_dsb, NULL },
+	{ NULL, 0, 0, NULL, NULL }
+};
 
 static void free_scriptlet(registry_t *reg, void *obj) {
 	(void) reg;	// silence
@@ -265,7 +302,15 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 			scr->pos = outp;
 			scr->exec = scriptlets[cmd].exec;
 			reg_append(&line->scriptlets, scr);
-			outp += scriptlets[cmd].outlen;
+			if (scriptlets[cmd].parse != NULL) {
+				int l = scriptlets[cmd].parse(buffer + outp, sizeof(buffer)-outp, &p);
+				if (l < 0) {
+					break;
+				}
+				outp += l;
+			} else {
+				outp += scriptlets[cmd].outlen;
+			}
 		} else
 		if ((*p) == 0) {
 			break;
@@ -597,7 +642,9 @@ int execute_script(int sockfd, registry_t *script) {
 			break;
 		case CMD_SEND:
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
-				scr->exec(line, scr);
+				if (scr->exec != NULL) {
+					scr->exec(line, scr);
+				}
 			}
 			log_info("Send  : ");
 			log_hexdump(line->buffer, line->length, 0);
@@ -611,7 +658,9 @@ int execute_script(int sockfd, registry_t *script) {
 			break;
 		case CMD_EXPECT:
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
-				scr->exec(line, scr);
+				if (scr->exec != NULL) {
+					scr->exec(line, scr);
+				}
 			}
 			err = compare_packet(sockfd, line->buffer, line->length, curpos);
 
