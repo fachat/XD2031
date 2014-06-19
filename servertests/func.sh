@@ -3,6 +3,7 @@
 VERBOSE=""
 RVERBOSE=""
 DEBUG=""
+RDEBUG=""
 CLEAN=0
 
 TMPDIR=`mktemp -d`
@@ -24,6 +25,14 @@ while test $# -gt 0; do
 		exit -1;
 	fi;
 	DEBUG="$DEBUG $2"
+	shift 2;
+	;;
+  -D)
+	if test $# -lt 2; then
+		echo "Option -D needs the break point name for gdb as parameter"
+		exit -1;
+	fi;
+	RDEBUG="$DEBUG $2"
 	shift 2;
 	;;
   -c)
@@ -124,7 +133,11 @@ for script in $TESTSCRIPTS; do
 		trap "kill -TERM $SERVERPID" INT
 
 		# start testrunner after server, so we get the return value in the script
-		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
+		if test "x$RDEBUG" != "x"; then
+			gdb -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
+		else
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
+		fi;
 
 		RESULT=$?
 		echo "result: $RESULT"
