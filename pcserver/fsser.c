@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
 
 	int res = cmd_loop(readfd, writefd);
 
-	if (device != NULL) {
+	if (device != NULL || socket != NULL) {
 		device_close(fdesc);
 	}
 
