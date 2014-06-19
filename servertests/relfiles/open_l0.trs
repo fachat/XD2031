@@ -3,7 +3,8 @@ init
 message testing OPEN of non-existing file with L not given
 
 # open REL file
-send 03 .len 02 00 52 45 4c 31 00 54 3d 4c 00
+send 03 .len 02 00 52 45 4c 32 00 54 3d 4c 00
+# file not found error
 expect 09 .len 02 32
 
 message testing OPEN of existing file with L not given
