@@ -1,5 +1,49 @@
 #!/bin/sh
 
+VERBOSE=""
+RVERBOSE=""
+DEBUG=""
+CLEAN=0
+
+while test $# -gt 0; do 
+  case $1 in 
+  -v)
+	VERBOSE="-v"
+	shift;
+	;;
+  -V)
+	RVERBOSE="-v"
+	shift;
+	;;
+  -d)
+	if test $# -lt 2; then
+		echo "Option -d needs the break point name for gdb as parameter"
+		exit -1;
+	fi;
+	DEBUG="$DEBUG $2"
+	shift 2;
+	;;
+  -C)
+	CLEAN=1
+	shift;
+	;;
+  *)
+	break;
+	;;
+  esac;
+done;
+
+
+# scripts to run
+if [ "x$*" = "x" ]; then
+        TESTSCRIPTS=$THISDIR/*.trs
+        TESTSCRIPTS=`basename -a $TESTSCRIPTS`;
+else
+        TESTSCRIPTS=$@;
+fi;
+
+echo "TESTSCRIPTS=$TESTSCRIPTS"
+
 
 ########################
 # tmp names
@@ -12,6 +56,8 @@ RUNNER="$THISDIR"/../testrunner
 SOCKETBASE="$TMPDIR"/socket
 
 SERVER="$THISDIR"/../../pcserver/fsser
+
+DEBUGFILE="$TMPDIR"/gdb.ex
 
 echo THISDIR=$THISDIR
 
@@ -40,27 +86,30 @@ for script in $TESTSCRIPTS; do
 
 	# start server
 
-	echo "Start server as:" $SERVER -s $SOCKET $SERVEROPTS $TMPDIR 
+	echo "Start server as:" $SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR 
 
-	$SERVER -s $SOCKET $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
-	SERVERPID=$!
+	if test "x$DEBUG" = "x"; then
+		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
+		SERVERPID=$!
+		trap "kill -TERM $SERVERPID" INT
 
-	trap "kill -TERM $SERVERPID" INT
+		# start testrunner after server, so we get the return value in the script
+		$RUNNER $RVERBOSE -w -d $SOCKET $script;
 
-	echo "SERVERPID=$SERVERPID"
+		RESULT=$?
+		echo "result: $RESULT"
+	else
+		# start testrunner before server and in background, so gdb can take console
+		$RUNNER $RVERBOSE -w -d $SOCKET $script &
+		SERVERPID=$!
+		trap "kill -TERM $SERVERPID" INT
 
-	echo "Waiting for socket $SOCKET"
-	while test ! -S $SOCKET; do sleep 1s; done;
-
-	########################
-	# start testrunner
-
-	#gdb -ex "break parse_buf" -ex "break execute_script" -ex "run -D -d $SOCKET $script" $RUNNER
-	#$RUNNER -D -d $SOCKET $script
-	$RUNNER -d $SOCKET $script
-
-	RESULT=$?
-	echo "result: $RESULT"
+		echo > $DEBUGFILE;
+		for i in $DEBUG; do
+			echo "break $i" >> $DEBUGFILE
+		done;
+		gdb -x $DEBUGFILE -ex "run -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
+	fi;
 
 	echo "Killing server (pid $SERVERPID)"
 	kill -TERM $SERVERPID

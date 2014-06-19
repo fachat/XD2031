@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <time.h>
 
 #include "log.h"
 #include "terminal.h"
@@ -69,10 +70,11 @@ void assert_single_char(char *argv) {
         }
 }
 
-int socket_open(const char *socketname) {
+int socket_open(const char *socketname, int dowait) {
 
    	int sockfd, servlen;
    	struct sockaddr_un  server_addr;
+	struct timespec sleeptime;
 
    	log_info("Connecting to socket %s\n", socketname);
 
@@ -85,10 +87,16 @@ int socket_open(const char *socketname) {
        		log_error("Creating socket");
 		return -1;
    	}
-   	if (connect(sockfd, (struct sockaddr *) 
+   	while (connect(sockfd, (struct sockaddr *) 
                          &server_addr, servlen) < 0) {
-       		log_error("Connecting");
-   		return -1;
+		if (errno != ENOENT || !dowait) {
+       			log_errno("Connecting: ");
+			log_error("Terminating\n");
+   			return -1;
+		}
+		sleeptime.tv_sec = 0;
+		sleeptime.tv_nsec = 100000000l;	// 100 ms
+		nanosleep(&sleeptime, NULL);
    	}
    	return sockfd;
 }
@@ -640,6 +648,10 @@ int main(int argc, char *argv[]) {
 
 	const char *device = NULL;
 	const char *scriptname = NULL;
+
+	// wait for socket if not there right away?
+	int dowait = 0;
+
 	terminal_init();
 
 
@@ -661,8 +673,11 @@ int main(int argc, char *argv[]) {
                   		exit(1);
                 	}
                 	break;
-		case 'D':
+		case 'v':
 			set_verbose();
+			break;
+		case 'w':
+			dowait = 1;
 			break;
             	default:
                 	log_error("Unknown command line option %s\n", argv[i]);
@@ -685,7 +700,7 @@ int main(int argc, char *argv[]) {
 
 	if (script != NULL) {
 
-		int sockfd = socket_open(device);
+		int sockfd = socket_open(device, dowait);
 	
 		if (sockfd >= 0) {
 
