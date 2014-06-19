@@ -23,8 +23,12 @@ while test $# -gt 0; do
 	DEBUG="$DEBUG $2"
 	shift 2;
 	;;
-  -C)
+  -c)
 	CLEAN=1
+	shift;
+	;;
+  -C)
+	CLEAN=2
 	shift;
 	;;
   *)
@@ -98,6 +102,12 @@ for script in $TESTSCRIPTS; do
 
 		RESULT=$?
 		echo "result: $RESULT"
+
+		if test $RESULT -ne 0; then
+			echo "Resetting clean to keep files!"
+			CLEAN=$(( $CLEAN - 1 ));
+			echo "CLEAN=$CLEAN"
+		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
 		$RUNNER $RVERBOSE -w -d $SOCKET $script &
@@ -111,7 +121,25 @@ for script in $TESTSCRIPTS; do
 		gdb -x $DEBUGFILE -ex "run -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
 	fi;
 
-	echo "Killing server (pid $SERVERPID)"
-	kill -TERM $SERVERPID
+	#echo "Killing server (pid $SERVERPID)"
+	#kill -TERM $SERVERPID
 
+	rm -f $SOCKET $DEBUGFILE;
+	if test $CLEAN -ge 1; then
+		rm -f $TMPDIR/$script;
+	fi;
 done;
+
+if test $CLEAN -ge 2; then
+
+	for script in $TESTSCRIPTS; do
+		rm -f $TMPDIR/$script.log
+	done;
+
+	for i in $TESTFILES; do
+		rm -f $TMPDIR/$i;
+	done;
+	
+	rmdir $TMPDIR
+fi;
+
