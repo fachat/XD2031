@@ -1,7 +1,7 @@
 
 /****************************************************************************
 
-    xd2031 filesystem server
+    xd2031 filesystem server - socket test runner
     Copyright (C) 2012,2014 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
@@ -258,6 +258,9 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 			scr->exec = scriptlets[cmd].exec;
 			reg_append(&line->scriptlets, scr);
 			outp += scriptlets[cmd].outlen;
+		} else
+		if ((*p) == 0) {
+			break;
 		} else {
 			log_error("Could not parse buffer at line %d: '%s'\n", line->num, p);
 			return -1;
@@ -392,6 +395,11 @@ registry_t* load_script(FILE *fp) {
 
 	while ( (len = getline(&lineptr, &n, fp)) != -1) {
 
+		// remove CR/LF at end of line
+		while (len > 0 && (lineptr[len-1] == '\n' || lineptr[len-1] == '\r')) {
+			lineptr[--len] = 0;
+		}
+
 		rv = parse_line(lineptr, len, &line, num);
 
 		if (rv < 0) {
@@ -479,7 +487,6 @@ int read_packet(int fd, char *outbuf, int buflen) {
                 if (cmd == FS_SYNC) {
                   // the byte is the FS_SYNC command
 		  // mirror it back
-log_debug("X(%d)", rdp);
 		  write(fd, buf+rdp+FSP_CMD, 1);
                   rdp++;
 		} else 
@@ -502,7 +509,7 @@ log_debug("X(%d)", rdp);
               }
 
               n = read(fd, buf+wrp, 8192-wrp);
-log_debug("read->%d\n", n);
+	      //log_debug("read->%d\n", n);
 	      if (n == 0) {
 		return 0;
 	      }
@@ -533,16 +540,20 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 	int err = 0;
 
 	cnt = read_packet(fd, buffer, sizeof(buffer));
+
+	log_info("Rxd   : ");
+	log_hexdump(buffer, cnt, 0);
+
 	if (cnt < 0) {
 		log_errno("Error reading from socket at line %d\n", curpos);
 		err = 2;
 	} else
 	if (memcmp(inbuffer, buffer, inbuflen)) {
 		log_error("Detected mismatch at line %d\n", curpos);
-		log_info("Expected: ");
-		log_hexdump(buffer, inbuflen, 0);
-		log_info("Found   : ");
+		log_warn("Expect: ");
 		log_hexdump(inbuffer, inbuflen, 0);
+		log_warn("Found : ");
+		log_hexdump(buffer, cnt, 0);
 		err = 1;
 	}
 	return err;
@@ -580,6 +591,9 @@ int execute_script(int sockfd, registry_t *script) {
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
 				scr->exec(line, scr);
 			}
+			log_info("Send  : ");
+			log_hexdump(line->buffer, line->length, 0);
+
 			size = write(sockfd, line->buffer, line->length);
 			if (size < 0) {
 				log_errno("Error writing to socket at line %d\n", curpos);
@@ -592,6 +606,7 @@ int execute_script(int sockfd, registry_t *script) {
 				scr->exec(line, scr);
 			}
 			err = compare_packet(sockfd, line->buffer, line->length, curpos);
+
 			if (err != 0) {
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", curpos, errmsg->buffer, err);
