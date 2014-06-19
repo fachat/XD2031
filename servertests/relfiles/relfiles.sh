@@ -9,7 +9,11 @@ TESTFILES="rel1.d64"
 SERVEROPTS="-v -A0:fs=rel1.d64"
 
 # scripts to run
-TESTSCRIPTS="open_l127.trs open_l0.trs"
+if [ "x$*" = "x" ]; then
+	TESTSCRIPTS="open_l127.trs open_l0.trs";
+else
+	TESTSCRIPTS=$@;
+fi;
 
 ########################
 # source and execute actual functionality
