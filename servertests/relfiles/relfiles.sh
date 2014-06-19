@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # call this script without params to run all *.trs tests in this directory
 # Providing a .trs file as parameter only runs the given test script
@@ -24,6 +24,9 @@ TESTFILES="rel1.d64"
 # server options
 SERVEROPTS="-v -A0:fs=rel1.d64"
 
+# tsr scripts from the directory to exclude
+#EXCLUDE="position1.trs"
+EXCLUDE=""
 
 ########################
 # source and execute actual functionality

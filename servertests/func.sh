@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 VERBOSE=""
 RVERBOSE=""
@@ -49,17 +49,35 @@ while test $# -gt 0; do
   esac;
 done;
 
+function contains() {
+	local j
+	for j in "${@:2}"; do test "$j" == "$1"  && return 0; done;
+	return 1;
+}
 
 # scripts to run
 if [ "x$*" = "x" ]; then
-        TESTSCRIPTS=$THISDIR/*.trs
-        TESTSCRIPTS=`basename -a $TESTSCRIPTS`;
+        SCRIPTS=$THISDIR/*.trs
+        SCRIPTS=`basename -a $SCRIPTS`;
+
+	TESTSCRIPTS=""
+
+	if test "x$EXCLUDE" != "x"; then
+		exarr=( $EXCLUDE )
+		scrarr=( $SCRIPTS )
+		for scr in "${scrarr[@]}"; do 
+			if ! contains "${scr}" "${exarr[@]}"; then
+				TESTSCRIPTS="$TESTSCRIPTS $scr";
+			fi
+		done;
+	else
+		TESTSCRIPTS="$SCRIPTS"
+	fi;
 else
-        TESTSCRIPTS=$@;
+        TESTSCRIPTS="$@";
 fi;
 
 echo "TESTSCRIPTS=$TESTSCRIPTS"
-
 
 ########################
 # tmp names
@@ -72,8 +90,6 @@ SERVER="$THISDIR"/../../pcserver/fsser
 
 DEBUGFILE="$TMPDIR"/gdb.ex
 
-echo THISDIR=$THISDIR
-
 ########################
 # prepare files
 #
@@ -81,6 +97,7 @@ echo THISDIR=$THISDIR
 for i in $TESTSCRIPTS; do
 	cp "$THISDIR/$i" "$TMPDIR"
 done;
+
 
 ########################
 # run scripts
