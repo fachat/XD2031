@@ -1250,10 +1250,11 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
       case FS_OPEN_WR: file_must_not_exist = true; break;
       case FS_OPEN_OW: break;
       case FS_OPEN_RW:
-	 if (pars->filetype != FS_DIR_TYPE_REL) {
-         	log_error("Read/Write currently only supported for REL files on disk images\n");
-		return CBM_ERROR_FAULT;
-	 }
+	 // we defer the test until after we find the file and check its file type
+	 //if (pars->filetype != FS_DIR_TYPE_REL) {
+         //	log_error("Read/Write currently only supported for REL files on disk images\n");
+	 //	return CBM_ERROR_FAULT;
+	 //}
 	 break;
       default:
          log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
@@ -1271,7 +1272,10 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
    	np  = di_match_slot(diep,&file->Slot,(const uint8_t*) filename, pars->filetype);
    	file->next_track  = file->Slot.start_track;
    	file->next_sector = file->Slot.start_sector;
-	if ((pars->filetype == FS_DIR_TYPE_REL) || ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+	if ((pars->filetype == FS_DIR_TYPE_REL) 
+		|| ((file->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) ) {
+		// open a relative file
+
 		pars->filetype = FS_DIR_TYPE_REL;
 		file->access_mode = FS_OPEN_RW;
 		// check record length
@@ -1291,6 +1295,13 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 					return CBM_ERROR_RECORD_NOT_PRESENT;
 				}
 			}
+		}
+		file->file.recordlen = pars->recordlen;
+	} else {
+		// not a rel file
+		if (di_cmd == FS_OPEN_RW) {
+         		log_error("Read/Write currently only supported for REL files on disk images\n");
+	 		return CBM_ERROR_FAULT;
 		}
 	}
    }
