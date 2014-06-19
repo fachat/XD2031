@@ -5,6 +5,9 @@ RVERBOSE=""
 DEBUG=""
 CLEAN=0
 
+TMPDIR=`mktemp -d`
+OWNDIR=1	
+
 while test $# -gt 0; do 
   case $1 in 
   -v)
@@ -31,6 +34,15 @@ while test $# -gt 0; do
 	CLEAN=2
 	shift;
 	;;
+  -R)	
+	if test $# -lt 2; then
+		echo "Option -R needs the directory path as parameter"
+		exit -1;
+	fi;
+	TMPDIR="$2"
+	OWNDIR=0
+	shift 2;
+	;;
   *)
 	break;
 	;;
@@ -53,11 +65,8 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 # tmp names
 #
 
-TMPDIR=`mktemp -d`
 
 RUNNER="$THISDIR"/../testrunner
-
-SOCKETBASE="$TMPDIR"/socket
 
 SERVER="$THISDIR"/../../pcserver/fsser
 
@@ -81,7 +90,7 @@ for script in $TESTSCRIPTS; do
 
 	echo "Run script $script"
 
-	SOCKET=${SOCKETBASE}_$script
+	SOCKET=socket_$script
 
 	# overwrite test files in each iteration, just in case
 	for i in $TESTFILES; do
@@ -98,7 +107,7 @@ for script in $TESTSCRIPTS; do
 		trap "kill -TERM $SERVERPID" INT
 
 		# start testrunner after server, so we get the return value in the script
-		$RUNNER $RVERBOSE -w -d $SOCKET $script;
+		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
 
 		RESULT=$?
 		echo "result: $RESULT"
@@ -110,7 +119,7 @@ for script in $TESTSCRIPTS; do
 		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
-		$RUNNER $RVERBOSE -w -d $SOCKET $script &
+		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -124,7 +133,7 @@ for script in $TESTSCRIPTS; do
 	#echo "Killing server (pid $SERVERPID)"
 	#kill -TERM $SERVERPID
 
-	rm -f $SOCKET $DEBUGFILE;
+	rm -f $TMPDIR/$SOCKET $DEBUGFILE;
 	if test $CLEAN -ge 1; then
 		rm -f $TMPDIR/$script;
 	fi;
@@ -139,7 +148,9 @@ if test $CLEAN -ge 2; then
 	for i in $TESTFILES; do
 		rm -f $TMPDIR/$i;
 	done;
-	
-	rmdir $TMPDIR
+
+	if test $OWNDIR -ge 1; then	
+		rmdir $TMPDIR
+	fi;
 fi;
 
