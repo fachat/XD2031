@@ -541,6 +541,12 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
 
   log_debug("Closing file %p (%s) access mode = %d\n", f, f->file.filename, f->access_mode);
 
+  if (f->access_mode == 0) {
+	// no access mode - not opened, so just return
+	// happens after handler gets an error from di_open
+	return CBM_ERROR_OK;
+  }
+
   // make sure cht/chs are valid
   if (!di_update_chx(diep, f, 0)) {
     // not EOF, i.e. cht is not zero
@@ -1241,7 +1247,7 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
    int file_required       = false;
    int file_must_not_exist = false;
 
-   file->access_mode = di_cmd;
+   file->access_mode = 0;
  
    switch(di_cmd)
    {
@@ -1277,7 +1283,6 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 		// open a relative file
 
 		pars->filetype = FS_DIR_TYPE_REL;
-		file->access_mode = FS_OPEN_RW;
 		// check record length
 		if (!np) {
 			// does not exist yet
@@ -1329,6 +1334,9 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
    if (di_cmd == FS_OPEN_AP) {
 	di_pos_append(diep,file);
    }
+   // flag for successful open
+   file->access_mode = di_cmd;
+
    return (pars->filetype == FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 

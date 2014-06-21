@@ -866,6 +866,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME));
 				}
 			    }
+		} else {
+			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
 		}
 		break;
 	case FS_WRITE:
@@ -881,6 +883,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				log_rv(rv);
 			}
 			retbuf[FSP_DATA] = rv;
+		} else {
+			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
 		}
 		break;
 	case FS_POSITION:
@@ -894,6 +898,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 				log_rv(rv);
 			}
 			retbuf[FSP_DATA] = rv;
+		} else {
+			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
 		}
 		break;
 	case FS_CLOSE:
@@ -903,6 +909,8 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 			fp->handler->close(fp, 1);
 			channel_free(tfd);
 			retbuf[FSP_DATA] = CBM_ERROR_OK;
+		} else {
+			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
 		}
 		break;
 

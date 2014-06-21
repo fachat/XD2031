@@ -528,8 +528,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	if (err == CBM_ERROR_OK) {
 	
 
-		log_info("File open gave %d\n", err);
-		log_debug("File open gave file=%p\n", file);
+		log_info("File resolve gave %d\n", err);
+		log_debug("File resolve gave file=%p\n", file);
 	
 		switch (type) {
 		case FS_OPEN_RD:
@@ -611,6 +611,8 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 			loose_parent(file, dir);
 		}
 	}
+
+	log_info("File open gave %d\n", err);
 
 	if (err != CBM_ERROR_OK && err != CBM_ERROR_OPEN_REL) {
 		// on error
