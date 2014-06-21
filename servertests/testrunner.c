@@ -606,7 +606,7 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 		//log_warn("Expect: ");
 		log_hexdump2(inbuffer, inbuflen, 0, "Expect: ");
 		//log_warn("Found : ");
-		log_hexdump2(buffer, cnt, 0, "Found : ");
+		//log_hexdump2(buffer, cnt, 0, "Found : ");
 		err = 1;
 	}
 	return err;
