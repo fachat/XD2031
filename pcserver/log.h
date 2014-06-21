@@ -40,6 +40,8 @@ void log_term(const char *msg);
 
 void log_hexdump(const char *p, int len, int petscii);
 
+void log_hexdump2(const char *p, int len, int petscii, const char *prefix);
+
 #define	log_entry(func)	log_debug("ENTER: %s\n", (func))
 #define	log_exit()	log_debug("EXIT")
 #define	log_exitr(rv)	log_debug("EXIT: rv=%d\n", (rv))

@@ -594,8 +594,8 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 
 	cnt = read_packet(fd, buffer, sizeof(buffer));
 
-	log_info("Rxd   : ");
-	log_hexdump(buffer, cnt, 0);
+	//log_info("Rxd   : ");
+	log_hexdump2(buffer, cnt, 0, "Rxd   : ");
 
 	if (cnt < 0) {
 		log_errno("Error reading from socket at line %d\n", curpos);
@@ -603,10 +603,10 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 	} else
 	if (memcmp(inbuffer, buffer, inbuflen)) {
 		log_error("Detected mismatch at line %d\n", curpos);
-		log_warn("Expect: ");
-		log_hexdump(inbuffer, inbuflen, 0);
-		log_warn("Found : ");
-		log_hexdump(buffer, cnt, 0);
+		//log_warn("Expect: ");
+		log_hexdump2(inbuffer, inbuflen, 0, "Expect: ");
+		//log_warn("Found : ");
+		log_hexdump2(buffer, cnt, 0, "Found : ");
 		err = 1;
 	}
 	return err;
@@ -646,8 +646,8 @@ int execute_script(int sockfd, registry_t *script) {
 					scr->exec(line, scr);
 				}
 			}
-			log_info("Send  : ");
-			log_hexdump(line->buffer, line->length, 0);
+			//log_info("Send  : ");
+			log_hexdump2(line->buffer, line->length, 0, "Send  : ");
 
 			size = write(sockfd, line->buffer, line->length);
 			if (size < 0) {

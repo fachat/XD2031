@@ -37,6 +37,8 @@
 
 static int verbose = 0;
 
+static const char* spaces = "                                                                  ";
+
 static enum lastlog {
 	lastlog_anything, lastlog_warn, lastlog_error, lastlog_info, lastlog_debug
 } newline = lastlog_anything;
@@ -163,17 +165,23 @@ void log_debug(const char *msg, ...) {
 	fflush(stdout);
 }
 
-void log_hexdump(const char *p, int len, int petscii) {
+
+void log_hexdump2(const char *p, int len, int petscii, const char *prefix) {
 	int tot = 0;
 	int line = 0;
 	int x = 0;
+	const char *spaceprefix = spaces + strlen(spaces) - strlen(prefix);
 
 	newline = lastlog_anything;
 	color_log_debug();
 
 	if(len) {
 		while(tot < len) {
-			printf("%04X  ", tot);
+			if (tot == 0) {
+				printf(LOG_PREFIX "%s%04X  ", prefix, tot);
+			} else {
+				printf(LOG_PREFIX "%s%04X  ", spaceprefix , tot);
+			}
 			for(x=0; x<16; x++) {
 				if(line+x < len) {
 					tot++;
@@ -198,7 +206,10 @@ void log_hexdump(const char *p, int len, int petscii) {
 	color_default();
 }
 
-static const char* spaces = "                                                                  ";
+void log_hexdump(const char *p, int len, int petscii) {
+	log_hexdump2(p, len, petscii, "");
+}
+
 
 const char* dump_indent(int n) {
 	return spaces + strlen(spaces) - n * 2;
