@@ -136,7 +136,31 @@ static type_t line_type = {
 };
 
 
-// parse a hex byte
+/** parse a string */
+static const char* parse_string(const char *inp, char *out, int *outlen) {
+
+	char delim = *inp;
+	const char *p = inp + 1;
+	int l = 0;
+
+	while ((*p) != 0 && (*p) != delim) {
+		out[l] = *p;
+		l++;
+		p++;
+	}
+
+	if ((*p) == 0) {
+		// string not delimited
+		log_error("String not delimited: %s\n", inp);
+		return NULL;
+	}
+	p++;
+	*outlen = l;
+	return p;
+}
+
+
+/** parse a hex byte */
 static const char* parse_hexbyte(const char *inp, char *out) {
 	
 	const char *p = inp;
@@ -274,6 +298,11 @@ static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 		if (isxdigit(*p)) {
 			p = parse_hexbyte(p, buffer+outp);
 			outp++;
+		} else
+		if ((*p) == '\"' || (*p) == '\'') {
+			int outlen = 0;
+			p = parse_string(p, buffer + outp, &outlen);
+			outp += outlen;
 		} else
 		if ((*p) == '.') {
 			// find scriptlet

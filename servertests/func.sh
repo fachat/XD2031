@@ -1,5 +1,22 @@
 #!/bin/bash
 
+function usage() {
+	echo "Running *.trs test runner scripts"
+	echo "  $0 [options] [trs_scripts]"
+	echo "Options:"
+	echo "       -v                      verbose server log"
+	echo "       -d <breakpoint>         run server with gdb and set given breakpoint. Can be "
+	echo "                               used multiple times"
+	echo "       -V                      verbose runner log"
+	echo "       -D <breakpoint>         run testrunner with gdb and set given breakpoint. Can be "
+	echo "                               used multiple times"
+	echo "       -c                      clean up non-log and non-data files from run directory"
+	echo "       -C                      clean up complete run directory"
+	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
+	echo "                               will not be rmdir'd on -C"
+	echo "       -? / -h                 show this help"
+}
+
 VERBOSE=""
 RVERBOSE=""
 DEBUG=""
@@ -11,6 +28,14 @@ OWNDIR=1
 
 while test $# -gt 0; do 
   case $1 in 
+  -?)
+	usage
+	exit 0;
+	;;
+  -h)
+	usage
+	exit 0;
+	;;
   -v)
 	VERBOSE="-v"
 	shift;
@@ -32,7 +57,7 @@ while test $# -gt 0; do
 		echo "Option -D needs the break point name for gdb as parameter"
 		exit -1;
 	fi;
-	RDEBUG="$DEBUG $2"
+	RDEBUG="$RDEBUG $2"
 	shift 2;
 	;;
   -c)
@@ -134,7 +159,11 @@ for script in $TESTSCRIPTS; do
 
 		# start testrunner after server, so we get the return value in the script
 		if test "x$RDEBUG" != "x"; then
-			gdb -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
+			echo > $DEBUGFILE;
+			for i in $RDEBUG; do
+				echo "break $i" >> $DEBUGFILE
+			done;
+			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
 		else
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
 		fi;
