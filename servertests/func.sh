@@ -17,6 +17,20 @@ function usage() {
 	echo "       -h                      show this help"
 }
 
+function hexdiff() {
+	if ! cmp -b "$1" "$2"; then
+		tmp1=`mktemp`
+		tmp2=`mktemp`
+
+		hexdump -C "$1" > $tmp1
+		hexdump -C "$2" > $tmp2
+
+		diff -u $tmp1 $tmp2
+
+		rm $tmp1 $tmp2
+	fi;
+}
+
 VERBOSE=""
 RVERBOSE=""
 DEBUG=""
@@ -192,6 +206,15 @@ for script in $TESTSCRIPTS; do
 
 	#echo "Killing server (pid $SERVERPID)"
 	#kill -TERM $SERVERPID
+
+	if test "x$COMPAREFILES" != "x"; then
+		testname=`basename $script .trs`
+		for i in $COMPAREFILES; do 
+			if test -f $THISDIR/${i}-${testname}; then
+				hexdiff $THISDIR/${i}-${testname} $TMPDIR/${i}
+			fi
+		done;
+	fi
 
 	rm -f $TMPDIR/$SOCKET $DEBUGFILE;
 	rm -f $TMPDIR/$script;

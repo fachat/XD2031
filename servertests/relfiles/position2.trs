@@ -3,6 +3,8 @@ init
 # reltest3.c: test A
 # create 14 records of len 20
 # position to record 24 in same block
+# then reopen expanded file, position into 
+# that expanded area and see if everything is ok
 
 message reltest3.c / A
 
@@ -45,5 +47,36 @@ expect 09 .len 02 00
 send 0c .len 02
 expect 09 .len 02 00 
 
+######################################
+message re-open file
+
+# open REL file (chan 2), expect 
+send 03 .len 02 00 52 45 4c 32 00 54 3d 4c 32 30 00
+expect 09 .len 02 02 14 00
+
+# send POSITION to record 0 (chan 2), expect OK
+send 19 .len 02 00 00
+expect 09 .len 02 00
+
+# read record (READ chan 2), expect record data
+# note: will be in multiple read chunks because of buffer length
+# restrictions
+send 07 .len 02
+expect 08 .len 02 ff .dsb 13,00 ff .dsb 13,00 ff .dsb 13,00 ff
+
+# until here all is part of the firmware OPEN
+# here starts the actual test payload
+
+message POSITION to record #13 - is in second block, but file exists, so OK
+send 19 .len 02 0d 00
+expect 09 .len 02 00
+
+message send data (EOF as end of record marker), to enlarge file
+send 0a .len 02 46 4f 4f 0d .dsb 10,0
+expect 09 .len 02 00
+
+# close file
+send 0c .len 02
+expect 09 .len 02 00 
 
 
