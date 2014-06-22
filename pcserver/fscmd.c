@@ -876,7 +876,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 		if (fp != NULL) {
 			if (cmd == FS_EOF) {
-				log_info("CLOSE_BY_EOF(%d)\n", tfd);
+				log_info("WRITE_WITH_EOF(%d)\n", tfd);
 			}
 			rv = fp->handler->writefile(fp, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
 			if (rv != 0) {
