@@ -1302,6 +1302,10 @@ static int di_open_file(File *file, openpars_t *pars, int di_cmd)
 			}
 		}
 		file->file.recordlen = pars->recordlen;
+	   	// store number of actual records in file; will store 0 on new file
+	   	file->maxrecord = di_rel_record_max(diep, file);
+   		log_debug("Setting maxrecord to %d\n", file->maxrecord);
+
 	} else {
 		// not a rel file
 		if (di_cmd == FS_OPEN_RW) {
@@ -2383,7 +2387,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 static int di_expand_rel(di_endpoint_t *diep, File *f, int recordno) {
 
-	log_debug("di_expand_rel f=%p to recordno=%d\n", f, recordno);
+	log_debug("di_expand_rel f=%p to recordno=%d (f->maxrecord=%d)\n", f, recordno, f->maxrecord);
 
 	int err = CBM_ERROR_OK;
 
