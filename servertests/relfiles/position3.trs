@@ -44,7 +44,7 @@ send 19 .len 02 19 00
 expect 09 .len 02 32
 
 # each write sends an own position
-message POSITION to record #15
+message POSITION to record #25
 send 19 .len 02 19 00
 expect 09 .len 02 32
 
