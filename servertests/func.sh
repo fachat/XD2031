@@ -194,12 +194,11 @@ for script in $TESTSCRIPTS; do
 	#kill -TERM $SERVERPID
 
 	rm -f $TMPDIR/$SOCKET $DEBUGFILE;
-	if test $CLEAN -ge 1; then
-		rm -f $TMPDIR/$script;
-	fi;
+	rm -f $TMPDIR/$script;
 done;
 
 if test $CLEAN -ge 2; then
+	echo "Cleaning up directory $TMPDIR"
 
 	for script in $TESTSCRIPTS; do
 		rm -f $TMPDIR/$script.log
@@ -212,5 +211,7 @@ if test $CLEAN -ge 2; then
 	if test $OWNDIR -ge 1; then	
 		rmdir $TMPDIR
 	fi;
+else 
+	echo "Find debug info in $TMPDIR"
 fi;
 
