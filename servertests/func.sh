@@ -14,7 +14,7 @@ function usage() {
 	echo "       -C                      clean up complete run directory"
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
-	echo "       -? / -h                 show this help"
+	echo "       -h                      show this help"
 }
 
 VERBOSE=""
@@ -28,10 +28,6 @@ OWNDIR=1
 
 while test $# -gt 0; do 
   case $1 in 
-  -?)
-	usage
-	exit 0;
-	;;
   -h)
 	usage
 	exit 0;
@@ -76,6 +72,11 @@ while test $# -gt 0; do
 	TMPDIR="$2"
 	OWNDIR=0
 	shift 2;
+	;;
+  -?)
+	echo "Unknown option $1"
+	usage
+	exit 1;
 	;;
   *)
 	break;
