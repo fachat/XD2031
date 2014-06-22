@@ -1796,6 +1796,8 @@ static int di_scratch(file_t *file) {
 
 static int di_move(file_t *fromfile, file_t *todir, const char *toname) {
 
+	(void) todir;	// silence
+
 	di_endpoint_t *diep = (di_endpoint_t*) fromfile->endpoint;
 
 	slot_t *slot;
@@ -2531,6 +2533,7 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 // TODO: detect loop / break after max len
 static int di_seek(file_t *file, long position, int flag) {
 
+
 	if (flag != SEEKFLAG_ABS) {
 		// unsupported
 		return CBM_ERROR_FAULT;
@@ -2538,6 +2541,14 @@ static int di_seek(file_t *file, long position, int flag) {
 
 	File *f = (File*) file;
 	di_endpoint_t *diep = (di_endpoint_t*)file->endpoint;
+
+	f->lastpos = 0;
+	if (f->file.recordlen > 0) {
+		// store position value for di_position / di_expand_rel
+		// because DOS returns RECORD NOT PRESENT, but subsequent
+		// writes WILL use this value and expand the file and write there.
+		f->lastpos = (position / f->file.recordlen) + 1;
+	}
 
 	uint8_t next_t = f->Slot.start_track;
 	uint8_t next_s = f->Slot.start_sector;
@@ -2561,9 +2572,17 @@ static int di_seek(file_t *file, long position, int flag) {
 
 	// when position >= 254 we passed to the end of the file
 	if (position >= 254) {
-		// TODO seek behind end of file
-		// for now just fault
-		return CBM_ERROR_FAULT;
+		// seek behind end of file - default for POSITION
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
+	if ((f->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) {
+		// when relative file, make sure the full record is within the
+		// block, or there is a following block
+		if (position + f->file.recordlen >= 254) {
+			if (f->next_track == 0) {
+				return CBM_ERROR_RECORD_NOT_PRESENT;
+			}
+		}
 	}
 
 	f->chp = position & 0xff;
