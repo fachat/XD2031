@@ -84,6 +84,7 @@
 
 */
 
+#ifdef HAS_EEPROM
 
 // Uncomment to enable debug output
 //#define DEBUG_NV
@@ -510,3 +511,5 @@ bool nv_restore_common_config (void) {
 	common_rtc.name = nv_common_name;
 	return nv_restore_config(&common_rtc);
 }
+
+#endif // HAS_EEPROM

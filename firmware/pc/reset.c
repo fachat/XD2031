@@ -22,35 +22,8 @@
 
 **************************************************************************/
 
-/* This file contains arch-specific stuff included by system.h */
+#include <stdlib.h>
 
-#include <avr/interrupt.h>
-
-
-static inline void enable_interrupts (void) __attribute__((always_inline));
-static inline void disable_interrupts (void) __attribute__((always_inline));
-
-static inline void enable_interrupts (void) 
-{
-  sei();
+void reset_mcu(void) {
+	exit(-1);
 }
-
-static inline void disable_interrupts (void) 
-{
-  cli();
-}
-
-static inline int32_t FreqKHz() {
-	return (int32_t)(F_CPU/1000);
-}
-
-
-//--------------------------
-// CALC FREE RAM SPACE
-static inline uint16_t BytesFree()
-{
-        extern unsigned char __heap_start;
-        uint16_t momentan_frei = SP - (uint16_t) &__heap_start;
-        return momentan_frei;
-}
-

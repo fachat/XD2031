@@ -68,6 +68,38 @@ static inline void* rom_read_pointer(void *p) {
 
 #endif
 
+// ---------- PC socket server ------------------------------
+#ifdef PC
+
+#include <string.h>
+#include <inttypes.h>
+
+#define	IN_ROM		
+#define	IN_ROM_STR(s)	(s)
+
+static inline size_t rom_strlen(const char *s) {
+	return strlen(s);
+}
+
+static inline void* rom_memcpy(void *dest, const void *src, size_t n) {
+	return memcpy(dest, src, n);
+}
+
+static inline char* rom_strcat(char *dest, const char *src) {
+	return strcat(dest, src);
+}
+
+#define rom_sprintf(s, f, ...) sprintf(s, f, __VA_ARGS__)
+#define	rom_vsprintf(s, f, ...)	vsprintf(s, f, __VA_ARGS__)
+#define	rom_vsnprintf(s, n, f, ...) vsnprintf(s, n, f, __VA_ARGS__)
+#define	rom_read_byte(addr)	(*(addr))
+#define rom_read_pointer(addr)	(*(addr))
+
+
+int rom_snprintf(char *buf, int buflen, const char *format, ...);
+
+#endif // PC
+
 // ---------- Atmel AVR 8 bit microcontroller ------------------------------
 #ifdef __AVR__
 #include <avr/pgmspace.h>

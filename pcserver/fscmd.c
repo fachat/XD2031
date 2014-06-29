@@ -395,7 +395,7 @@ int cmd_loop(serial_port_t readfd, serial_port_t writefd) {
 #ifdef DEBUG_READ
 	      if(n) {
 		log_debug("read %d bytes (wrp=%d, rdp=%d: ",n,wrp,rdp);
-		log_hexdump(buf[wrp], n, 0);
+		log_hexdump(buf+wrp, n, 0);
               }
 #endif
 
