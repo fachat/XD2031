@@ -124,10 +124,11 @@ int main(int argc, char *argv[])
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
 
-	device_setup(argc, argv);
 
 #ifdef __AVR__
 	stdout = &term_stdout;          // redirect stdout
+#else
+	device_setup(argc, argv);
 #endif
 
 	// server communication
