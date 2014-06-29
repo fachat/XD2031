@@ -186,8 +186,9 @@ for script in $TESTSCRIPTS; do
 		trap "kill -TERM $SERVERPID" INT
 
 		# start firmware
+		echo "Starting firmware as: $FIRMWARE -S $TMPDIR/$SOCKET"
 		#gdb -ex "break socket_open" -ex "run -S $TMPDIR/$SOCKET" $FIRMWARE
-		$FIRMWARE -S $TMPDIR/$SOCKET
+		$FIRMWARE -S $TMPDIR/$SOCKET 
 
 #		# start testrunner after server, so we get the return value in the script
 #		if test "x$RDEBUG" != "x"; then
@@ -219,8 +220,6 @@ for script in $TESTSCRIPTS; do
 		for i in $DEBUG; do
 			echo "break $i" >> $DEBUGFILE
 		done;
-		echo "running with debug:"
-		cat $DEBUGFILE
 		gdb -x $DEBUGFILE -ex "run -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
 	fi;
 
