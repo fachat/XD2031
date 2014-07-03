@@ -8,8 +8,7 @@ atn 28 6f
 send 50 02 0e 00
 atn 3f
 atn 48 6f
-expect 35 30 2c 20 52 45 43 4f 52 44 20 4e 4f 54 20 50 52
-recv 45 53 45 4e 54 2c 30 30 2c 30 30 0d
+recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 28 62
 send 46 4f 4f 0d
@@ -34,8 +33,7 @@ atn 28 6f
 send 50 02 0e 00
 atn 3f
 atn 48 6f
-expect 35 30 2c 20 52 45 43 4f 52 44 20 4e 4f 54 20 50 52
-recv 45 53 45 4e 54 2c 30 30 2c 30 30 0d
+recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 28 62
 send 46 4f 4f 0d
@@ -47,8 +45,7 @@ atn 28 6f
 send 50 02 1a 00
 atn 3f
 atn 48 6f
-expect 35 30 2c 20 52 45 43 4f 52 44 20 4e 4f 54 20 50 52
-recv 45 53 45 4e 54 2c 30 30 2c 30 30 0d
+recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 28 62
 send 31 32 33 34 35 0d
@@ -166,7 +163,7 @@ atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 48 62
-recv 41 53 44 46 47 48 4a 4b 4c 4d 0d
+recv 4e 4f 20 50 4f 49 4e 54 45 52 0d
 atn 5f
 atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
@@ -185,7 +182,7 @@ atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 48 62
-recv 41 53 44 46 47 48 4a 4b 4c 4d 0d
+recv 4e 4f 20 50 4f 49 4e 54 45 52 0d
 atn 5f
 atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
@@ -204,7 +201,7 @@ atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 48 62
-recv 51 57 45 52 54 5a 55 49 4f 50
+recv 4e 4f 20 50 4f 49 4e 54 45 52 0d
 atn 5f
 atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
@@ -223,7 +220,7 @@ atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 48 62
-recv 00 31 32 33 34 35 36 37 38 39 30
+recv 52 0d
 atn 5f
 atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
@@ -236,7 +233,7 @@ atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
 atn 5f
 atn 48 62
-recv ff
+recv 4e
 atn 5f
 atn 48 6f
 recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
