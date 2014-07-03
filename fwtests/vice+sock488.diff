@@ -1,0 +1,322 @@
+Only in vice-2.4-jamexit+sock488/: log
+diff -ur vice-2.4+jamexit/po/vice.pot vice-2.4-jamexit+sock488/po/vice.pot
+--- vice-2.4+jamexit/po/vice.pot	2014-06-30 21:44:37.161177842 +0200
++++ vice-2.4-jamexit+sock488/po/vice.pot	2014-07-02 22:49:36.975609163 +0200
+@@ -8,7 +8,7 @@
+ msgstr ""
+ "Project-Id-Version: PACKAGE VERSION\n"
+ "Report-Msgid-Bugs-To: \n"
+-"POT-Creation-Date: 2014-06-30 21:44+0200\n"
++"POT-Creation-Date: 2014-07-02 22:49+0200\n"
+ "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+ "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+ "Language-Team: LANGUAGE <LL@li.org>\n"
+Only in vice-2.4-jamexit+sock488/: rel.d64
+Only in vice-2.4-jamexit+sock488/: sock488.trace
+diff -ur vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+sock488/src/parallel/parallel.c
+--- vice-2.4+jamexit/src/parallel/parallel.c	2012-03-19 22:01:46.000000000 +0100
++++ vice-2.4-jamexit+sock488/src/parallel/parallel.c	2014-07-02 23:11:44.539739842 +0200
+@@ -54,7 +54,7 @@
+ #include "types.h"
+ 
+ 
+-int parallel_debug = 0;
++int parallel_debug = 1;
+ static int parallel_emu = 1;
+ 
+ void parallel_bus_enable(int enable)
+@@ -161,9 +161,10 @@
+ 
+ static int state = WaitATN;
+ 
+-#define Go(a)           state=(a);return
++#define Go(a)           state=(a);parallel_debug?log_warning(LOG_DEFAULT,"Go->%d\n",(a)):0;return
+ #define isListening()   ((par_status&0xf000)==0x2000)
+ #define isTalking()     ((par_status&0xf000)==0x4000)
++#define isMonitoring()  ((par_status&0xf000)==0x8000)
+ 
+ #ifdef PARALLEL_DEBUG_VERBOSE
+ static void DoTrans(int tr) {
+@@ -228,11 +229,11 @@
+         ResetBus();
+         Go(WaitATN);
+     } else {
+-        if (isListening()) {
++        if (isListening() || isMonitoring()) {
+             Go(In1);
+         } else {
+             if (isTalking()) {
+-                ResetBus();
++               	ResetBus();
+                 if (!parallel_ndac) {  /* old pet... */
+                     Go(OldPet);
+                 } else {
+@@ -240,12 +241,12 @@
+                     return;
+                 }
+             } else {
+-                if (parallel_debug)
+-                    log_warning(LOG_DEFAULT,
+-                                "IEEE488: Ouch, something weird happened: %s got %s",
++               	if (parallel_debug)
++               		log_warning(LOG_DEFAULT,
++                               "IEEE488: Ouch, something weird happened: %s got %s",
+                                 State[In1].name, Trans[tr]);
+-                ResetBus();
+-                Go(WaitATN);
++               	ResetBus();
++               	Go(WaitATN);
+             }
+         }
+     }
+@@ -254,15 +255,22 @@
+ static void In1_davlo(int tr)
+ {
+     static BYTE b;
++    static BYTE eoi;
+ 
+     parallel_emu_set_nrfd(1);
+     b = parallel_bus;
++    eoi = parallel_eoi;
+     parallel_emu_set_ndac(0);
+ 
+     if (parallel_atn) {
+         par_status = parallel_trap_attention(b ^ 0xff);
+     } else {
+-        par_status = parallel_trap_sendbyte((BYTE)(b ^ 0xff));
++    	if (isMonitoring()) {
++		b ^= 0xff;
++        	par_status = parallel_trap_receivebyte(&b, eoi ? -2 : -1);
++    	} else {
++        	par_status = parallel_trap_sendbyte((BYTE)(b ^ 0xff));
++	}
+     }
+     if (parallel_debug)
+         log_warning(LOG_DEFAULT,
+@@ -341,17 +349,20 @@
+ {
+     static BYTE b;
+ 
+-    par_status = parallel_trap_receivebyte(&b, 1);
+-    parallel_emu_set_bus((BYTE)(b ^ 0xff));
++    if (isTalking()) {
++	    // alternative is Monitoring
++	    par_status = parallel_trap_receivebyte(&b, 1);
++	    parallel_emu_set_bus((BYTE)(b ^ 0xff));
++
++	    if (par_status & 0x40) {
++	        parallel_emu_set_eoi(1);
++	    } else {
++	        parallel_emu_set_eoi(0);
++	    }
+ 
+-    if (par_status & 0x40) {
+-        parallel_emu_set_eoi(1);
+-    } else {
+-        parallel_emu_set_eoi(0);
++	    parallel_emu_set_dav(1);
+     }
+ 
+-    parallel_emu_set_dav(1);
+-
+     Go(Out1a);
+ }
+ 
+diff -ur vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamexit+sock488/src/parallel/parallel-trap.c
+--- vice-2.4+jamexit/src/parallel/parallel-trap.c	2010-12-13 15:14:20.000000000 +0100
++++ vice-2.4-jamexit+sock488/src/parallel/parallel-trap.c	2014-07-02 22:56:40.099826147 +0200
+@@ -42,6 +42,8 @@
+ #define SERIAL_NAMELENGTH 255
+ 
+ 
++
++
+ /* On which channel did listen happen to?  */
+ static BYTE TrapDevice;
+ static BYTE TrapSecondary;
+@@ -58,6 +60,128 @@
+ static BYTE SerialBuffer[SERIAL_NAMELENGTH + 1];
+ static int SerialPtr;
+ 
++// --------------------------------------------------------------------------------
++
++#define S488_ATN        0x01            /* M->D send a byte with ATN */
++#define S488_SEND       0x02            /* M->D send a byte to device */
++#define S488_REQ        0x03            /* M->D request a byte from device */
++#define S488_OFFER      0x04            /* D->M offer a byte for a receive */
++
++#define S488_ACK        0x40            /* ACKnowledge a byte to receiver as part of a REQ */
++#define S488_EOF        0x80            /* when set on SEND or OFFER, transfer with EOF */
++
++static FILE *trace488File = NULL;
++
++#define	TR488_ATN	1
++#define	TR488_SEND	2
++#define	TR488_RECV	3
++
++static int trace488State = 0;
++
++static int trace488Buflen = 0;
++static char trace488Buf[4096];
++
++static FILE *getTraceFile(void) {
++	
++	if (trace488File == NULL) {
++		
++		trace488File = fopen("sock488.trace", "w");
++
++		if (trace488File == NULL) {
++			log_warning(parallel_log, "Could not open sock488 trace file\n");
++		}
++	}
++
++	return trace488File;
++}
++
++
++static void s488_close(int doEof) {
++
++	if (trace488Buflen > 0) {
++		switch (trace488State) {
++		case TR488_ATN:
++			fprintf(getTraceFile(), "atn");
++			break;
++		case TR488_SEND:
++			if (doEof) {
++				fprintf(getTraceFile(), "send");
++			} else {
++				fprintf(getTraceFile(), "sendnoeof");
++			}
++			break;
++		case TR488_RECV:
++			if (doEof) {
++				fprintf(getTraceFile(), "recv");
++			} else {
++				fprintf(getTraceFile(), "expect");
++			}
++			break;
++		}	
++		int i;
++		for(i = 0; i < trace488Buflen; i++) {
++			fprintf(getTraceFile(), " %02x", 255&trace488Buf[i]);
++		}
++		fprintf(getTraceFile(), "\n");
++		fflush(getTraceFile());
++	}
++
++	trace488Buflen = 0;
++	trace488State = 0;
++}
++
++static void s488_attention(int b) {
++
++	//log_warning(parallel_log, "s488_attention(%x)", b);
++
++	if (trace488State != 0 && trace488State != TR488_ATN) {
++		s488_close(1);
++	}
++
++	trace488State = TR488_ATN;
++	trace488Buf[trace488Buflen++] = b;
++
++	if (b == 0x5f || b == 0x3f) {
++		s488_close(0);
++	}
++}
++
++static void s488_send(BYTE b) {
++
++	//log_warning(parallel_log, "s488_send(%x)", b);
++
++	if (trace488State != 0 && trace488State != TR488_SEND) {
++		s488_close(0);
++	}
++
++	trace488State = TR488_SEND;
++	trace488Buf[trace488Buflen++] = b;
++}
++
++static void s488_recv(BYTE b, int fake, int iseof) {
++
++	//log_warning(parallel_log, "s488_recv(%x, fake=%d, iseof=%d)", b, fake, iseof);
++
++	if (trace488State != 0 && trace488State != TR488_RECV) {
++		s488_close(0);
++	}
++
++	trace488State = TR488_RECV;
++	trace488Buf[trace488Buflen] = b;
++
++	if (!fake) {
++		trace488Buflen++;
++	}
++	if (iseof && !fake) {
++		s488_close(1);
++	} else
++	if (trace488Buflen > 16) {
++		s488_close(0);
++	}
++}
++
++// --------------------------------------------------------------------------------
++
+ /*
+    On a real system an opened channel is affected only after having
+    received and parsed the complete next open command.
+@@ -171,6 +295,8 @@
+     serial_t *p;
+     void *vdrive;
+ 
++    s488_attention(b);
++
+     if (parallel_debug) {
+         log_message(parallel_log, "ParallelAttention(%02x).", b);
+     }
+@@ -234,6 +360,15 @@
+         attention_callback_func();
+     }
+ 
++    if (st & 0xff) {
++    	if ((st & 0xff00) == 0x4800) {
++		// error - start monitoring instead (only on device 8 for now...)
++		st = 0x8800;
++	} else
++	if ((st & 0xff00) == 0x2800) {
++		st = 0x2800;
++	}	
++    }
+     return st;
+ }
+ 
+@@ -244,6 +379,8 @@
+     void *vdrive;
+     unsigned int dnr;
+ 
++    s488_send(data);
++
+     for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+         if ((unsigned int)(TrapDevice & 0x0f) == dnr + 8
+             && drive_context[dnr]->drive->enable) {
+@@ -283,6 +420,12 @@
+     void *vdrive;
+     unsigned int dnr;
+ 
++    if (fake < 0) {
++	// fake -1 is normal, -2 is EOF 
++    	s488_recv(*data, 0, fake == -2);
++	return 0x8800;
++    }
++
+     for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+         if ((unsigned int)(TrapDevice & 0x0f) == dnr + 8
+             && drive_context[dnr]->drive->enable) {
+@@ -343,6 +486,9 @@
+     if ((st & 0x40) && eof_callback_func != NULL) {
+         eof_callback_func();
+     }
++
++    s488_recv(*data, fake, st & 0x40);
++
+     return st;
+ }
+ 
