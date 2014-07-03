@@ -1,0 +1,9 @@
+
+The file vice+sock488.diff is an experimental diff to VICE version 2.4, 
+so it writes a firmware test runner script into the file "sock488.trace"
+for all actions being done on a true drive emulation emulated drive.
+
+For best experience run it like
+
+	./src/xpet -model 4032 -truedrive -drive8type 4040 -8 <<disk-image-for-test>> -autostartprgmode 1 <<BASIC-file-to-test>>
+
