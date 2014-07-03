@@ -2,7 +2,7 @@
 /****************************************************************************
 
     xd2031 filesystem server - socket test runner
-    Copyright (C) 2012,2014 Andre Fachat
+    Copyright (C) 2014 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 #include "registry.h"
 #include "mem.h"
 #include "wireformat.h"
+#include "sock488.h"
 
 
 void usage(int rv) {
@@ -255,6 +256,58 @@ int scr_dsb(char *trg, int trglen, const char **parseptr) {
 	return len;
 }
 
+
+int scr_unlisten(char *trg, int trglen, const char **parseptr) {
+	(void) trglen;	// silence warning
+	(void) parseptr;// silence warning
+
+	trg[0] = 0x3f;
+	return 1;
+}
+int scr_untalk(char *trg, int trglen, const char **parseptr) {
+	(void) trglen;	// silence warning
+	(void) parseptr;// silence warning
+
+	trg[0] = 0x5f;
+	return 1;
+}
+
+
+int scr_atn(char *trg, int trglen, const char **parseptr, char cmd) {
+
+	(void) trglen;	// silence warning
+
+	char addr = 0;
+	const char *p = *parseptr;
+
+	while (isspace(*p)) { p++; }
+
+	p = parse_hexbyte(p, &addr);
+	if (p != NULL) {	
+
+		while (isspace(*p)) { p++; }
+	}
+	*parseptr = p;
+
+	if (addr > 0x1e) {
+		log_warn("ATN byte out of range (>0x1e) %02x\n", addr);
+	}
+
+	trg[0] = cmd | addr;
+
+	return 1;
+}
+
+int scr_listen(char *trg, int trglen, const char **parseptr) {
+	return scr_atn(trg, trglen, parseptr, 0x20);
+}
+int scr_talk(char *trg, int trglen, const char **parseptr) {
+	return scr_atn(trg, trglen, parseptr, 0x40);
+}
+int scr_secondary(char *trg, int trglen, const char **parseptr) {
+	return scr_atn(trg, trglen, parseptr, 0x60);
+}
+
 // scriplets
 static const struct {
 	const char *name;
@@ -265,6 +318,11 @@ static const struct {
 } scriptlets[] = {
 	{ "len", 3, 1, NULL, scr_len },
 	{ "dsb", 3, 0, scr_dsb, NULL },
+	{ "talk", 4, 1, scr_talk, NULL },
+	{ "listen", 6, 1, scr_listen, NULL },
+	{ "secondary", 9, 1, scr_secondary, NULL },
+	{ "untalk", 6, 1, scr_untalk, NULL },
+	{ "unlisten", 8, 1, scr_unlisten, NULL },
 	{ NULL, 0, 0, NULL, NULL }
 };
 
@@ -281,6 +339,7 @@ static void free_line(registry_t *reg, void *obj) {
 
 	mem_free(obj);
 }
+
 
 static int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 
@@ -364,36 +423,29 @@ static int parse_msg(line_t *line, const char *in, char **outbuf, int *outlen) {
 	return 0;
 }
 
-static int parse_init(line_t *line, const char *in, char **outbuf, int *outlen) {
-	(void) in; // silence
-	(void) line; // silence
-	*outlen = 3;
-	*outbuf = mem_alloc_c(3, "init_reset_response_buffer");
-	(*outbuf)[0] = 0x16;
-	(*outbuf)[1] = 0x03;
-	(*outbuf)[2] = 0x7d;
-
-	return 0;
-}
 
 static const struct {
 	const char *name;
 	const int namelen;
 	int (*parser)(line_t *line, const char *in, char **outbuf, int *outlen);
 } cmds[] = {
-	{ "expect", 6, parse_buf },
+	{ "atn", 3, parse_buf },
 	{ "send", 4, parse_buf },
-	{ "message", 7, parse_msg },
+	{ "recv", 4, parse_buf },
 	{ "errmsg", 6, parse_msg },
-	{ "init", 4, parse_init },
+	{ "message", 7, parse_msg },
+	{ "expect", 6, parse_buf },
+	{ "sendnoeof", 9, parse_buf },
 	{ NULL, 0, NULL }
 };
 
-#define CMD_EXPECT	0
+#define CMD_ATN		0
 #define CMD_SEND	1
-#define CMD_MESSAGE	2
+#define CMD_RECEIVE	2
 #define CMD_ERRMSG	3
-#define CMD_INIT	4
+#define CMD_MESSAGE	4
+#define CMD_EXPECT	5
+#define CMD_SENDNOEOF	6	/* like send, but do not set EOF on last byte */
 
 
 /**
@@ -548,83 +600,73 @@ char buf[8192];
 int wrp = 0;
 int rdp = 0;
 
-int read_packet(int fd, char *outbuf, int buflen) {
 
-        int plen, cmd;
-        int n;
+int read_byte(int fd, char *data) {
+	int n;
+	while ((n = read(fd, data, 1)) <= 0) {
+		if (n < 0) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+			   	log_error("testrunner: read error %d (%s)\n",
+                       			errno,strerror(errno));
+                            		return -1;
+			}
+		}
+	}
+	return 0;
+}
 
+/*
+ * buflen is the expected length of data
+ */
+int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
+
+	char incmd, outcmd;
+        int n, eof;
+
+	*outeof = 0;
 	wrp = 0;
-	rdp = 0;
 
-        for(;;) {
+	outcmd = S488_REQ;
+	do {
+		n = write(fd, &outcmd, 1);
+		
+		n = read_byte(fd, &incmd);
+		eof = incmd & S488_EOF;
+		incmd &= ~S488_EOF;
+		if (incmd == S488_OFFER) {
+			n = read_byte(fd, outbuf + wrp);
+		}
+		wrp++;
+		outcmd = S488_REQ | S488_ACK;
 
-              // as long as we have more than FSP_LEN bytes in the buffer
-              // i.e. 2 or more, we loop and process packets
-              // FSP_LEN is the position of the packet length
-              while(wrp-rdp > FSP_LEN) {
-                // first byte in packet is command, second is length of packet
-                plen = 255 & buf[rdp+FSP_LEN];  //  AND with 255 to fix sign
-                cmd = 255 & buf[rdp+FSP_CMD];   //  AND with 255 to fix sign
-                // full packet received already?
-                if (cmd == FS_SYNC) {
-                  // the byte is the FS_SYNC command
-		  // mirror it back
-		  write(fd, buf+rdp+FSP_CMD, 1);
-                  rdp++;
-		} else 
-		if (plen < FSP_DATA) {
-                  // a packet is at least 3 bytes (when with zero data length)
-                  // so ignore byte and shift one in buffer position
-                  rdp++;
-                } else
-                if(wrp-rdp >= plen) {
-                  // did we already receive the full packet?
-                  // yes, then execute
-                  //printf("dispatch @rdp=%d [%02x %02x ... ]\n", rdp, buf[rdp], buf[rdp+1]);
-		  memcpy(outbuf, buf+rdp, plen);
-                  rdp +=plen;
-		  return plen;
-                } else {
-                  // no, then break out of the while, to read more data
-                  break;
-                }
-              }
+	} while((n == 0) && (wrp < buflen) && (!eof));
 
-              n = read(fd, buf+wrp, 8192-wrp);
-	      //log_debug("read->%d\n", n);
-	      if (n == 0) {
-		return 0;
-	      }
+	if (n == 0) {
+		outcmd = S488_ACK;
+		n = write(fd, &outcmd, 1);
+	}
+		
+	*outeof = eof;
 
-              if(n < 0) {
-                log_error("testrunner: read error %d (%s)\n",
-                        errno,strerror(errno));
-                return -1;
-              }
-
-              wrp+=n;
-              if(rdp && (wrp==8192 || rdp==wrp)) {
-                if(rdp!=wrp) {
-                  memmove(buf, buf+rdp, wrp-rdp);
-                }
-                wrp -= rdp;
-                rdp = 0;
-              }
-
-            }
+	return (n < 0) ? -1 : wrp;
 }
 
 // -----------------------------------------------------------------------
 
-int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos) {
+int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos, int waitforeof) {
 	char buffer[8192];
 	ssize_t cnt = 0;
 	int err = 0;
+	int eof = 0;
 
-	cnt = read_packet(fd, buffer, sizeof(buffer));
+	if (waitforeof) {
+		cnt = read_packet(fd, buffer, sizeof(buffer), &eof);
+	} else {
+		cnt = read_packet(fd, buffer, inbuflen, &eof);
+	}
 
 	//log_info("Rxd   : ");
-	log_hexdump2(buffer, cnt, 0, "Rxd   : ");
+	log_hexdump2(buffer, cnt, 0, eof ? "Eof   : " : "Rxd   : ");
 
 	if (cnt < 0) {
 		log_errno("Error reading from socket at line %d\n", curpos);
@@ -636,6 +678,10 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 		log_hexdump2(inbuffer, inbuflen, 0, "Expect: ");
 		//log_warn("Found : ");
 		//log_hexdump2(buffer, cnt, 0, "Found : ");
+		err = 1;
+	} else
+	if (cnt != inbuflen) {
+		log_error("Detected length mismatch: expected %d, received %d\n", inbuflen, cnt);
 		err = 1;
 	}
 	return err;
@@ -649,10 +695,14 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
  */
 int execute_script(int sockfd, registry_t *script) {
 
+	char cmd = 0;
+
+	int numerrs = 0;
+
 	// current "pc" pointer to script line
 	int curpos = 0;	
-	line_t *line = NULL;
 	int lineno = 0;
+	line_t *line = NULL;
 
 	int err = 0;
 	ssize_t size = 0;
@@ -663,14 +713,22 @@ int execute_script(int sockfd, registry_t *script) {
 
 		lineno = line->num;
 
+		cmd = S488_SEND;
+
 		switch (line->cmd) {
 		case CMD_MESSAGE:
 			log_info("> %s\n", line->buffer);
+			curpos++;
 			break;
 		case CMD_ERRMSG:
 			errmsg = line;
+			curpos++;
 			break;
+		case CMD_ATN:
+			cmd = S488_ATN;
+			// fall-through
 		case CMD_SEND:
+		case CMD_SENDNOEOF:
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
 				if (scr->exec != NULL) {
 					scr->exec(line, scr);
@@ -679,42 +737,50 @@ int execute_script(int sockfd, registry_t *script) {
 			//log_info("Send  : ");
 			log_hexdump2(line->buffer, line->length, 0, "Send  : ");
 
-			size = write(sockfd, line->buffer, line->length);
-			if (size < 0) {
-				log_errno("Error writing to socket at line %d\n", lineno);
-				err = -1;
+			for (int i = 0; i < line->length; i++) {
+				if (((i+1) == line->length) && (line->cmd == CMD_SEND)) {
+					// TODO explicit EOF handling
+					cmd |= S488_EOF;
+				}
+				size = write(sockfd, &cmd, 1);
+				if (size < 0) {
+					log_errno("Error writing to socket at line %d\n", lineno);
+					err = -1;
+				}
+				size = write(sockfd, line->buffer+i, 1);
+				if (size < 0) {
+					log_errno("Error writing to socket at line %d\n", lineno);
+					err = -1;
+				}
 			}
+			curpos++;
 			break;
+		case CMD_RECEIVE:
 		case CMD_EXPECT:
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
 				if (scr->exec != NULL) {
 					scr->exec(line, scr);
 				}
 			}
-			err = compare_packet(sockfd, line->buffer, line->length, lineno);
+			err = compare_packet(sockfd, line->buffer, line->length, curpos, line->cmd == CMD_RECEIVE);
 
 			if (err != 0) {
+				numerrs++;
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);
 				}
-				return err;
-			}
-			break;
-		case CMD_INIT:
-			send_sync(sockfd);
-			err = compare_packet(sockfd, line->buffer, line->length, lineno);
-			if (err != 0) {
-				if (errmsg != NULL) {
-					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);
+				if (err > 1) {
+					// fatal
+					return numerrs;
 				}
-				return err;
+				err = 0;
 			}
+			curpos++;
 			break;
 		}
-		curpos++;
 	}
 
-	return 0;
+	return numerrs;
 }
 
 // -----------------------------------------------------------------------
@@ -781,6 +847,7 @@ int main(int argc, char *argv[]) {
 	
 		if (sockfd >= 0) {
 
+			// returns the number of errors in script
 			rv = execute_script(sockfd, script);
 		}
 	}

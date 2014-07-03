@@ -56,7 +56,8 @@ char *drop_crlf(char *s) {
 	char *p = s + strlen(s) - 1;
 	while(p >= s) {
 		if((*p == 10) || (*p == 13)) {
-			*(p--)=0; 	// remove CR or LF
+			*p=0; 	// remove CR or LF
+			p--;
 		} else { 
 			break;
 		}
