@@ -27,8 +27,11 @@
 
 #include "debug.h"
 #include "uarthw.h"
+#include "sock488.h"
 
 void device_init(void) {
+
+	sock488_init();
 }
 
 /**
@@ -54,6 +57,17 @@ void device_setup(int argc, const char *argv[]) {
 				uarthw_set_socket(socketname);
 			} else {
 				printf("setup: parameter -S requires socket name\n");
+			}
+			break;
+		case 'C':
+			// client socket
+			if (p < argc - 1) {
+			 	p++;
+				socketname = argv[p];
+
+				sock488_set_socket(socketname);
+			} else {
+				printf("setup: parameter -C requires socket name\n");
 			}
 			break;
 		}

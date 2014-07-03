@@ -44,7 +44,7 @@ void uarthw_set_socket(const char *socketname) {
 	socket_name = socketname;
 }
 
-int socket_open(const char *socketname, int dowait) {
+static int client_socket_open(const char *socketname, int dowait) {
 
         int sockfd, servlen;
         struct sockaddr_un  server_addr;
@@ -87,7 +87,7 @@ void uarthw_init() {
 
 	if (socket_name != NULL) {
 
-		int fd = socket_open(socket_name, 1);
+		int fd = client_socket_open(socket_name, 1);
 
 		if (fd >= 0) {
 			socket_fd = fd;

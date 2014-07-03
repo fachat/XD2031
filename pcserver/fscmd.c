@@ -264,9 +264,11 @@ void disable_user_interface(void) {
 int cmd_process_stdin(void) {
 	char buf[INBUF_SIZE + 1];
 
-	log_debug("cmd_process_stdin()\n");
+	//log_debug("cmd_process_stdin()\n");
 
-	fgets(buf, INBUF_SIZE, stdin);
+	if (fgets(buf, INBUF_SIZE, stdin) == NULL) {
+		return false;
+	}
 	drop_crlf(buf);
 
 	log_debug("stdin: %s\n", buf);
