@@ -257,6 +257,7 @@ for script in $TESTSCRIPTS; do
 		testname=`basename $script .frs`
 		for i in $COMPAREFILES; do 
 			if test -f $THISDIR/${i}-${testname}; then
+				echo "Comparing file ${i}"
 				hexdiff $THISDIR/${i}-${testname} $TMPDIR/${i}
 			fi
 		done;
