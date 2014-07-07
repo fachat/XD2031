@@ -1,28 +1,14 @@
 #!/bin/bash
 
-BASEDIR="../.."
-
-#hardcode firmware binary for now
-#VERSION?=$(shell date +"%Y-%m-%d")
-
-SWNAME=xd2031
-VERSION=`date +"%Y-%m-%d"`
-ZOOBINDIR=${SWNAME}-firmware-${VERSION}
-THISBINDIR=${ZOOBINDIR}/${SWNAME}-${VERSION}-sockserv-pc
-BINNAME=${SWNAME}-${VERSION}-sockserv-pc.elf
-
-FIRMWARE=${BASEDIR}/firmware/${THISBINDIR}/${BINNAME}
-
 function usage() {
-	echo "Running *.frs test runner scripts"
-	echo "  $0 [options] [frs_scripts]"
+	echo "Running *.trs test runner scripts"
+	echo "  $0 [options] [trs_scripts]"
 	echo "Options:"
 	echo "       -v                      verbose server log"
-	echo "       -o                      server log on console"
 	echo "       -d <breakpoint>         run server with gdb and set given breakpoint. Can be "
 	echo "                               used multiple times"
 	echo "       -V                      verbose runner log"
-	echo "       -D <breakpoint>         run firmware with gdb and set given breakpoint. Can be "
+	echo "       -D <breakpoint>         run testrunner with gdb and set given breakpoint. Can be "
 	echo "                               used multiple times"
 	echo "       -c                      clean up non-log and non-data files from run directory"
 	echo "       -C                      clean up complete run directory"
@@ -50,7 +36,6 @@ RVERBOSE=""
 DEBUG=""
 RDEBUG=""
 CLEAN=0
-LOGFILE=""
 
 TMPDIR=`mktemp -d`
 OWNDIR=1	
@@ -60,10 +45,6 @@ while test $# -gt 0; do
   -h)
 	usage
 	exit 0;
-	;;
-  -o)
-	LOGFILE="-"
-	shift;
 	;;
   -v)
 	VERBOSE="-v"
@@ -125,7 +106,7 @@ function contains() {
 
 # scripts to run
 if [ "x$*" = "x" ]; then
-        SCRIPTS=$THISDIR/*.frs
+        SCRIPTS=$THISDIR/*.trs
         SCRIPTS=`basename -a $SCRIPTS`;
 
 	TESTSCRIPTS=""
@@ -152,9 +133,9 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../../testrunner/fwrunner
+RUNNER="$THISDIR"/../../testrunner/pcrunner
 
-SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+SERVER="$THISDIR"/../../pcserver/fsser
 
 DEBUGFILE="$TMPDIR"/gdb.ex
 
@@ -175,8 +156,7 @@ for script in $TESTSCRIPTS; do
 
 	echo "Run script $script"
 
-	SSOCKET=ssocket_$script
-	CSOCKET=csocket_$script
+	SOCKET=socket_$script
 
 	# overwrite test files in each iteration, just in case
 	for i in $TESTFILES; do
@@ -185,51 +165,26 @@ for script in $TESTSCRIPTS; do
 
 	# start server
 
+	echo "Start server as:" $SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR 
 
 	if test "x$DEBUG" = "x"; then
-		############################################
-		# start server
-
-		echo "Start server as:" $SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR 
-		if test "x$LOGFILE" = "x-"; then
-			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR &
-		else
-			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
-		fi
+		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
 		SERVERPID=$!
+		trap "kill -TERM $SERVERPID" INT
 
-		############################################
-		# start firmware
-		echo "Starting firmware as: $FIRMWARE -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET"
-
-		# start testrunner after server/firmware, so we get the return value in the script
+		# start testrunner after server, so we get the return value in the script
 		if test "x$RDEBUG" != "x"; then
-
-			# start test runner before server, so we can use gdb on firmware
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script &
-			RUNNERPID=$!
-			trap "kill -TERM $SERVERPID $RUNNERPID" INT
-
 			echo > $DEBUGFILE;
 			for i in $RDEBUG; do
 				echo "break $i" >> $DEBUGFILE
 			done;
-			#gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script " $RUNNER
-			gdb -x $DEBUGFILE -ex "run -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET" $FIRMWARE
-
-			RESULT=-1
+			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
 		else
-			$FIRMWARE -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET &
-			FWPID=$!
-			trap "kill -TERM $SERVERPID $FWPID" INT
-
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script;
-			RESULT=$?
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
 		fi;
 
+		RESULT=$?
 		echo "result: $RESULT"
-
-		#kill -TERM $RUNNERPID $SERVERPID
 
 		if test $RESULT -ne 0; then
 			echo "Resetting clean to keep files!"
@@ -238,8 +193,7 @@ for script in $TESTSCRIPTS; do
 		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
-		#$RUNNER $RVERBOSE -w -d $TMPDIR/$SSOCKET $script &
-		$FIRMWARE -S $TMPDIR/$SSOCKET &
+		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -247,14 +201,14 @@ for script in $TESTSCRIPTS; do
 		for i in $DEBUG; do
 			echo "break $i" >> $DEBUGFILE
 		done;
-		gdb -x $DEBUGFILE -ex "run -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
+		gdb -x $DEBUGFILE -ex "run -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
 	fi;
 
 	#echo "Killing server (pid $SERVERPID)"
 	#kill -TERM $SERVERPID
 
 	if test "x$COMPAREFILES" != "x"; then
-		testname=`basename $script .frs`
+		testname=`basename $script .trs`
 		for i in $COMPAREFILES; do 
 			if test -f $THISDIR/${i}-${testname}; then
 				echo "Comparing file ${i}"
@@ -263,7 +217,7 @@ for script in $TESTSCRIPTS; do
 		done;
 	fi
 
-	rm -f $TMPDIR/$SSOCKET $TMPDIR/$CSOCKET $DEBUGFILE;
+	rm -f $TMPDIR/$SOCKET $DEBUGFILE;
 	rm -f $TMPDIR/$script;
 done;
 
