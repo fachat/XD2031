@@ -133,7 +133,7 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../testrunner
+RUNNER="$THISDIR"/../../testrunner/pcrunner
 
 SERVER="$THISDIR"/../../pcserver/fsser
 
@@ -211,6 +211,7 @@ for script in $TESTSCRIPTS; do
 		testname=`basename $script .trs`
 		for i in $COMPAREFILES; do 
 			if test -f $THISDIR/${i}-${testname}; then
+				echo "Comparing file ${i}"
 				hexdiff $THISDIR/${i}-${testname} $TMPDIR/${i}
 			fi
 		done;

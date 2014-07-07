@@ -152,7 +152,7 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../testrunner
+RUNNER="$THISDIR"/../../testrunner/fwrunner
 
 SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
 
