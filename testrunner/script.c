@@ -249,6 +249,10 @@ int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 		if ((*p) == '\"' || (*p) == '\'') {
 			int outlen = 0;
 			p = parse_string(p, buffer + outp, &outlen);
+			if (p == NULL) {
+				log_error("Error parsing line %d\n", line->num);
+				return -1;
+			}
 			outp += outlen;
 		} else
 		if ((*p) == '.') {
