@@ -1,0 +1,93 @@
+
+
+;reltest5.2.prg ==0401==
+  100 d=8
+  110 n=1
+  120 ex=0
+ 1000 open1,d,15
+ 1100 print"create 10 recs"
+ 1110 gosub9100
+ 1120 print#1,"p"chr$(2)chr$(10)chr$(0);
+ 1130 gosub9000
+ 1140 print#2,"foo"
+ 1150 gosub9000
+ 1160 close2
+ 1500 print"fill some records"
+ 1510 gosub 9100
+ 1520 print#1,"p"chr$(2)chr$(8)chr$(0)chr$(0)
+ 1530 gosub9000
+ 1540 print#2,"8888888888";:rem full record
+ 1550 gosub9000
+ 1560 print#1,"p"chr$(2)chr$(2)chr$(0)chr$(0)
+ 1570 gosub9000
+ 1580 print#2,"2222222222";:rem full record
+ 1590 gosub9000
+ 1600 print#1,"p"chr$(2)chr$(3)chr$(0)chr$(0)
+ 1610 gosub9000
+ 1620 print#2,"3333333333";:rem full record
+ 1630 gosub9000
+ 1640 close 2
+ 2000 print"write 0 in middle of filled record"
+ 2010 gosub 9100
+ 2020 print#1,"p"chr$(2)chr$(3)chr$(0)chr$(5)
+ 2030 gosub 9000
+ 2040 print#2,chr$(0);
+ 2050 gosub 9000
+ 2090 close 2
+ 2100 print"write 0 in middle of new record"
+ 2110 gosub 9100
+ 2120 print#1,"p"chr$(2)chr$(4)chr$(0)chr$(0)
+ 2130 gosub 9000
+ 2140 print#2,"12345"+chr$(0)+"7890";
+ 2150 gosub 9000
+ 2190 close 2
+ 2200 print"write all-zero record"
+ 2210 gosub 9100
+ 2220 print#1,"p"chr$(2)chr$(2)chr$(0)chr$(0)
+ 2230 gosub 9000
+ 2240 a$="":for i=1 to 10:a$=a$+chr$(0):next
+ 2250 print#2,a$;
+ 2260 gosub 9000
+ 2290 close 2
+ 2300 print"read all-zero record"
+ 2310 gosub 9100
+ 2320 print#1,"p"chr$(2)chr$(2)chr$(0)chr$(0)
+ 2330 gosub 9000
+ 2340 for i=0 to 15:get#2,a$:if a$="" then a$=chr$(0)
+ 2350 if st=0 then printasc(a$),:next:goto 2380
+ 2360 printasc(a$):gosub 9200:gosub 9000
+ 2370 gosub 9000
+ 2380 close 2
+ 2400 print"read rec with zero in middle"
+ 2410 gosub 9100
+ 2420 print#1,"p"chr$(2)chr$(4)chr$(0)chr$(0)
+ 2430 gosub 9000
+ 2440 for i=0 to 15:get#2,a$:if a$="" then a$=chr$(0)
+ 2450 if st=0 then printasc(a$),:next:goto 2480
+ 2460 printasc(a$):gosub 9200:gosub 9000
+ 2470 gosub 9000
+ 2480 close 2
+ 2500 print"write after read"
+ 2510 gosub 9100
+ 2520 print#1,"p"chr$(2)chr$(8)chr$(0)chr$(0)
+ 2530 gosub 9000
+ 2540 for i=0 to 15:get#2,a$
+ 2550 if st=0 then printa$;:next:goto 2600
+ 2560 printa$;:gosub 9200:gosub 9000
+ 2570 rem write after read
+ 2580 print#2,"hoho"
+ 2590 gosub 9000
+ 2600 close 2
+ 8900 directory
+ 8905 close1
+ 8910 end
+ 9000 input#1,a,b$,t,s
+ 9010 if a<>ex thenprinta","b$","t","s
+ 9020 return
+ 9100 open2,d,2,"rel5."+chr$(48+n)+",l,"+chr$(10)
+ 9105 if st<>0 then print"st="st
+ 9110 gosub9000
+ 9130 return
+ 9200 if st<>0 then print"st="st
+ 9230 return
+

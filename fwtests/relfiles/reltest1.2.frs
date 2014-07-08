@@ -1,31 +1,298 @@
 atn 28 f2
-send 30 3a 52 45 4c 31 2c 4c
+send "0:REL1,L"
 atn 3f
 atn 48 6f
-expect 36 32 2c 20 46 49 4c 45 20 4e 4f 54 20 46 4f 55 4e
-recv 44 2c 30 30 2c 30 30 0d
+expect "62, FILE NOT FOUN"
+recv "D,00,00,0" 0d
 atn 5f
 atn 28 e2 3f
 atn 28 f2
-send 30 3a 52 45 4c 31 2c 4c 2c 7f
+send "0:REL1,L," 7f
 atn 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00,0" 0d
 atn 5f
 atn 28 e2 3f
 atn 28 f2
-send 30 3a 52 45 4c 31 2c 4c
+send "0:REL1,L"
 atn 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00,0" 0d
 atn 5f
 atn 28 e2 3f
 atn 28 f2
-send 30 3a 52 45 4c 31 2c 4c 2c 7f
+send "0:REL1,L," 7f
 atn 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00,0" 0d
 atn 5f
 atn 28 e2 3f
 atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "1"
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect 22 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
 atn 28 ef 3f

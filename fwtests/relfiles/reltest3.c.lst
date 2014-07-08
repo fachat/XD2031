@@ -1,0 +1,176 @@
+
+
+;reltest3.c.prg ==0401==
+  100 d=8
+  120 ex=0
+  130 open1,d,15
+  150 goto 505
+  500 geta$:ifa$=""then500
+  505 print"test:"
+  510 print"a create 14 recs, position 24 (in blk)"
+  520 print"b create 14 recs, pos 26 (out of blk)"
+  530 print"c write mid to n"
+  540 print"d write mid to n+1"
+  550 print"e write 0 to mid"
+  580 print"f write 1 to mid"
+  590 print"g write no ptr to mid"
+  600 print"h read from (no pos in rec)
+  610 print"i read from 0"
+  620 print"j read from 1"
+  630 print"k read from mid"
+  640 print"l get after open"
+  650 print"m print after open"
+  780 print"y all with step"
+  790 print"z all"
+  800 geta$:ifa$="" then 800
+  810 aa=asc(a$)-asc("a")+1
+  820 if aa=25 or aa=26 then 850
+  830 gosub 900
+  840 goto 500
+  850 bb=aa
+  851 for aa = 1 to 13:gosub 900
+  852 if bb=26 then 858
+  854 geta$:ifa$=""then854
+  858 next
+  860 print"press key"
+  880 goto 500
+  900 on aa goto 2000,2200,2500,2600,2700,2800,2900,3000,3100,3200,3300,4000,4100
+ 2000 print"create 14 recs, pos rec 24 in same blk"
+ 2005 n=1
+ 2010 gosub9100
+ 2100 print#1,"p"chr$(2)chr$(14)chr$(0);
+ 2110 gosub9000
+ 2120 print#2,"foo"
+ 2130 gosub9000
+ 2150 print#1,"p"chr$(2)chr$(24)chr$(0)
+ 2160 ex=-1:gosub9000
+ 2170 close2
+ 2199 return
+ 2200 print"create 14 recs, pos rec 26 end of blk"
+ 2205 n=2
+ 2210 gosub9100
+ 2220 print#1,"p"chr$(2)chr$(14)chr$(0);
+ 2222 gosub9000
+ 2225 print#2,"foo"
+ 2227 gosub9000
+ 2230 print#1,"p"chr$(2)chr$(26)chr$(0);
+ 2240 ex=-1:gosub9000
+ 2250 print#2,"12345"
+ 2260 ex=-1:gosub9000
+ 2270 close2
+ 2399 return
+ 2500 print"write mid to n"
+ 2505 n=3
+ 2520 gosub9100
+ 2530 print#1,"p"chr$(2)chr$(10)chr$(0)chr$(11)
+ 2540 gosub9000
+ 2550 print#2,"1234567890";
+ 2560 gosub9000
+ 2570 close2
+ 2599 return
+ 2600 print"write mid to n+1"
+ 2605 n=3
+ 2620 gosub9100
+ 2630 print#1,"p"chr$(2)chr$(9)chr$(0)chr$(11)
+ 2640 gosub9000
+ 2650 print#2,"12345678901";
+ 2660 gosub9000
+ 2670 close2
+ 2699 return
+ 2700 print"write 0 to mid"
+ 2705 n=3
+ 2720 gosub9100
+ 2730 print#1,"p"chr$(2)chr$(8)chr$(0)chr$(0)
+ 2740 gosub9000
+ 2750 print#2,"qwertzuiop";
+ 2760 gosub9000
+ 2770 close2
+ 2799 return
+ 2800 print"write 1 to mid"
+ 2805 n=3
+ 2820 gosub9100
+ 2830 print#1,"p"chr$(2)chr$(7)chr$(0)chr$(1)
+ 2840 gosub9000
+ 2850 print#2,"asdfghjklm"
+ 2860 gosub9000
+ 2870 close2
+ 2899 return
+ 2900 print"write no ptr to mid"
+ 2905 n=3
+ 2920 gosub9100
+ 2930 print#1,"p"chr$(2)chr$(6)chr$(0);
+ 2940 gosub9000
+ 2950 print#2,"no pointer"
+ 2960 gosub9000
+ 2970 close2
+ 2999 return
+ 3000 print"read from (no pos in rec)
+ 3005 n=3
+ 3010 gosub9100
+ 3020 print#1,"p"chr$(2)chr$(7)chr$(0);
+ 3030 gosub9000
+ 3040 input#2,c$:print"c$="c$
+ 3045 gosub9200
+ 3050 gosub9000
+ 3060 close2
+ 3099 return
+ 3100 print"read from 0"
+ 3105 n=3
+ 3110 gosub9100
+ 3120 print#1,"p"chr$(2)chr$(7)chr$(0)chr$(0);
+ 3130 gosub9000
+ 3140 input#2,c$:print"c$="c$
+ 3145 gosub9200
+ 3150 gosub9000
+ 3160 close2
+ 3199 return
+ 3200 print"read from 1"
+ 3205 n=3
+ 3210 gosub9100
+ 3220 print#1,"p"chr$(2)chr$(8)chr$(0)chr$(1);
+ 3230 gosub9000
+ 3240 input#2,c$:print"c$="c$
+ 3245 gosub9200d from 1"
+ 3250 gosub9000
+ 3260 close2
+ 3299 return
+ 3300 print"read from mid"
+ 3305 n=3
+ 3310 gosub9100
+ 3320 print#1,"p"chr$(2)chr$(9)chr$(0)chr$(10);
+ 3330 gosub9000
+ 3340 input#2,c$:print"c$="c$
+ 3345 gosub9200
+ 3350 gosub9000
+ 3360 close2
+ 3999 return
+ 4000 print"get after open"
+ 4005 n=3
+ 4010 gosub 9100
+ 4020 get#2,a$
+ 4030 print"st="st", char="asc(a$+chr$(0))
+ 4040 gosub9000
+ 4050 close2
+ 4099 return
+ 4100 print"print after open"
+ 4105 n=3
+ 4110 gosub 9100
+ 4120 print#2,"x";
+ 4130 print"st="st"
+ 4140 gosub9000
+ 4150 close2
+ 4199 return
+ 8900 directory
+ 8905 close1
+ 8910 end
+ 9000 input#1,a,b$,t,s
+ 9010 if a<>ex thenprinta","b$","t","s
+ 9015 ex=0
+ 9020 return
+ 9100 open2,d,2,"0:rel3."+chr$(48+n)+",l,"+chr$(20)
+ 9105 if st<>0 then print"st="st
+ 9110 gosub9000
+ 9130 return
+ 9200 if st<>0 then print"st="st
+ 9230 return
+
