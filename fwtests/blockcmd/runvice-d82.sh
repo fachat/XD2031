@@ -4,7 +4,7 @@ vicedir="$HOME/user/xd2031/vice-2.4+sock488/src"
 testname="$1"
 warp="-warp"
 drivetype=1001
-imgname=rel.d82
+imgname=blk.d82
 
 
 if [ -f ${testname}.lst ]; then
