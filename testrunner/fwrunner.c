@@ -46,6 +46,7 @@
 #include "registry.h"
 #include "sock488.h"
 #include "script.h"
+#include "connect.h"
 
 void usage(int rv) {
         printf("Usage: fsser [options] run_directory\n"
@@ -66,37 +67,6 @@ void assert_single_char(char *argv) {
                                 strlen(argv) > 3 ? "s" : "", argv + 2, argv);
                 exit (1);
         }
-}
-
-int socket_open(const char *socketname, int dowait) {
-
-   	int sockfd, servlen;
-   	struct sockaddr_un  server_addr;
-	struct timespec sleeptime;
-
-   	log_info("Connecting to socket %s\n", socketname);
-
-   	memset((char *)&server_addr, 0, sizeof(server_addr));
-   	server_addr.sun_family = AF_UNIX;
-   	strcpy(server_addr.sun_path, socketname);
-   	servlen = strlen(server_addr.sun_path) + 
-                 sizeof(server_addr.sun_family);
-   	if ((sockfd = socket(AF_UNIX, SOCK_STREAM,0)) < 0) {
-       		log_error("Creating socket");
-		return -1;
-   	}
-   	while (connect(sockfd, (struct sockaddr *) 
-                         &server_addr, servlen) < 0) {
-		if (errno != ENOENT || !dowait) {
-       			log_errno("Connecting: ");
-			log_error("Terminating\n");
-   			return -1;
-		}
-		sleeptime.tv_sec = 0;
-		sleeptime.tv_nsec = 100000000l;	// 100 ms
-		nanosleep(&sleeptime, NULL);
-   	}
-   	return sockfd;
 }
 
 
