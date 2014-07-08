@@ -182,6 +182,9 @@ for script in $TESTSCRIPTS; do
 	for i in $TESTFILES; do
 		cp "$THISDIR/$i" "$TMPDIR"
 	done;
+	for i in $TESTZFILES; do
+		gunzip -c "$THISDIR/$i".gz >  "$TMPDIR"/"$i"
+	done;
 
 	# start server
 
@@ -256,9 +259,16 @@ for script in $TESTSCRIPTS; do
 	if test "x$COMPAREFILES" != "x"; then
 		testname=`basename $script .frs`
 		for i in $COMPAREFILES; do 
-			if test -f $THISDIR/${i}-${testname}; then
+			NAME="${THISDIR}/${i}-${testname}"
+			if test -f ${NAME}; then
 				echo "Comparing file ${i}"
-				hexdiff $THISDIR/${i}-${testname} $TMPDIR/${i}
+				hexdiff ${NAME} $TMPDIR/${i}
+			fi
+			if test -f ${NAME}.gz; then
+				echo "Comparing file ${i}"
+				gunzip -c ${NAME}.gz > ${TMPDIR}/_${i}
+				hexdiff ${TMPDIR}/_${i} ${TMPDIR}/${i}
+				rm -f ${TMPDIR}/_${i}
 			fi
 		done;
 	fi
@@ -274,7 +284,7 @@ if test $CLEAN -ge 2; then
 		rm -f $TMPDIR/$script.log
 	done;
 
-	for i in $TESTFILES; do
+	for i in $TESTFILES $TESTZFILES; do
 		rm -f $TMPDIR/$i;
 	done;
 
