@@ -18,18 +18,16 @@ THISDIR=`dirname $0`
 
 echo "THISDIR=$THISDIR"
 
-# necessary files to copy to temp
-#TESTFILES="rel1.d64"
-TESTZFILES="blk.d82"
+# necessary files to copy to temp; may be gzipped (but leave out the .gz here)
+TESTFILES="blk.d82"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
-#COMPAREFILES="rel1.d64"
+# The "<file>-<test>" file may be gzipped (with .gz)
 COMPAREFILES="blk.d82"
 
-# server options
-#SERVEROPTS="-v -A0:fs=rel1.d64"
+# server options for the pcserver
 SERVEROPTS="-v -A0:fs=blk.d82"
 
 # tsr scripts from the directory to exclude
