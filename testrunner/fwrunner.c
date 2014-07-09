@@ -297,7 +297,7 @@ int execute_script(int sockfd, registry_t *script) {
 				}
 			}
 			//log_info("Send  : ");
-			log_hexdump2(line->buffer, line->length, 0, "Send  : ");
+			log_hexdump2(line->buffer, line->length, 0, (line->cmd == CMD_SEND) ? "Send  : " : "Send_A: ");
 
 			for (int i = 0; i < line->length; i++) {
 				if (((i+1) == line->length) && (line->cmd == CMD_SEND)) {
