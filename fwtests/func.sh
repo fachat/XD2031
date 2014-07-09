@@ -186,10 +186,11 @@ for script in $TESTSCRIPTS; do
 
 	# overwrite test files in each iteration, just in case
 	for i in $TESTFILES; do
-		cp "$THISDIR/$i" "$TMPDIR"
-	done;
-	for i in $TESTZFILES; do
-		gunzip -c "$THISDIR/$i".gz >  "$TMPDIR"/"$i"
+		if [ -f ${THISDIR}/${i}.gz ]; then
+			gunzip -c ${THISDIR}/${i}.gz >  ${TMPDIR}/${i}
+		else
+			cp ${THISDIR}/${i} ${TMPDIR}/${i}
+		fi;
 	done;
 
 	# start server
@@ -292,7 +293,8 @@ if test $CLEAN -ge 2; then
 		rm -f $TMPDIR/$script.log
 	done;
 
-	for i in $TESTFILES $TESTZFILES; do
+	# gzipped test files are unzipped
+	for i in $TESTFILES; do
 		rm -f $TMPDIR/$i;
 	done;
 

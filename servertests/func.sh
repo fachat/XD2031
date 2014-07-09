@@ -164,11 +164,12 @@ for script in $TESTSCRIPTS; do
 	SOCKET=socket_$script
 
 	# overwrite test files in each iteration, just in case
-	for i in $TESTFILES; do
-		cp "$THISDIR/$i" "$TMPDIR"
-	done;
-        for i in $TESTZFILES; do
-                gunzip -c "$THISDIR/$i".gz >  "$TMPDIR"/"$i"
+        for i in $TESTFILES; do
+                if [ -f ${THISDIR}/${i}.gz ]; then
+                        gunzip -c ${THISDIR}/${i}.gz >  ${TMPDIR}/${i}
+                else
+                        cp ${THISDIR}/${i} ${TMPDIR}/${i}
+                fi;
         done;
 
 	# start server
@@ -218,7 +219,7 @@ for script in $TESTSCRIPTS; do
 	#kill -TERM $SERVERPID
 
         if test "x$COMPAREFILES" != "x"; then
-                testname=`basename $script .frs`
+                testname=`basename $script .trs`
                 for i in $COMPAREFILES; do
                         NAME="${THISDIR}/${i}-${testname}"
                         if test -f ${NAME}; then
