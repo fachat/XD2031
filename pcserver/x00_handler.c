@@ -75,7 +75,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 
 	(void) type;
 
-	log_debug("x00_resolve: infile=%s\n", infile->filename);
+	//log_debug("x00_resolve: infile=%s\n", infile->filename);
 
 	// check the file name of the given file_t, if it actually is a Pxx file.
 
@@ -87,7 +87,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 
 	const char *name = conv_to_name_alloc(infile->filename, CHARSET_ASCII_NAME);
 
-	log_debug("x00_resolve: infile converted to=%s\n", name);
+	//log_debug("x00_resolve: infile converted to=%s\n", name);
 
 	char typechar = 0;
 	uint8_t ftype = 0;
