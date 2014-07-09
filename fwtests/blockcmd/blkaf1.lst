@@ -16,6 +16,7 @@
  2200 t=1:s=1
  2220 print#1,"b-a: 0";t;s
  2250 gosub9000
+ 2255 directory
  2260 if a=65 then t=c:s=d:goto 2220
  3000 print#1,"b-f: 0";tt;ss
  3010 gosub9000

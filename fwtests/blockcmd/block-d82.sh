@@ -26,11 +26,11 @@ TESTZFILES="blk.d82"
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES="blk.d64"
+COMPAREFILES="blk.d82"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=blk.d64"
+SERVEROPTS="-v -A0:fs=blk.d82"
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
