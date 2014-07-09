@@ -1,5 +1,14 @@
 #!/bin/bash
 
+BASEDIR="../.."
+
+RUNNER="$THISDIR"/${BASEDIR}/testrunner/pcrunner
+
+SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+
+# make sure we have a testrunner
+(cd ${BASEDIR}/testrunner; make pcrunner)
+
 function usage() {
 	echo "Running *.trs test runner scripts"
 	echo "  $0 [options] [trs_scripts]"
@@ -51,7 +60,7 @@ while test $# -gt 0; do
 	shift;
 	;;
   -V)
-	RVERBOSE="-v"
+	RVERBOSE="-t"
 	shift;
 	;;
   -d)
@@ -133,10 +142,6 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../../testrunner/pcrunner
-
-SERVER="$THISDIR"/../../pcserver/fsser
-
 DEBUGFILE="$TMPDIR"/gdb.ex
 
 ########################
@@ -183,6 +188,7 @@ for script in $TESTSCRIPTS; do
 			done;
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
 		else
+			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
 		fi;
 
@@ -196,6 +202,7 @@ for script in $TESTSCRIPTS; do
 		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
+		echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
 		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT

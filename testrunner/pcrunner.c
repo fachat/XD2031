@@ -50,10 +50,14 @@
 #include "connect.h"
 
 
+static int trace = 0;
+
 void usage(int rv) {
         printf("Usage: fsser [options] run_directory\n"
                 " options=\n"
                 "   -d <device> define serial device to use\n"
+                "   -v          verbose\n"
+                "   -t          trace send/received data\n"
                 "   -?          gives you this help text\n"
         );
         exit(rv);
@@ -206,20 +210,22 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 
 	cnt = read_packet(fd, buffer, sizeof(buffer));
 
-	//log_info("Rxd   : ");
-	log_hexdump2(buffer, cnt, 0, "Rxd   : ");
 
 	if (cnt < 0) {
 		log_errno("Error reading from socket at line %d\n", curpos);
 		err = 2;
-	} else
-	if (memcmp(inbuffer, buffer, inbuflen)) {
-		log_error("Detected mismatch at line %d\n", curpos);
-		//log_warn("Expect: ");
-		log_hexdump2(inbuffer, inbuflen, 0, "Expect: ");
-		//log_warn("Found : ");
-		//log_hexdump2(buffer, cnt, 0, "Found : ");
-		err = 1;
+	} else {
+		if (memcmp(inbuffer, buffer, inbuflen)) {
+			log_error("Detected mismatch at line %d\n", curpos);
+			err = 1;
+		}
+		// print data lines
+		if (trace || err) {
+			log_hexdump2(buffer, cnt, 0, "Rxd   : ");
+		}
+		if (err) {
+			log_hexdump2(inbuffer, inbuflen, 0, "Expect: ");
+		}
 	}
 	return err;
 }
@@ -259,8 +265,9 @@ int execute_script(int sockfd, registry_t *script) {
 					scr->exec(line, scr);
 				}
 			}
-			//log_info("Send  : ");
-			log_hexdump2(line->buffer, line->length, 0, "Send  : ");
+			if (trace) {
+				log_hexdump2(line->buffer, line->length, 0, "Send  : ");
+			}
 
 			size = write(sockfd, line->buffer, line->length);
 			if (size < 0) {
@@ -335,6 +342,9 @@ int main(int argc, char *argv[]) {
                 	break;
 		case 'v':
 			set_verbose();
+			break;
+		case 't':
+			trace = 1;
 			break;
 		case 'w':
 			dowait = 1;
