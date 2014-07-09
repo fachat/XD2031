@@ -221,7 +221,7 @@ static int16_t cmd_handler (bus_t *bus)
 #endif
 		// result of the open
 		if (bus_for_irq->errnum == 1) {
-			set_error_ts(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0);
+			set_error_tsd(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0, 0);
 		} else {
                 	set_error(&error, bus_for_irq->errnum);
 		}
@@ -286,7 +286,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 	int8_t err = channel_put(bus->channel, data, with_eoi);
 debug_printf("last_push_error: %d (ch=%p)\n", err, bus->channel);
 	if (err != CBM_ERROR_OK) {
-	  set_error(&error, err);
+	  set_error_tsd(&error, err, 0, 0, bus->channel->drive);
 	  st |= STAT_WRTIMEOUT;
 	  bus->channel = NULL;
 	}
@@ -323,7 +323,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			if (error.error_buffer[error.readp] == 0) {
 				// finished reading the error message
 				// set OK
-				set_error(&error, CBM_ERROR_OK);
+				set_error_tsd(&error, CBM_ERROR_OK, 0, 0, channel == NULL ? 0 : channel->drive);
 			}
 		}
 	} else {
@@ -350,7 +350,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			}
 		}
 		if (err != CBM_ERROR_OK) {
-			set_error(&error, err);
+			set_error_tsd(&error, err, 0, 0, channel->drive);
 		}
 /*
 #ifdef DEBUG_BUS

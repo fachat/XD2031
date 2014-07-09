@@ -435,7 +435,7 @@ debug_printf("Sent command - got: %d, rptr=%d, wptr=%d\n", rv, buffer->rptr, buf
 		}
 		if (rv != CBM_ERROR_OK) {
 		
-			set_error_ts(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector);
+			set_error_tsd(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector, drive);
 			// means: don't wait, error is already set
 			return -1;
 		}
@@ -532,7 +532,7 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 		debug_printf("block_allocfree: drive=%d, t&s=%d, %d\n", drive, track, sector);
 
 		if (rv != CBM_ERROR_OK) {
-			set_error_ts(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector);
+			set_error_tsd(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector, drive);
 		}
 	}
         return rv;
