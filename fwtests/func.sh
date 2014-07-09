@@ -13,6 +13,16 @@ BINNAME=${SWNAME}-${VERSION}-sockserv-pc.elf
 
 FIRMWARE=${BASEDIR}/firmware/${THISBINDIR}/${BINNAME}
 
+RUNNER="$THISDIR"/../../testrunner/fwrunner
+
+SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+
+# make sure we have a firmware
+(cd ${BASEDIR}/firmware; DEVICE=sockserv make)
+# make sure we have a testrunner
+(cd ${BASEDIR}/testrunner; make fwrunner)
+
+
 function usage() {
 	echo "Running *.frs test runner scripts"
 	echo "  $0 [options] [frs_scripts]"
@@ -70,7 +80,7 @@ while test $# -gt 0; do
 	shift;
 	;;
   -V)
-	RVERBOSE="-v"
+	RVERBOSE="-t"
 	shift;
 	;;
   -d)
@@ -152,10 +162,6 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../../testrunner/fwrunner
-
-SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
-
 DEBUGFILE="$TMPDIR"/gdb.ex
 
 ########################
@@ -209,6 +215,7 @@ for script in $TESTSCRIPTS; do
 		if test "x$RDEBUG" != "x"; then
 
 			# start test runner before server, so we can use gdb on firmware
+			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script &
 			RUNNERPID=$!
 			trap "kill -TERM $SERVERPID $RUNNERPID" INT
@@ -226,6 +233,7 @@ for script in $TESTSCRIPTS; do
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
 
+			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script;
 			RESULT=$?
 		fi;
