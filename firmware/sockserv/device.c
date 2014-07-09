@@ -40,8 +40,6 @@ void device_init(void) {
  */
 void device_setup(int argc, const char *argv[]) {
 
-	debug_printf("setup: argc=%d\n", argc);
-	printf("setup: argc=%d\n", argc);
 
 	const char *socketname = NULL;
 	int p = 1;
