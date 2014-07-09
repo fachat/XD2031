@@ -3,6 +3,10 @@ The file vice+sock488.diff is an experimental diff to VICE version 2.4,
 so it writes a firmware test runner script into the file "sock488.trace"
 for all actions being done on a true drive emulation emulated drive.
 
+The file vice+jamexit.diff is an experimental file that makes VICE exit
+when the processor runs on a JAM opcode, like opcode 2. In some of the
+tests you will thus find a sequence "POKE2,2:SYS2" to exit VICE.
+
 For best experience run it like
 
 	./src/xpet -model 4032 -truedrive -drive8type 4040 -8 <<disk-image-for-test>> -autostartprgmode 1 <<BASIC-file-to-test>>
