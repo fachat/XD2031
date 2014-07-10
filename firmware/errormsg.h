@@ -48,7 +48,7 @@ typedef struct {
 	uint8_t		readp;	// read index in error_buffer
 } errormsg_t ;
 
-void set_error_tsd(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector, uint8_t drive);
+void set_error_tsd(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector, int8_t drive);
 
 void set_status(errormsg_t *err, char* s);
 

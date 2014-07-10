@@ -111,14 +111,18 @@ const char *errmsg(const uint8_t code) {  // lookup error text
 	return STR_EMPTY;            // default if code not in table
 }	
 
-void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector, uint8_t drive) {
+void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector, int8_t drive) {
 	char *msg = (char *)err->error_buffer;
 	err->errorno = errornum;
   	err->readp = 0;
 
 	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
 	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
-	rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d,%1.1d\r"), track, sector, drive); // track & sector
+	if (drive < 0) {
+		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track, sector); // track & sector
+	} else {
+		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d,%1.1d\r"), track, sector, drive); // track & sector & drive
+	}
 
 	if (errornum != CBM_ERROR_OK         &&
 	    errornum != CBM_ERROR_DOSVERSION &&

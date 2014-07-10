@@ -108,7 +108,7 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 // Main-Funktion
 /////////////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
 
 	// Initializations
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 
 	// pull in command line config options from server
 	// also send directory charset
-	rtconfig_pullconfig();
+	rtconfig_pullconfig(argc, argv);
 
 #ifdef USE_FAT
 	// register fat provider

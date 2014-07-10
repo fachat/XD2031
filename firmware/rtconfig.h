@@ -35,6 +35,7 @@ typedef struct {
 	uint8_t		device_address;		// current unit number
 	uint8_t		last_used_drive;	// init with 0
 	bool		advanced_wildcards;
+	bool		errmsg_with_drive;
 } rtconfig_t;
 
 #endif

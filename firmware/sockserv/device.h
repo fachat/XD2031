@@ -32,7 +32,7 @@
 
 void device_init(void);
 
-void device_setup(int argc, char *argv[]);
+void device_setup(int argc, const char *argv[]);
 
 static inline void device_led_on (void) {
 }

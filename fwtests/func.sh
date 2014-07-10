@@ -210,7 +210,7 @@ for script in $TESTSCRIPTS; do
 
 		############################################
 		# start firmware
-		echo "Starting firmware as: $FIRMWARE -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET"
+		echo "Starting firmware as: $FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET"
 
 		# start testrunner after server/firmware, so we get the return value in the script
 		if test "x$RDEBUG" != "x"; then
@@ -226,11 +226,11 @@ for script in $TESTSCRIPTS; do
 				echo "break $i" >> $DEBUGFILE
 			done;
 			#gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script " $RUNNER
-			gdb -x $DEBUGFILE -ex "run -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET" $FIRMWARE
+			gdb -x $DEBUGFILE -ex "run $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET" $FIRMWARE
 
 			RESULT=-1
 		else
-			$FIRMWARE -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET &
+			$FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET &
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
 
@@ -250,8 +250,8 @@ for script in $TESTSCRIPTS; do
 		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
-		#$RUNNER $RVERBOSE -w -d $TMPDIR/$SSOCKET $script &
-		$FIRMWARE -S $TMPDIR/$SSOCKET &
+		$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script &
+		$FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
