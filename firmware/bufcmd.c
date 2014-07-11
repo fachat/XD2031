@@ -290,7 +290,7 @@ static uint8_t bufcmd_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint
 	return rv;
 }
 
-uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf) {
 	
 	int ichan;
 	int ptr;
@@ -337,7 +337,8 @@ uint8_t bufcmd_set_ptr(bus_t *bus, char *cmdbuf, errormsg_t *error) {
  *
  * returns CBM_ERROR_OK/CBM_ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
-uint8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, errormsg_t *error, uint8_t blockflag) {
+int8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, uint8_t blockflag, 
+			uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv) {
 
 #ifdef DEBUG_USER
 	debug_printf("cmd_user (%02x): %s\n", cmd, pars);
@@ -356,7 +357,8 @@ uint8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, errormsg_t *error, uin
        	if (rv != 4) {
                	return CBM_ERROR_SYNTAX_INVAL;
        	}
-		
+	
+	
 	channel = bus_secaddr_adjust(bus, ichan);
 	buffer = cmdbuf_find(channel);
 	if (buffer == NULL) {
@@ -364,7 +366,7 @@ uint8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, errormsg_t *error, uin
 	}
 	buffer->pflag |= PFLAG_PRELOAD;
 
-	int8_t errdrive = bus->rtconf.errmsg_with_drive ? drive : -1;
+	*err_drv = drive;
 
 	// read/write sector
 #ifdef DEBUG_USER
@@ -436,10 +438,10 @@ debug_printf("Sent command - got: %d, rptr=%d, wptr=%d\n", rv, buffer->rptr, buf
 			}
 		}
 		if (rv != CBM_ERROR_OK) {
-		
-			set_error_tsd(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector, errdrive);
-			// means: don't wait, error is already set
-			return -1;
+
+			*err_trk = track > 255 ? 255 : track;	
+			*err_sec = sector > 255 ? 255 : sector;
+			return -rv;
 		}
 
 	} else {
@@ -458,7 +460,7 @@ debug_printf("Sent command - got: %d, rptr=%d, wptr=%d\n", rv, buffer->rptr, buf
  * 
  * returns CBM_ERROR_OK/CBM_ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
-uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+int8_t cmd_user(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv) {
 
 	char *pars;	
 	uint8_t cmd = cmdbuf[1];
@@ -470,15 +472,15 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 	// start of parameter string into pars
 	pars = cmdbuf+2;
 	
-	uint8_t rv = CBM_ERROR_SYNTAX_UNKNOWN;
+	int8_t rv = CBM_ERROR_SYNTAX_UNKNOWN;
 
         // digits and letters allowed: U1 = UA etc.
 	switch(cmd & 0x0f) {
 	case 1:		// U1
-		rv = cmd_user_u12(bus, FS_BLOCK_U1, pars, error, 0);
+		rv = cmd_user_u12(bus, FS_BLOCK_U1, pars, 0, err_trk, err_sec, err_drv);
 		break;
 	case 2:		// U2
-		rv = cmd_user_u12(bus, FS_BLOCK_U2, pars, error, 0);
+		rv = cmd_user_u12(bus, FS_BLOCK_U2, pars, 0, err_trk, err_sec, err_drv);
 		break;
 	case 9:		// U9 / UI
 		rv = CBM_ERROR_DOSVERSION;
@@ -494,7 +496,8 @@ uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 /**
  * block commands
  */
-uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t *error) {
+int8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, 
+			uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv) {
 	
 	int drive;
 	int track;
@@ -504,12 +507,11 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 	
 	uint8_t rv = CBM_ERROR_DRIVE_NOT_READY;
 
-	rv = sscanf(cmdbuf, "%d%*[, ]%d%*[, ]%d", &drive, &track, &sector);
-	if (rv != 3) {
+	if (3 != sscanf(cmdbuf, "%d%*[, ]%d%*[, ]%d", &drive, &track, &sector)) {
 		return CBM_ERROR_SYNTAX_INVAL;
 	}
 
-	int8_t errdrive = bus->rtconf.errmsg_with_drive ? drive : -1;
+	*err_drv = drive;
 
         buf[FS_BLOCK_PAR_DRIVE] = drive;		// comes first similar to other FS_* cmds
         buf[FS_BLOCK_PAR_CMD] = fscmd;
@@ -536,7 +538,9 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
 		debug_printf("block_allocfree: drive=%d, t&s=%d, %d\n", drive, track, sector);
 
 		if (rv != CBM_ERROR_OK) {
-			set_error_tsd(error, rv, track > 255 ? 255 : track, sector > 255 ? 255 : sector, drive);
+			*err_trk = track > 255 ? 255 : track;
+			*err_sec = sector > 255 ? 255 : sector;
+			return -rv;
 		}
 	}
         return rv;
@@ -550,7 +554,7 @@ uint8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd, errormsg_t 
  * 
  * returns CBM_ERROR_OK/CBM_ERROR_* on direct ok/error, or -1 if a callback has been submitted
  */
-uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
+int8_t cmd_block(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv) {
 
 #ifdef DEBUG_BLOCK
 	debug_printf("CMD BLOCK: %s\n", cmdbuf);
@@ -576,15 +580,15 @@ uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error) {
 		
 	switch(cchar) {
 	case 'A':
-		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BA, error);
+		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BA, err_trk, err_sec, err_drv);
 	case 'F':
-		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BF, error);
+		return cmd_block_allocfree(bus, cmdbuf, FS_BLOCK_BF, err_trk, err_sec, err_drv);
 	case 'P':
-		return bufcmd_set_ptr(bus, cmdbuf, error);
+		return bufcmd_set_ptr(bus, cmdbuf);
 	case 'R':
-		return cmd_user_u12(bus, FS_BLOCK_U1, cmdbuf, error, 1);
+		return cmd_user_u12(bus, FS_BLOCK_U1, cmdbuf, 1, err_trk, err_sec, err_drv);
 	case 'W':
-		return cmd_user_u12(bus, FS_BLOCK_U2, cmdbuf, error, 1);
+		return cmd_user_u12(bus, FS_BLOCK_U2, cmdbuf, 1, err_trk, err_sec, err_drv);
 	}
 
 	return CBM_ERROR_SYNTAX_UNKNOWN;

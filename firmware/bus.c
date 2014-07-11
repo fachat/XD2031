@@ -222,7 +222,7 @@ static int16_t cmd_handler (bus_t *bus)
 		debug_printf("Received callback error number on open: %d\n", bus_for_irq->errnum);
 #endif
 		// result of the open
-		if (bus_for_irq->errnum == 1) {
+		if (bus_for_irq->errnum == CBM_ERROR_SCRATCHED) {
 			set_error_tsd(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0, errdrive);
 		} else {
                 	set_error_tsd(&error, bus_for_irq->errnum, 0, 0, errdrive);

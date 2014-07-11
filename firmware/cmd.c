@@ -49,10 +49,15 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
         cmd_t *command = &(bus->command);
         rtconfig_t *rtconf = &(bus->rtconf);
 	int8_t rv = 0;
+	uint8_t err_trk = 0;
+	uint8_t err_sec = 0;
+	uint8_t err_drv = 0;
 
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 
 	parse_filename(command, &nameinfo, PARSEHINT_COMMAND);
+
+	err_drv = (nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive);
 
 #ifdef DEBUG_CMD
         debug_printf("CMD=%s\n", nameinfo.cmd == command_to_name(nameinfo.cmd));
@@ -100,10 +105,10 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			}
 			break;
 		case CMD_UX:
-			rv = cmd_user(bus, (char*) command->command_buffer, errormsg);
+			rv = cmd_user(bus, (char*) command->command_buffer, &err_trk, &err_sec, &err_drv);
 			break;
 		case CMD_BLOCK:
-			rv = cmd_block(bus, (char*) command->command_buffer, errormsg);
+			rv = cmd_block(bus, (char*) command->command_buffer, &err_trk, &err_sec, &err_drv);
 			break;
 		case CMD_EXT:
 			rv = rtconfig_set(rtconf, (char*) command->command_buffer);
@@ -118,14 +123,14 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			break;
 #endif
 		default:
-			rv = -1;
+			rv = -CBM_ERROR_SYNTAX_UNKNOWN;
 	}
 	if (rv >= 0) {
 		callback(rv, NULL);
 		return 0;
 	}
 	// need to have the error message set when returning <0
-        set_error_tsd(errormsg, CBM_ERROR_SYNTAX_UNKNOWN, 0, 0, bus->rtconf.errmsg_with_drive ? 
-		(nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive) : -1);
+        set_error_tsd(errormsg, rv < -1 ? -rv : CBM_ERROR_SYNTAX_UNKNOWN, err_trk, err_sec, 
+						bus->rtconf.errmsg_with_drive ?  err_drv : -1);
 	return -1;
 }

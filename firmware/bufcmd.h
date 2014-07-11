@@ -30,8 +30,8 @@
 
 
 
-uint8_t cmd_user(bus_t *bus, char *cmdbuf, errormsg_t *error);
-uint8_t cmd_block(bus_t *bus, char *cmdbuf, errormsg_t *error); 
+int8_t cmd_user(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv);
+int8_t cmd_block(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv); 
 
 void bufcmd_init();
 
