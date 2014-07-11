@@ -32,6 +32,11 @@ COMPAREFILES=""
 #SERVEROPTS="-v -A0:fs=rel1.d64"
 SERVEROPTS="-v"
 
+#firmware options
+#FWOPTS=""
+FWOPTS=-Xsock488:E=-
+
+
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
