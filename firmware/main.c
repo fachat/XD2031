@@ -25,9 +25,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 //-------------------------------------------------------------------------
 
+/*
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+*/
 #include <inttypes.h>
 #include <ctype.h>
 #include <string.h>
@@ -46,7 +48,10 @@
 #include "device.h"
 #include "rtconfig.h"
 #include "rtconfig2.h"
+
+#ifdef HAS_EEPROM
 #include "nvconfig.h"
+#endif
 
 // those are currently still needed for *_mainloop_iteration
 #ifdef HAS_IEC
@@ -54,6 +59,9 @@
 #endif
 #ifdef HAS_IEEE
 #include "ieee.h"
+#endif
+#ifdef HAS_SOCK488
+#include "sock488.h"
 #endif
 
 #ifdef USE_FAT
@@ -71,7 +79,9 @@
 #include "led.h"
 
 
+#ifdef __AVR__
 static FILE term_stdout = FDEV_SETUP_STREAM(term_putchar, NULL, _FDEV_SETUP_WRITE);
+#endif
 
 //---------------------------
 // LIST XD-2031 VERSIONSTRING
@@ -83,15 +93,6 @@ void ListVersion()
 	term_putcrlf();
 }
 
-
-//--------------------------
-// CALC FREE RAM SPACE
-uint16_t BytesFree()
-{
-	extern unsigned char __heap_start;
-	uint16_t momentan_frei = SP - (uint16_t) &__heap_start;
-	return momentan_frei;
-}
 
 
 static endpoint_t term_endpoint;
@@ -107,8 +108,9 @@ void main_delay() {
 /////////////////////////////////////////////////////////////////////////////
 // Main-Funktion
 /////////////////////////////////////////////////////////////////////////////
-int main()
+int main(int argc, const char *argv[])
 {
+
 	// Initializations
 	//
 	// first some basic hardware infrastructure
@@ -121,7 +123,13 @@ int main()
 
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
+
+
+#ifdef __AVR__
 	stdout = &term_stdout;          // redirect stdout
+#else
+	device_setup(argc, argv);
+#endif
 
 	// server communication
 	uarthw_init();			// first hardware
@@ -160,8 +168,10 @@ int main()
 	// it also handles the interrupt initialization if necessary
 	device_init();
 
+#ifdef HAS_EEPROM
 	// read bus-independent settings from non volatile memory
 	nv_restore_common_config();
+#endif
 
 	// enable interrupts
 	enable_interrupts();
@@ -171,7 +181,7 @@ int main()
 
 	// pull in command line config options from server
 	// also send directory charset
-	rtconfig_pullconfig();
+	rtconfig_pullconfig(argc, argv);
 
 #ifdef USE_FAT
 	// register fat provider
@@ -184,8 +194,10 @@ int main()
   	ListVersion();
 	// ... and some system info
 	term_printf((" %u Bytes free"), BytesFree());
-	term_printf((", %d kHz"), (int32_t)(F_CPU/1000));
+	term_printf((", %d kHz"), FreqKHz());
+#ifdef __AVR__
 	fuse_info();
+#endif
 	term_putcrlf();
 	term_putcrlf();
 
@@ -200,6 +212,10 @@ int main()
 #ifdef HAS_IEC
 		// handle IEC bus
 		iec_mainloop_iteration();
+#endif
+#ifdef HAS_SOCK488
+		// handle IEC bus
+		sock488_mainloop_iteration();
 #endif
 		// send out log messages
 		term_flush();

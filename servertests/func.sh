@@ -1,5 +1,14 @@
 #!/bin/bash
 
+BASEDIR="../.."
+
+RUNNER="$THISDIR"/${BASEDIR}/testrunner/pcrunner
+
+SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+
+# make sure we have a testrunner
+(cd ${BASEDIR}/testrunner; make pcrunner)
+
 function usage() {
 	echo "Running *.trs test runner scripts"
 	echo "  $0 [options] [trs_scripts]"
@@ -51,7 +60,7 @@ while test $# -gt 0; do
 	shift;
 	;;
   -V)
-	RVERBOSE="-v"
+	RVERBOSE="-t"
 	shift;
 	;;
   -d)
@@ -133,10 +142,6 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 #
 
 
-RUNNER="$THISDIR"/../testrunner
-
-SERVER="$THISDIR"/../../pcserver/fsser
-
 DEBUGFILE="$TMPDIR"/gdb.ex
 
 ########################
@@ -159,9 +164,13 @@ for script in $TESTSCRIPTS; do
 	SOCKET=socket_$script
 
 	# overwrite test files in each iteration, just in case
-	for i in $TESTFILES; do
-		cp "$THISDIR/$i" "$TMPDIR"
-	done;
+        for i in $TESTFILES; do
+                if [ -f ${THISDIR}/${i}.gz ]; then
+                        gunzip -c ${THISDIR}/${i}.gz >  ${TMPDIR}/${i}
+                else
+                        cp ${THISDIR}/${i} ${TMPDIR}/${i}
+                fi;
+        done;
 
 	# start server
 
@@ -180,6 +189,7 @@ for script in $TESTSCRIPTS; do
 			done;
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
 		else
+			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
 		fi;
 
@@ -193,6 +203,7 @@ for script in $TESTSCRIPTS; do
 		fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
+		echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
 		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
@@ -207,14 +218,22 @@ for script in $TESTSCRIPTS; do
 	#echo "Killing server (pid $SERVERPID)"
 	#kill -TERM $SERVERPID
 
-	if test "x$COMPAREFILES" != "x"; then
-		testname=`basename $script .trs`
-		for i in $COMPAREFILES; do 
-			if test -f $THISDIR/${i}-${testname}; then
-				hexdiff $THISDIR/${i}-${testname} $TMPDIR/${i}
-			fi
-		done;
-	fi
+        if test "x$COMPAREFILES" != "x"; then
+                testname=`basename $script .trs`
+                for i in $COMPAREFILES; do
+                        NAME="${THISDIR}/${i}-${testname}"
+                        if test -f ${NAME}; then
+                                echo "Comparing file ${i}"
+                                hexdiff ${NAME} $TMPDIR/${i}
+                        fi
+                        if test -f ${NAME}.gz; then
+                                echo "Comparing file ${i}"
+                                gunzip -c ${NAME}.gz > ${TMPDIR}/_${i}
+                                hexdiff ${TMPDIR}/_${i} ${TMPDIR}/${i}
+                                rm -f ${TMPDIR}/_${i}
+                        fi
+                done;
+        fi
 
 	rm -f $TMPDIR/$SOCKET $DEBUGFILE;
 	rm -f $TMPDIR/$script;

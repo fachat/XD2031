@@ -87,6 +87,7 @@ void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr) {
 	rtc->device_address = devaddr;
 	rtc->last_used_drive = 0;
 	rtc->advanced_wildcards = false;
+	rtc->errmsg_with_drive = true;
 
 	if(nv_restore_config(rtc)) nv_save_config(rtc);
 
@@ -182,7 +183,7 @@ static uint8_t setopt_callback(int8_t channelno, int8_t errno, packet_t *rxpacke
 			do_setopt(buf, len);
 			break;
 		case FS_RESET:
-			rtconfig_pullconfig();
+			rtconfig_pullconfig(0, NULL);
 			break;
 		}
         }
@@ -191,7 +192,14 @@ static uint8_t setopt_callback(int8_t channelno, int8_t errno, packet_t *rxpacke
 }
 
 
-void rtconfig_pullconfig() {
+void rtconfig_pullconfig(int argc, const char *argv[]) {
+
+	for (int i = 0; i < argc; i++) {
+		if (argv[i][0] == '-' && argv[i][1] == 'X') {
+			do_setopt((char*)argv[i]+2, strlen(argv[i]+2));
+		}
+	}
+
         // prepare FS_RESET packet
         packet_set_filled(&buspack, FSFD_SETOPT, FS_RESET, 0);
 
@@ -243,6 +251,27 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 			}
 			if (er == CBM_ERROR_OK) {
 				debug_puts("ADVANCED WILDCARDS ");
+				if (rtc->advanced_wildcards)
+					debug_puts("EN");
+				else
+					debug_puts("DIS");
+				debug_puts("ABLED\n");
+			}
+		}
+		break;
+	case 'E':
+		// enable/disable the drive number on error messages
+		// look for E=+ || E=-
+		if (*++ptr == '=') {
+			if (*++ptr == '+') {
+				rtc->errmsg_with_drive = true;
+				er = CBM_ERROR_OK;
+			} else if (*ptr == '-') {
+				rtc->errmsg_with_drive = false;
+				er = CBM_ERROR_OK;
+			}
+			if (er == CBM_ERROR_OK) {
+				debug_puts("ERRORS WITH DRIVE ");
 				if (rtc->advanced_wildcards)
 					debug_puts("EN");
 				else

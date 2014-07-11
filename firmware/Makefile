@@ -49,7 +49,7 @@ endif
 
 # If no DEVICE=<yourdevice> is given, default to xs1541
 DEVICE?=xs1541
-DEVICES=xs1541 petSD petSD2
+DEVICES=xs1541 petSD petSD2 sockserv
 
 # If no VERSION=<x.y.z.> is given, default to today's date
 VERSION?=$(shell date +"%Y-%m-%d")

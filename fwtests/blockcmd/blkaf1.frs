@@ -1,0 +1,769 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,03"
+recv ",0" 0d
+atn 5f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect "#" 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
+atn 28 6f
+send "B-A: 0 1  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect 22 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
+atn 28 6f
+send "B-F: 0 1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect "#" 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect 22 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f

@@ -1,0 +1,137 @@
+
+
+;reltest4.7.prg ==0401==
+  100 d=8
+  110 n=1
+  120 ex=0
+  130 open1,d,15
+  160 gosub2200
+  190 goto 505
+  500 geta$:ifa$=""then500
+  505 print"test:"
+  510 print"a write after end"
+  520 print"b read after end"
+  530 print"c read after write"
+  540 print"d write after read"
+  550 print"e write in middle of record"
+  560 print"f position to record #0"
+  570 print"g create 5 recs, pos rec 10 in same blk"
+  780 print"y all with step"
+  790 print"z all"
+  800 geta$:ifa$="" then 800
+  810 aa=asc(a$)-asc("a")+1
+  820 if aa=25 or aa=26 then 850
+  830 gosub 900
+  840 goto 500
+  850 bb=aa
+  851 for aa = 1 to 7:gosub 900
+  852 if bb=26 then 858
+  854 geta$:ifa$=""then854
+  858 next
+  860 print"press key"
+  880 goto 500
+  900 on aa goto 4000,4100,5000,5200,5400,5500,2000
+ 2000 print"create 5 recs, pos rec 10 in same blk"
+ 2010 gosub9100
+ 2100 print#1,"p"chr$(2)chr$(5)chr$(0);
+ 2110 gosub9000
+ 2120 print#2,"foo"
+ 2130 gosub9000
+ 2170 close2
+ 2199 return
+ 2200 rem prepare data
+ 2210 gosub 9100
+ 2220 print#1,"p"chr$(2)chr$(1)chr$(0)chr$(0)
+ 2230 gosub9000
+ 2240 print#2,"1111111111";:rem full record
+ 2250 gosub9000
+ 2260 print#1,"p"chr$(2)chr$(2)chr$(0)chr$(0)
+ 2270 gosub9000
+ 2280 print#2,"2222222222";:rem full record
+ 2290 gosub9000
+ 2300 print#1,"p"chr$(2)chr$(3)chr$(0)chr$(0)
+ 2310 gosub9000
+ 2320 print#2,"3333333333";:rem full record
+ 2330 gosub9000
+ 2340 close 2
+ 3999 return
+ 4000 print"write after end"
+ 4010 gosub 9100
+ 4020 print#1,"p"chr$(2)chr$(4)chr$(0)chr$(0)
+ 4030 gosub9000
+ 4040 print#2,"1111111111";:rem full record
+ 4050 gosub9000
+ 4060 print#2,"2222222";
+ 4070 gosub9000
+ 4080 print#2,"333";
+ 4085 gosub9000
+ 4090 close 2
+ 4099 return
+ 4100 print"read after end"
+ 4110 gosub 9100
+ 4120 print#1,"p"chr$(2)chr$(4)chr$(0)chr$(0)
+ 4130 gosub9000
+ 4140 for i=0 to 15:get#2,a$
+ 4150 if st=0 then printa$;:next:goto 4200
+ 4160 printa$;:gosub 9200:gosub 9000
+ 4170 for j=i to 20:get#2,a$
+ 4180 printa$:gosub 9200
+ 4190 next
+ 4200 close 2
+ 4299 return
+ 5000 print"read after write"
+ 5010 gosub 9100
+ 5020 print#1,"p"chr$(2)chr$(1)chr$(0)chr$(0)
+ 5030 gosub9000
+ 5040 print#2,"444"
+ 5050 gosub9000
+ 5140 for i=0 to 15:get#2,a$
+ 5150 if st=0 then printa$;:next:goto 5190
+ 5160 printa$;:gosub 9200:gosub 9000
+ 5180 next
+ 5190 close 2
+ 5199 return
+ 5200 print:print"write after read"
+ 5210 gosub 9100
+ 5220 print#1,"p"chr$(2)chr$(2)chr$(0)chr$(0)
+ 5230 gosub9000
+ 5240 for i=0 to 3:get#2,a$
+ 5250 if st=0 then printa$;:next:goto 5390
+ 5260 printa$;:gosub 9200:gosub 9000
+ 5280 next
+ 5340 print#2,"555"
+ 5350 gosub9000
+ 5360 print#2,"666"
+ 5370 gosub9000
+ 5390 close 2
+ 5399 return
+ 5400 print:print"write in middle of record"
+ 5410 gosub 9100
+ 5420 print#1,"p"chr$(2)chr$(3)chr$(0)chr$(5)
+ 5430 gosub9000
+ 5440 print#2,"888";:rem short record
+ 5450 gosub9000
+ 5490 close 2
+ 5499 return
+ 5500 print"position to record #0"
+ 5505 n=n+1
+ 5510 gosub 9100
+ 5520 print#1,"p"chr$(2)chr$(0)chr$(0)chr$(5)
+ 5530 gosub9000
+ 5540 print#2,"888";
+ 5550 gosub9000
+ 5590 close 2
+ 5599 return
+ 8900 print:directory
+ 8905 close1
+ 8910 end
+ 9000 input#1,a,b$,t,s
+ 9010 if a<>ex thenprinta","b$","t","s
+ 9020 return
+ 9100 open2,d,2,"0:rel4."+chr$(48+n)+",l,"+chr$(10)
+ 9105 if st<>0 then print"st="st
+ 9110 gosub9000
+ 9130 return
+ 9200 if st<>0 then print"st="st
+ 9230 return
+

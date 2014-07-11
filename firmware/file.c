@@ -92,6 +92,16 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	parse_filename(command, &nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
 
+	// drive handling needed for error message drive
+	if (nameinfo.drive == NAMEINFO_LAST_DRIVE) {
+		nameinfo.drive = rtconf->last_used_drive;
+	}
+	else if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+		// TODO: match CBM behavior
+		nameinfo.drive = rtconf->last_used_drive;
+	}
+	int8_t errdrive = rtconf->errmsg_with_drive ? nameinfo.drive : -1;
+
 	// post-parse
 
 	if (nameinfo.cmd != CMD_NONE && nameinfo.cmd != CMD_DIR && nameinfo.cmd != CMD_OVERWRITE) {
@@ -104,20 +114,20 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		&& nameinfo.type != 'U' && nameinfo.type != 'L') {
 		// not set, or set as not sequential and not program
 		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
-		set_error(errormsg, CBM_ERROR_FILE_TYPE_MISMATCH);
+		set_error_tsd(errormsg, CBM_ERROR_FILE_TYPE_MISMATCH, 0, 0, errdrive);
 		return -1;
 	}
 	if (nameinfo.access != 0 && nameinfo.access != 'W' && nameinfo.access != 'R'
 			&& nameinfo.access != 'A' && nameinfo.access != 'X') {
 		debug_puts("UNKNOWN FILE ACCESS TYPE "); debug_putc(nameinfo.access); debug_putcrlf();
 		// not set, or set as not read, write, or append, or r/w ('X')
-		set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
+		set_error_tsd(errormsg, CBM_ERROR_SYNTAX_UNKNOWN, 0, 0, errdrive);
 		return -1;
 	}
 	if (nameinfo.cmd == CMD_DIR && (nameinfo.access != 0 && nameinfo.access != 'R')) {
 		// trying to write to a directory
 		debug_puts("WRITE TO DIRECTORY!"); debug_putcrlf();
-		set_error(errormsg, CBM_ERROR_FILE_EXISTS);
+		set_error_tsd(errormsg, CBM_ERROR_FILE_EXISTS, 0, 0, errdrive);
 		return -1;
 	}
 
@@ -230,7 +240,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 		if (endpoint2 != endpoint) {
 			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.file[0].drive+0x30);
-			set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
+			set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo.drive);
 			return -1;
 		}
 	}
@@ -240,7 +250,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// may do further checks
 	if (endpoint == NULL) {
 		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
-		set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
+		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo.drive);
 		return -1;
 	}
 	provider_t *provider = endpoint->provider;
@@ -259,7 +269,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	if (activeslot == NULL) {
 		debug_puts("NO OPEN SLOT FOR OPEN!");
 		debug_putcrlf();
-		set_error(errormsg, CBM_ERROR_NO_CHANNEL);
+		set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
 		return -1;
 	}
 
@@ -304,7 +314,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		if (channel != NULL) {
 			debug_puts("FILE OPEN ERROR");
 			debug_putcrlf();
-			set_error(errormsg, CBM_ERROR_NO_CHANNEL);
+			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
 			// clean up
 			channel_close(channel_no);
 			return -1;
@@ -312,7 +322,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
 		if (e < 0) {
 			debug_puts("E="); debug_puthex(e); debug_putcrlf();
-			set_error(errormsg, CBM_ERROR_NO_CHANNEL);
+			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
 			return -1;
 		}
 	}

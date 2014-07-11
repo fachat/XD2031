@@ -59,7 +59,7 @@ const char IN_ROM STR_DRIVE_NOT_READY[]      = "DRIVE NOT READY";
 const char IN_ROM STR_NO_BLOCK[]             = "NO BLOCK";
 const char IN_ROM STR_ILLEGAL_T_OR_S[]       = "ILLEGAL TRACK OR SECTOR";
 const char IN_ROM STR_OVERFLOW_IN_RECORD[]   = "OVERFLOW IN RECORD";
-const char IN_ROM STR_RECORD_NOT_PRESENT[]   = "RECORD NOT PRESENT";
+const char IN_ROM STR_RECORD_NOT_PRESENT[]   = " RECORD NOT PRESENT";
 const char IN_ROM STR_TOO_LARGE[]            = "FILE TOO LARGE";
 const char IN_ROM STR_EMPTY[]                = "";
 
@@ -111,14 +111,18 @@ const char *errmsg(const uint8_t code) {  // lookup error text
 	return STR_EMPTY;            // default if code not in table
 }	
 
-void set_error_ts(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector) {
+void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector, int8_t drive) {
 	char *msg = (char *)err->error_buffer;
 	err->errorno = errornum;
   	err->readp = 0;
 
 	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
 	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
-	rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d"), track, sector); // track & sector
+	if (drive < 0) {
+		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track, sector); // track & sector
+	} else {
+		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d,%1.1d\r"), track, sector, drive); // track & sector & drive
+	}
 
 	if (errornum != CBM_ERROR_OK         &&
 	    errornum != CBM_ERROR_DOSVERSION &&

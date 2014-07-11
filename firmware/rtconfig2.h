@@ -43,6 +43,6 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
 
 // send an FS_RESET packet and pull in cmdline options
 // also tries to send the preferred character set
-void rtconfig_pullconfig(void);
+void rtconfig_pullconfig(int argc, const char *argv[]);
 
 #endif

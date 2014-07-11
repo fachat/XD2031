@@ -1002,6 +1002,8 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
 		if (diep->CurrentTrack == *track && Sector == *sector) {
 			// the block found is the one requested
 			// so allocate it before we return
+			log_debug("di_block_alloc: found %d/%d to alloc, BAM at pos %d\n", *track, Sector, bam-diep->BAM[0]);
+      			fbl[0]--;      // decrease # of free blocks on track
 			di_alloc_BAM(bam, Sector);
 			// sync BAM to disk (image)
 			di_sync_BAM(diep);
