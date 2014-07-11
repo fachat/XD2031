@@ -225,7 +225,7 @@ static int16_t cmd_handler (bus_t *bus)
 		if (bus_for_irq->errnum == 1) {
 			set_error_tsd(&error, bus_for_irq->errnum, bus_for_irq->errparam, 0, errdrive);
 		} else {
-                	set_error(&error, bus_for_irq->errnum);
+                	set_error_tsd(&error, bus_for_irq->errnum, 0, 0, errdrive);
 		}
 
 #ifdef DEBUG_BUS
@@ -336,7 +336,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		// if still NULL, error
 		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
-		set_error(&error, CBM_ERROR_FILE_NOT_OPEN);
+		set_error_tsd(&error, CBM_ERROR_FILE_NOT_OPEN, 0, 0, errdrive);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
 	    } else {
 		int8_t err;

@@ -90,8 +90,8 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, errormsg, rtconf, callback, 1);
 		case CMD_ASSIGN:
 			if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
-				// no drive
-				set_error(errormsg, CBM_ERROR_DRIVE_NOT_READY);
+				// no drive; TODO: last drive
+				set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, bus->rtconf.errmsg_with_drive ? 0 : -1);
 				return -1;
 			}
 
@@ -125,6 +125,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		return 0;
 	}
 	// need to have the error message set when returning <0
-        set_error(errormsg, CBM_ERROR_SYNTAX_UNKNOWN);
+        set_error_tsd(errormsg, CBM_ERROR_SYNTAX_UNKNOWN, 0, 0, bus->rtconf.errmsg_with_drive ? 
+		(nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive) : -1);
 	return -1;
 }
