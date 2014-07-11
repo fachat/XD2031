@@ -20,8 +20,7 @@ echo "THISDIR=$THISDIR"
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-#TESTZFILES="rel1.d64"
-TESTZFILES="rel.d82"
+TESTFILES="rel.d82"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",

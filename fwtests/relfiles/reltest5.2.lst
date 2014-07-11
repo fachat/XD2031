@@ -80,7 +80,8 @@
  2600 close 2
  8900 directory
  8905 close1
- 8910 end
+ 8910 get a$:if a$="" then 8910
+ 8920 poke2,2:sys2:rem exit vice
  9000 input#1,a,b$,t,s
  9010 if a<>ex thenprinta","b$","t","s
  9020 return

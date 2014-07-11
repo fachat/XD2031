@@ -6,6 +6,7 @@
   130 open1,d,15
   150 goto 505
   500 geta$:ifa$=""then500
+  501 poke2,2:sys2:rem exit vice
   505 print"test:"
   510 print"a create 14 recs, position 24 (in blk)"
   520 print"b create 14 recs, pos 26 (out of blk)"

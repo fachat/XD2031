@@ -10,7 +10,8 @@
  2110 gosub9000
  2390 close2
  8900 close1
- 8910 end
+ 8910 get a$:if a$="" then 8910
+ 8920 poke2,2:sys2:rem exit vice
  9000 input#1,a,b$,t,s
  9010 printa","b$","t","s
  9020 return
