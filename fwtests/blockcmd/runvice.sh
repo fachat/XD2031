@@ -3,7 +3,7 @@
 
 testname="$1"
 warp="-warp"
-drivetype=2031
+drivetype=4040
 
 imgname=blk.d64
 
