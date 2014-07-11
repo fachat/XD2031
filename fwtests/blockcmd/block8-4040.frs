@@ -1,0 +1,1099 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect 0b
+atn 5f
+atn 28 6f
+send "U1:2 0 3 4" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+recv 00
+atn 5f
+atn 28 6f
+send "U1:2 0 3 4" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 48 62
+expect 00
+atn 5f
+atn 28 6f
+send "B-P: 2 10" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "THE QUICK BROWN FOX" 0d
+atn 3f
+atn 28 62
+send "0"
+atn 3f
+atn 28 62
+send "1"
+atn 3f
+atn 28 62
+send "2"
+atn 3f
+atn 28 62
+send "3"
+atn 3f
+atn 28 62
+send "4"
+atn 3f
+atn 28 62
+send "5"
+atn 3f
+atn 28 62
+send "6"
+atn 3f
+atn 28 62
+send "7"
+atn 3f
+atn 28 62
+send "8"
+atn 3f
+atn 28 62
+send "9"
+atn 3f
+atn 28 6f
+send "U2:2 0 4 5" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "B-P: 2 200" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "THE QUICK BROWN FOX" 0d
+atn 3f
+atn 28 62
+send "0"
+atn 3f
+atn 28 62
+send "1"
+atn 3f
+atn 28 62
+send "2"
+atn 3f
+atn 28 62
+send "3"
+atn 3f
+atn 28 62
+send "4"
+atn 3f
+atn 28 62
+send "5"
+atn 3f
+atn 28 62
+send "6"
+atn 3f
+atn 28 62
+send "7"
+atn 3f
+atn 28 62
+send "8"
+atn 3f
+atn 28 62
+send "9"
+atn 3f
+atn 28 6f
+send "U2:2 0 4 5" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "U2:2 0 98 0" 0d
+atn 3f
+atn 48 6f
+expect "66,ILLEGAL TRACK "
+recv "OR SECTOR,98,00" 0d
+atn 5f
+atn 28 6f
+send "U2:2 0 100 98" 0d
+atn 3f
+atn 48 6f
+expect "66,ILLEGAL TRACK "
+recv "OR SECTOR,00,98" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0            1            2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "B-F: 0            1            2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0            511            2 " 0d
+atn 3f
+atn 48 6f
+expect "66,ILLEGAL TRACK "
+recv "OR SECTOR,55,02" 0d
+atn 5f
+atn 28 6f
+send "B-F: 0            1            257 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f3
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 63
+expect 0a
+atn 5f
+atn 28 6f
+send "U1:3 0 3 4" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 48 63
+expect 00
+atn 5f
+atn 28 6f
+send "B-P: 3 20" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 63
+send "FOX BROWN QUICK THE" 0d
+atn 3f
+atn 28 63
+send "9"
+atn 3f
+atn 28 63
+send "8"
+atn 3f
+atn 28 63
+send "7"
+atn 3f
+atn 28 63
+send "6"
+atn 3f
+atn 28 63
+send "5"
+atn 3f
+atn 28 63
+send "4"
+atn 3f
+atn 28 63
+send "3"
+atn 3f
+atn 28 63
+send "2"
+atn 3f
+atn 28 63
+send "1"
+atn 3f
+atn 28 63
+send "0"
+atn 3f
+atn 28 6f
+send "U2:3 0 4 6" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f4
+send "#1"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 64
+expect 01
+atn 5f
+atn 28 e4 3f
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 e3 3f
+atn 28 f3
+send "#1"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 63
+expect 01
+atn 5f
+atn 28 6f
+send "B-P: 2 55" 0d
+atn 3f
+atn 48 6f
+expect "70,NO CHANNEL,00,"
+recv "00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 e3 3f
+atn 28 ef 3f
