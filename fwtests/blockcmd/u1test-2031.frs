@@ -1,792 +1,792 @@
 atn 48 6f
-expect 37 33 2c 43 42 4d 20 44 4f 53 20 56 32 2e 36 20 32
-recv 30 33 31 2c 30 30 2c 30 30 0d
+expect "73,CBM DOS V2.6 2"
+recv "031,00,00" 0d
 atn 5f
 atn 28 f2
-send 23
+send "#"
 atn 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00" 0d
 atn 5f
 atn 28 6f
-send 55 41 3a 32 20 30 20 31 38 20 30 0d
+send "UA:2 0 18 0" 0d
 atn 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00" 0d
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 41
+expect "A"
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 15
+expect 15
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 1f
+expect 1f
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv fc
+expect fc
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 13
+expect 13
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 07
+expect 07
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 12
+expect 12
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 03
+expect 03
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 11
+expect 11
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv ff
+expect ff
 atn 5f
 atn 48 62
-recv 01
+expect 01
 atn 5f
 atn 48 62
-recv 42
+expect "B"
 atn 5f
 atn 48 62
-recv 4c
+expect "L"
 atn 5f
 atn 48 62
-recv 4b
+expect "K"
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv 30
+expect "0"
 atn 5f
 atn 48 62
-recv 31
+expect "1"
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv 32
+expect "2"
 atn 5f
 atn 48 62
-recv 41
+expect "A"
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv a0
+expect a0
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
-recv 00
+expect 00
 atn 5f
 atn 48 62
 recv 00
 atn 5f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00" 0d
 atn 5f
 atn 28 e2 3f
 atn 48 6f
-recv 30 30 2c 20 4f 4b 2c 30 30 2c 30 30 0d
+recv "00, OK,00,00" 0d
 atn 5f
 atn 28 ef 3f

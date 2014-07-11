@@ -1,0 +1,143 @@
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f3
+send "#"
+atn 3f
+atn 28 62
+send "THE QUICK BROWN FOX" 0d
+atn 3f
+atn 28 6f
+send "B-P:2 128" 0d
+atn 3f
+atn 28 62
+send "JUMPS OVER THE LAZY DOG" 0d
+atn 3f
+atn 28 6f
+send "B-P:2 0" 0d
+atn 3f
+atn 28 62
+send "@"
+atn 3f
+atn 28 6f
+send "U2: 2  0  1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "U1: 3  0  1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P:3 1" 0d
+atn 3f
+atn 48 63
+expect "THE QUICK BROWN F"
+expect "OX" 0d
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P:3 128" 0d
+atn 3f
+atn 48 63
+expect "JUMPS OVER THE LA"
+expect "ZY DOG" 0d
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P:3 0" 0d
+atn 3f
+atn 48 63
+expect "@"
+atn 5f
+atn 28 6f
+send "B-P: 3  7 " 0d
+atn 3f
+atn 28 6f
+send "B-W: 3  0  1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-R: 2  0  1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 62
+recv "THE QU"
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P: 2  1 " 0d
+atn 3f
+atn 48 62
+expect "T"
+atn 5f
+atn 48 62
+expect "H"
+atn 5f
+atn 48 62
+expect "E"
+atn 5f
+atn 48 62
+expect " "
+atn 5f
+atn 48 62
+expect "Q"
+atn 5f
+atn 48 62
+recv "U"
+atn 5f
+atn 28 62
+send "FOO BAR" 0d
+atn 3f
+atn 28 6f
+send "U2 2 0 1 3" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P: 2 4" 0d
+atn 3f
+atn 28 62
+send "LOREM IPSUM CETERUM CENSEO" 0d
+atn 3f
+atn 28 6f
+send "U2 2 0 1 4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-W: 2 0 1 5 " 0d
+atn 3f
+atn 28 6f
+send "U1 3 0 1 5" 0d
+atn 3f
+atn 48 63
+expect 1e
+atn 5f
+atn 28 6f
+send "B-R: 3 0 1 5" 0d
+atn 3f
+atn 48 63
+expect "F"
+atn 5f
+atn 28 e2 3f
+atn 28 e3 3f
+atn 28 ef 3f
