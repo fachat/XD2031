@@ -229,6 +229,8 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 
 	int8_t len = in->command_length;	//  includes the zero-byte
 
+	result->access = 0;
+
 	// copy over command to the end of the buffer, so we can
 	// construct it from the parts at the beginning after parsing it
 	// (because we may need to insert bytes at some places, which would
