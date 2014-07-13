@@ -1,0 +1,92 @@
+
+
+;block9.prg ==0401==
+ 1000 d=8
+ 1100 open15,d,15,"i0"
+ 1110 open2,d,2,"#"
+ 1120 gosub9000
+ 1130 get#2,a$
+ 1140 print"got buffer number ";asc(a$+chr$(0))
+ 1200 print#15,"u1:2 0 3 4"
+ 1210 gosub 9000
+ 1300 for i=0 to 255
+ 1310 get#2,a$:ifa$=""thena$=chr$(0)
+ 1320 printasc(a$)" ";
+ 1350 next
+ 1400 print#15,"u1:2 0 3 4"
+ 1410 gosub 9000
+ 1500 for i=0 to 12
+ 1510 get#2,a$:ifa$=""thena$=chr$(0)
+ 1520 printasc(a$)" ";
+ 1550 next
+ 1600 print#15,"b-p: 2 10"
+ 1610 gosub 9000
+ 1700 print#2,"the quick brown fox"
+ 1710 for i=0 to 9
+ 1720 print#2,chr$(48+i);
+ 1730 next
+ 1800 print#15,"u2:2 0 4 5"
+ 1820 gosub 9000
+ 1900 print#15,"b-p: 2 200"
+ 1910 gosub 9000
+ 1920 print#2,"the quick brown fox"
+ 1930 for i=0 to 9
+ 1940 print#2,chr$(48+i);
+ 1950 next
+ 1970 print#15,"u2:2 0 4 5"
+ 1980 gosub 9000
+ 2000 print#15,"u2:2 0 98 0"
+ 2010 gosub 9000
+ 2100 print#15,"u2:2 0 100 98"
+ 2110 gosub 9000
+ 3000 print#15,"b-a:"0,1,2
+ 3010 gosub9000
+ 3100 print#15,"b-f:"0,1,2
+ 3110 gosub9000
+ 3200 print#15,"b-a:"0,511,2
+ 3210 gosub9000
+ 3300 print#15,"b-f:"0,1,257
+ 3310 gosub9000
+ 4000 open3,d,3,"#"
+ 4010 gosub9000
+ 4020 get#3,a$
+ 4030 print"got buffer number ";asc(a$+chr$(0))
+ 4100 print#15,"u1:3 0 3 4"
+ 4110 gosub 9000
+ 4120 for i=0 to 12
+ 4130 get#3,a$:ifa$=""thena$=chr$(0)
+ 4140 printasc(a$)" ";
+ 4150 next
+ 4200 print#15,"b-p: 3 20"
+ 4210 gosub 9000
+ 4220 print#3,"fox brown quick the"
+ 4230 for i=9 to 0 step -1
+ 4240 print#3,chr$(48+i);
+ 4250 next
+ 4260 print#15,"u2:3 0 4 6"
+ 4270 gosub 9000
+ 5000 open4,d,4,"#1"
+ 5010 gosub9000
+ 5020 get#4,a$
+ 5030 print"got buffer number ";asc(a$+chr$(0))
+ 5040 close4
+ 5100 open4,d,2,"#"
+ 5110 gosub9000
+ 5120 close4
+ 5200 close3
+ 5300 open3,d,3,"#1"
+ 5310 gosub9000
+ 5320 get#3,a$
+ 5330 print"got buffer number ";asc(a$+chr$(0))
+ 5400 print#15,"b-p: 2 55"
+ 5410 gosub9000
+ 8000 close2
+ 8010 close3
+ 8020 close15
+ 8100 get a$:if a$="" then 8100
+ 8110 poke2,2:sys2:rem exit vice
+ 9000 print
+ 9010 input#15,a$,b$,c$,d$
+ 9020 printa$","b$","c$","d$
+ 9030 return
+
