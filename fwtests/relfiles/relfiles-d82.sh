@@ -16,8 +16,6 @@
 
 THISDIR=`dirname $0`
 
-echo "THISDIR=$THISDIR"
-
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
 TESTFILES="rel.d82"
@@ -35,6 +33,7 @@ SERVEROPTS="-v -A0:fs=rel.d82"
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
+FILTER=1001
 
 ########################
 # source and execute actual functionality
