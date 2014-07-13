@@ -1,0 +1,7 @@
+
+#define	PC
+
+#define	CONFIG_ERROR_BUFFER_SIZE	80
+
+#define	CONFIG_COMMAND_BUFFER_SIZE	80
+

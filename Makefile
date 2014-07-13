@@ -40,6 +40,7 @@ sockserv:
 tests: pcserver/fsser testrunner sockserv
 	make -C servertests tests
 	make -C fwtests tests
+	make -C unittests tests
 
 	
 sample/webcat: doc/webcat.lst
