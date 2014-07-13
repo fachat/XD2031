@@ -21,6 +21,7 @@ clean:
 	make -C pcserver clean
 	make -C imgtool clean
 	make -C firmware clean veryclean
+	make -C testrunner clean
 
 install:
 	make -C pcserver install
@@ -30,6 +31,17 @@ uninstall:
 	make -C pcserver uninstall
 	make -C imgtool uninstall
 
+testrunner:
+	make -C testrunner
+
+sockserv:
+	DEVICE=sockserv make -C firmware
+
+tests: pcserver/fsser testrunner sockserv
+	make -C servertests tests
+	make -C fwtests tests
+
+	
 sample/webcat: doc/webcat.lst
 	petcat -l 0401 -w4 doc/webcat.lst > sample/webcat
 sample/telnet: doc/telnet.lst

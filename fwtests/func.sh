@@ -18,9 +18,9 @@ RUNNER="$THISDIR"/../../testrunner/fwrunner
 SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
 
 # make sure we have a firmware
-(cd ${BASEDIR}/firmware; DEVICE=sockserv make)
+#(cd ${BASEDIR}/firmware; DEVICE=sockserv make)
 # make sure we have a testrunner
-(cd ${BASEDIR}/testrunner; make fwrunner)
+#(cd ${BASEDIR}/testrunner; make fwrunner)
 
 
 function usage() {
@@ -34,14 +34,18 @@ function usage() {
 	echo "       -V                      verbose runner log"
 	echo "       -D <breakpoint>         run firmware with gdb and set given breakpoint. Can be "
 	echo "                               used multiple times"
-	echo "       -c                      clean up non-log and non-data files from run directory"
-	echo "       -C                      clean up complete run directory"
+	echo "       -k                      keep all files, even non-log and non-data files in run directory"
+	echo "       -c                      clean up only non-log and non-data files from run directory,"
+	echo "                               keep rest (default)"
+	echo "       -C                      always clean up complete run directory"
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
+	echo "       -q                      will suppress any output except whether test was successful"
 	echo "       -h                      show this help"
 }
 
 function hexdiff() {
+	diffres=0
 	if ! cmp -b "$1" "$2"; then
 		tmp1=`mktemp`
 		tmp2=`mktemp`
@@ -50,16 +54,19 @@ function hexdiff() {
 		hexdump -C "$2" > $tmp2
 
 		diff -u $tmp1 $tmp2
+		diffres=$?
 
 		rm $tmp1 $tmp2
 	fi;
+	return $diffres
 }
 
 VERBOSE=""
 RVERBOSE=""
 DEBUG=""
 RDEBUG=""
-CLEAN=0
+CLEAN=1
+QUIET=0
 LOGFILE=""
 
 TMPDIR=`mktemp -d`
@@ -99,12 +106,20 @@ while test $# -gt 0; do
 	RDEBUG="$RDEBUG $2"
 	shift 2;
 	;;
+  -k)
+	CLEAN=0
+	shift;
+	;;
   -c)
 	CLEAN=1
 	shift;
 	;;
   -C)
 	CLEAN=2
+	shift;
+	;;
+  -q)
+	QUIET=1
 	shift;
 	;;
   -R)	
@@ -133,9 +148,32 @@ function contains() {
 	return 1;
 }
 
+########################
+# test for executables
+
+ERR=0
+if test ! -e $RUNNER; then
+       echo "$RUNNER does not exist! Maybe forgot to compile?"
+	ERR=1
+fi
+if test ! -e $SERVER; then
+       echo "$SERVER does not exist! Maybe forgot to compile?"
+	ERR=1
+fi
+if test ! -e $FIRMWARE; then
+       echo "$FIRMWARE does not exist! Maybe forgot to compile?"
+	ERR=1
+fi
+if [ $ERR -ge 1 ]; then
+	echo "Aborting!"
+	exit 1;
+fi
+
+########################
+
 # scripts to run
 if [ "x$*" = "x" ]; then
-        SCRIPTS=$THISDIR/*.frs
+        SCRIPTS=$THISDIR/*${FILTER}*.frs
         SCRIPTS=`basename -a $SCRIPTS`;
 
 	TESTSCRIPTS=""
@@ -152,10 +190,20 @@ if [ "x$*" = "x" ]; then
 		TESTSCRIPTS="$SCRIPTS"
 	fi;
 else
-        TESTSCRIPTS="$@";
+        TESTSCRIPTS="";
+
+        for i in "$@"; do
+               if test -f "$i".frs ; then
+                       	TESTSCRIPTS="$TESTSCRIPTS $i.frs";
+               else
+                       	TESTSCRIPTS="$TESTSCRIPTS $i";
+               fi
+        done;
 fi;
 
-echo "TESTSCRIPTS=$TESTSCRIPTS"
+#echo "TESTSCRIPTS=$TESTSCRIPTS"
+
+
 
 ########################
 # tmp names
@@ -163,6 +211,18 @@ echo "TESTSCRIPTS=$TESTSCRIPTS"
 
 
 DEBUGFILE="$TMPDIR"/gdb.ex
+
+
+########################
+# stdout
+
+# remember stdout for summary output
+exec 5>&1
+
+# redirect log when quiet
+if test $QUIET -ge 1 ; then 
+       exec 1>$TMPDIR/stdout.log
+fi
 
 ########################
 # prepare files
@@ -239,15 +299,19 @@ for script in $TESTSCRIPTS; do
 			RESULT=$?
 		fi;
 
-		echo "result: $RESULT"
+                if test $RESULT -eq 0; then
+                        echo "$script: Ok" >&5
+                else
+                        echo "$script: errors: $RESULT" >&5
+                fi
 
 		#kill -TERM $RUNNERPID $SERVERPID
 
-		if test $RESULT -ne 0; then
-			echo "Resetting clean to keep files!"
-			CLEAN=$(( $CLEAN - 1 ));
-			echo "CLEAN=$CLEAN"
-		fi;
+		#if test $RESULT -ne 0; then
+		#	echo "Resetting clean to keep files!"
+		#	CLEAN=$(( $CLEAN - 1 ));
+		#	echo "CLEAN=$CLEAN"
+		#fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
 		#$RUNNER $RVERBOSE -w -d $TMPDIR/$SSOCKET $script &
@@ -270,20 +334,28 @@ for script in $TESTSCRIPTS; do
 		for i in $COMPAREFILES; do 
 			NAME="${THISDIR}/${i}-${testname}"
 			if test -f ${NAME}; then
-				echo "Comparing file ${i}"
+				echo "Comparing file ${i} with ${NAME}"
 				hexdiff ${NAME} $TMPDIR/${i}
+                                if test $? -ne 0; then
+                                        echo "$script: File ${i} differs!" >&5
+                                fi;
 			fi
 			if test -f ${NAME}.gz; then
-				echo "Comparing file ${i}"
-				gunzip -c ${NAME}.gz > ${TMPDIR}/_${i}
-				hexdiff ${TMPDIR}/_${i} ${TMPDIR}/${i}
-				rm -f ${TMPDIR}/_${i}
+                                 echo "Comparing file ${i} with ${NAME}.gz"
+                                 gunzip -c ${NAME}.gz > ${TMPDIR}/shouldbe_${i}
+                                 hexdiff ${TMPDIR}/shouldbe_${i} ${TMPDIR}/${i}
+                                 if test $? -ne 0; then
+                                        echo "$script: File ${i} differs!" >&5
+                                 fi;
+                                 rm -f ${TMPDIR}/shouldbe_${i}
 			fi
 		done;
 	fi
 
-	rm -f $TMPDIR/$SSOCKET $TMPDIR/$CSOCKET $DEBUGFILE;
-	rm -f $TMPDIR/$script;
+	if test $CLEAN -ge 1; then
+		rm -f $TMPDIR/$SSOCKET $TMPDIR/$CSOCKET $DEBUGFILE;
+		rm -f $TMPDIR/$script;
+	fi
 done;
 
 if test $CLEAN -ge 2; then
@@ -298,10 +370,13 @@ if test $CLEAN -ge 2; then
 		rm -f $TMPDIR/$i;
 	done;
 
+        rm -f $TMPDIR/stdout.log
+ 
+        # only remove work dir if we own it (see option -R)
 	if test $OWNDIR -ge 1; then	
 		rmdir $TMPDIR
 	fi;
 else 
-	echo "Find debug info in $TMPDIR"
+	echo "Find debug info in $TMPDIR" >&5
 fi;
 

@@ -33,6 +33,7 @@ SERVEROPTS="-v -A0:fs=blk.d82"
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
+FILTER=1001
 
 ########################
 # source and execute actual functionality

@@ -16,8 +16,6 @@
 
 THISDIR=`dirname $0`
 
-echo "THISDIR=$THISDIR"
-
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
 TESTFILES="rel.d64"
@@ -38,6 +36,8 @@ FWOPTS=-Xsock488:E=-
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
+shopt -s extglob
+FILTER='+(2031|4040)'
 
 ########################
 # source and execute actual functionality

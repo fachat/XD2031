@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # call this script without params to run all *.trs tests in this directory
-# Providing a .frs file as parameter only runs the given test script
+# Providing a .trs file as parameter only runs the given test script
 #
 # Available options are:
 # 	-v 			verbose server log
@@ -17,23 +17,19 @@
 THISDIR=`dirname $0`
 
 # necessary files to copy to temp
-#TESTFILES="rel1.d64"
-TESTFILES="rel.d82"
+TESTFILES="rel1.d64"
 
 # files to compare after test iff files like <file>-<test> exist
-# e.g. if there is a file "rel1.d64" and a test "position2.frs",
+# e.g. if there is a file "rel1.d64" and a test "position2.trs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
-#COMPAREFILES="rel1.d64"
-COMPAREFILES="rel.d82"
+COMPAREFILES="rel1.d64"
 
 # server options
-#SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=rel.d82"
+SERVEROPTS="-v -A0:fs=rel1.d64"
 
 # tsr scripts from the directory to exclude
-#EXCLUDE="position1.frs"
+#EXCLUDE="position1.trs"
 EXCLUDE=""
-FILTER=1001
 
 ########################
 # source and execute actual functionality
