@@ -51,6 +51,7 @@
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
+#include "socket.h"
 #include "terminal.h"
 #include "dir.h"
 
@@ -66,6 +67,7 @@ void usage(int rv) {
 		"               the IEC bus to device number 9 use:\n"
 		"               -Xiec:U=9\n"
 		"   -d <device>	define serial device to use\n"
+		"   -s <socket>	define socket device to use (instead of device)\n"
 		"   -d auto     auto-detect serial device\n"
 		"   -w          Use advanced wildcards (anything following '*' must also match)\n"
 		"   -D          run as daemon, disable user interface\n"
@@ -90,12 +92,16 @@ void assert_single_char(char *argv) {
 
 
 int main(int argc, char *argv[]) {
+
 	serial_port_t writefd=0, readfd=0;
 	serial_port_t fdesc;
 	int i;
 	char *dir=NULL;
-	char *device = NULL;	/* device name or NULL if stdin/out */
+
+	char *device = NULL;	/* device name or NULL if not given */
+	char *socket = NULL;	/* socket name or NULL if not given */
 	char parameter_d_given = false;
+	char use_stdio = false;
 
 	mem_init();
 
@@ -113,6 +119,11 @@ int main(int argc, char *argv[]) {
 		usage(EXIT_SUCCESS);	/* usage() exits already */
 		break;
 	    case 'd':
+		if (socket != NULL) {
+		  log_error("both -s and -d given!\n");
+		  exit(EXIT_RESPAWN_NEVER);
+		}
+		// device name
 		assert_single_char(argv[i]);
 		parameter_d_given = true;
 		if (i < argc-2) {
@@ -122,10 +133,30 @@ int main(int argc, char *argv[]) {
 		    guess_device(&device);
 		    /* exits on more or less than a single possibility */
 		  }
-		  if(!strcmp(device,"-")) device = NULL; 	// use stdin/out
-		  log_info("main: device = %s\n", device);
+		  if(!strcmp(device,"-")) {
+			device = NULL; 	// use stdin/out
+			use_stdio = true;
+		  }
+		  log_info("main: device = %s\n", use_stdio ? "<stdio>" : device);
 		} else {
 		  log_error("-d requires <device> parameter\n");
+		  exit(EXIT_RESPAWN_NEVER);
+		}
+ 	     	break;
+	    case 's':
+		// socket name
+		if (device != NULL || use_stdio) {
+		  log_error("both -s and -d given!\n");
+		  exit(EXIT_RESPAWN_NEVER);
+		}
+		assert_single_char(argv[i]);
+		parameter_d_given = true;
+		if (i < argc-2) {
+		  i++;
+		  socket = argv[i];
+		  log_info("main: socket = %s\n", socket);
+		} else {
+		  log_error("-s requires <socket name> parameter\n");
 		  exit(EXIT_RESPAWN_NEVER);
 		}
  	     	break;
@@ -151,7 +182,9 @@ int main(int argc, char *argv[]) {
 	  }
 	  i++;
 	}
-	if(!parameter_d_given) guess_device(&device);
+	if(!parameter_d_given) {
+		guess_device(&device);
+	}
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
@@ -193,6 +226,24 @@ int main(int argc, char *argv[]) {
 	// we have the serial device open, now we can drop privileges
 	drop_privileges();
 
+	if (socket != NULL) {
+		// socket should be opened without privileges
+		fdesc = socket_open(socket);
+                if (os_open_failed(fdesc)) {
+                  /* error */
+                  log_error("Could not open socket %s, errno=%d (%s)\n",
+                        socket, os_errno(), os_strerror(os_errno()));
+                  exit(EXIT_RESPAWN_NEVER);
+                }
+                readfd = fdesc;
+                writefd = readfd;
+        } else 
+	if (device == NULL && !use_stdio) {
+
+                log_error("No socket or device name given!\n");
+                exit(EXIT_RESPAWN_NEVER);
+	}
+
 	cmd_init();
 
 	if(argc == 1) {
@@ -207,7 +258,7 @@ int main(int argc, char *argv[]) {
 
 	int res = cmd_loop(readfd, writefd);
 
-	if (device != NULL) {
+	if (device != NULL || socket != NULL) {
 		device_close(fdesc);
 	}
 

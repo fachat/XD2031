@@ -31,7 +31,13 @@
 #include "petscii.h"
 #include "terminal.h"
 
+#ifndef LOG_PREFIX
+#define	LOG_PREFIX	""
+#endif
+
 static int verbose = 0;
+
+static const char* spaces = "                                                                  ";
 
 static enum lastlog {
 	lastlog_anything, lastlog_warn, lastlog_error, lastlog_info, lastlog_debug
@@ -46,11 +52,11 @@ void log_term(const char *msg) {
 	int newline = 0;
 
 	color_log_term();
-	printf(">>>: ");
+	printf(LOG_PREFIX ">>>: ");
 	char c;
 	while ((c = *msg) != 0) {
 		if (newline) {
-			printf("\n>>>: ");
+			printf("\n" LOG_PREFIX ">>>: ");
 		}
 		if (isprint(c)) {
 			putchar(c);
@@ -83,7 +89,7 @@ void log_errno(const char *msg, ...) {
 		vsprintf(buffer, msg, args);
 		msg = buffer;
 	}
-        printf("ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
+        printf(LOG_PREFIX "ERN: %s: errno=%d: %s\n", msg, errno, strerror(errno));
 	newline = lastlog_anything;
 	color_default();
 	fflush(stdout);
@@ -95,7 +101,7 @@ void log_warn(const char *msg, ...) {
 
 	color_log_warn();
 	if (newline != lastlog_warn) {
-       		printf("WRN:");
+       		printf(LOG_PREFIX "WRN:");
 	}
 	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
@@ -112,7 +118,7 @@ void log_error(const char *msg, ...) {
 
 	color_log_error();
 	if (newline != lastlog_error) {
-       		printf("ERR:");
+       		printf(LOG_PREFIX "ERR:");
 	}
 	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
@@ -129,7 +135,7 @@ void log_info(const char *msg, ...) {
 
 	color_log_info();
 	if (newline != lastlog_info) {
-		printf("INF:");
+		printf(LOG_PREFIX "INF:");
 	}
 	newline = lastlog_anything;
 	if (msg[strlen(msg)-1]!='\n') {
@@ -147,7 +153,7 @@ void log_debug(const char *msg, ...) {
 
 		color_log_debug();
 		if (newline != lastlog_debug) {
-			printf("DBG:");
+			printf(LOG_PREFIX "DBG:");
 		}
 		newline = lastlog_anything;
 		if (msg[strlen(msg)-1]!='\n') {
@@ -159,17 +165,23 @@ void log_debug(const char *msg, ...) {
 	fflush(stdout);
 }
 
-void log_hexdump(char *p, int len, int petscii) {
+
+void log_hexdump2(const char *p, int len, int petscii, const char *prefix) {
 	int tot = 0;
 	int line = 0;
 	int x = 0;
+	const char *spaceprefix = spaces + strlen(spaces) - strlen(prefix);
 
 	newline = lastlog_anything;
 	color_log_debug();
 
 	if(len) {
 		while(tot < len) {
-			printf("%04X  ", tot);
+			if (tot == 0) {
+				printf(LOG_PREFIX "%s%04X  ", prefix, tot);
+			} else {
+				printf(LOG_PREFIX "%s%04X  ", spaceprefix , tot);
+			}
 			for(x=0; x<16; x++) {
 				if(line+x < len) {
 					tot++;
@@ -193,6 +205,16 @@ void log_hexdump(char *p, int len, int petscii) {
 	}
 	color_default();
 }
+
+void log_hexdump(const char *p, int len, int petscii) {
+	log_hexdump2(p, len, petscii, "");
+}
+
+
+const char* dump_indent(int n) {
+	return spaces + strlen(spaces) - n * 2;
+}
+
 
 #if 0
 void test_log(void) {
