@@ -45,6 +45,7 @@
 #include "fscmd.h"
 
 #include "provider.h"
+#include "handler.h"
 #include "errors.h"
 #include "mem.h"
 
@@ -59,35 +60,68 @@
 
 //#define	min(a,b)	(((a)<(b))?(a):(b))
 
+static handler_t tcp_file_handler;
+extern provider_t tcp_provider;
+
+// list of endpoints
+static registry_t endpoints;
+
 typedef struct {
-	int		chan;		// channel for which the File is
+	file_t		file;		// embedded
+	int		isroot;		// !=0 when root
 
 	char		has_lastbyte;	// lastbyte is valid when set
 	char		lastbyte;	// last byte read, to handle EOF correctly
 	int		sockfd;		// socket file descriptor
 } File;
 
+static void file_init(const type_t *t, void *obj) {
+        (void) t;       // silence unused warning
+        File *fp = (File*) obj;
+
+        //log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
+
+        fp->file.handler = &tcp_file_handler;
+        fp->file.recordlen = 0;
+
+	fp->has_lastbyte = 0;
+        fp->isroot = -0;
+        fp->sockfd = -1;
+}
+
+static type_t file_type = {
+        "tn_file",
+        sizeof(File),
+        file_init
+};
+
 typedef struct {
 	// derived from endpoint_t
 	endpoint_t 	base;
 	// payload
 	char			*hostname;	// from assign
-	File 			files[MAXFILES];
 } tn_endpoint_t;
 
-void tnp_init() {
+static void endpoint_init(const type_t *t, void *obj) {
+        (void) t;       // silence unused warning
+        tn_endpoint_t *fsep = (tn_endpoint_t*)obj;
+        reg_init(&(fsep->base.files), "tcp_endpoint_files", 16);
+
+        fsep->base.ptype = &tcp_provider;
+
+        fsep->base.is_temporary = 0;
+        fsep->base.is_assigned = 0;
+
+        reg_append(&endpoints, fsep);
 }
 
-extern provider_t tcp_provider;
+static type_t endpoint_type = {
+        "tcp_endpoint",
+        sizeof(tn_endpoint_t),
+        endpoint_init
+};
 
-static void init_fp(File *fp) {
 
-	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
-
-	fp->has_lastbyte = 0;
-        fp->chan = -1;
-        fp->sockfd = -1;
-}
 
 // close a file descriptor
 static int close_fd(File *file) {
@@ -97,33 +131,73 @@ static int close_fd(File *file) {
 		close(file->sockfd);
 		file->sockfd = -1;
 	}
-	init_fp(file);
+	mem_free(file);
 	return er;
 }
 
+static File *reserve_file(tn_endpoint_t *fsep) {
+
+        File *file = mem_alloc(&file_type);
+
+        file->file.endpoint = (endpoint_t*)fsep;
+
+        reg_append(&fsep->base.files, file);
+
+        return file;
+}
+
+static void tnp_init(void) {
+}
+
+static void tn_close(file_t *fp, int recurse) {
+
+	close_fd((File*)fp);
+
+	if (recurse) {
+		if (fp->parent != NULL) {
+			fp->parent->handler->close(fp->parent, 1);
+		}
+	}
+}
+
 // free the endpoint descriptor
-static void tnp_free(endpoint_t *ep) {
+static void tnp_do_free(endpoint_t *ep) {
         tn_endpoint_t *cep = (tn_endpoint_t*) ep;
-        int i;
-        for(i=0;i<MAXFILES;i++) {
-                close_fd(&(cep->files[i]));
+
+        if (reg_size(&ep->files)) {
+                log_warn("fsp_free(): trying to close endpoint %p with %d open files!\n",
+                        ep, reg_size(&ep->files));
+                return;
         }
+        if (ep->is_assigned > 0) {
+                log_warn("fsp_free(): trying to free endpoint %p still assigned\n", ep);
+                return;
+        }
+
+        reg_remove(&endpoints, cep);
 
 	mem_free(cep->hostname);
         mem_free(ep);
 }
 
+static void tnp_free(endpoint_t *ep) {
+
+        if (ep->is_assigned > 0) {
+                ep->is_assigned--;
+        }
+
+        if (ep->is_assigned == 0) {
+                tnp_do_free(ep);
+        }
+}
+
 // internal helper
 static tn_endpoint_t *create_ep() {
 	// alloc and init a new endpoint struct
-	tn_endpoint_t *tnep = malloc(sizeof(tn_endpoint_t));
-
-        tnep->base.ptype = &tcp_provider;
+	tn_endpoint_t *tnep = mem_alloc(&endpoint_type);
 
 	tnep->hostname = NULL;
-        for(int i=0;i<MAXFILES;i++) {
-		init_fp(&(tnep->files[i]));
-        }
+
 	return tnep;
 }
 
@@ -131,9 +205,10 @@ static tn_endpoint_t *create_ep() {
 // hostname for the connections. Not much to do here, as the
 // port comes with the file name in the open, so we can get
 // the address on the open only.
-static endpoint_t *tnp_new(endpoint_t *parent, const char *path) {
+static endpoint_t *tnp_new(endpoint_t *parent, const char *path, int from_cmdline) {
 
 	(void) parent;	// silence unused parameter warning
+	(void) from_cmdline;	// silence unused parameter warning
 
 	tn_endpoint_t *tnep = create_ep();
 
@@ -210,53 +285,7 @@ static int errno_to_error(int err) {
 
 
 // ----------------------------------------------------------------------------------
-// if we had closures, we could reuse instead of copy this code across endpoint types...
-//
-
-static File *reserve_file(endpoint_t *ep, int chan) {
-        tn_endpoint_t *cep = (tn_endpoint_t*) ep;
-
-        for (int i = 0; i < MAXFILES; i++) {
-                if (cep->files[i].chan == chan) {
-                        close_fd(&(cep->files[i]));
-                }
-                if (cep->files[i].chan < 0) {
-                        File *fp = &(cep->files[i]);
-                        init_fp(fp);
-                        fp->chan = chan;
-
-			log_debug("reserving file %p for chan %d\n", fp, chan);
-
-                        return &(cep->files[i]);
-                }
-        }
-        log_warn("Did not find free fs session for channel=%d\n", chan);
-        return NULL;
-}
-
-static File *find_file(endpoint_t *ep, int chan) {
-        tn_endpoint_t *cep = (tn_endpoint_t*) ep;
-
-        for (int i = 0; i < MAXFILES; i++) {
-                if (cep->files[i].chan == chan) {
-                        return &(cep->files[i]);
-                }
-        }
-        log_warn("Did not find fs session for channel=%d\n", chan);
-        return NULL;
-}
-
-// ----------------------------------------------------------------------------------
 // commands as sent from the device
-
-// close a file descriptor
-static void close_fds(endpoint_t *ep, int tfd) {
-	File *file = find_file(ep, tfd); // ((fs_endpoint_t*)ep)->files;
-	if (file != NULL) {
-		close_fd(file);
-		init_fp(file);
-	}
-}
 
 
 // open a socket for reading, writing, or appending
@@ -328,7 +357,7 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 
 		log_debug("Connected with fd=%d\n", sockfd);
 
-		file = reserve_file(ep, tfd);
+		file = reserve_file(tnep);
 
 		if (file) {
 			file->sockfd = sockfd;
@@ -350,8 +379,8 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 //
 // returns positive number of bytes read, or negative error number
 //
-static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
-	File *file = find_file(ep, tfd);
+static int read_file(file_t *fp, char *retbuf, int len, int *eof) {
+	File *file = (File*)fp;
 
 	if (file != NULL) {
 		int sockfd = file->sockfd;
@@ -404,8 +433,8 @@ static int read_file(endpoint_t *ep, int tfd, char *retbuf, int len, int *eof) {
 }
 
 // write file data
-static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int is_eof) {
-	File *file = find_file(ep, tfd);
+static int write_file(file_t *fp, char *buf, int len, int is_eof) {
+	File *file = (File*)fp;
 
 #ifdef DEBUG_WRITE
 	log_debug("Write_file (tcp): fd=%p\n", file);
@@ -458,6 +487,120 @@ static int tcp_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, 
 	}
 }
 
+static file_t *tnp_root(endpoint_t *ep) {
+	tn_endpoint_t *tep = (tn_endpoint_t*) ep;
+
+	log_entry("tn_provider.tnp_root");
+
+	File *fp = reserve_file(tep);
+
+	return (file_t*) fp;
+}
+
+// ----------------------------------------------------------------------------------
+
+static void tn_dump_file(file_t *fp, int recurse, int indent) {
+
+        File *file = (File*)fp;
+        const char *prefix = dump_indent(indent);
+
+        log_debug("%shandler='%s';\n", prefix, file->file.handler->name);
+        log_debug("%sparent='%p';\n", prefix, file->file.parent);
+        if (recurse) {
+                log_debug("%s{\n", prefix);
+                if (file->file.parent != NULL && file->file.parent->handler->dump != NULL) {
+                        file->file.parent->handler->dump(file->file.parent, 1, indent+1);
+                }
+                log_debug("%s}\n", prefix);
+
+        }
+        log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
+        log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
+        log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+        log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
+        log_debug("%sfilename='%s';\n", prefix, file->file.filename);
+        log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);
+        log_debug("%smode='%d';\n", prefix, file->file.mode);
+        log_debug("%stype='%d';\n", prefix, file->file.type);
+        log_debug("%sattr='%d';\n", prefix, file->file.attr);
+        log_debug("%swritable='%d';\n", prefix, file->file.writable);
+        log_debug("%sseekable='%d';\n", prefix, file->file.seekable);
+}
+
+static void tn_dump_ep(tn_endpoint_t *fsep, int indent) {
+
+        const char *prefix = dump_indent(indent);
+        int newind = indent + 1;
+        const char *eppref = dump_indent(newind);
+
+        log_debug("%sprovider='%s';\n", prefix, fsep->base.ptype->name);
+        log_debug("%sis_temporary='%d';\n", prefix, fsep->base.is_temporary);
+        log_debug("%sis_assigned='%d';\n", prefix, fsep->base.is_assigned);
+        log_debug("%shostname='%d';\n", prefix, fsep->hostname);
+        log_debug("%sfiles={;\n", prefix);
+        for (int i = 0; ; i++) {
+                File *file = (File*) reg_get(&fsep->base.files, i);
+                log_debug("%s// file at %p\n", eppref, file);
+                if (file != NULL) {
+                        log_debug("%s{\n", eppref, file);
+                        if (file->file.handler->dump != NULL) {
+                                file->file.handler->dump((file_t*)file, 0, newind+1);
+                        }
+                        log_debug("%s{\n", eppref, file);
+                } else {
+                        break;
+                }
+        }
+        log_debug("%s}\n", prefix);
+}
+
+static void tnp_dump(int indent) {
+
+        const char *prefix = dump_indent(indent);
+        int newind = indent + 1;
+        const char *eppref = dump_indent(newind);
+
+        log_debug("%s// tcp system provider\n", prefix);
+        log_debug("%sendpoints={\n", prefix);
+        for (int i = 0; ; i++) {
+                tn_endpoint_t *fsep = (tn_endpoint_t*) reg_get(&endpoints, i);
+                if (fsep != NULL) {
+                        log_debug("%s// endpoint %p\n", eppref, fsep);
+                        log_debug("%s{\n", eppref);
+                        tn_dump_ep(fsep, newind+1);
+                        log_debug("%s}\n", eppref);
+                } else {
+                        break;
+                }
+        }
+        log_debug("%s}\n", prefix);
+}
+
+// ----------------------------------------------------------------------------------
+
+
+static handler_t tcp_file_handler = {
+        "tcp_file_handler",
+        NULL,                   // resolve
+        tn_close,               // close
+NULL,//        tn_open,                // open
+        handler_parent,         // default parent() implementation
+        NULL,			// fs_seek,                // seek
+NULL,//        readfile,               // readfile
+NULL,//        writefile,              // writefile
+        NULL,                   // truncate
+NULL,//        fs_direntry,            // direntry
+        NULL,			// fs_create,              // create
+NULL,//        fs_flush,               // flush data out to disk
+NULL,//        fs_equals,              // check if two files (e.g. d64 files are the same)
+        NULL,			// fs_realsize,            // real size of file (same as file->filesize here)
+        NULL,			// fs_delete,              // delete file
+        NULL,			// fs_mkdir,               // create a directory
+        NULL,			// fs_rmdir,               // remove a directory
+        NULL,			// fs_move,                // move a file or directory
+        tn_dump_file            // dump file
+};
+
 
 provider_t tcp_provider = {
 	"tcp",
@@ -465,18 +608,12 @@ provider_t tcp_provider = {
 	tnp_init,
 	tnp_new,
 	tnp_temp,
+	NULL,				// to_endpoint
 	tnp_free,
-	NULL,	// wrap
-	close_fds,
-	tcp_open,
-	NULL,	//open_dr,
-	read_file,
-	write_file,
-	NULL,	//fs_delete,
-	NULL,	//fs_rename,
-	NULL,	//fs_cd,
-	NULL,	//fs_mkdir,
-	NULL,	//fs_rmdir
-	NULL,	// block
-	NULL	// direct
+	tnp_root,			// root - basically only a handle to open files (ports)
+	NULL,				// wrap
+	NULL,				// direct
+	tnp_dump			// dump
 };
+
+
