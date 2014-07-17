@@ -58,6 +58,8 @@
 
 #define	MAX_BUFFER_SIZE	64
 
+#define	TELNET_PORT	"23"
+
 //#define	min(a,b)	(((a)<(b))?(a):(b))
 
 static handler_t tcp_file_handler;
@@ -289,17 +291,19 @@ static int errno_to_error(int err) {
 
 
 // open a socket for reading, writing, or appending
-static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode) {
+static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 	int ern;
 	int er = CBM_ERROR_FAULT;
-	File *file=NULL;
 	struct addrinfo *addr, *ap;
 	struct addrinfo hints;
 	int sockfd;
 
-	tn_endpoint_t *tnep = (tn_endpoint_t*) ep;
+	(void) pars;	// silence
 
-	log_info("open file for fd=%d on host %s with service/port %s\n", tfd, tnep->hostname, buf);
+	File *file=(File*)fp;
+	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
+
+	log_info("open file on host %s with service/port %s\n", tnep->hostname, fp->filename);
 
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = 0;
@@ -307,9 +311,9 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	hints.ai_flags = (AI_V4MAPPED | AI_ADDRCONFIG);
 
 	// 1. get the internet address for it via getaddrinfo
-	ern = getaddrinfo(tnep->hostname, buf, &hints, &addr);
+	ern = getaddrinfo(tnep->hostname, fp->filename, &hints, &addr);
 	if (ern != 0) {
-		log_errno("Did not get address info for %s:%s\n", tnep->hostname, buf);
+		log_errno("Did not get address info for %s:%s\n", tnep->hostname, fp->filename);
 		return er;
 	}
 
@@ -352,24 +356,16 @@ static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *mode)
 	}
 
         if (ap == NULL) {               /* No address succeeded */
-            log_error("Could not connect to %s:%s\n", tnep->hostname, buf);
+            	log_error("Could not connect to %s:%s\n", tnep->hostname, fp->filename);
         } else {
 
 		log_debug("Connected with fd=%d\n", sockfd);
 
-		file = reserve_file(tnep);
-
-		if (file) {
-			file->sockfd = sockfd;
-			er = CBM_ERROR_OK;
-		} else {
-			close(sockfd);
-			log_error("Could not reserve file\n");
-			er = CBM_ERROR_FAULT;
-		}
+		file->sockfd = sockfd;
+		er = CBM_ERROR_OK;
 	}
 
-	log_info("OPEN_RD/AP/WR(%s: %s:%s =%p (fd=%d)\n",mode, tnep->hostname, buf, (void*)file, sockfd);
+	log_info("OPEN_RD/AP/WR(%s: %s:%s =%p (fd=%d)\n",mode, tnep->hostname, fp->filename, (void*)file, sockfd);
 
 	return er;
 }
@@ -465,23 +461,49 @@ static int write_file(file_t *fp, char *buf, int len, int is_eof) {
 // ----------------------------------------------------------------------------------
 // command channel
 
+static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
+
+        log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
+
+        if (fp->handler != &tcp_file_handler) {
+                return CBM_ERROR_FAULT;
+        }
+
+	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
+	*outentry = NULL;
+
+	if (isresolve) {
+		// escape, we don't show a dir
+		return CBM_ERROR_OK;
+	}
+
+	char *name = conv_from_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, &tcp_provider);
+
+	File *retfile = reserve_file(tnep);
+
+	retfile->file.filename = name;
+
+	*outentry = (file_t*)retfile;
+	*outpattern = NULL;
+
+	return CBM_ERROR_OK;
+}
+
 
 // ----------------------------------------------------------------------------------
 
-static int tcp_open(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int type) {
-       (void) opts; // silence warning unused parameter
-       (void) reclen;
+static int tn_open(file_t *fp, openpars_t *pars, int type) {
 
 	switch (type) {
 		case FS_OPEN_RD:
-       			return open_file(ep, tfd, buf, "rb");
+       			return open_file(fp, pars, "rb");
 		case FS_OPEN_WR:
 		case FS_OPEN_OW:
-       			return open_file(ep, tfd, buf, "wb");
+       			return open_file(fp, pars, "wb");
 		case FS_OPEN_AP:
-       			return open_file(ep, tfd, buf, "ab");
+       			return open_file(fp, pars, "ab");
 		case FS_OPEN_RW:
-       			return open_file(ep, tfd, buf, "rwb");
+       			return open_file(fp, pars, "rwb");
 		default:
 			return CBM_ERROR_FAULT;
 	}
@@ -583,16 +605,16 @@ static handler_t tcp_file_handler = {
         "tcp_file_handler",
         NULL,                   // resolve
         tn_close,               // close
-NULL,//        tn_open,                // open
+        tn_open,                // open
         handler_parent,         // default parent() implementation
         NULL,			// fs_seek,                // seek
 NULL,//        readfile,               // readfile
 NULL,//        writefile,              // writefile
         NULL,                   // truncate
-NULL,//        fs_direntry,            // direntry
+        tn_direntry,            // direntry
         NULL,			// fs_create,              // create
-NULL,//        fs_flush,               // flush data out to disk
-NULL,//        fs_equals,              // check if two files (e.g. d64 files are the same)
+	NULL,			// fs_flush,               // flush data out to disk
+	NULL,			// fs_equals,              // check if two files (e.g. d64 files are the same)
         NULL,			// fs_realsize,            // real size of file (same as file->filesize here)
         NULL,			// fs_delete,              // delete file
         NULL,			// fs_mkdir,               // create a directory
