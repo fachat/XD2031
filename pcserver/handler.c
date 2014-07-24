@@ -126,6 +126,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 			// no handler found
 			break;
 		}
+		// outpattern then points into the pattern string
 		if ( handler->resolve(infile, outfile, type, pattern, &pars, outpattern) == CBM_ERROR_OK) {
 			// worked ok.
 			if (*outfile != NULL) {
@@ -143,6 +144,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 	if (*outfile == NULL) {
 		// no wrapper has matched
 		// check original name
+		// outpattern then points into the pattern string
 		if (compare_dirpattern(infile->filename, pattern, outpattern) != 0) {
 			// match of original 
 			err = CBM_ERROR_OK;

@@ -31,6 +31,8 @@
 
 #include "socket.h"
 
+#define	LOG_PREFIX	"s488_sock "
+
 /**
  * open a named unix socket, listen on it and return the first connection
  *
@@ -38,7 +40,7 @@
  */
 int socket_open(const char *socketname) {
 
-        printf("Opening socket %s for requests\n", socketname);
+        printf(LOG_PREFIX "Opening socket %s for requests\n", socketname);
 
         int sockfd, clientfd;
         socklen_t servlen, clientlen;
@@ -46,7 +48,7 @@ int socket_open(const char *socketname) {
 
         sockfd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
         if (sockfd < 0) {
-                printf("Error opening socket\n");
+                printf(LOG_PREFIX "Error opening socket\n");
                 return -1;
         }
 
@@ -56,7 +58,7 @@ int socket_open(const char *socketname) {
         servlen=strlen(server_addr.sun_path) +
                      sizeof(server_addr.sun_family);
         if(bind(sockfd,(struct sockaddr *)&server_addr,servlen)<0) {
-                printf("Error binding socket\n");
+                printf(LOG_PREFIX "Error binding socket\n");
                 close(sockfd);
                 return -1;
         }
@@ -73,7 +75,7 @@ int socket_open(const char *socketname) {
 			nanosleep(&waittime, NULL);
         		clientfd = accept(sockfd,(struct sockaddr *)&client_addr,&clientlen);
 		} else {
-                	printf("Error accepting socket, errno=%d (%s)\n", errno, strerror(errno));
+                	printf(LOG_PREFIX "Error accepting socket, errno=%d (%s)\n", errno, strerror(errno));
                 	close(sockfd);
                 	return -1;
 		}

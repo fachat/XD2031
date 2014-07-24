@@ -42,12 +42,12 @@
 
 // TODO: this is ... awkward
 /*
-extern provider_t tcp_provider;
 extern provider_t http_provider;
 extern provider_t ftp_provider;
 */
 extern provider_t di_provider;
 extern provider_t fs_provider;
+extern provider_t tcp_provider;
 
 //------------------------------------------------------------------------------------
 // handling the registered list of providers
@@ -401,12 +401,12 @@ void provider_init() {
 
         http_provider.init();
 	provider_register(&http_provider);
+*/
 
 #ifndef _WIN32
         tcp_provider.init();
 	provider_register(&tcp_provider);
 #endif
-*/
 
 	// registers itself
         di_provider.init();

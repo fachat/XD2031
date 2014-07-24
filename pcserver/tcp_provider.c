@@ -149,6 +149,8 @@ static File *reserve_file(tn_endpoint_t *fsep) {
 }
 
 static void tnp_init(void) {
+
+	reg_init(&endpoints, "tcp_endpoints", 5);
 }
 
 static void tn_close(file_t *fp, int recurse) {
@@ -375,7 +377,7 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 //
 // returns positive number of bytes read, or negative error number
 //
-static int read_file(file_t *fp, char *retbuf, int len, int *eof) {
+static int read_file(file_t *fp, char *retbuf, int len, int *readflag) {
 	File *file = (File*)fp;
 
 	if (file != NULL) {
@@ -419,7 +421,7 @@ static int read_file(file_t *fp, char *retbuf, int len, int *eof) {
 		} else
 		if (n == 0) {
 			// got an EOF
-			*eof = READFLAG_EOF;
+			*readflag = READFLAG_EOF;
 			len = file->has_lastbyte ? 1 : 0;
 			retbuf[0] = file->lastbyte;
 		}
@@ -463,7 +465,7 @@ static int write_file(file_t *fp, char *buf, int len, int is_eof) {
 
 static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 
-        log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
+        log_debug("ENTER: tcp_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
         if (fp->handler != &tcp_file_handler) {
                 return CBM_ERROR_FAULT;
@@ -472,7 +474,7 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
 	*outentry = NULL;
 
-	if (isresolve) {
+	if (!isresolve) {
 		// escape, we don't show a dir
 		return CBM_ERROR_OK;
 	}
@@ -484,7 +486,7 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	retfile->file.filename = name;
 
 	*outentry = (file_t*)retfile;
-	*outpattern = NULL;
+	*outpattern = fp->pattern + strlen(fp->pattern);
 
 	return CBM_ERROR_OK;
 }
@@ -608,8 +610,8 @@ static handler_t tcp_file_handler = {
         tn_open,                // open
         handler_parent,         // default parent() implementation
         NULL,			// fs_seek,                // seek
-NULL,//        readfile,               // readfile
-NULL,//        writefile,              // writefile
+        read_file,               // readfile
+        write_file,              // writefile
         NULL,                   // truncate
         tn_direntry,            // direntry
         NULL,			// fs_create,              // create

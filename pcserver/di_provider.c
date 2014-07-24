@@ -1443,6 +1443,7 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  * get the next directory entry in the directory given as fp.
  * If isresolve is set, then the disk header and blocks free entries are skipped
  * 
+ * outpattern points into a newly malloc'd string
  */
 static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 

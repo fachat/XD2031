@@ -1,0 +1,18 @@
+
+# test script to test basic communication between 
+# test runner and firmware
+
+message READ error channel message
+
+message open TCP file non-blocking, read-write
+atn .listen 8 f2
+send "0:19,x,n" 0d
+atn .unlisten
+
+atn .listen 8 .secondary 2
+send "foo" 0d
+atn .unlisten
+
+message close TCP file
+atn .listen 8 e2
+atn .unlisten

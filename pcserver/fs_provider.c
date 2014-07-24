@@ -1074,6 +1074,8 @@ static char *get_path(File *parent, const char *child) {
 /**
  * get the next directory entry in the directory given as fp.
  * If isresolve is set, then the disk header and blocks free entries are skipped
+ *
+ * outpattern then points into fp->pattern
  */
 static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 	  File *file = (File*) fp;

@@ -36,6 +36,7 @@
 #include "debug.h"
 #include "uarthw.h"
 
+#define LOG_PREFIX 	"s488_uart "
 
 static const char *socket_name = NULL;
 static int socket_fd = -1;
@@ -50,7 +51,7 @@ static int client_socket_open(const char *socketname, int dowait) {
         struct sockaddr_un  server_addr;
         struct timespec sleeptime;
 
-        printf("Connecting to socket %s\n", socketname);
+        printf(LOG_PREFIX "Connecting to socket %s\n", socketname);
 
         memset((char *)&server_addr, 0, sizeof(server_addr));
         server_addr.sun_family = AF_UNIX;
@@ -58,13 +59,13 @@ static int client_socket_open(const char *socketname, int dowait) {
         servlen = strlen(server_addr.sun_path) +
                  sizeof(server_addr.sun_family);
         if ((sockfd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK,0)) < 0) {
-                debug_puts("Creating socket");
+                printf(LOG_PREFIX "Creating socket");
                 return -1;
         }
         while (connect(sockfd, (struct sockaddr *)
                          &server_addr, servlen) < 0) {
                 if (errno != ENOENT || !dowait) {
-                        printf("Connecting: %d (%s)", errno, strerror(errno));
+                        printf(LOG_PREFIX "Connecting: %d (%s)", errno, strerror(errno));
                         return -1;
                 }
                 sleeptime.tv_sec = 0;
@@ -92,13 +93,13 @@ void uarthw_init() {
 		if (fd >= 0) {
 			socket_fd = fd;
 		} else {
-			printf("Could not open socket!\n");
+			printf(LOG_PREFIX "Could not open socket!\n");
 		}
 	} else {
-		printf("No socket name given!\n");
+		printf(LOG_PREFIX "No socket name given!\n");
 	}
 	if (socket_fd < 0) {
-		printf("Terminating!\n");
+		printf(LOG_PREFIX "Terminating!\n");
 		exit (-3);
 	}
 }
@@ -117,10 +118,10 @@ int8_t uarthw_can_send() {
 void uarthw_send(int8_t data) {
 	ssize_t wsize = write(socket_fd, &data, 1);
 	if (wsize == 0) {
-		printf("Could not write to fd=%d, data=%02x\n", socket_fd, data);
+		printf(LOG_PREFIX "Could not write to fd=%d, data=%02x\n", socket_fd, data);
 	} else
 	if (wsize < 0) { 
-		printf("Error writing to fd %d: errno=%d (%s)\n", socket_fd, errno, strerror(errno));
+		printf(LOG_PREFIX "Error writing to server on fd %d: errno=%d (%s)\n", socket_fd, errno, strerror(errno));
 	} else {
 		//printf("Written to fd=%d, data=%02x\n", socket_fd, data);
 	}
@@ -140,7 +141,7 @@ int16_t uarthw_receive() {
 
 	ssize_t rsize = read(socket_fd, &data, 1);
 	if (rsize == 0) {
-		debug_puts("End of file on socket!\n");
+		printf(LOG_PREFIX "End of file on socket!\n");
 		exit(-1);
 	} else
 	if (rsize < 0) {
@@ -148,7 +149,7 @@ int16_t uarthw_receive() {
 			// ok, just no data currently available
 			return -1;
 		}
-		printf("Unrecoverable error on read ->%d (%s)\n", errno, strerror(errno));
+		printf(LOG_PREFIX "Unrecoverable error on read ->%d (%s)\n", errno, strerror(errno));
 		exit(-2);
 	}
 

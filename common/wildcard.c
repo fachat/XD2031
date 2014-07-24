@@ -56,6 +56,8 @@ static int8_t classic_match(const char *name, const char *pattern) {
  * 	"*" - only works as the last pattern char and matches everything
  * 	      further chars in the pattern are ignored
  * 	"?" - single character is ignored
+ *
+ * outpattern points into the second compare string (the pattern)
  */
 
 static int8_t classic_dirmatch(const char *x, const char *y, const char **outpattern) {
