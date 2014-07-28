@@ -23,7 +23,8 @@
 
 #include "cmd.h"
 #include "cmd2.h"
-#include "bufcmd.h"
+#include "direct.h"
+#include "relfile.h"
 #include "file.h"
 #include "name.h"
 #include "wireformat.h"
@@ -114,7 +115,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			rv = rtconfig_set(rtconf, (char*) command->command_buffer);
 			break;
 		case CMD_POSITION:
-			rv = bufcmd_position(bus, (char*) nameinfo.name, nameinfo.namelen, errormsg);
+			rv = relfile_position(bus, (char*) nameinfo.name, nameinfo.namelen, errormsg);
 			break;
 #ifdef HAS_RTC
 		case CMD_TIME:

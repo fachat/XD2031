@@ -73,7 +73,10 @@
 #include "channel.h"
 #include "bus.h"
 #include "archcompat.h"
-#include "bufcmd.h"
+
+#include "buffer.h"
+#include "direct.h"
+#include "relfile.h"
 
 #include "timer.h"
 #include "led.h"
@@ -151,7 +154,11 @@ int main(int argc, const char *argv[])
 	// init file handling (active open calls)
 	file_init();
 	// buffer structures
-	bufcmd_init();
+	buffer_init();
+	// direct buffer handling
+	direct_init();
+	// relfile handling
+	relfile_init();
 	// init main channel handling
 	channel_init();
 

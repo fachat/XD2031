@@ -30,7 +30,8 @@
 #include "name.h"
 #include "serial.h"
 #include "wireformat.h"
-#include "bufcmd.h"
+#include "direct.h"
+#include "relfile.h"
 #include "cmdnames.h"
 
 #include "debug.h"
@@ -211,7 +212,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	endpoint_t *endpoint = NULL;
 	if (type == FS_OPEN_DIRECT) {
 		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
-		endpoint = bufcmd_provider();
+		endpoint = direct_provider();
 	} else {
 		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.drivename);
 	}
@@ -375,7 +376,7 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rx
 
 					// note: automatically closes the original file (on the server)
 					// on error (i.e. err != CBM_ERROR_OK)
-					err = bufcmd_relfile_proxy(channelno, active[i].endpoint, reclen);
+					err = relfile_proxy(channelno, active[i].endpoint, reclen);
 				}	
 
 				active[i].callback(err, (uint8_t *) active[i].rxdata);
