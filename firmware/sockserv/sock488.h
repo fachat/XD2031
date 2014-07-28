@@ -27,6 +27,7 @@
 #define	S488_REQ	0x03		/* M->D request a byte from device */
 #define	S488_OFFER	0x04		/* D->M offer a byte for a receive */
 
+#define	S488_TIMEOUT	0x20		/* Read timeout */
 #define	S488_ACK	0x40		/* ACKnowledge a byte to receiver as part of a REQ */
 #define	S488_EOF	0x80		/* when set on SEND or OFFER, transfer with EOF */
 

@@ -32,23 +32,6 @@
 #include <ctype.h>
 #include <string.h>
 
-/*
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <time.h>
-
-#include "terminal.h"
-#include "types.h"
-#include "wireformat.h"
-#include "sock488.h"
-*/
-
 #include "mem.h"
 #include "log.h"
 #include "registry.h"
@@ -107,6 +90,29 @@ const char* parse_string(const char *inp, char *out, int *outlen) {
 
 
 /** parse a hex byte */
+const char* parse_hexint(const char *inp, int *out) {
+	
+	const char *p = inp;
+	int val = 0;
+	char v = 0;
+
+	do {
+		v = *(p++);
+		if (v >= 0x30 && v <= 0x39) {
+			v -= 0x30;
+		} else {
+			v &= 0x1f;
+			v += 9;
+		}
+		val = (val << 4) + v;
+
+	} while (isxdigit(*p));
+
+	*out = val;
+	return p;
+}
+
+/** parse a hex byte */
 const char* parse_hexbyte(const char *inp, char *out) {
 	
 	const char *p = inp;
@@ -152,22 +158,24 @@ static type_t scriptlet_type = {
 // parse a buffer line (i.e. a series of hex numbers and strings, possibly with scriplets)
 // return length of out bytes
 
-int scr_len(line_t *line, scriptlet_t *scr) {
+int exec_len(line_t *line, scriptlet_t *scr) {
 
 	line->buffer[scr->pos] = line->length;
 
 	return 1;
 }
 
-int scr_dsb(char *trg, int trglen, const char **parseptr) {
+int scr_dsb(char *trg, int trglen, const char **parseptr, int *outparam) {
 
-	char len = 0;
+        (void) outparam; // silence warning
+
+	int len = 0;
 	char fill = 0;
 	const char *p = *parseptr;
 
 	while (isspace(*p)) { p++; }
 
-	p = parse_hexbyte(p, &len);
+	p = parse_hexint(p, &len);
 	if (p != NULL) {	
 
 		while (isspace(*p)) { p++; }
@@ -193,26 +201,35 @@ int scr_dsb(char *trg, int trglen, const char **parseptr) {
 	return len;
 }
 
+int scr_ignore(char *trg, int trglen, const char **parseptr, int *outparam) {
 
-/*
-// scriplets
-static const struct {
-	const char *name;
-	const int namelen;
-	const int outlen;
-	int (*parse)(char *trg, int trglen, const char **parseptr);
-	int (*exec)(line_t *line, scriptlet_t *scr);
-} scriptlets[] = {
-	{ "len", 3, 1, NULL, scr_len },
-	{ "dsb", 3, 0, scr_dsb, NULL },
-	{ "talk", 4, 1, scr_talk, NULL },
-	{ "listen", 6, 1, scr_listen, NULL },
-	{ "secondary", 9, 1, scr_secondary, NULL },
-	{ "untalk", 6, 1, scr_untalk, NULL },
-	{ "unlisten", 8, 1, scr_unlisten, NULL },
-	{ NULL, 0, 0, NULL, NULL }
-};
-*/
+	int len = 0;
+	const char *p = *parseptr;
+
+	while (isspace(*p)) { p++; }
+
+	p = parse_hexint(p, &len);
+	*parseptr = p;
+
+	if (trglen < len) {
+		log_error("dsb has fill %d larger than remaining buffer %d\n", len, trglen);
+		return -1;
+	}
+
+	memset(trg, 0, len);
+
+	*outparam = len;
+
+	return len;
+}
+
+int exec_ignore(line_t *line, scriptlet_t *scr) {
+	(void)line; // silence
+
+	return scr->param;
+}
+
+
 
 static void free_scriptlet(registry_t *reg, void *obj) {
 	(void) reg;	// silence
@@ -283,7 +300,7 @@ int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 			scr->exec = scriptlets[cmd].exec;
 			reg_append(&line->scriptlets, scr);
 			if (scriptlets[cmd].parse != NULL) {
-				int l = scriptlets[cmd].parse(buffer + outp, sizeof(buffer)-outp, &p);
+				int l = scriptlets[cmd].parse(buffer + outp, sizeof(buffer)-outp, &p, &scr->param);
 				if (l < 0) {
 					break;
 				}
@@ -315,31 +332,6 @@ int parse_msg(line_t *line, const char *in, char **outbuf, int *outlen) {
 	return 0;
 }
 
-#if 0
-static const struct {
-	const char *name;
-	const int namelen;
-	int (*parser)(line_t *line, const char *in, char **outbuf, int *outlen);
-} cmds[] = {
-	{ "atn", 3, parse_buf },
-	{ "send", 4, parse_buf },
-	{ "recv", 4, parse_buf },
-	{ "errmsg", 6, parse_msg },
-	{ "message", 7, parse_msg },
-	{ "expect", 6, parse_buf },
-	{ "sendnoeof", 9, parse_buf },
-	{ NULL, 0, NULL }
-};
-
-#define CMD_ATN		0
-#define CMD_SEND	1
-#define CMD_RECEIVE	2
-#define CMD_ERRMSG	3
-#define CMD_MESSAGE	4
-#define CMD_EXPECT	5
-#define CMD_SENDNOEOF	6	/* like send, but do not set EOF on last byte */
-
-#endif
 
 /**
  * parse the null-terminated input buffer into a line_t struct

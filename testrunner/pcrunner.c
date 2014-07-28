@@ -78,7 +78,7 @@ void assert_single_char(char *argv) {
 
 
 scriptlet_tab_t scriptlets[] = {
-	{ "len", 3, 1, NULL, scr_len },
+	{ "len", 3, 1, NULL, exec_len },
 	{ "dsb", 3, 0, scr_dsb, NULL },
 	{ NULL, 0, 0, NULL, NULL }
 };

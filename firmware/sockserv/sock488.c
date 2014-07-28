@@ -30,6 +30,8 @@
 #include "socket.h"
 
 
+#undef	S488_DEBUG
+
 
 static bus_t sock488_bus;
 
@@ -68,7 +70,7 @@ static void send_byte(int8_t data) {
                 printf("Could not write to fd=%d, data=%02x\n", socket_fd, data);
         } else
         if (wsize < 0) {
-                printf("Error writing to fd %d: errno=%d (%s)\n", socket_fd, errno, strerror(errno));
+                printf("Error writing %02x to fd %d: errno=%d (%s)\n", data, socket_fd, errno, strerror(errno));
         } else {
                 //printf("Written to fd=%d, data=%02x\n", socket_fd, data);
         }
@@ -108,13 +110,15 @@ void sock488_mainloop_iteration() {
 	int16_t par_status = 0;
 
 	uint8_t tmp = 0;
-	uint8_t data = read_byte();
+	uint8_t indata = read_byte();
+	uint8_t data = 0;
 
-	uint8_t eof = data & S488_EOF;
-	uint8_t ack = data & S488_ACK;
-	data &= ~(S488_EOF | S488_ACK);
+	uint8_t eof = indata & S488_EOF;
+	uint8_t tout = indata & S488_TIMEOUT;
+	uint8_t ack = indata & S488_ACK;
+	indata &= ~(S488_EOF | S488_ACK);
 
-	switch (data) {
+	switch (indata) {
 
 		case S488_ATN:
 			data = read_byte();
@@ -129,12 +133,24 @@ void sock488_mainloop_iteration() {
 				// acknowledge old byte
 				bus_receivebyte(&sock488_bus, &tmp, 0);
 			}
+
+			eof = 0;
+			tout = 0;
+
 			par_status = bus_receivebyte(&sock488_bus, &data, BUS_PRELOAD);
-			if (par_status & STAT_EOF) {
-				eof = S488_EOF;
+#ifdef S488_DEBUG
+			printf("got: %02x, e=%02x, a=%02x, t=%02x -> par_status=%04x, data=%02x\n", indata, eof, ack, tout, par_status, data);
+#endif
+			if (par_status & STAT_RDTIMEOUT) {
+				tout = S488_TIMEOUT;
+				send_byte(S488_OFFER | tout);
+			} else {
+				if (par_status & STAT_EOF) {
+					eof = S488_EOF;
+				}
+				send_byte(S488_OFFER | eof );
+				send_byte(data);
 			}
-			send_byte(S488_OFFER | eof);
-			send_byte(data);
 			break;
 		case 0:
 			if (ack) {

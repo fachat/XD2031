@@ -296,6 +296,7 @@ for script in $TESTSCRIPTS; do
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script;
+			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
 			RESULT=$?
 		fi;
 

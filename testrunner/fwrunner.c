@@ -75,23 +75,25 @@ void assert_single_char(char *argv) {
 
 
 
-int scr_unlisten(char *trg, int trglen, const char **parseptr) {
+int scr_unlisten(char *trg, int trglen, const char **parseptr, int *outparam) {
 	(void) trglen;	// silence warning
 	(void) parseptr;// silence warning
+	(void) outparam; // silence warning
 
 	trg[0] = 0x3f;
 	return 1;
 }
-int scr_untalk(char *trg, int trglen, const char **parseptr) {
+int scr_untalk(char *trg, int trglen, const char **parseptr, int *outparam) {
 	(void) trglen;	// silence warning
 	(void) parseptr;// silence warning
+	(void) outparam; // silence warning
 
 	trg[0] = 0x5f;
 	return 1;
 }
 
 
-int scr_atn(char *trg, int trglen, const char **parseptr, char cmd) {
+static int scr_atn(char *trg, int trglen, const char **parseptr, char cmd) {
 
 	(void) trglen;	// silence warning
 
@@ -116,24 +118,28 @@ int scr_atn(char *trg, int trglen, const char **parseptr, char cmd) {
 	return 1;
 }
 
-int scr_listen(char *trg, int trglen, const char **parseptr) {
+int scr_listen(char *trg, int trglen, const char **parseptr, int *outparam) {
+	(void) outparam; // silence warning
 	return scr_atn(trg, trglen, parseptr, 0x20);
 }
-int scr_talk(char *trg, int trglen, const char **parseptr) {
+int scr_talk(char *trg, int trglen, const char **parseptr, int *outparam) {
+	(void) outparam; // silence warning
 	return scr_atn(trg, trglen, parseptr, 0x40);
 }
-int scr_secondary(char *trg, int trglen, const char **parseptr) {
+int scr_secondary(char *trg, int trglen, const char **parseptr, int *outparam) {
+	(void) outparam; // silence warning
 	return scr_atn(trg, trglen, parseptr, 0x60);
 }
 
 scriptlet_tab_t scriptlets[] = {
-	{ "len", 3, 1, NULL, scr_len },
+	{ "len", 3, 1, NULL, exec_len },
 	{ "dsb", 3, 0, scr_dsb, NULL },
 	{ "talk", 4, 1, scr_talk, NULL },
 	{ "listen", 6, 1, scr_listen, NULL },
 	{ "secondary", 9, 1, scr_secondary, NULL },
 	{ "untalk", 6, 1, scr_untalk, NULL },
 	{ "unlisten", 8, 1, scr_unlisten, NULL },
+	{ "ignore", 6, 0, scr_ignore, exec_ignore },
 	{ NULL, 0, 0, NULL, NULL }
 };
 
@@ -178,6 +184,7 @@ int read_byte(int fd, char *data) {
 			}
 		}
 	}
+	//printf("%02x ", *data);
 	return 0;
 }
 
@@ -187,7 +194,7 @@ int read_byte(int fd, char *data) {
 int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 
 	char incmd, outcmd;
-        int n, eof;
+        int n, eof, tout;
 
 	*outeof = 0;
 	wrp = 0;
@@ -198,12 +205,17 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 		
 		n = read_byte(fd, &incmd);
 		eof = incmd & S488_EOF;
-		incmd &= ~S488_EOF;
-		if (incmd == S488_OFFER) {
-			n = read_byte(fd, outbuf + wrp);
+		tout = incmd & S488_TIMEOUT;
+		incmd &= ~(S488_EOF | S488_TIMEOUT);
+		if (tout == 0) {
+			if (incmd == S488_OFFER) {
+				n = read_byte(fd, outbuf + wrp);
+				wrp++;
+			}
+			outcmd = S488_REQ | S488_ACK;
+		} else {
+			outcmd = S488_REQ;
 		}
-		wrp++;
-		outcmd = S488_REQ | S488_ACK;
 
 	} while((n == 0) && (wrp < buflen) && (!eof));
 
@@ -219,11 +231,13 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 
 // -----------------------------------------------------------------------
 
-int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos, int waitforeof) {
-	char buffer[8192];
+int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos, int waitforeof, 
+		registry_t *scriptlets, line_t *line) {
+	char buffer[4096];
 	ssize_t cnt = 0;
 	int err = 0;
 	int eof = 0;
+	int scrp = 0;
 
 	if (waitforeof) {
 		cnt = read_packet(fd, buffer, sizeof(buffer), &eof);
@@ -233,14 +247,34 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos,
 
 	//log_info("Rxd   : ");
 
+	scriptlet_t *scr = reg_get(scriptlets, scrp);
+	int curp = 0;
+	int offset = 0;
+
 	if (cnt < 0) {
 		log_errno("Error reading from socket at line %d\n", curpos);
 		err = 2;
 	} else {
-		if (memcmp(inbuffer, buffer, inbuflen)) {
-			log_error("Detected mismatch at line %d\n", curpos);
-			err = 1;
-		} else
+		do {
+			offset = 0;
+			if (scr != NULL && scr->pos == curp) {
+				if (scr->exec != NULL) {
+					offset = scr->exec(line, scr);
+				}
+				scrp++;
+				scr = reg_get(scriptlets, scrp);
+			}
+			if (offset == 0) {
+				if (inbuffer[curp] != buffer[curp]) {
+					log_error("Detected mismatch at line %d\n", curpos);
+					err = 1;
+					break;
+				}
+				offset = 1;
+			}
+			curp += offset;
+		} while (curp < inbuflen && curp < cnt);
+
 		if (cnt != inbuflen) {
 			log_error("Detected length mismatch: expected %d, received %d\n", inbuflen, cnt);
 			err = 1;
@@ -327,12 +361,12 @@ int execute_script(int sockfd, registry_t *script) {
 			break;
 		case CMD_RECEIVE:
 		case CMD_EXPECT:
-			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
-				if (scr->exec != NULL) {
-					scr->exec(line, scr);
-				}
-			}
-			err = compare_packet(sockfd, line->buffer, line->length, curpos, line->cmd == CMD_RECEIVE);
+			//for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
+			//	if (scr->exec != NULL) {
+			//		scr->exec(line, scr);
+			//	}
+			//}
+			err = compare_packet(sockfd, line->buffer, line->length, curpos, line->cmd == CMD_RECEIVE, &line->scriptlets, line);
 
 			if (err != 0) {
 				numerrs++;
