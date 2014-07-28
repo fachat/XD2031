@@ -116,14 +116,19 @@ int8_t uarthw_can_send() {
  * submit a byte to the send buffer
  */
 void uarthw_send(int8_t data) {
-	ssize_t wsize = write(socket_fd, &data, 1);
+        ssize_t wsize = write(socket_fd, &data, 1);
+        while (wsize < 0 && errno == EAGAIN) {
+                // wait 10ms
+                struct timespec sleeptime = { 0, 10000000l };
+                nanosleep(&sleeptime, NULL);
+                wsize = write(socket_fd, &data, 1);
+        }
+
 	if (wsize == 0) {
 		printf(LOG_PREFIX "Could not write to fd=%d, data=%02x\n", socket_fd, data);
 	} else
 	if (wsize < 0) { 
 		printf(LOG_PREFIX "Error writing to server on fd %d: errno=%d (%s)\n", socket_fd, errno, strerror(errno));
-	} else {
-		//printf("Written to fd=%d, data=%02x\n", socket_fd, data);
 	}
 }
 

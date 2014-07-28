@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "bus.h"
 #include "sock488.h"
@@ -65,14 +66,19 @@ void sock488_init() {
  * submit a byte to the send buffer
  */
 static void send_byte(int8_t data) {
-        ssize_t wsize = write(socket_fd, &data, 1);
-        if (wsize == 0) {
-                printf("Could not write to fd=%d, data=%02x\n", socket_fd, data);
-        } else
-        if (wsize < 0) {
-                printf("Error writing %02x to fd %d: errno=%d (%s)\n", data, socket_fd, errno, strerror(errno));
-        } else {
-                //printf("Written to fd=%d, data=%02x\n", socket_fd, data);
+ 	ssize_t wsize = write(socket_fd, &data, 1);
+	while (wsize < 0 && errno == EAGAIN) {
+		// wait 10ms
+		struct timespec sleeptime = { 0, 10000000l };
+		nanosleep(&sleeptime, NULL);
+ 	       	wsize = write(socket_fd, &data, 1);
+	}
+
+       	if (wsize == 0) {
+               printf("Could not write to fd=%d, data=%02x\n", socket_fd, data);
+       	} else
+       	if (wsize < 0) {
+               printf("Error writing %02x to fd %d: errno=%d (%s)\n", data, socket_fd, errno, strerror(errno));
         }
 }
 
