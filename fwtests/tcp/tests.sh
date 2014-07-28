@@ -16,8 +16,6 @@
 
 THISDIR=`dirname $0`
 
-echo "THISDIR=$THISDIR"
-
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
 #TESTFILES="blk.d64"
