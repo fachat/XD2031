@@ -70,9 +70,7 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 		len = n;
 	}
 
-	len+=MEM_OFFSET;
-
-	char *ptr = malloc(len+1);
+	char *ptr = malloc(len+MEM_OFFSET+1);
 
 	check_alloc(ptr, file, line);		
 
