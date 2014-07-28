@@ -216,7 +216,7 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path, int from_cmdlin
 
 	tn_endpoint_t *tnep = create_ep();
 
-	char *hostname = mem_alloc_str(path);
+	char *hostname = conv_to_alloc(path, &tcp_provider);
 	tnep->hostname = hostname;
 	
 	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
@@ -246,7 +246,8 @@ static endpoint_t *tnp_temp(char **name) {
 
 	// create new string and copy the first n bytes of *name into it
 	char *hostname = mem_alloc_strn(*name, n);
-	tnep->hostname = hostname;
+	tnep->hostname = conv_to_alloc(hostname, &tcp_provider);
+	mem_free(hostname);
 
 	*name = end+1;	// char after the ':'
 	
@@ -305,7 +306,9 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 	File *file=(File*)fp;
 	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
 
-	log_info("open file on host %s with service/port %s\n", tnep->hostname, fp->filename);
+	const char *filename = conv_to_alloc(fp->filename, &tcp_provider);
+
+	log_info("open file on host %s with service/port %s\n", tnep->hostname, filename);
 
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = 0;
@@ -313,11 +316,14 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 	hints.ai_flags = (AI_V4MAPPED | AI_ADDRCONFIG);
 
 	// 1. get the internet address for it via getaddrinfo
-	ern = getaddrinfo(tnep->hostname, fp->filename, &hints, &addr);
+	ern = getaddrinfo(tnep->hostname, filename, &hints, &addr);
 	if (ern != 0) {
-		log_errno("Did not get address info for %s:%s\n", tnep->hostname, fp->filename);
+		log_error("Did not get address info for %s:%s, returns %d (%s)", tnep->hostname, filename,
+				ern, gai_strerror(ern));
+		mem_free(filename);
 		return er;
 	}
+	mem_free(filename);
 
         /* getaddrinfo() returns a list of address structures.
            Try each address until we successfully bind(2).
@@ -369,6 +375,7 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 
 	log_info("OPEN_RD/AP/WR(%s: %s:%s =%p (fd=%d)\n",mode, tnep->hostname, fp->filename, (void*)file, sockfd);
 
+	fp->writable = 1;
 	return er;
 }
 
@@ -453,7 +460,7 @@ static int write_file(file_t *fp, char *buf, int len, int is_eof) {
 		}
 
 		if (is_eof) {
-			close_fd(file);
+			//close_fd(file);
 		}
 		return 0;
 	}
@@ -479,7 +486,7 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		return CBM_ERROR_OK;
 	}
 
-	char *name = conv_from_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, &tcp_provider);
+	char *name = mem_alloc_str((fp->pattern == NULL) ? TELNET_PORT : fp->pattern);
 
 	File *retfile = reserve_file(tnep);
 
