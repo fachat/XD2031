@@ -307,7 +307,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 		}
 	} else {
 
-		const char *ascname = mem_alloc_str(wirename);
+		char *ascname = mem_alloc_str(wirename);
 		cconv_converter(cconv_getcharset(provider_get_ext_charset()), CHARSET_ASCII)
 				(wirename, len, ascname, len);
 

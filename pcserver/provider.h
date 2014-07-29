@@ -186,7 +186,7 @@ struct _handler {
         int             (*readfile)(file_t *fp, char *retbuf, int len, int *readflag);
 
                                                         // write file data
-        int             (*writefile)(file_t *fp, char *buf, int len, int is_eof);
+        int             (*writefile)(file_t *fp, const char *buf, int len, int is_eof);
 
                                                         // truncate to a given size
         int             (*truncate)(file_t *fp, long size);

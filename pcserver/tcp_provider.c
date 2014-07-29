@@ -438,7 +438,7 @@ static int read_file(file_t *fp, char *retbuf, int len, int *readflag) {
 }
 
 // write file data
-static int write_file(file_t *fp, char *buf, int len, int is_eof) {
+static int write_file(file_t *fp, const char *buf, int len, int is_eof) {
 	File *file = (File*)fp;
 
 #ifdef DEBUG_WRITE

@@ -353,7 +353,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 
 	// when no parent given (i.e. path without base), use root endpoint as base
 	if (parentep == NULL) {
-		parentep = (endpoint_t*) fs_root_endpoint(path, &new_assign_path, from_cmdline);
+		parentep = fs_root_endpoint(path, &new_assign_path, from_cmdline);
 	}
 
 
@@ -691,7 +691,7 @@ static int read_block(File *file, char *retbuf, int len, int *eof) {
 	return n;
 }
 
-static int write_block(File *file, char *buf, int len, int is_eof) {
+static int write_block(File *file, const char *buf, int len, int is_eof) {
 
 	(void)is_eof; // silence warning unused parameter
 
@@ -1368,7 +1368,7 @@ static int expand_relfile(File *file, long cursize, long curpos) {
 }
 
 // write file data
-static int write_file(File *file, char *buf, int len, int is_eof) {
+static int write_file(File *file, const char *buf, int len, int is_eof) {
 
 	//log_debug("write_file: file=%p\n", file);
 
@@ -1647,7 +1647,7 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 }
 
 // write file data
-static int writefile(file_t *fp, char *buf, int len, int is_eof) {
+static int writefile(file_t *fp, const char *buf, int len, int is_eof) {
 
 	File *file = (File*) fp;
 

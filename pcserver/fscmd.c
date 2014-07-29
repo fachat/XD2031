@@ -499,6 +499,82 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 	return rv;
 }
 
+
+int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag) {
+	
+	int rv = CBM_ERROR_FILE_NOT_OPEN;
+
+	file_t *fp = channel_to_file(tfd);
+	if (fp != NULL) {
+		    *readflag = 0;	// default just in case
+		    rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag);
+		    // TODO: handle error (rv<0)
+		    if (rv < 0) {
+				// an error is sent as REPLY with error code
+				rv = -rv;
+				log_rv(rv);
+		    } else {
+				*outlen = rv;
+				rv = CBM_ERROR_OK;
+		    }
+	}
+	return rv;
+}
+
+int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
+
+	int rv = CBM_ERROR_FILE_NOT_OPEN;
+
+	file_t *fp = channel_to_file(tfd);
+	//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
+	if (fp != NULL) {
+		if (cmd == FS_EOF) {
+			log_info("WRITE_WITH_EOF(%d)\n", tfd);
+		}
+		rv = fp->handler->writefile(fp, indata, datalen, cmd == FS_EOF);
+		if (rv != 0) {
+			log_rv(rv);
+		}
+	}
+	return rv;
+}
+
+int cmd_position(int tfd, const char *indata, int datalen) {
+
+	int rv = CBM_ERROR_FILE_NOT_OPEN;
+
+	if (datalen < 2) {
+		rv = CBM_ERROR_FAULT;
+	} else {
+		// position the read/write cursor into a file
+		file_t *fp = channel_to_file(tfd);
+		if (fp != NULL) {
+			int record = (indata[0] & 0xff) | ((indata[1] & 0xff) << 8);
+			log_debug("POSITION: chan=%d, record=%d\n", tfd, record);
+			rv = fp->handler->seek(fp, record * fp->recordlen, SEEKFLAG_ABS);
+			if (rv != 0) {
+				log_rv(rv);
+			}
+		}
+	}
+	return rv;
+}
+
+
+int cmd_close(int tfd) {
+
+	int rv = CBM_ERROR_FILE_NOT_OPEN;
+
+	file_t *fp = channel_to_file(tfd);
+	if (fp != NULL) {
+		log_info("CLOSE(%d)\n", tfd);
+		fp->handler->close(fp, 1);
+		channel_free(tfd);
+		rv = CBM_ERROR_OK;
+	}
+	return rv;
+}
+
 int cmd_open_dir(int tfd, const char *inname, int namelen) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
@@ -736,6 +812,29 @@ int cmd_copy(const char *inname, int namelen) {
 	return err;
 }
 
+int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+
+	// not file-related, so no file descriptor (tfd)
+	// we only support mapped drives (thus name is NULL)
+	// we only interpret the drive, so namelen for the lookup is 1
+	endpoint_t *ep = provider_lookup(indata, 1, NULL, NAMEINFO_UNDEF_DRIVE);
+	if (ep != NULL) {
+		provider_t *prov = (provider_t*) ep->ptype;
+		if (prov->block != NULL) {
+			log_info("DIRECT(%d,...)\n", tfd);
+			rv = prov->block(ep, indata + 1, outdata, outlen);
+			if (rv != 0) {
+				log_rv(rv);
+			}
+		}
+		// cleanup when not needed anymore
+		provider_cleanup(ep);
+	}
+	return rv;
+}
+
 // ----------------------------------------------------------------------------------
 
 /**
@@ -797,10 +896,6 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	// some error pops up by removing it
 	//buf[(unsigned int)buf[FSP_LEN]] = 0;	// 0-terminator
 
-	provider_t *prov = NULL; //&fs_provider;
-	endpoint_t *ep = NULL;
-	file_t *fp = NULL;
-
 #if 0
 	printf("got cmd=%d, fd=%d, name=%s",cmd,tfd,
 			(cmd<FS_ASSIGN)?((char*)buf+FSP_DATA):"null");
@@ -813,17 +908,15 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	retbuf[FSP_DATA] = CBM_ERROR_FAULT;
 
 	int readflag = 0;
-	int retlen = 0;
 	int sendreply = 1;
 	const char *name = buf+FSP_DATA+1;
 	int drive = buf[FSP_DATA]&255;
-	int convlen = len - FSP_DATA-1;
-	int record = 0;
 	int outlen = 0;
-	char *inname = buf + FSP_DATA;
 	int namelen = len - FSP_DATA;
 
 
+	// dispatch to the correct cmd_* routine.
+	// may someday be replaced by an array lookup when the routine calls have been unified...
 	switch(cmd) {
 		// file-oriented commands
 	case FS_OPEN_RD:
@@ -841,79 +934,30 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_READ:
-		fp = channel_to_file(tfd);
-		if (fp != NULL) {
-			    readflag = 0;	// default just in case
-			    rv = fp->handler->readfile(fp, retbuf + FSP_DATA, MAX_BUFFER_SIZE-FSP_DATA, &readflag);
-			    // TODO: handle error (rv<0)
-			    if (rv < 0) {
-				// an error is sent as REPLY with error code
-				retbuf[FSP_DATA] = -rv;
-				log_rv(-rv);
-			    } else {
-				// a WRITE mirrors the READ request when ok 
-				retbuf[FSP_CMD] = FS_WRITE;
-				retbuf[FSP_LEN] = FSP_DATA + rv;
-				if (readflag & READFLAG_EOF) {
-					log_info("SEND_EOF(%d)\n", tfd);
-					retbuf[FSP_CMD] = FS_EOF;
-				}
-				if (readflag & READFLAG_DENTRY) {
-					log_info("SEND DIRENTRY(%d)\n", tfd);
-					//convfrom(retbuf+FSP_DATA+FS_DIR_NAME, fp->endpoint->ptype);
-					//fp->handler->convfrom(fp, provider_get_ext_charset())
-					//		(retbuf+FSP_DATA+FS_DIR_NAME, 
-					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME), 
-					//			retbuf+FSP_DATA+FS_DIR_NAME, 
-					//			strlen(retbuf+FSP_DATA+FS_DIR_NAME));
-				}
-			    }
+		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag);
+		if (rv != CBM_ERROR_OK) {
+			retbuf[FSP_DATA] = rv;
+			retbuf[FSP_LEN] = FSP_DATA + 1;
 		} else {
-			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
+			retbuf[FSP_CMD] = (readflag & READFLAG_EOF) ? FS_EOF : FS_WRITE;
+			retbuf[FSP_LEN] = FSP_DATA + outlen;
 		}
 		break;
 	case FS_WRITE:
 	case FS_EOF:
-		fp = channel_to_file(tfd);
-		//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
-		if (fp != NULL) {
-			if (cmd == FS_EOF) {
-				log_info("WRITE_WITH_EOF(%d)\n", tfd);
-			}
-			rv = fp->handler->writefile(fp, buf+FSP_DATA, len-FSP_DATA, cmd == FS_EOF);
-			if (rv != 0) {
-				log_rv(rv);
-			}
-			retbuf[FSP_DATA] = rv;
-		} else {
-			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
-		}
+		rv = cmd_write(tfd, cmd, buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_POSITION:
-		// position the read/write cursor into a file
-		fp = channel_to_file(tfd);
-		if (fp != NULL) {
-			record = (buf[FSP_DATA] & 0xff) | ((buf[FSP_DATA+1] & 0xff) << 8);
-			log_debug("POSITION: chan=%d, ep=%p, record=%d\n", tfd, (void*)ep, record);
-			rv = fp->handler->seek(fp, record * fp->recordlen, SEEKFLAG_ABS);
-			if (rv != 0) {
-				log_rv(rv);
-			}
-			retbuf[FSP_DATA] = rv;
-		} else {
-			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
-		}
+		rv = cmd_position(tfd, buf+FSP_DATA, len-FSP_DATA);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_CLOSE:
-		fp = channel_to_file(tfd);
-		if (fp != NULL) {
-			log_info("CLOSE(%d)\n", tfd);
-			fp->handler->close(fp, 1);
-			channel_free(tfd);
-			retbuf[FSP_DATA] = CBM_ERROR_OK;
-		} else {
-			retbuf[FSP_DATA] = CBM_ERROR_FILE_NOT_OPEN;
-		}
+		rv = cmd_close(tfd);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 
 		// command operations
@@ -948,24 +992,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
       		break;
 	case FS_BLOCK:
-		// not file-related, so no file descriptor (tfd)
-		// we only support mapped drives (thus name is NULL)
-		ep = provider_lookup(inname, namelen, NULL, NAMEINFO_UNDEF_DRIVE);
-		if (ep != NULL) {
-			prov = (provider_t*) ep->ptype;
-			if (prov->block != NULL) {
-				provider_convto(prov)(name, convlen, name, convlen);
-				log_info("DIRECT(%d,...)\n", tfd);
-				rv = prov->block(ep, buf + FSP_DATA + 1, retbuf + FSP_DATA + 1, &retlen);
-				if (rv != 0) {
-					log_rv(rv);
-				}
-				retbuf[FSP_LEN] = FSP_DATA + 1 + retlen;
-				retbuf[FSP_DATA] = rv;
-			}
-			// cleanup when not needed anymore
-			provider_cleanup(ep);
-		}
+		rv = cmd_block(tfd, buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	
 	case FS_ASSIGN:

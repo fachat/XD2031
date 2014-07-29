@@ -244,7 +244,7 @@ static int x00_read(file_t *file, char *buf, int len, int *readflg) {
 	return file->parent->handler->readfile(file->parent, buf, len, readflg );
 }
 
-static int x00_write(file_t *file, char *buf, int len, int writeflg) {
+static int x00_write(file_t *file, const char *buf, int len, int writeflg) {
 
 	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
 }

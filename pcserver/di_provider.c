@@ -1678,7 +1678,7 @@ static int di_read_seq(di_endpoint_t *diep, File *file, char *retbuf, int len, i
 // di_writefile
 // ************
 
-static int di_writefile(file_t *fp, char *buf, int len, int is_eof)
+static int di_writefile(file_t *fp, const char *buf, int len, int is_eof)
 {
    int i;
    int err;
