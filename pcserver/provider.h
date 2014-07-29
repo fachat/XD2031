@@ -93,7 +93,7 @@ typedef struct {
 
 	// command channel
 							// B-A/B-F
-	int		(*block)(endpoint_t *ep, char *buf, char *retbuf, int *retlen); 
+	int		(*block)(endpoint_t *ep, const char *buf, char *retbuf, int *retlen); 
 	// dump / debug
 	void		(*dump)(int indent);
 } provider_t;

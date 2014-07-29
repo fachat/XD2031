@@ -650,7 +650,7 @@ static int di_save_buffer(di_endpoint_t *diep)
    log_debug("di_save_buffer U2(%d/%d)\n",diep->U2_track,diep->U2_sector);
    di_fseek_tsp(diep,diep->U2_track,diep->U2_sector,0);
    di_fwrite(diep->buf[0],1,256,diep->Ip);
-   di_fflush(diep->Ip);
+   di_fsync(diep->Ip);
    diep->U2_track = 0;
    // di_dump_block(diep->buf[0]);
    return 1; // OK
@@ -697,7 +697,7 @@ static int di_read_block(di_endpoint_t *diep, File *file, char *retbuf, int len,
 // di_write_block
 // **************
 
-static int di_write_block(di_endpoint_t *diep, char *buf, int len)
+static int di_write_block(di_endpoint_t *diep, const char *buf, int len)
 {
    log_debug("di_write_block: len=%d at ptr %d\n", len, diep->bp[0]);
 
@@ -716,19 +716,21 @@ static int di_write_block(di_endpoint_t *diep, char *buf, int len)
 // di_direct
 // *********
 
-static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
+static int di_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
 {
    int rv = CBM_ERROR_OK;
 
    di_endpoint_t *diep = (di_endpoint_t *)ep;
    file_t *fp = NULL;
+   File *file = NULL;
 
    uint8_t cmd    = (uint8_t)buf[FS_BLOCK_PAR_CMD    -1];
    uint8_t track  = (uint8_t)buf[FS_BLOCK_PAR_TRACK  -1];	// ignoring high byte
    uint8_t sector = (uint8_t)buf[FS_BLOCK_PAR_SECTOR -1];	// ignoring high byte
    uint8_t chan   = (uint8_t)buf[FS_BLOCK_PAR_CHANNEL-1];
 
-   log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d\n",cmd,track,sector,chan);
+   log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d (ep=%p, '%s')\n",cmd,track,sector,chan,
+			ep, ep->ptype->name);
    rv = di_assert_ts(diep,track,sector);
    if (rv != CBM_ERROR_OK) return rv; // illegal track or sector
 
@@ -740,6 +742,10 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
    	diep->chan[0] = chan; // assign channel # to buffer
 
         //handler_resolve_block(ep, chan, &fp);
+	file = mem_alloc(&file_type);
+	file->file.endpoint = ep;
+	file->access_mode = FS_BLOCK;
+	fp = (file_t*) file;
 
         channel_set(chan, fp);
 	break;
@@ -751,6 +757,11 @@ static int di_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen)
 	di_flag_buffer(diep,track,sector); 
    	diep->chan[0] = chan; // assign channel # to buffer
         //handler_resolve_block(ep, chan, &fp);
+
+	file = mem_alloc(&file_type);
+	file->file.endpoint = ep;
+	file->access_mode = FS_BLOCK;
+	fp = (file_t*) file;
 
         channel_set(chan, fp);
 	break;
@@ -1685,7 +1696,7 @@ static int di_writefile(file_t *fp, const char *buf, int len, int is_eof)
    di_endpoint_t *diep = (di_endpoint_t*) fp->endpoint;
    File *file = (File*) fp;
 
-   if (diep->U2_track) // fill block for U2 command
+   if (file->access_mode == FS_BLOCK && diep->U2_track) // fill block for U2 command
    {
       di_write_block(diep,buf,len);
       if (is_eof) di_save_buffer(diep);
@@ -2707,18 +2718,6 @@ static int di_open(file_t *fp, openpars_t *pars, int type)
    	return rv;
 }
 
-// *****************
-// di_direct_channel
-// *****************
-
-static int di_direct_channel(di_endpoint_t *diep, int chan)
-{
-   int i;
-
-   for (i=0 ; i < 5 ; ++i)
-      if (diep->chan[i] == chan) return i;
-   return -1; // no direct channel
-}
 
 // ***********
 // di_readfile
@@ -2736,13 +2735,11 @@ static int di_readfile(file_t *fp, char *retbuf, int len, int *eof)
 		rv = di_read_dir_entry(diep, file, retbuf, len, eof);
 	} else
 	{
-/*   
-   if (di_direct_channel(diep,chan) >= 0)
-   {
-      return di_read_block(diep, file, retbuf, len, eof);
-   } else {
-*/
-   		rv = di_read_seq(diep, file, retbuf, len, eof);
+   		if (file->access_mode == FS_BLOCK) {
+      			return di_read_block(diep, file, retbuf, len, eof);
+   		} else {
+   			rv = di_read_seq(diep, file, retbuf, len, eof);
+		}
 	}
    	return rv;
 }

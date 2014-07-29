@@ -1,0 +1,57 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "THE QUICK BROWN FOX" 0d
+atn 3f
+atn 28 6f
+send "B-P:2 128" 0d
+atn 3f
+atn 28 62
+send "JUMPS OVER THE LAZY DOG" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-P:2 0" 0d
+atn 3f
+atn 28 62
+send "@"
+atn 3f
+atn 28 6f
+send "U2: 2  0  1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-R: 2  0  1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-R: 2  0  1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 62
+expect "THE QUICK BROWN F"
+expect "OX" 0d
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 ef 3f

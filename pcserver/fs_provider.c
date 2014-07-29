@@ -606,7 +606,7 @@ static int open_block_channel(File *fp) {
 
 // in Firmware currently used for:
 // B-A/B-F/U1/U2
-static int fs_direct(endpoint_t *ep, char *buf, char *retbuf, int *retlen) {
+static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen) {
 
 	// Note that buf has already consumed the drive (first byte), so all indexes are -1
 	unsigned char cmd = buf[FS_BLOCK_PAR_CMD-1];
