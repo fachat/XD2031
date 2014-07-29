@@ -11,7 +11,7 @@ atn .untalk
 
 message expect wrong message
 atn .talk 8 .secondary 0f
-recv "73,XD2031 V0.9.2/PCSOCK,00,00" 0d
+recv "73, XD,00,00" 0d
 atn .untalk
 
 message expect too long
