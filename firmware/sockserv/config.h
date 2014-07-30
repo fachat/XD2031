@@ -32,7 +32,8 @@
 #define CONFIG_ERROR_BUFFER_SIZE        46
 
 // number of direct buffers (for U1/U2/B-* commands)
-#define	CONFIG_NUM_DIRECT_BUFFERS	2
+// Note: 12 is the number of buffers in the old dual drives, which we use to test
+#define	CONFIG_NUM_DIRECT_BUFFERS	12
 
 // max. opened files for FAT provider (SD card provider)
 #define FAT_MAX_FILES			4

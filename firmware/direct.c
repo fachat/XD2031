@@ -53,7 +53,7 @@ uint8_t direct_set_ptr(bus_t *bus, char *cmdbuf) {
 
 	uint8_t rv;
 
-	rv = sscanf(cmdbuf, "%d%*[, ]%d", &ichan, &ptr);
+	rv = sscanf(cmdbuf, "%*[ :]%d%*[, ]%d", &ichan, &ptr);
 	if (rv != 2) {
 		return CBM_ERROR_SYNTAX_INVAL;
 	}
@@ -266,7 +266,7 @@ static int8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd,
 	
 	uint8_t rv = CBM_ERROR_DRIVE_NOT_READY;
 
-	if (3 != sscanf(cmdbuf, "%d%*[, ]%d%*[, ]%d", &drive, &track, &sector)) {
+	if (3 != sscanf(cmdbuf, "%*[: ]%d%*[, ]%d%*[, ]%d", &drive, &track, &sector)) {
 		return CBM_ERROR_SYNTAX_INVAL;
 	}
 
@@ -286,12 +286,6 @@ static int8_t cmd_block_allocfree(bus_t *bus, char *cmdbuf, uint8_t fscmd,
 
         if (endpoint != NULL) {
 		rv = buf_call(endpoint, NULL, channel, &buf_cmdpack, &buf_cmdpack);
-/*
-        	cbstat = 0;
-                endpoint->provider->submit_call(NULL, channel,
-                                            &buf_cmdpack, &buf_cmdpack, cmd_callback);
-		rv = cmd_wait_cb();
-*/
 
 		// buf[1]/buf[2] contain the T&S - need to get that into the error
 		track = (buf[1] & 0xff) | ((buf[2] << 8) & 0xff00);
@@ -331,8 +325,8 @@ int8_t cmd_block(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, u
 
 	char cchar = *cmdbuf++;
 	
-	// skip blanks and colon before parameters
-	while (*cmdbuf == ' ' || *cmdbuf == ':') {
+	// skip chars until the following blank or colon, which denote start of params
+	while (*cmdbuf != 0 && *cmdbuf != ' ' && *cmdbuf != ':') {
 		cmdbuf++;
 	}
 	if (*cmdbuf == 0) {

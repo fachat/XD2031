@@ -119,7 +119,7 @@ void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sec
 	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
 	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
 	if (drive < 0) {
-		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track, sector); // track & sector
+		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track%100, sector%100); // track & sector
 	} else {
 		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d,%1.1d\r"), track, sector, drive); // track & sector & drive
 	}

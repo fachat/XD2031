@@ -16,7 +16,7 @@
 
 THISDIR=`dirname $0`
 
-echo "THISDIR=$THISDIR"
+#echo "THISDIR=$THISDIR"
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
@@ -33,14 +33,19 @@ COMPAREFILES="blk.d64"
 SERVEROPTS="-v -A0:fs=blk.d64"
 
 #firmware options
-# switch off drive in error messages
+# switch off drive in error messages; also restricts track/sector to two chars
 FWOPTS="-Xsock488:E=-"
 
 # tsr scripts from the directory to exclude
+# Note that the 2031 drive is "worse" in a sense that some useful features are
+# only in the dual drives. Like 12 direct buffers (as sockserv), or track/sector numbers
+# > 100 being handled correctly in the error message. So as reference we only use the 4040 
+# tests
 #EXCLUDE="position1.frs"
 EXCLUDE=""
-shopt -s extglob
-FILTER='+(2031|4040)'
+#shopt -s extglob
+#FILTER='+(2031|4040)'
+FILTER='4040'
 
 ########################
 # source and execute actual functionality

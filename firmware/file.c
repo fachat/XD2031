@@ -313,12 +313,16 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		// but that would break the FILE OPEN detection here.
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
-			debug_puts("FILE OPEN ERROR");
-			debug_putcrlf();
-			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
 			// clean up
 			channel_close(channel_no);
-			return -1;
+			// Note: it seems possible to open the same channel multiple times
+			// on a direct file
+			if (type != FS_OPEN_DIRECT) {
+				debug_puts("FILE OPEN ERROR");
+				debug_putcrlf();
+				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
+				return -1;
+			}
 		}
 		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
 		if (e < 0) {

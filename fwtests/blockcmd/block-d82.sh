@@ -16,7 +16,7 @@
 
 THISDIR=`dirname $0`
 
-echo "THISDIR=$THISDIR"
+#echo "THISDIR=$THISDIR"
 
 # necessary files to copy to temp; may be gzipped (but leave out the .gz here)
 TESTFILES="blk.d82"

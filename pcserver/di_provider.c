@@ -724,15 +724,26 @@ static int di_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
    file_t *fp = NULL;
    File *file = NULL;
 
-   uint8_t cmd    = (uint8_t)buf[FS_BLOCK_PAR_CMD    -1];
-   uint8_t track  = (uint8_t)buf[FS_BLOCK_PAR_TRACK  -1];	// ignoring high byte
-   uint8_t sector = (uint8_t)buf[FS_BLOCK_PAR_SECTOR -1];	// ignoring high byte
-   uint8_t chan   = (uint8_t)buf[FS_BLOCK_PAR_CHANNEL-1];
+   buf--;
+
+   uint8_t cmd    = (uint8_t)buf[FS_BLOCK_PAR_CMD];
+   uint8_t track  = (uint8_t)buf[FS_BLOCK_PAR_TRACK];	// ignoring high byte
+   uint8_t sector = (uint8_t)buf[FS_BLOCK_PAR_SECTOR];	// ignoring high byte
+   uint8_t chan   = (uint8_t)buf[FS_BLOCK_PAR_CHANNEL];
 
    log_debug("di_direct(cmd=%d, tr=%d, se=%d ch=%d (ep=%p, '%s')\n",cmd,track,sector,chan,
 			ep, ep->ptype->name);
    rv = di_assert_ts(diep,track,sector);
-   if (rv != CBM_ERROR_OK) return rv; // illegal track or sector
+   if (buf[FS_BLOCK_PAR_TRACK+1] != 0 || buf[FS_BLOCK_PAR_SECTOR+1] != 0 
+	|| rv != CBM_ERROR_OK) {
+   	retbuf[0] = track;	// low byte
+   	retbuf[1] = buf[FS_BLOCK_PAR_TRACK+1];	// high byte
+   	retbuf[2] = sector;	// low byte
+   	retbuf[3] = buf[FS_BLOCK_PAR_SECTOR+1];	// high byte
+   	*retlen = 4;
+	return rv; // illegal track or sector
+   }
+
 
    switch (cmd)
    {
@@ -987,6 +998,10 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
    Disk_Image_t *di = &diep->DI;
    uint8_t *fbl;	// pointer to free blocks byte
    uint8_t *bam;	// pointer to BAM bit field
+
+//  if (track == 0 || track > di->Tracks * di->Sides) {
+//	return CBM_ERROR_ILLEGAL_T_OR_S;
+//  }
 
    diep->CurrentTrack = *track;
    if (diep->CurrentTrack < 1 || diep->CurrentTrack > di->Tracks * di->Sides) {

@@ -1,0 +1,79 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 62
+expect 0b
+atn 5f
+atn 28 f3
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 63
+expect 0a
+atn 5f
+atn 28 6f
+send "U1:3 0 3 4" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f4
+send "#1"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 64
+expect 01
+atn 5f
+atn 28 e4 3f
+atn 28 f2
+send "#"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e3 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f3
+send "#1"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 63
+expect 01
+atn 5f
+atn 28 6f
+send "B-P: 2 55" 0d
+atn 3f
+atn 48 6f
+expect "70,NO CHANNEL,00,"
+recv "00,0" 0d
+atn 5f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e3 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 ef 3f

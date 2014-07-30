@@ -65,8 +65,8 @@ void buffer_init(void) {
 // reserve a free buffer for the given channel
 cmdbuf_t *buf_reserve(int8_t channel_no) {
 	// reserve a direct buffer
-	uint8_t i;
-	for (i = 0; i < CONFIG_NUM_DIRECT_BUFFERS; i++) {
+	int8_t i;
+	for (i = CONFIG_NUM_DIRECT_BUFFERS -1; i >= 0; i--) {
 		if (buffers[i].channel_no < 0) {
 			buffers[i].channel_no = channel_no;
 			buffers[i].real_endpoint = NULL;

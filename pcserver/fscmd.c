@@ -828,6 +828,8 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 			if (rv != 0) {
 				log_rv(rv);
 			}
+			log_debug("block: outlen=%d, outdata=%02x %02x %02x %02x\n",
+					*outlen, outdata[0], outdata[1], outdata[2], outdata[3]);
 		}
 		// cleanup when not needed anymore
 		provider_cleanup(ep);

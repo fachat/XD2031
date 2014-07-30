@@ -1,0 +1,45 @@
+
+
+;block8.prg ==0401==
+ 1000 d=8
+ 1100 open15,d,15,"i0"
+ 1105 gosub 9000
+ 1110 open2,d,2,"#"
+ 1120 gosub9000
+ 1130 get#2,a$
+ 1140 print"got buffer number ";asc(a$+chr$(0))
+ 4000 open3,d,3,"#"
+ 4010 gosub9000
+ 4020 get#3,a$
+ 4030 print"got buffer number ";asc(a$+chr$(0))
+ 4100 print#15,"u1:3 0 3 4"
+ 4110 gosub 9000
+ 5000 open4,d,4,"#1"
+ 5010 gosub9000
+ 5020 get#4,a$
+ 5030 print"got buffer number ";asc(a$+chr$(0))
+ 5040 close4
+ 5100 open4,d,2,"#"
+ 5110 gosub9000
+ 5120 close4
+ 5130 gosub9000
+ 5200 close3
+ 5210 gosub9000
+ 5300 open3,d,3,"#1"
+ 5310 gosub9000
+ 5320 get#3,a$
+ 5330 print"got buffer number ";asc(a$+chr$(0))
+ 5400 print#15,"b-p: 2 55"
+ 5410 gosub9000
+ 8000 close2
+ 8005 gosub9000
+ 8010 close3
+ 8015 gosub9000
+ 8020 close15
+ 8100 get a$:if a$="" then 8100
+ 8110 poke 2,2:sys2:rem exit vice
+ 9000 print
+ 9010 input#15,a$,b$,c$,d$
+ 9020 printa$","b$","c$","d$
+ 9030 return
+
