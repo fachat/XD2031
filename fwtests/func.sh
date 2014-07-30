@@ -47,8 +47,8 @@ function usage() {
 function hexdiff() {
 	diffres=0
 	if ! cmp -b "$1" "$2"; then
-		tmp1=`mktemp`
-		tmp2=`mktemp`
+                tmp1="$1".hex;  #`mktemp`
+                tmp2="$2".hex;  #`mktemp`
 
 		hexdump -C "$1" > $tmp1
 		hexdump -C "$2" > $tmp2

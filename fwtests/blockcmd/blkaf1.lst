@@ -25,6 +25,7 @@
  3120 print#1,"b-a: 0";t;s
  3150 gosub9000
  3160 if a=65 then t=c:s=d:goto 3120
+ 3180 close1
  3190 directory
  8900 get a$:if a$="" then 8900
  8910 pO2,2:sys2:rem jam
