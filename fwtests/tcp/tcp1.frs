@@ -6,7 +6,7 @@ message READ error channel message
 
 message open TCP file non-blocking, read-write
 atn .listen 8 f2
-send "0:19,X,N" 0d
+send "5:19,X,N" 0d
 atn .unlisten
 
 

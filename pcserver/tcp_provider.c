@@ -491,6 +491,7 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	File *retfile = reserve_file(tnep);
 
 	retfile->file.filename = name;
+	retfile->file.writable = 1;
 
 	*outentry = (file_t*)retfile;
 	*outpattern = fp->pattern + strlen(fp->pattern);
