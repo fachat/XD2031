@@ -41,10 +41,8 @@
 
 
 // TODO: this is ... awkward
-/*
 extern provider_t http_provider;
 extern provider_t ftp_provider;
-*/
 extern provider_t di_provider;
 extern provider_t fs_provider;
 extern provider_t tcp_provider;
@@ -395,13 +393,11 @@ void provider_init() {
         // manually handle the initial provider
         fs_provider.init();
 
-/*
         ftp_provider.init();
 	provider_register(&ftp_provider);
 
         http_provider.init();
 	provider_register(&http_provider);
-*/
 
 #ifndef _WIN32
         tcp_provider.init();

@@ -169,12 +169,12 @@ static void tnp_do_free(endpoint_t *ep) {
         tn_endpoint_t *cep = (tn_endpoint_t*) ep;
 
         if (reg_size(&ep->files)) {
-                log_warn("fsp_free(): trying to close endpoint %p with %d open files!\n",
+                log_warn("tcp_free(): trying to close endpoint %p with %d open files!\n",
                         ep, reg_size(&ep->files));
                 return;
         }
         if (ep->is_assigned > 0) {
-                log_warn("fsp_free(): trying to free endpoint %p still assigned\n", ep);
+                log_warn("tcp_free(): trying to free endpoint %p still assigned\n", ep);
                 return;
         }
 
