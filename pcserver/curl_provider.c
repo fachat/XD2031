@@ -63,8 +63,12 @@ extern provider_t http_provider;
 
 static handler_t curl_file_handler;
 
+// has init been done?
+static int curl_init_done = 0;
 // list of endpoints
 static registry_t endpoints;
+
+static void curl_close(file_t *fp, int recurse);
 
 typedef enum {
 	PROTO_FTP,
@@ -142,10 +146,9 @@ typedef struct curl_endpoint_t {
 	// payload
 	proto_t			protocol;	// type of provider
 	char			error_buffer[CURL_ERROR_SIZE];
-	char			name_buffer[2 * MAX_BUFFER_SIZE + MAX_PROTO_SIZE];
-	char			host_buffer[MAX_BUFFER_SIZE];
-	char			path_buffer[MAX_BUFFER_SIZE];
-	File			files[MAX_SESSIONS];
+	char			*name_buffer;
+	char			*host_buffer;
+	char			*path_buffer;
 
 } curl_endpoint_t;
 
@@ -162,9 +165,9 @@ static void endpoint_init(const type_t *t, void *obj) {
         fsep->base.is_assigned = 0;
 
 	fsep->error_buffer[0] = 0;
-	fsep->name_buffer[0] = 0;
-	fsep->path_buffer[0] = 0;
-	fsep->host_buffer[0] = 0;
+	fsep->name_buffer = NULL;
+	fsep->path_buffer = NULL;
+	fsep->host_buffer = NULL;
 
         reg_append(&endpoints, fsep);
 }
@@ -176,13 +179,20 @@ static type_t endpoint_type = {
 };
 
 
-//static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user);
-
+// note: curl_init is being called twice, for HTTP as well as FTP
 static void curl_init() {
-	// according to the curl man page, this init can be done multiple times
-	CURLcode cc = curl_global_init(CURL_GLOBAL_ALL);
-	if (cc != 0) {
-		// error handling!
+
+	if (!curl_init_done) {
+
+		reg_init(&endpoints, "curl_endpoints", 10);
+
+		// according to the curl man page, this init can be done multiple times
+		CURLcode cc = curl_global_init(CURL_GLOBAL_ALL);
+		if (cc != 0) {
+			// error handling!
+		}
+
+		curl_init_done = 1;
 	}
 }
 
@@ -195,15 +205,15 @@ static curl_endpoint_t *new_endpoint(const char *path) {
 	// if hostend is NULL, then we only have the host
 	char *hostend=strchr(path, '/');
 
-	int hostlen = strlen(path);
-	if (hostend != NULL) {
-		hostlen = hostend - path;
+	fsep->host_buffer = conv_to_alloc(path, &ftp_provider);
+	char *p = strchr(fsep->host_buffer, '/');
+	if (p != NULL) {
+		*p = 0;
 	}
-	strncpy(fsep->host_buffer, path, hostlen);
-	fsep->host_buffer[hostlen] = 0;
 
-	strncpy(fsep->path_buffer, path+hostlen+1, MAX_BUFFER_SIZE);
-	fsep->path_buffer[MAX_BUFFER_SIZE-1] = 0;
+	if (hostend != NULL) {
+		fsep->path_buffer = conv_to_alloc(hostend+1, &ftp_provider);
+	}
 
 	return fsep;
 }
@@ -301,6 +311,61 @@ static endpoint_t *http_new(endpoint_t *parent, const char *path, int from_cmdli
 	return (endpoint_t*) fsep;
 }
 
+static char* add_parent_path(char *buffer, file_t *file) {
+
+	if (file->parent != NULL) {
+		buffer = add_parent_path(buffer, file->parent);
+	}
+	if (file->filename != NULL) {
+
+		//strcat(buffer, file->filename);
+
+		char *p = conv_to_alloc(file->filename, &ftp_provider);
+		char *newbuf = malloc_path(buffer, p);
+		mem_free(p);
+		mem_free(buffer);
+		buffer = newbuf;
+	}
+	return buffer;
+}
+
+/**
+ *make a dir into an endpoint (only called with isdir=1)
+ */
+static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
+
+        if (file->handler != &curl_file_handler) {
+                log_error("Wrong file type (unexpected)\n");
+                return CBM_ERROR_FAULT;
+        }
+
+        File *fp = (File*) file;
+        curl_endpoint_t *parentep = (curl_endpoint_t*) file->endpoint;
+
+        if (parentep == NULL) {
+		return CBM_ERROR_FAULT;
+	}
+
+        // alloc and init a new endpoint struct
+        curl_endpoint_t *newep = mem_alloc(&endpoint_type);
+
+
+	newep->host_buffer = mem_alloc_str(parentep->host_buffer);
+	if (parentep->path_buffer != NULL) {
+		newep->path_buffer = mem_alloc_str(parentep->path_buffer);
+	}
+	
+	newep->path_buffer = add_parent_path(newep->path_buffer, file);
+
+        // free resources
+        curl_close((file_t*)fp, 1);
+
+        *outep = (endpoint_t*)newep;
+        return CBM_ERROR_OK;
+
+}
+
+
 //-----------------------------------------------------
 
 
@@ -351,6 +416,18 @@ void curl_pfree(endpoint_t *ep) {
         }
 
         reg_remove(&endpoints, ep);
+
+	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
+	
+	if (cep->host_buffer != NULL) {
+		mem_free(cep->host_buffer);
+	}
+	if (cep->path_buffer != NULL) {
+		mem_free(cep->path_buffer);
+	}
+	if (cep->name_buffer != NULL) {
+		mem_free(cep->name_buffer);
+	}
 
         mem_free(ep);
 }
@@ -542,8 +619,10 @@ static file_t *curl_root(endpoint_t *ep) {
 
 
 static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
-
 	(void) readflag;	// silence warning
+        *outentry = NULL;	// just in case
+
+	file_t *wrapfile = NULL;
 
         log_debug("ENTER: curl_direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
@@ -552,7 +631,6 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
         }
 
         curl_endpoint_t *tnep = (curl_endpoint_t*) fp->endpoint;
-        *outentry = NULL;
 
         if (!isresolve) {
 		// TODO ftp dir
@@ -560,14 +638,29 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
                 return CBM_ERROR_OK;
         }
 
-        char *name = mem_alloc_str(fp->pattern);
 
         File *retfile = reserve_file((endpoint_t*) tnep);
 
-        retfile->file.filename = name;
+	retfile->file.parent = fp;
 
-        *outentry = (file_t*)retfile;
-        *outpattern = fp->pattern + strlen(fp->pattern);
+	// compute file name (filename is stored in the external charset, e.g. PETSCII)
+        char *name = mem_alloc_str(fp->pattern);
+	char *p = strchr(name, '/');
+	if (p != NULL) {
+		// shorten file/dir name to next dir separator if exists
+		*p = 0;
+	}
+        retfile->file.filename = name;
+	retfile->file.isdir = 1;	// just in case
+
+        if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, outpattern, &wrapfile)
+                                == CBM_ERROR_OK) {
+	        *outentry = wrapfile;
+                int rv = CBM_ERROR_OK;
+		return rv;
+	}
+
+	curl_close((file_t*)retfile, 0);
 
         return CBM_ERROR_OK;
 }
@@ -587,7 +680,7 @@ static int open_file(file_t *file, openpars_t *pars, int type) {
 
 		if (fp->multi == NULL) {
 			log_error("multi session is NULL\n");
-			return CBM_ERROR_FAULT;
+			return rv;
 		}
 
 		fp->session = curl_easy_init();
@@ -607,22 +700,24 @@ static int open_file(file_t *file, openpars_t *pars, int type) {
 		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
 
 		// prepare name
-		strcpy(cep->name_buffer, ((provider_t*)(cep->base.ptype))->name);
-		strcat(cep->name_buffer, "://");
-		strcat(cep->name_buffer, cep->host_buffer);
-		strcat(cep->name_buffer, "/");
-		strcat(cep->name_buffer, cep->path_buffer);
-		strcat(cep->name_buffer, "/");
-		//strcat(cep->name_buffer, buf);
+		mem_append_str5(&cep->name_buffer, 
+			((provider_t*)(cep->base.ptype))->name,
+			"://",
+			cep->host_buffer,
+			"/",
+			cep->path_buffer);
+
+		cep->name_buffer = add_parent_path(cep->name_buffer, (file_t*)fp);
+
 		if (type == FS_OPEN_DR) {
 			// end with a slash "/" to indicate a dir list
-			strcpy(cep->name_buffer + strlen(cep->name_buffer), "/");
+			mem_append_str2(&cep->name_buffer, "/", NULL);
 		}
 
 		log_info("curl URL: %s\n", cep->name_buffer);
 
 		// set URL
-		curl_easy_setopt(fp->session, CURLOPT_URL, &(cep->name_buffer));
+		curl_easy_setopt(fp->session, CURLOPT_URL, cep->name_buffer);
 
 		// debatable...
 		curl_easy_setopt(fp->session, CURLOPT_BUFFERSIZE, (long) MAX_BUFFER_SIZE);
@@ -801,10 +896,9 @@ static int open_dr(file_t *file, openpars_t *pars) {
 		// only they are so new, I still need to find a running one for tests
 		//
 		// NLST is the "name list" without other data
-		strcpy(cep->name_buffer, "NLST ");
-		strcpy(cep->name_buffer + strlen(cep->name_buffer), file->filename);
+		mem_append_str2(&cep->name_buffer, "NLST ", file->filename);
 		// custom FTP command to make info more grokable
-		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, &(cep->name_buffer));
+		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, cep->name_buffer);
 
 		//add to multi session
 		CURLMcode rv = curl_multi_add_handle(fp->multi, fp->session);
@@ -993,7 +1087,7 @@ provider_t ftp_provider = {
 	curl_init,
 	ftp_new,
 	ftp_temp,
-	NULL,	// to_endpoint
+	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
 	NULL,	// wrap
@@ -1007,7 +1101,7 @@ provider_t http_provider = {
 	curl_init,
 	http_new,
 	http_temp,
-	NULL,	// to_endpoint
+	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
 	NULL,	// wrap

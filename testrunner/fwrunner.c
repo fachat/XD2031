@@ -451,6 +451,8 @@ int main(int argc, char *argv[]) {
 	if (script != NULL) {
 
 		int sockfd = socket_open(device, dowait);
+
+		sleep(1);
 	
 		if (sockfd >= 0) {
 
