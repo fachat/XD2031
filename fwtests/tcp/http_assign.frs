@@ -6,7 +6,7 @@ message READ error channel message
 
 message assign new child endpoint
 atn .listen 8 .secondary f
-send "A4:0=/PUB/CBM"
+send "A4:1=/PUB/CBM"
 atn .unlisten
 
 atn 48 6f

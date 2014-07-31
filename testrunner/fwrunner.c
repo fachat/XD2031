@@ -452,6 +452,8 @@ int main(int argc, char *argv[]) {
 
 		int sockfd = socket_open(device, dowait);
 
+		// this is needed to let the server and firmware negotiate the
+		// character set to use.
 		sleep(1);
 	
 		if (sockfd >= 0) {
