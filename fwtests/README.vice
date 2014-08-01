@@ -11,3 +11,13 @@ For best experience run it like
 
 	./src/xpet -model 4032 -truedrive -drive8type 4040 -8 <<disk-image-for-test>> -autostartprgmode 1 <<BASIC-file-to-test>>
 
+In fact some of the subdirectories there is a "runvice.sh" or "runvice-d82.sh", 
+that runs a test program as given on the command line with the appropriate 
+VICE parameters. For example running
+
+	./runvice.sh reltest1.2
+
+runs the reltest1.2.lst BASIC program. For this it translates it into a BASIC binary
+(the reltest1.2.prg file) and executes it. After executing it gives you instructions
+on how to move files to make the result an official test case.
+

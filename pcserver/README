@@ -35,6 +35,9 @@ file operations happen with the privileges of the starting user.
 
 Alternatively do not setuid the executable, but then you need to be 
 root to run them and they don't drop privileges!
+Even better: make the USB device user-accessible, so no extra
+permissions are needed.
+
 
 TODO
 ----

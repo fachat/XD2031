@@ -4,7 +4,8 @@ V0.9.2, 2. May 2013
 
 This software enables to program an AVR AtMega device to play
 the role of a disk drive to a Commodore PET computer with IEEE488 
-interface.
+interface, a disk drive for the serial-IEC-based machines like
+the C64, the C128 and others.
 
 XD-2031 consists of two main parts, an AtMega firmware, and a PC server.
 Both communicate via a serial line. 
@@ -14,6 +15,104 @@ Currently this hardware is supported:
 	- petSD   	Communication via serial line over USB
 
 For more information see the README files in the subdirectories
+
+
+Building
+--------
+
+To build the firmware image, see the README file in the firmware directory.
+To build the server side code, see the README file in the pcserver directory.
+
+
+Testing
+-------
+
+To build the tests, simply run "make tests" in this directory.
+Please note that the (growing) number of tests has some that fail - that
+is partly due to sampling test data from a CBM DOS, that is buggy itself
+(like the blkaf1/blkaf2 tests do not allocate blocks on disk on the 4040
+emulation...)
+
+
+Using
+-----
+
+To use the PC as disk drive, the Commodore must be connected to one
+of the supported devices running the firmware part. This device must
+be connected to the PC, usually with a serial-over-USB connection.
+The server can then be configured with some command line options:
+
+	-d <devicepath>
+		path to the serial device where the server communicates
+		with the firmware
+
+	-A<drv>:<provider-string>
+		This "assign" command allows defining what is behind
+		a "drive" in Commodore terms. The code allows for using
+		ten different drive numbers (as opposed to the common
+		two), so you can have drive numbers 0-9. 
+		The provider-string is special in that it defined what
+		is then used as drive content. It consists of a provider
+		name, and a parameter string for the provider.
+		A provider can be "fs" for the local file system,
+		"tcp" for a TCP/IP connection, or "ftp" or "http" for
+		their respective protocols. Here are examples and 
+		descriptions of their parameters:
+
+		fs=<directory-path>
+			assigns a local directory to a drive
+		tcp=<hostname>
+			assigns a host name to a drive, any OPEN
+			then opens the port given as OPEN file name
+		ftp=<hostname>[/<path>]
+		http=<hostname>[/<path>]
+			assigns an FTP or HTTP path to the drive.
+			Only FTP supports reading a directory though.
+
+	-X<bus>:<cmd>
+               send an 'X'-command to the specified bus, e.g. to set
+               the IEC bus to device number 9 use:
+
+	               -Xiec:U=9
+	
+		"<bus>" can normally be "iec" or "ieee" (or "sock488" for the
+		socket-based test version of the firmware".
+		Another interesting commands are 
+
+			-X<bus>:*=+
+				enable the use of advanced wildcards
+			-X<bus>:*=-
+				disable the use of advanced wildcards
+
+			-X<bus>:E=-
+			-X<bus>:E=+
+				disable/enable the drive number if the channel 15
+				error messages, also restrict number of 
+				digits for track and sector to two
+			-XR
+				Reset the device
+			
+		If the device as non-volatile configuration memory, these commands
+		are also available:
+
+			-XI
+				restore default values from NV-RAM
+			-XW
+				write configuration to NV-RAM
+
+
+Please note that you can use the X and A commands also on the command channel, from the
+Commodore machine side.
+
+	OPEN15,8,15,"A9:fs=foodir"
+
+	or
+
+	PRINT#15,"XU=9"
+
+You can leave out the bus here, as the command is given to the bus that receives the
+command.
+
 
 Notes
 -----
@@ -34,20 +133,11 @@ The code is under GPL V2. Please note that the PC server part is
 also available on later versions of the GPL, the AtMega firmware is
 ONLY(!) available under GPL V2.
 
-(C) 2012 Andre Fachat <afachat@gmx.de>,
+(C) 2012,2014 Andre Fachat <afachat@gmx.de>,
 	 Ingo Korb, Thomas Winkler, Nils Eilers and others!
 
 Please see the individual files for specific copyright notices.
 
-
-TODO
-----
-
-Fix bugs:
-	- the HTTP/FTP (cURL) provider is missing uploads (SAVE)
-	  and most commands (CHDIR works)
-
-	- ...
 
 
 ROADMAP
@@ -57,15 +147,16 @@ Here are some ideas about what can be implemented. For and more current
 information see also the github issues list on:
 https://github.com/fachat/XD2031/issues?state=open
 
+
 Planned features for Release 1.0
 --------------------------------
 
 - direct channel support (U1/U2 commands)
-	-> TODO
+	-> done
 - SD card provider on the atmega side
 	-> started
 - D64 support on the server side, to be able to use D64/D80/D82 etc files
-	-> started (but not yet included in the release)
+	-> done
 - IEC support so C64 et al can use the device 
 	-> done for C64, done for C128,
 	   and VIC20 still to test
@@ -86,13 +177,12 @@ Further plans
 With the ASSIGN command it is possible to assign drive numbers (like the "0" in "$0") 
 to different service providers. Some of those will be in the atmega, some will be on the PC side.
 Currently there is only one in the atmega, the one that connects via RS232-over-USB. On the PC
-side there currently are three, filesystem, FTP and HTTP. All those providers basically implement
-the "wireformat" protocol, so it is a clearly separated responsibility. If you are willing to 
-help with one of these ideas, feel free to contact me!
+side there currently are five, filesystem, disk images, plain TCP as well as FTP and HTTP. 
+All those providers basically implement the "wireformat" protocol, so it is a clearly separated 
+responsibility. If you are willing to help with one of these ideas, feel free to contact me!
 
 In the future these providers can be implemented:
 
-	- A D64 provider on the PC side, to use D64/D80/D82 etc files (planned for 1.0)
 	- A D64 provider on the atmega side, to use D64/D80/D82 etc files from the SD card
 	- An iec provider - so a PET can "call out" to a serial IEC floppy
 	- And vice versa, an ieee provider and a serial iec bus interface to
