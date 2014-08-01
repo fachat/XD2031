@@ -97,7 +97,6 @@ typedef struct File {
 	int	bufrp;			// buffer read pointer
 	// directory read state
 	int	read_state;		// data for read_converter / read_file
-	char	*name_buffer;		// malloc'd buffer for dir path
 } File;
 
 
@@ -126,7 +125,6 @@ static void file_init(const type_t *t, void *obj) {
 
 	fp->read_converter = NULL;
 	fp->read_state = 0;
-	fp->name_buffer = NULL;
 }
 
 static type_t file_type = {
@@ -383,10 +381,6 @@ static void close_fd(File *fp) {
 		if (fp->wrbuffer != NULL) {
 			free(fp->wrbuffer);
 		}
-	}
-	if (fp->name_buffer != NULL) {
-		free(fp->name_buffer);
-		fp->name_buffer = NULL;
 	}
 
 	mem_free(fp);
@@ -885,8 +879,6 @@ static int open_dr(file_t *file, openpars_t *pars) {
 	int rv = open_file(file, pars, FS_OPEN_DR);
 	if (rv == CBM_ERROR_OK) {
 
-		fp->name_buffer = mem_alloc_str(file->filename);
-
 		fp->read_converter = &dir_nlst_read_converter;	// do DIR conversion
 	
 		// set for receiving
@@ -896,9 +888,11 @@ static int open_dr(file_t *file, openpars_t *pars) {
 		// only they are so new, I still need to find a running one for tests
 		//
 		// NLST is the "name list" without other data
-		mem_append_str2(&cep->name_buffer, "NLST ", file->filename);
+		char *cmd = NULL;
+		mem_append_str2(&cmd, "NLST ", file->filename);
 		// custom FTP command to make info more grokable
-		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, cep->name_buffer);
+		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, cmd);
+		mem_free(cmd);
 
 		//add to multi session
 		CURLMcode rv = curl_multi_add_handle(fp->multi, fp->session);
