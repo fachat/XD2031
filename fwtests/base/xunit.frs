@@ -13,7 +13,7 @@ recv "00, OK,00,00" 0d
 atn .untalk
 
 atn .listen 8 .secondary f
-send "XU=9"
+send "Xsockserv:U=9"
 atn .untalk
 
 atn .talk 8 .secondary 0f
