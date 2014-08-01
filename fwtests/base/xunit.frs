@@ -1,0 +1,30 @@
+
+# test script to test basic communication between 
+# test runner and firmware
+
+message READ error channel message
+
+atn .listen 8 .secondary f
+send "I0"
+atn .unlisten
+
+atn .talk 8 .secondary 0f
+recv "00, OK,00,00" 0d
+atn .untalk
+
+atn .listen 8 .secondary f
+send "XU=9"
+atn .untalk
+
+atn .talk 8 .secondary 0f
+recv "00, OK,00,00" 0d
+atn .untalk
+
+
+atn .listen 8 .secondary 0
+send "$0"
+atn .unlisten
+
+atn .listen 8 e0
+atn .unlisten
+
