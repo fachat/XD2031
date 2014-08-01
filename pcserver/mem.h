@@ -71,5 +71,6 @@ char *malloc_path(const char *base, const char *name);
  * to by baseptr will be mem_free'd!
  */
 void mem_append_str2(char **baseptr, const char *s1, const char *s2);
+void mem_append_str5(char **baseptr, const char *s1, const char *s2, const char *s3, const char *s4, const char *s5);
 
 #endif

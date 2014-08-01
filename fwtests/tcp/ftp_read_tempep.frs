@@ -1,0 +1,24 @@
+
+# test script to test basic communication between 
+# test runner and firmware
+
+message READ error channel message
+
+message open FTP file for reading
+atn .listen 8 f2
+send "FTP:WWW.ZIMMERS.NET/PUB/CBM/PET/00index" 0d
+atn .unlisten
+
+
+atn .talk 8 .secondary f
+recv "00, OK,00,00" 0d
+atn .untalk
+
+atn .talk 8 .secondary 2
+expect "** See also the PET home pages"
+#recv .ignore 1000
+atn .untalk
+
+message close TCP file
+atn .listen 8 e2
+atn .unlisten

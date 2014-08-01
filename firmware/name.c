@@ -312,7 +312,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	for (i=0 ; i < nameinfo->num_files ; ++i) {
 		// two or more file names
 		*p++ = nameinfo->file[i].drive;
-		if (*nameinfo->file[i].drivename) {
+		if (nameinfo->file[i].drivename != NULL && *nameinfo->file[i].drivename) {
 			len = strlen((char*)nameinfo->file[i].drivename);
 			memmove (p, nameinfo->file[i].drivename, len);
 			p += len;

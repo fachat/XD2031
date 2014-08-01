@@ -230,18 +230,37 @@ char *malloc_path(const char *base, const char *name) {
  * given to in the first parameter. The string originally pointed
  * to by baseptr will be mem_free'd!
  */
-void mem_append_str2(char **baseptr, const char *s1, const char *s2) {
+void mem_append_str5(char **baseptr, const char *s1, const char *s2, const char *s3, const char *s4, const char *s5) {
 
-	int newlen = strlen(*baseptr) + strlen(s1) + strlen(s2) + 1;
+	int newlen = ((*baseptr == NULL) ? 0 :strlen(*baseptr))
+		+ ((s1 == NULL) ? 0 : strlen(s1))
+		+ ((s2 == NULL) ? 0 : strlen(s2))
+		+ ((s3 == NULL) ? 0 : strlen(s3))
+		+ ((s4 == NULL) ? 0 : strlen(s4))
+		+ ((s5 == NULL) ? 0 : strlen(s5))
+		+ 1;
 
 	char *base = mem_alloc_c(newlen, "mem_append");
 
-	strcpy(base, *baseptr);
-	strcat(base, s1);
-	strcat(base, s2);
+	if (*baseptr != NULL) { strcpy(base, *baseptr); };
+	if (s1 != NULL) { strcat(base, s1); }
+	if (s2 != NULL) { strcat(base, s2); }
+	if (s3 != NULL) { strcat(base, s3); }
+	if (s4 != NULL) { strcat(base, s4); }
+	if (s5 != NULL) { strcat(base, s5); }
 	
 	mem_free(*baseptr);
 	*baseptr = base;
+}
+
+/**
+ * take all the variable arg chars and append them to the string
+ * given to in the first parameter. The string originally pointed
+ * to by baseptr will be mem_free'd!
+ */
+void mem_append_str2(char **baseptr, const char *s1, const char *s2) {
+
+	mem_append_str5(baseptr, s1, s2, NULL, NULL, NULL);
 }
 
 

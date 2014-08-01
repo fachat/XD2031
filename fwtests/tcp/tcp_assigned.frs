@@ -1,0 +1,28 @@
+
+# test script to test basic communication between 
+# test runner and firmware
+
+message READ error channel message
+
+message open TCP file non-blocking, read-write
+atn .listen 8 f2
+send "5:19,X,N" 0d
+atn .unlisten
+
+
+atn .talk 8 .secondary f
+recv "00, OK,00,00" 0d
+atn .untalk
+
+atn .talk 8 .secondary 2
+expect 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30
+#recv .ignore 1000
+atn .untalk
+
+atn .listen 8 .secondary 2
+send "FOO" 0d
+atn .unlisten
+
+message close TCP file
+atn .listen 8 e2
+atn .unlisten

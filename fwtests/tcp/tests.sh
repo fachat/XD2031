@@ -29,7 +29,7 @@ THISDIR=`dirname $0`
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
 #SERVEROPTS="-v -A0:fs=blk.d64"
-SERVEROPTS="-v -A0:tcp=localhost"
+SERVEROPTS="-v -A0:ftp=www.zimmers.net -A1:http=www.zimmers.net -A2:ftp=www.zimmers.net/pub/cbm -A3:http=www.zimmers.net/anonftp/pub/cbm -A5:tcp=localhost" 
 
 #firmware options
 # switch off drive in error messages

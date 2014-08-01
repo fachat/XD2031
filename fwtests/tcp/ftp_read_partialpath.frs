@@ -4,9 +4,9 @@
 
 message READ error channel message
 
-message open TCP file non-blocking, read-write
+message open FTP file for reading
 atn .listen 8 f2
-send "0:19,X,N" 0d
+send "2:PET/00index" 0d
 atn .unlisten
 
 
@@ -15,13 +15,9 @@ recv "00, OK,00,00" 0d
 atn .untalk
 
 atn .talk 8 .secondary 2
-expect 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30
+expect "** See also the PET home pages"
 #recv .ignore 1000
 atn .untalk
-
-atn .listen 8 .secondary 2
-send "FOO" 0d
-atn .unlisten
 
 message close TCP file
 atn .listen 8 e2
