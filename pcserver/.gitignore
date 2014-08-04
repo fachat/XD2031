@@ -8,3 +8,4 @@ curltest
 fsser.init.d.localized
 *.o
 xd2031-win32*
+Makefile.local

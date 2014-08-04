@@ -103,32 +103,7 @@ depclean:
 run:
 	MALLOC_CHECK_=1 ./fsser -d auto -A0:fs=../sample -A1:fs=../tools .
 
-runv:
-	# I'm lazy...
-	#MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample/sample1.d64 -A1:fs=../sample .
-	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../../xs1541/sample/sample1.d64 -A1:fs=../sample ." ./fsser
-
-runv2:
-	# I'm lazy...
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . 
-
-runv2d:
-	MALLOC_CHECK_=1 sudo gdb -ex "run -D -v -d auto -A2:fs=../sample -A1:fs=../tools -A0:di=../sample/test.d64 -A3:ftp=ftp.zimmers.net/pub/cbm/pet -Xiec:U=9 . " ./fsser
-
-rungdb:
-	MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A3:fs=../sample/test2.d64 -A2:fs=../sample -A1:fs=../tools -A0:fs=../sample/test2.d64 ." ./fsser
-	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A3:fs=../sample/test.d64 -A0:fs=../sample -A1:fs=../tools ." ./fsser
-	#MALLOC_CHECK_=1 sudo gdb -ex "run -v -d auto -A0:fs=../sample -A1:fs=../tools ." ./fsser
-
-run9:
-	MALLOC_CHECK_=1 ./fsser -v -d auto -A0:fs=../sample -A1:fs=../tools -Xiec:U=9 -Xieee:U=9 .
-
-debug:
-	echo "Start with: run -d auto ../sample"
-	sudo gdb ./fsser 
-
-curltest: curl_test.c curl_provider.c log.c
-	${CC} ${CFLAGS} -o curltest curl_provider.c curl_test.c log.c ${LIBS}
+-include Makefile.local
 
 doc:
 	mkdir -p ../docsrc/doxygen
