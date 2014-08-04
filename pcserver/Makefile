@@ -14,9 +14,10 @@ PKG_CONFIG=$(CROSS)pkg-config
 FSSER_EXE=fsser
 CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
 
-#COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c curl_provider.c provider.c mem.c xcmd.c os.c tcp_provider.c serial.c channel.c di_provider.c ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c
-COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c di_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c  ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c socket.c tcp_provider.c curl_provider.c
-COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h openpars.h handler.h registry.h diskimgs.h ../common/filetypes.h terminal.h socket.h
+#COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c di_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c  ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c socket.c tcp_provider.c curl_provider.c
+#COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h openpars.h handler.h registry.h diskimgs.h ../common/filetypes.h terminal.h socket.h
+COMMONC=$(wildcard *.c) $(wildcard ../common/*.c)
+COMMONH=$(wildcard *.h) $(wildcard ../common/*.h)
 
 #output of `curl-config --libs`
 #LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
@@ -37,9 +38,9 @@ endif
 #all: fstcp fsser
 all: fsser 
 
-fsser: fsser.c $(COMMONC) $(COMMONH)
+fsser: $(COMMONC) $(COMMONH)
 	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} fsser.c $(COMMONC) -o $(FSSER_EXE) ${LIBS}
+	${CC} ${CFLAGS} $(COMMONC) -o $(FSSER_EXE) ${LIBS}
 ifeq ($(PRIVILEGED),y)
 	sudo chown root $@
 	sudo chmod u+s $@
