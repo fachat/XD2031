@@ -1,27 +1,58 @@
+
+
+# Enable verbose compile with make V=1
+ifeq ($(V),1)
+  V1=
+  V2=@\#
+else
+  V1=@
+  V2=@echo
+endif
+
+TARGET=fsser
+
+all: $(TARGET) 
+
 PREFIX=/usr/local
-BINDIR=bin
 DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
 TOOLSDIR=xd2031/tools
+# OBJDIR contains temporary object and dependency files
+OBJDIR=obj/
+DEPDIR=$(OBJDIR).dep/
 # The space separeted list of directories in DROPDIR will be removed at uninstall too
 DROPDIR=xd2031
 
 CC=$(CROSS)gcc
-LD=$(CROSS)ld
-AR=$(CROSS)ar
+LD=$(CROSS)gcc
 PKG_CONFIG=$(CROSS)pkg-config
 
-FSSER_EXE=fsser
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char -I. -I../common -DSERVER
+# Create automatic dependency files (*.d) on the fly during compilation
+AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
-#COMMONC=fscmd.c privs.c dir.c log.c fs_provider.c di_provider.c provider.c mem.c xcmd.c os.c serial.c channel.c  ../common/charconvert.c ../common/wildcard.c openpars.c diskimgs.c ../common/filetypes.c terminal.c handler.c registry.c x00_handler.c socket.c tcp_provider.c curl_provider.c
-#COMMONH=fscmd.h privs.h ../common/wildcard.h dir.h ../common/wireformat.h log.h provider.h mem.h types.h xcmd.h os.h ../common/errors.h serial.h channel.h ../common/petscii.h ../common/charconvert.h openpars.h handler.h registry.h diskimgs.h ../common/filetypes.h terminal.h socket.h
-COMMONC=$(wildcard *.c) $(wildcard ../common/*.c)
-COMMONH=$(wildcard *.h) $(wildcard ../common/*.h)
+# Sorting include paths and defines simplifies checking them
+INCPATHS=. ../common 
+INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
+
+CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
+
+SRC=$(wildcard *.c) $(wildcard ../common/*.c)
 
 #output of `curl-config --libs`
-#LIBS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
-LIBS=-lncurses -lcurl
+#LDFLAGS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
+LDFLAGS=-lncurses -lcurl -lc
+
+# Create object names from .c and .S
+_OBJ=$(notdir $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRC))))
+OBJ=$(addprefix $(OBJDIR),$(_OBJ))
+# Create dependency names from .o
+DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
+
+# locations where make searches C source files
+vpath %.c . ../common 
+
+# Include automatic dependencies, continue if they don't exist yet
+-include $(DEP)
 
 # Open the serial device with root or user rights
 PRIVILEGED=y
@@ -33,14 +64,17 @@ ifeq ($(PRIVILEGED),n)
 	CFLAGS+=-DUNPRIVILEGED
 endif
 
-# fstcp builds a version that listens on a TCP/IP port - but there is not
-# device (yet) to use it
-#all: fstcp fsser
-all: fsser 
 
-fsser: $(COMMONC) $(COMMONH)
-	# Note: LIBS must be at the end for curl/libs to be found
-	${CC} ${CFLAGS} $(COMMONC) -o $(FSSER_EXE) ${LIBS}
+# Compile C files
+$(OBJDIR)%.o: %.c
+	$(V2) CC $<
+	$(V1) $(CC) $(CFLAGS) $(AUTODEP) -c $< -o $@
+
+# Link object files
+$(TARGET): $(OBJDIR) $(DEPDIR) $(OBJ)
+	$(V2) LD $(notdir $@)
+	$(V1) $(LD) $(OBJ) -o $@ $(LDFLAGS)
+	$(V1)# Note: LIBS must be at the end for curl/libs to be found
 ifeq ($(PRIVILEGED),y)
 	sudo chown root $@
 	sudo chmod u+s $@
@@ -49,8 +83,21 @@ else
 	@echo 'fsser opens the serial device with user rights.'
 endif
 
-clean:
-	rm -f fsser curltest
+veryclean:
+	rm -rf fsser obj
+
+# Clean directories
+clean: objclean depclean
+
+objclean:
+	$(V2) Cleaning object files
+	$(V1) rm -f $(OBJ)
+	@# The object directory gets removed by make depclean
+
+depclean:
+	$(V2) Cleaning dependencies
+	$(V1) rm -f $(DEP)
+	$(V1) if [ -d $(DEPDIR) ]; then rmdir $(DEPDIR); fi
 
 
 run:
@@ -86,6 +133,12 @@ curltest: curl_test.c curl_provider.c log.c
 doc:
 	mkdir -p ../docsrc/doxygen
 	doxygen Doxyfile
+
+# Create build directories
+$(OBJDIR):
+	$(V1) mkdir -p $@
+$(DEPDIR):
+	$(V1) mkdir -p $@
 
 install:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
