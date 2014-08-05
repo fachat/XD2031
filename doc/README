@@ -32,6 +32,11 @@ distributions "firmware" directory:
 you will get a drive 0 that points to the sample directory, and a drive 1 that points
 to the tools directory. Note that you can use drives 0 - 9, not just 0 or 1.
 
+In assigning a drive, you can also assign a disk image file (like D64 or D82) by simply 
+putting it into the assign path, like:
+
+        -A0:fs=../sample/test.d64
+
 Now you can switch on the Commodore equipment.
 
 On the Commodore BASIC 4 PET you can now for example use
@@ -45,15 +50,15 @@ described below.
 What does it not do
 -------------------
 
-- it currently does not support disk images / RELative files
 - it doesn't emulate a 6502 / fastloaders
-- it does support only a small subset of CBM DOS commands
+- it does support only a subset of CBM DOS commands
+- although it supported disk images on the server, disk images on the 
+  SD card are not yet supported
 
 What is planned
 ---------------
 
-- support for an SD card
-- support for disk images like D64, D80 etc.
+- support for disk images on the SD card
 
 Command overview
 ----------------
@@ -147,6 +152,7 @@ providers are available:
 	fs 	- provides access to the server file system
 	ftp	- provides read-only access to an FTP server
 	http	- provides read-only access to an HTTP server
+	tcp	- provides asynchronous read/write TCP connections
 
 To use such a provider, a path needs to be configured as well as base address. For the
 ftp and http providers the path contains a server name as well.
@@ -167,9 +173,9 @@ drive 2. The following allows HTTP access to that server on drive 3
 You can short-cut the provider definition by re-using the definition of an already
 configured drive:
 
-	A4:2:pet
+	A4:2=pet
 or
-	A4:0:subdir
+	A4:0=subdir
 
 (Note: the short-cut does currently not work for ftp/http)
 
