@@ -4,6 +4,7 @@
   100 u=8
  1000 open1,u,15,"i0"
  1010 gosub 9000
+ 1015 directory
  1020 open2,u,2,"#"
  2000 t=1:s=1
  2020 print#1,"b-a: 0";t;s
