@@ -1,10 +1,10 @@
 
 
 ;block8.prg ==0401==
- 1000 d=8
- 1100 open15,d,15,"i0"
+ 1000 u=8
+ 1100 open15,u,15,"i0"
  1105 gosub 9000
- 1110 open2,d,2,"#"
+ 1110 open2,u,2,"#"
  1120 gosub9000
  1130 get#2,a$
  1140 print"got buffer number ";asc(a$+chr$(0))
@@ -48,7 +48,7 @@
  3210 gosub9000
  3300 print#15,"b-f:"0,1,257
  3310 gosub9000
- 4000 open3,d,3,"#"
+ 4000 open3,u,3,"#"
  4010 gosub9000
  4020 get#3,a$
  4030 print"got buffer number ";asc(a$+chr$(0))
@@ -66,16 +66,16 @@
  4250 next
  4260 print#15,"u2:3 0 4 6"
  4270 gosub 9000
- 5000 open4,d,4,"#1"
+ 5000 open4,u,4,"#1"
  5010 gosub9000
  5020 get#4,a$
  5030 print"got buffer number ";asc(a$+chr$(0))
  5040 close4
- 5100 open4,d,2,"#"
+ 5100 open4,u,2,"#"
  5110 gosub9000
  5120 close4
  5200 close3
- 5300 open3,d,3,"#1"
+ 5300 open3,u,3,"#1"
  5310 gosub9000
  5320 get#3,a$
  5330 print"got buffer number ";asc(a$+chr$(0))
