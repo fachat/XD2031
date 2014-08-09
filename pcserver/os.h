@@ -37,10 +37,10 @@
 */
 
 // =======================================================================
-//	INCLUDES FOR LINUX and possibly other POSIX compatible systems
+//	INCLUDES FOR LINUX, MAC  and possibly other POSIX compatible systems
 // =======================================================================
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
 #define	__USE_POSIX
 #define __USE_XOPEN	/* SuSE Linux stdlib.h fsync() */
 #define _XOPEN_SOURCE 
@@ -57,27 +57,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <stdio.h>	/* SuSE Linux fileno() */
-#endif
-
-// =======================================================================
-// 	INCLUDES FOR APPLE OS X
-// =======================================================================
-
-#ifdef __APPLE__ // OS X 10.6.8, Darwin Kernel Version 10.8.0
-#define	__USE_POSIX
-#define _XOPEN_SOURCE 
-#define _XOPEN_SOURCE_EXTENDED
-#define __USE_XOPEN_EXTENDED
-#include <stdlib.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/syslimits.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #endif
 
 // =======================================================================
@@ -156,24 +135,12 @@ static inline int os_fsync(FILE *f) {
 
 
 // -----------------------------------------------------------------------
-//	LINUX
+//	LINUX and MAC OS X
 // -----------------------------------------------------------------------
 
-#ifndef __APPLE__
 static inline char *os_realpath (const char *path) {
 	return realpath(path, NULL);
 }
-#endif // LINUX
-
-// -----------------------------------------------------------------------
-//	APPLE OS X
-// -----------------------------------------------------------------------
-
-#ifdef __APPLE__
-static inline char *os_realpath (const char *path) {
-	return (realpath(path, mem_alloc_c(PATH_MAX, "realpath")));
-}
-#endif // APPLE OS X
 
 #endif // POSIX
 
