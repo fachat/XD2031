@@ -286,7 +286,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
     } else {
       if (bus->channel != NULL) {
 	int8_t err = channel_put(bus->channel, data, with_eoi);
-debug_printf("last_push_error: %d (ch=%p)\n", err, bus->channel);
+	if (err) debug_printf("last_push_error: %d (ch=%p)\n", err, bus->channel);
 	if (err != CBM_ERROR_OK) {
 	  int8_t errdrive = bus->rtconf.errmsg_with_drive ? bus->channel->drive : -1;
 	  set_error_tsd(&error, err, 0, 0, errdrive);

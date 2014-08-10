@@ -473,7 +473,7 @@ static uint8_t _push_callback(int8_t channelno, int8_t errnum, packet_t *rxpacke
 			p->last_push_errorno = CBM_ERROR_OK;
 		}
 #ifdef DEBUG_CHANNEL
-		debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
+		if (p->last_push_errorno) debug_printf("last_push_errno -> %d\n", p->last_push_errorno);
 #endif
 
                 // TODO: only if errorno == 0?
