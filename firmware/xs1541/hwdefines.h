@@ -91,13 +91,10 @@
 #define	IEC_PIN_ATN		PD2
 
 /* interrupt init */
-#define IEC_SATN_INT         	PCINT3
 #define IEC_PCINT            	PCINT26
 
 /* general pin change interrupt for serial ATN as well as parallel ATN */
 #define XS1541_PCMSK         	PCMSK3
-#define XS1541_ATN_INT_VECT  	PCINT3_vect
-#define XS1541_ATN_HANDLER  	ISR(XS1541_ATN_INT_VECT)
 
 /* LED configuration */
 #define LED_DDR			DDRC
