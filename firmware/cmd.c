@@ -61,7 +61,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	err_drv = (nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive);
 
 #ifdef DEBUG_CMD
-        debug_printf("CMD=%s\n", nameinfo.cmd == command_to_name(nameinfo.cmd));
+        debug_printf("CMD=%s\n", command_to_name(nameinfo.cmd));
         debug_printf("DRIVE=%c\n", nameinfo.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
                                 (nameinfo.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
                                 nameinfo.drive + 0x30));
