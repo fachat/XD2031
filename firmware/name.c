@@ -43,7 +43,7 @@
 
 #if defined(DEBUG_NAME) || defined(PCTEST)
 static void dump_result(nameinfo_t *result) {
-	printf("CMD=%s\n", result->cmd == CMD_NONE ? "-" : command_to_name(result->cmd));
+	printf("CMD=%s\n", command_to_name(result->cmd));
 	printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				(result->drive == NAMEINFO_LAST_DRIVE ? 'L' :
