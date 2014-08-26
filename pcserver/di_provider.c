@@ -1473,6 +1473,8 @@ static int di_blocks_free(char *dest, di_endpoint_t *diep)
  */
 static int di_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 
+	(void)isresolve; // silence warning unused parameter
+
 	// here we (currently) only use it in resolve, not in read_dir_entry,
 	// so we don't care about isresolve and first/last entry
 

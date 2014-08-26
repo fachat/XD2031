@@ -84,7 +84,7 @@ void channel_set(int channo, file_t *fp) {
 			chantable[i].fp = NULL;
 			chantable[i].channo = -1;
 		}
-               if ((chantable[i].channo == -1)) {
+               if (chantable[i].channo == -1) {
                        chantable[i].channo = channo;
                        chantable[i].fp = fp;
                        return;

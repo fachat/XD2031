@@ -814,6 +814,8 @@ int cmd_copy(const char *inname, int namelen) {
 
 int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen) {
 
+	(void)datalen; // silence warning unused parameter
+
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 
 	// not file-related, so no file descriptor (tfd)

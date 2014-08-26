@@ -472,6 +472,8 @@ static int write_file(file_t *fp, const char *buf, int len, int is_eof) {
 
 static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
 
+	(void)readflag; // silence warning unused parameter;
+
         log_debug("ENTER: tcp_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
         if (fp->handler != &tcp_file_handler) {

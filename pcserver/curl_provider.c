@@ -664,6 +664,8 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
 // open a file for reading, writing, or appending
 static int open_file(file_t *file, openpars_t *pars, int type) {
 
+	(void)pars; // silence warning unused parameter
+
 	int rv = CBM_ERROR_FAULT;
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
@@ -873,7 +875,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 
 	(void)pars; // silence warning unused parameter
 
-	curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
+	// curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
 	File *fp = (File*) file;
 
 	int rv = open_file(file, pars, FS_OPEN_DR);

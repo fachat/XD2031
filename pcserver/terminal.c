@@ -199,12 +199,12 @@ void color_default(void){
 
 // Set foreground color
 static inline void color_textcolor_red     (void) { color_textcolor(red    ); }
-static inline void color_textcolor_green   (void) { color_textcolor(green  ); }
 static inline void color_textcolor_yellow  (void) { color_textcolor(yellow ); }
 static inline void color_textcolor_blue    (void) { color_textcolor(blue   ); }
 static inline void color_textcolor_magenta (void) { color_textcolor(magenta); }
-static inline void color_textcolor_white   (void) { color_textcolor(white  ); }
 static inline void color_textcolor_cyan    (void) { color_textcolor(cyan   ); }
+//static inline void color_textcolor_green (void) { color_textcolor(green  ); }
+//static inline void color_textcolor_white (void) { color_textcolor(white  ); }
 
 #endif // _WIN32
 
