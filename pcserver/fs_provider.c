@@ -349,7 +349,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 		return NULL;
 	}
 
-	fs_endpoint_t *parentep = (fs_endpoint_t*) parent;
+	endpoint_t *parentep = parent;
 
 	// when no parent given (i.e. path without base), use root endpoint as base
 	if (parentep == NULL) {
@@ -360,7 +360,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 	if (new_assign_path != NULL) {
 		// use handler_resolve_file with resolve_path and wrap into endpoint
 		endpoint_t *assign_ep = NULL;
-		int err = handler_resolve_assign((endpoint_t*)parentep, &assign_ep, new_assign_path);
+		int err = handler_resolve_assign(parentep, &assign_ep, new_assign_path);
 		mem_free(new_assign_path);
 		if (err != CBM_ERROR_OK || assign_ep == NULL) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
@@ -370,7 +370,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 		
 	}
 
-	return (endpoint_t*) parentep;
+	return parentep;
 }
 
 static endpoint_t *fsp_tempep(char **name) {
