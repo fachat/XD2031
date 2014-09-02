@@ -1,76 +1,111 @@
-# Verbose compile:                make V=1
-# Cross compile for Windows:      make WIN=y
-# To compile and zip for Windows: make winzip
-
-PREFIX?=/usr/local
-BINDIR?=bin
-
-XD2031PATH=..
-INCLUDE=-I $(XD2031PATH)/common -I $(XD2031PATH)/pcserver
-
-PRGNAME=imgtool
-
-ifeq ($(WIN),y)
-	CROSS=i686-pc-mingw32-
-	EXE=$(PRGNAME).exe
+# Enable verbose compile with make V=1
+ifeq ($(V),1)
+  V1=
+  V2=@\#
 else
-	EXE=$(PRGNAME)
-	LIB+=-lncurses
+  V1=@
+  V2=@echo
 endif
 
-ifneq ($(V),1)
-	SILENT=@
+TARGET=imgtool
+
+# Cross compile for Windows with make WIN=y
+# Please note doc/README-win32
+ifeq ($(WIN),y)
+  ARCH    = win32
+  CROSS   = i686-pc-mingw32-
+  LDFLAGS = 
+  TARGET  = imgtool.exe
+else
+  ARCH    = posix
+  #output of `curl-config --libs`
+  #LDFLAGS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
+  LDFLAGS = -lncurses
 endif
 
-OBJ=$(PRGNAME).o diskimgs.o log.o terminal.o relfiles.o wildcard.o
+
+all: $(TARGET) 
+
+PREFIX=/usr/local
+BINDIR=bin
+# OBJDIR contains temporary object and dependency files
+OBJDIR=obj/$(ARCH)/
+DEPDIR=$(OBJDIR).dep/
+
 CC=$(CROSS)gcc
-CFLAGS=-Wall -std=c99 -g
-RM=rm -f
+LD=$(CROSS)gcc
+PKG_CONFIG=$(CROSS)pkg-config
 
-all:	$(EXE)
+# Create automatic dependency files (*.d) on the fly during compilation
+AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
+
+# Sorting include paths and defines simplifies checking them
+INCPATHS=. ../common ../pcserver $(ARCH)
+INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
+
+CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
+
+SRC=imgtool.c diskimgs.c log.c terminal.c relfiles.c wildcard.c
+
+
+# Create object names from .c and .S
+_OBJ=$(notdir $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRC))))
+OBJ=$(addprefix $(OBJDIR),$(_OBJ))
+# Create dependency names from .o
+DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
+
+# locations where make searches C source files
+vpath %.c . ../pcserver ../common $(ARCH)
+
+# Include automatic dependencies, continue if they don't exist yet
+-include $(DEP)
+
+# Compile C files
+$(OBJDIR)%.o: %.c
+	$(V2) CC $<
+	$(V1) $(CC) $(CFLAGS) $(AUTODEP) -c $< -o $@
 
 # Link object files
-$(EXE):	$(OBJ)
-	@echo LINK $(EXE)
-	$(SILENT)$(CC) $(CFLAGS) -o $(EXE) $(OBJ) $(LIB)
+$(TARGET): $(OBJDIR) $(DEPDIR) $(OBJ)
+	$(V2) LD $(notdir $@)
+	$(V1) $(LD) $(OBJ) -o $@ $(LDFLAGS)
+	$(V1)# Note: LIBS must be at the end for curl/libs to be found
 
-# Local files residing in this directory used only for imgtool
-imgtool.o:	imgtool.c imgtool.h
-	@echo CC $@
-	$(SILENT)$(CC) $(CFLAGS) $(INCLUDE) -c $*.c
+veryclean:
+	rm -rf $(TARGET) obj
 
-relfiles.o:	relfiles.c
-	@echo CC $@
-	$(SILENT)$(CC) $(CFLAGS) $(INCLUDE) -c $*.c
+# Clean directories
+clean: objclean depclean
 
-# External files from XD2031/common
-wildcard.o:	$(XD2031PATH)/common/wildcard.c
-	@echo CC $@
-	$(SILENT)$(CC) $(CFLAGS) $(INCLUDE) -c $<
+objclean:
+	$(V2) Cleaning object files
+	$(V1) rm -f $(OBJ)
+	@# The object directory gets removed by make depclean
+
+depclean:
+	$(V2) Cleaning dependencies
+	$(V1) rm -f $(DEP)
+	$(V1) if [ -d $(DEPDIR) ]; then rmdir $(DEPDIR); fi
 
 
-# External files from XD2031/pcserver
-%.o:	$(XD2031PATH)/pcserver/%.c
-	@echo CC $@
-	$(SILENT)$(CC) $(CFLAGS) $(INCLUDE) -c $<
+-include Makefile.local
 
-clean:
-	$(RM) $(OBJ) $(EXE) $(PRGNAME).zip $(PRGNAME).exe
-
-winzip:
-	make WIN=y clean
-	$(RM) $(PRGNAME).zip
-	make WIN=y
-	zip $(PRGNAME).zip $(PRGNAME).exe
+# Create build directories
+$(OBJDIR):
+	$(V1) mkdir -p $@
+$(DEPDIR):
+	$(V1) mkdir -p $@
 
 install:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	test -d $(PREFIX) || mkdir -p $(PREFIX)
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
-	install -m 0755 $(EXE) $(PREFIX)/$(BINDIR)
+	install -m 0755 $(TARGET) $(PREFIX)/$(BINDIR)
 
 uninstall:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
-	rm -f $(PREFIX)/$(BINDIR)/$(EXE)
+	rm -f $(PREFIX)/$(BINDIR)/$(TARGET)
 
-.PHONY: all clean dist
+-include $(ARCH)/$(ARCH).mk
+
+.PHONY: all install uninstall 
