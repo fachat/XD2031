@@ -19,13 +19,13 @@ then
     echo Could not find default file $default, aborting
     exit 1
   else
-    avrdude -v -y -u -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -U flash:w:$default
+    avrdude -v -u -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -U flash:w:$default
   fi
 else
   if test ! -s "$1"
   then
     echo File $1 not found
   else 
-    avrdude -v -y -u -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -U flash:w:$1
+    avrdude -v -u -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -U flash:w:$1
   fi
 fi

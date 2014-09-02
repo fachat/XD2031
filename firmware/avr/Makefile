@@ -100,11 +100,11 @@ load: $(HEX)
 
 # ISP programming
 flash:	$(HEX)
-	$(DUDE) $(DUDE_VERBOSE) -y -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(MCU_AVRDUDE) \
+	$(DUDE) $(DUDE_VERBOSE) -u -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) $(DUDE_SPEED) -p $(MCU_AVRDUDE) \
 	        -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
 
 # Fuse programming
 fuses:
-	$(DUDE) $(DUDE_VERBOSE) -y -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) -B 10 \
+	$(DUDE) $(DUDE_VERBOSE) -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) -B 10 \
                 -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
 

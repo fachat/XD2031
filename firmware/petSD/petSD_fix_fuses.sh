@@ -25,7 +25,7 @@ echo ""
 read -p "If you are shure, enter 'yes' to continue: " sure
 if [ "$sure" == "yes" ]
    then
-      avrdude -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -v -y -U lfuse:w:0xf7:m -U hfuse:w:0xd2:m -U efuse:w:0xff:m
+      avrdude -c $PROGRAMMER -P $CONNECTED_TO -p m1284p -v -U lfuse:w:0xf7:m -U hfuse:w:0xd2:m -U efuse:w:0xff:m
    else
       echo "Aborted."
       exit 1
