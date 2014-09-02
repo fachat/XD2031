@@ -51,7 +51,9 @@
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
-#include "socket.h"
+#ifndef _WIN32
+#  include "socket.h"
+#endif
 #include "terminal.h"
 #include "dir.h"
 
@@ -67,7 +69,9 @@ void usage(int rv) {
 		"               the IEC bus to device number 9 use:\n"
 		"               -Xiec:U=9\n"
 		"   -d <device>	define serial device to use\n"
+#ifndef _WIN32
 		"   -s <socket>	define socket device to use (instead of device)\n"
+#endif
 		"   -d auto     auto-detect serial device\n"
 		"   -w          Use advanced wildcards (anything following '*' must also match)\n"
 		"   -D          run as daemon, disable user interface\n"
@@ -143,6 +147,7 @@ int main(int argc, char *argv[]) {
 		  exit(EXIT_RESPAWN_NEVER);
 		}
  	     	break;
+#ifndef _WIN32
 	    case 's':
 		// socket name
 		if (device != NULL || use_stdio) {
@@ -160,6 +165,7 @@ int main(int argc, char *argv[]) {
 		  exit(EXIT_RESPAWN_NEVER);
 		}
  	     	break;
+#endif
 	    case 'A':
 	    case 'X':
 		// ignore these, as those will be evaluated later by cmd_...
@@ -226,6 +232,7 @@ int main(int argc, char *argv[]) {
 	// we have the serial device open, now we can drop privileges
 	drop_privileges();
 
+#ifndef _WIN32
 	if (socket != NULL) {
 		// socket should be opened without privileges
 		fdesc = socket_open(socket);
@@ -243,6 +250,7 @@ int main(int argc, char *argv[]) {
                 log_error("No socket or device name given!\n");
                 exit(EXIT_RESPAWN_NEVER);
 	}
+#endif
 
 	cmd_init();
 

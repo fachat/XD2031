@@ -266,7 +266,7 @@ int os_path_is_dir (const char *name) {
 // free disk space in bytes, < 0 on errors
 // If per-user quotas are being used, the reported value may be less than 
 // the total number of free bytes on a disk.
-signed long long os_free_disk_space (char *path) {
+signed long long os_free_disk_space (const char *path) {
 	BOOL res;
 	signed long long total, free_bytes_to_caller;
 

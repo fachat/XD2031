@@ -1,5 +1,5 @@
-Compile for Windows on Linux
-============================
+Compile for Windows on Linux / OS X
+===================================
 
 Prerequistes
 ------------
@@ -22,5 +22,5 @@ Compiling
 
 To compile and generate a distribution zip-file:
 
-	make -f Makefile-win32 dist
+	make WIN=y dist
 

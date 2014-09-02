@@ -11,6 +11,24 @@ endif
 
 TARGET=fsser
 
+# Cross compile for Windows with make WIN=y
+# Please note doc/README-win32
+ifeq ($(WIN),y)
+  ARCH    = win32
+  CROSS   = i686-pc-mingw32-
+  CFLAGS  = -DCURL_STATICLIB
+  LDFLAGS = -static -Wl,-Bsymbolic-functions -lcurl -lssh2 -lidn -lgcrypt \
+            -lgnutls -lcrypt32 -lwldap32 -lz -lnettle -lintl -liconv \
+            -lhogweed -lgmp -lgnutls-openssl -lgpg-error -lws2_32
+  TARGET  = fsser.exe
+else
+  ARCH    = posix
+  #output of `curl-config --libs`
+  #LDFLAGS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
+  LDFLAGS = -lncurses -lcurl -lc
+endif
+
+
 all: $(TARGET) 
 
 PREFIX=/usr/local
@@ -18,7 +36,7 @@ DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
 TOOLSDIR=xd2031/tools
 # OBJDIR contains temporary object and dependency files
-OBJDIR=obj/
+OBJDIR=obj/$(ARCH)/
 DEPDIR=$(OBJDIR).dep/
 # The space separeted list of directories in DROPDIR will be removed at uninstall too
 DROPDIR=xd2031
@@ -31,16 +49,13 @@ PKG_CONFIG=$(CROSS)pkg-config
 AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
 # Sorting include paths and defines simplifies checking them
-INCPATHS=. ../common 
+INCPATHS=. ../common $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
-CFLAGS=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
+CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
 
-SRC=$(wildcard *.c) $(wildcard ../common/*.c)
+SRC=$(wildcard *.c) $(wildcard ../common/*.c) $(wildcard $(ARCH)/*.c)
 
-#output of `curl-config --libs`
-#LDFLAGS=-L/usr/lib/i386-linux-gnu -lcurl -Wl,-Bsymbolic-functions
-LDFLAGS=-lncurses -lcurl -lc
 
 # Create object names from .c and .S
 _OBJ=$(notdir $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRC))))
@@ -49,7 +64,7 @@ OBJ=$(addprefix $(OBJDIR),$(_OBJ))
 DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
 
 # locations where make searches C source files
-vpath %.c . ../common 
+vpath %.c . ../common $(ARCH)
 
 # Include automatic dependencies, continue if they don't exist yet
 -include $(DEP)
@@ -84,7 +99,7 @@ else
 endif
 
 veryclean:
-	rm -rf fsser obj
+	rm -rf $(TARGET) obj
 
 # Clean directories
 clean: objclean depclean
@@ -143,6 +158,8 @@ uninstall:
 	  rmdir $(PREFIX)/$$i 2>/dev/null | exit 0; \
 	done;
 
+-include $(ARCH)/$(ARCH).mk
+
 # make dmg generates xd2031.dmg for binary distribution with uninstaller
 # ---> edit --version "0.9.1" a few lines below
 # ---> compile with -arch i386 in CFLAGS first!
@@ -177,6 +194,7 @@ dmg:
 	hdiutil create -srcfolder dmg -volname "XD-2031" xd2031-osx-$$(date +%Y-%m-%d).dmg
 	# Clean again
 	rm -rf fauxroot dmg
+
 
 daemon:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
