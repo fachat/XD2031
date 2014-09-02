@@ -41,7 +41,7 @@ typedef struct {
 } di_t;
 
 typedef struct {
-   int             number_of_images;   // number of images
+   unsigned int    number_of_images;   // number of images
    int             bad_images;         // number of images with bad blocks
    di_t            di[MAX_IMG];
    bool *          weak_block;         // Array of bools per track indicating

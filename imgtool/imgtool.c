@@ -80,7 +80,7 @@ int lba_to_ts(int lba, int (*LBA)(int t, int s), int* track, int* sector) {
 }
 
 int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity) {
-   for (int i = 0; i < imgs->number_of_images; i++) {
+   for (unsigned int i = 0; i < imgs->number_of_images; i++) {
       // File exists?
       struct stat st;
       off_t filesize;
@@ -123,7 +123,7 @@ int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity
       if (!imgs->di[i].di.HasErrorTable) memset (imgs->di[i].error_table, error_table_default, imgs->di[i].di.Blocks);
       // Count bad blocks
       imgs->di[i].number_of_bad_blocks = 0;
-      for(int j = 0; j < imgs->di[i].di.Blocks; j++) {
+      for(unsigned int j = 0; j < imgs->di[i].di.Blocks; j++) {
          if (is_bad_block(imgs->di[i].error_table[j])) {
             imgs->di[i].number_of_bad_blocks++;
          }
@@ -143,7 +143,7 @@ int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity
                  imgs->di[i].number_of_bad_blocks == 1 ? "is" : "are");
 
          // List bad blocks
-         for(int j = 0; j < imgs->di[i].di.Blocks; j++) {
+         for(unsigned int j = 0; j < imgs->di[i].di.Blocks; j++) {
             if (is_bad_block(imgs->di[i].error_table[j])) {
                int t, s;
                lba_to_ts(j, imgs->di[i].di.LBA, &t, &s);
@@ -160,8 +160,11 @@ int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity
 
 int merge_repair(imgset_t *imgs, char *outfilename, int preserve_table, uint8_t weak_block_entry, 
                  di_t **mdi, bool **weak) {
-   int i, j, b, compares, differs, t, s;
+   unsigned int i, j, b;
+   int compares, differs, t, s;
    int rv = 0;
+
+   (void)weak; // silence warning unused parameter
 
    if(imgs->number_of_images < 2) {
       log_error("Merge repair requires at least two images\n");
@@ -202,7 +205,7 @@ int merge_repair(imgset_t *imgs, char *outfilename, int preserve_table, uint8_t 
       log_error("calloc failed\n");
       return -1;
    }
-   for(int i=0; i < imgs->number_of_images; i++) {
+   for(unsigned int i=0; i < imgs->number_of_images; i++) {
       score[i] = (int *) calloc (imgs->di[0].di.Blocks, sizeof(int));
       if(score[i] == NULL) {
          log_error("calloc failed\n");
@@ -479,7 +482,7 @@ int follow_link_chain(di_t *di, uint8_t t, uint8_t s, int action, bool *weak, ch
 }
 
 bool dirwalk(di_t *di, bool *weak, char *filemask, void *common,
-            int (*action)(di_t *di, bool *weak, file_t *file, void *common)) 
+            bool (*action)(di_t *di, bool *weak, file_t *file, void *common)) 
 {
    int t = di->di.DirTrack;
    int s = di->di.DirSector;
@@ -595,12 +598,14 @@ static bool catalog_file(di_t *di, bool *weak, file_t *f, void *common) {
 
 
 bool catalog(di_t *di, bool *weak, char *filemask) {
-   catalog_t c = { };
+   catalog_t c;
    char diskname[16 + 1];
    char diskid[]  = "  ";
    char diskdos[] = "  ";
    bool faulty = false;
    uint8_t *p;
+
+   memset(&c, 0, sizeof c);
 
    // Get disk name, disk ID and DOS version
    switch(di->di.ID) {
@@ -636,7 +641,7 @@ bool catalog(di_t *di, bool *weak, char *filemask) {
 
    printf("%s \"%s\" %s %s\n", di->filename, diskname, diskid, diskdos);
 
-   faulty = dirwalk(di, weak, filemask, &c, (void*) catalog_file);
+   faulty = dirwalk(di, weak, filemask, &c, catalog_file);
    if (c.blocks_used || c.number_of_files)
       printf("%d blocks used by %d files.\n\n", c.blocks_used, c.number_of_files);
 
@@ -670,13 +675,17 @@ static bool scan_file(di_t *di, bool *weak, file_t *f, void *common) {
 }
 
 bool scan(di_t *di, bool *weak) {
-   catalog_t c = { };
+   catalog_t c;
 
-   return(dirwalk(di, weak, "*", &c, (void*) scan_file));
+   memset(&c, 0, sizeof c);
+
+   return(dirwalk(di, weak, "*", &c, scan_file));
 }
 
-static int dump_file(di_t *di, bool *weak, file_t *f, void *common) {
+static bool dump_file(di_t *di, bool *weak, file_t *f, void *common) {
    bool faulty = false;
+
+   (void)common; // silence warning unused parameter;
 
    switch(f->filetype & 0x0f) {
       case 1: // SEQ
@@ -731,9 +740,11 @@ int main (int argc, char* argv[]) {
    char *   outfilename                 = NULL;
    char *   filemask                    = "*";
    bool     option_dump                 = false;
-   imgset_t imgs                        = { };
+   imgset_t imgs;
    bool     faulty_image                = false;
    di_t *   img                         = &imgs.di[0];
+
+   memset(&imgs, 0, sizeof imgs);
 
    terminal_init();
 
@@ -844,7 +855,7 @@ int main (int argc, char* argv[]) {
          faulty_image = true;
    }
 
-   int current_image = 0;
+   unsigned int current_image = 0;
    for(;;) {
       // Show directory
       if (option_catalog) catalog(img, imgs.weak_block, filemask);

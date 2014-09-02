@@ -270,6 +270,8 @@ int process_relfile(
 	bool *weak,
 	char *filename) 
 {
+	(void)weak; // silence warning unused parameter;
+
 	bool faulty = false;
 	bad_relfile = false;
 
