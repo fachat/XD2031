@@ -32,6 +32,7 @@ endif
 all: $(TARGET) 
 
 PREFIX=/usr/local
+BINDIR=bin
 DOCDIR=xd2031/doc
 SAMPLEDIR=xd2031/sample
 TOOLSDIR=xd2031/tools
