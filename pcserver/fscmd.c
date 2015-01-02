@@ -532,8 +532,13 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 			log_info("WRITE_WITH_EOF(%d)\n", tfd);
 		}
 		rv = fp->handler->writefile(fp, indata, datalen, cmd == FS_EOF);
-		if (rv != 0) {
+		if (rv < 0) {
+			// if negative, then it's an error
+			rv = -rv;
 			log_rv(rv);
+		} else {
+			// returns the number of bytes written when positive
+			rv = CBM_ERROR_OK;
 		}
 	}
 	return rv;
