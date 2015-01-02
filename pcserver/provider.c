@@ -278,6 +278,11 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 		if (assign_to_rooted != NULL) {
 			mem_free(assign_to_rooted);
 		}
+		if (newep != NULL) {
+			if (from_cmdline) {
+				newep->is_temporary = 0;
+			}
+		}
 		// if not found, something's clearly wrong, as the default provider "fs"
 		// should be there. So return FAULT...
 	} else
