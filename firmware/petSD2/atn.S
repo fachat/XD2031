@@ -5,7 +5,7 @@
     This file is part of XD-2031 -- Serial line filesystem server for CBMs
 
     Copyright (C) 2013 Andre Fachat <afachat@gmx.de>
-    Copyrifht (C) 2013 Nils Eilers  <nils.eilers@gmx.de>
+    Copyright (C) 2015 Nils Eilers  <nils.eilers@gmx.de>
 
     XD-2031 is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -26,7 +26,6 @@
 
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 
 /**
  * ATN interrupt handler
@@ -42,6 +41,9 @@ INT0_vect:
         clr     r16                   ; switch data lines to input      1
         out     1, r16                ; DDRA = 0                        1
 
+        andi    r16, 255 - _BV(PC5) - _BV(PC4) ; DAV  + EOI as input    1
+        out     7, r16                ;                                 1
+
         ; ATN acknowledge
         ; pull NRFD (PC7) + NDAC (PC6) low
         ; make sure, bus drivers are in listen mode (TE (PC3) = 0)
@@ -51,10 +53,6 @@ INT0_vect:
 
         in      r16, 7                ; DDRC: NDFD + NDAC as outputs    1
         ori     r16, _BV(PC7) | _BV(PC6);                               1
-        ; Prerequistes for possible change of flow direction if
-        ; ATN came when device was talker
-        andi    r16, 255 - _BV(PC5) - _BV(PC4) ; DAV  + EOI as input    1
-        out     7, r16                ;                                 1
 
                                       ;                               ===
                                       ;                                14
