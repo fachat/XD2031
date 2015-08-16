@@ -55,6 +55,7 @@ static void sdcard_init(void) {
 }
 
 void device_init(void) {
+
 	i2c_init();                     // I2C bus
         rtc_init();                     // real time clock
         sdcard_init();                  // SD card

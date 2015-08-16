@@ -26,6 +26,7 @@
 
 
 #include "ieeehw.h"
+#include "debug.h"
 
 
 /* ----------------------------------------------------------------------- 
@@ -57,7 +58,7 @@ static void ieee_interrupts_init(void)  {
 // IEEE-488 ATN interrupt using INT0
 static void set_atn_irq(uint8_t x) {
 #if DEBUG
-    debug_putps("ATN_IRQ:"); debug_puthex(x); debug_putcrlf();
+    debug_puts("ATN_IRQ:"); debug_puthex(x); debug_putcrlf();
 #endif
     if (x)
         EIMSK |= _BV(IEEE_ATN_INT);
@@ -83,13 +84,17 @@ void ieeehw_setup() {
 
 void ieeehw_init() {
 
+    //debug_puts("ieeehw_init()");debug_flush();
+
     IEEE_DDR_TE |= _BV(IEEE_PIN_TE);                // Define TE as output
-    IEEE_PORT_TE &= (uint8_t) ~ _BV(IEEE_PIN_TE);   // TE=0
+    telo();
 
     // TODO: let slave MCU set DC=1 (device)
 
     // disable ATN interrupt
     set_atn_irq(0);
+
+    //setrx();
 
     // clear IEEE lines
     ieeehw_setup();

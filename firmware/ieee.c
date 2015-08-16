@@ -217,6 +217,7 @@ static void talkloop()
 
 atn:
 	// sets IEEE488 back to receive mode
+	//debug_puts("setrx()");debug_flush();
         setrx();
         return; //(er&(E_EOI));
 
@@ -238,6 +239,7 @@ void ieee_mainloop_iteration(void)
 
 //if (1) return;
 
+
 	// only do something on ATN low
 	if (atnishi()) {
 		if (bus.active == 0) {
@@ -254,6 +256,7 @@ void ieee_mainloop_iteration(void)
         }
 
 	// set receive mode
+	//debug_puts("setrx()");debug_flush();
 	setrx();
 
         par_status=0;

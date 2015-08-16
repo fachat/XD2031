@@ -41,6 +41,7 @@ INT0_vect:
         clr     r16                   ; switch data lines to input      1
         out     1, r16                ; DDRA = 0                        1
 
+	in	r16, 7
         andi    r16, 255 - _BV(PC5) - _BV(PC4) ; DAV  + EOI as input    1
         out     7, r16                ;                                 1
 
@@ -53,9 +54,10 @@ INT0_vect:
 
         in      r16, 7                ; DDRC: NDFD + NDAC as outputs    1
         ori     r16, _BV(PC7) | _BV(PC6);                               1
+        out     7, r16                ;                                 1
 
                                       ;                               ===
-                                      ;                                14
+                                      ;                                15
 
         ; End of interrupt routine, restore registers
         pop     r16
