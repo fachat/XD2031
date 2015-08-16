@@ -104,10 +104,10 @@
 #define PIN_SD_CS 		PB4
 
 // SD card write protect switch
-#define INPUT_SD_WP 		PINC
-#define PORT_SD_WP 		PORTC
-#define DDR_SD_WP 		DDRC
-#define PIN_SD_WP 		PC3
+#define INPUT_SD_WP 		PIND
+#define PORT_SD_WP 		PORTD
+#define DDR_SD_WP 		DDRD
+#define PIN_SD_WP 		PD7
 
 // SD card detect switch
 #define INPUT_SD_CD 		PIND
