@@ -1163,10 +1163,11 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 					
 		            	int rvx = stat(ospath, &sbuf);
         		    	if (rvx < 0) {
-					rv = errno_to_error(errno);
-                   			log_error("Failed stat'ing entry %s\n", file->de->d_name);
-                			log_errno("Problem stat'ing dir entry");
-					break;
+                			log_errno("Problem stat'ing dir entry (%s)", file->de->d_name);
+					if (errno != EOVERFLOW) {
+						rv = errno_to_error(errno);
+						break;
+					}
         		    	} else {
 	 	  			// alloc directory entry struct
 		  			retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
