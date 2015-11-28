@@ -362,45 +362,6 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 		if (err != CBM_ERROR_OK) {
 			set_error_tsd(&error, err, 0, 0, errdrive);
 		}
-/*
-#ifdef DEBUG_BUS
-		//debug_printf("rx: chan=%p, channo=%d\n", channel, channel->channel_no);
-#endif
-		// first fillup the buffers
-		if (channel_preloadp(channel) < 0) {
-			// no data available
-			st |= STAT_RDTIMEOUT;
-#ifdef DEBUG_BUS
-			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
-				channel->channel_no, st);
-#endif
-			int8_t err = channel_last_pull_error(channel);
-			if (err != CBM_ERROR_OK) {
-				set_error(&error, err);
-			}
-		} else {
-
-			*data = channel_current_byte(channel, &iseof);
-			if (iseof) {
-#ifdef DEBUG_BUS
-				debug_puts("EOF!\n");
-#endif
-				st |= STAT_EOF;
-			}
-
-			// TODO: simplify the channel interface for the code here
-			if (!(preload & BUS_PRELOAD)) {
-				// make sure the next call does have a data byte
-				if (!channel_next(channel, preload & BUS_SYNC)) {
-					// no further data on channel available
-					int8_t err = channel_last_pull_error(channel);
-					if (err != CBM_ERROR_OK) {
-						set_error(&error, err);
-					}
-				}
-			}
-		}
-*/
 	    }
 	}
 #ifdef DEBUG_BUS_DATA

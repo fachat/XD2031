@@ -395,7 +395,7 @@ debug_flush();
 		break;
 	case FS_READ:
 		buffer = buf_find(channelno);
-		rtype = FS_EOF;		// just in case, for an error
+		rtype = FS_DATA_EOF;		// just in case, for an error
 		if (buffer != NULL) {
 			if ((buffer->pflag & PFLAG_PRELOAD) == 0) {
 				// only direct block access
@@ -411,7 +411,7 @@ debug_flush();
 				buffer->wptr = buffer->rptr;
 				// see DOS 2.7 @ $d885 (getbyt)
 				if (buffer->lastvalid == 0 || buffer->rptr != buffer->lastvalid) {
-					rtype = FS_WRITE;
+					rtype = FS_DATA;
 					buffer->rptr ++;
 				} else {
 					buffer->rptr = 0;
@@ -419,13 +419,13 @@ debug_flush();
 					// if IEEE preloads the EOF, but never fetches it?
 					buffer->wptr = 1;
 				}
-debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_EOF ? "EOF" : "WRITE", buffer->rptr, buffer->lastvalid);
+debug_printf("read -> %s (ptr=%d, lastvalid=%d)\n", rtype == FS_DATA_EOF ? "DATA_EOF" : "DATA", buffer->rptr, buffer->lastvalid);
 			}
 		}
 		packet_set_filled(rxbuf, channelno, rtype, 1);
 		break;
 	case FS_WRITE:
-	case FS_EOF:
+	case FS_WRITE_EOF:
 		buffer = buf_find(channelno);
 		if (buffer != NULL) {
 			plen = packet_get_contentlen(txbuf);

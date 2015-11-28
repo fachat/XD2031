@@ -191,17 +191,18 @@ static inline uint8_t packet_next(packet_t *buf) {
 
 static inline uint8_t packet_is_last(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
-	return (buf->type == ((uint8_t)(FS_EOF & 0xff)));
+	return (buf->type == ((uint8_t)(FS_DATA_EOF & 0xff)));
 }
 
-static inline uint8_t packet_is_eof(packet_t *buf) {
+//static inline uint8_t packet_is_eof(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
-	return (buf->type == ((uint8_t)(FS_EOF & 0xff))) && (buf->rp >= buf->wp);
-}
+//	return packet_is_last(buf) && (buf->rp >= buf->wp);
+//}
 
+// true when the current byte is the last one and should be sent with EOF
 static inline uint8_t packet_current_is_eof(packet_t *buf) {
 //debug_puts("packet_eof: "); debug_puthex(buf->type); debug_puthex(buf->rp); debug_puthex(buf->wp); debug_putcrlf();
-	return (buf->type == ((uint8_t)(FS_EOF & 0xff))) && ((buf->rp + 1) >= buf->wp);
+	return packet_is_last(buf) && ((buf->rp + 1) >= buf->wp);
 }
 
 static inline bool packet_has_data(packet_t *buf) {

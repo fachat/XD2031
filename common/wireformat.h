@@ -63,35 +63,37 @@
 
 #define   FS_READ        7      /* pull data */
 #define   FS_WRITE       8      /* push data */
-#define   FS_REPLY       9      /* return value */
-#define   FS_EOF         10     /* as FS_WRITE, but signal EOF with */
-#define	 FS_SEEK        11	/* seek within a file */
-#define   FS_CLOSE       12	/* close a channel */
+#define   FS_WRITE_EOF   9      /* push data with EOF */
+#define   FS_REPLY       10     /* return value */
+#define   FS_DATA        11     /* as FS_WRITE, but signal EOF with */
+#define   FS_DATA_EOF    12     /* as FS_WRITE, but signal EOF with */
+#define	  FS_SEEK        13	/* seek within a file */
+#define   FS_CLOSE       14	/* close a channel */
 
-#define   FS_MOVE      	 13	/* rename a file */
-#define   FS_DELETE      14	/* delete a file */
-#define   FS_FORMAT      15	/* format a disk */
-#define   FS_CHKDSK      16	/* check disk for consistency */
-#define   FS_RMDIR       17	/* remove a subdirectory */
-#define   FS_MKDIR       18	/* create a subdirectory */
-#define   FS_CHDIR       19	/* change into another directory */
+#define   FS_MOVE      	 15	/* rename a file */
+#define   FS_DELETE      16	/* delete a file */
+#define   FS_FORMAT      17	/* format a disk */
+#define   FS_CHKDSK      18	/* check disk for consistency */
+#define   FS_RMDIR       19	/* remove a subdirectory */
+#define   FS_MKDIR       20	/* create a subdirectory */
+#define   FS_CHDIR       21	/* change into another directory */
 
-#define   FS_ASSIGN      20	/* assign a drive number to a directory */
-#define   FS_SETOPT      21	/* set an option using an X-command string as payload */
-#define   FS_RESET       22	/* device sends this to notify it has reset */
+#define   FS_ASSIGN      22	/* assign a drive number to a directory */
+#define   FS_SETOPT      23	/* set an option using an X-command string as payload */
+#define   FS_RESET       24	/* device sends this to notify it has reset */
 
-#define   FS_BLOCK       23	/* summary for block commands */
-#define	  FS_GETDATIM	 24	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
+#define   FS_BLOCK       25	/* summary for block commands */
+#define	  FS_GETDATIM	 26	/* request an FS_DATE_* struct with the current date/time as FS_REPLY */
 
-#define	  FS_POSITION	 25	/* position a read/write pointer onto a rel file record; zero-based */
+#define	  FS_POSITION	 27	/* position a read/write pointer onto a rel file record; zero-based */
 
-#define   FS_OPEN_DIRECT 26	/* open a direct file (firmware-internal) */
+#define   FS_OPEN_DIRECT 28	/* open a direct file (firmware-internal) */
 
-#define   FS_CHARSET 	 27	/* send to the server the name of the requested character set for
+#define   FS_CHARSET 	 29	/* send to the server the name of the requested character set for
 				   file names and directory entries */
-#define   FS_COPY        28   /* copy a file or merge files */
-#define   FS_DUPLICATE   29   /* duplicate a disk image or copy a directory */
-#define   FS_INITIALIZE  30   /* initialize (e.g. free buffers and remove file locks) */
+#define   FS_COPY        30     /* copy a file or merge files */
+#define   FS_DUPLICATE   31     /* duplicate a disk image or copy a directory */
+#define   FS_INITIALIZE  32     /* initialize (e.g. free buffers and remove file locks) */
 
 /*
  * BLOCK and DIRECT commands

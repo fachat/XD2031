@@ -97,10 +97,10 @@ debug_printf("close_cb: c=%d, errorno=%d, rxp=%p\n", channel_no, errorno, rxpack
 	return 0;
 }
 
-static inline uint8_t channel_is_eof(channel_t *chan) {
-        // return buf->sendeoi && (buf->position == buf->lastused);
-        return packet_is_eof(&chan->buf[chan->current]);
-}       
+//static inline uint8_t channel_is_eof(channel_t *chan) {
+//        // return buf->sendeoi && (buf->position == buf->lastused);
+//        return packet_is_eof(&chan->buf[chan->current]);
+//}       
 
 /**
  * pull in a buffer from the server
@@ -342,7 +342,6 @@ static uint8_t channel_next(channel_t *chan, uint8_t options) {
 		// this is an optimization:
 		// pull in the "other" buffer in the background
 		uint8_t other = 1-chan->current;
-		//if (packet_is_done(&chan->buf[other]) && (!packet_is_eoi(&chan->buf[chan->current]))) {
 		if ((chan->pull_state == PULL_ONEREAD) && (!packet_is_last(&chan->buf[chan->current]))) {
 			// if the other packet is free ("done"), and the current packet is not the last one ("eoi")
 			// We should only do this on "standard" files though, not relative or others
@@ -421,7 +420,7 @@ static channel_t* channel_refill(channel_t *chan, uint8_t options) {
 	    if (!packet_is_last(&chan->buf[chan->current])) {
 		// current packet is not last one
 		// other packet should have been pulled in channel_next()
-		// so it is either empty (request, or FS_EOF), or has data
+		// so it is either empty (request, or EOF), or has data
 		packet_t *opacket = &chan->buf[other];
 
 		// wait until available	
@@ -527,7 +526,7 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 		uint8_t channo = chan->channel_no;
 
 		packet_set_filled(curpack, channo, 
-			(forceflush & PUT_FLUSH) ? FS_EOF : FS_WRITE, 
+			(forceflush & PUT_FLUSH) ? FS_WRITE_EOF : FS_WRITE, 
 			packet_get_contentlen(curpack));
 
 		// wait until the other packet has been replied to,

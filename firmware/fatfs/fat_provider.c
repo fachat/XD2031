@@ -517,19 +517,19 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
                rxbuf->type = FS_REPLY;
                packet_write_char(rxbuf, -conv_fresult(fres));
             } else {
-               // a WRITE mirrors the READ request when ok
+               // a DATA packet mirrors the READ request when ok
                rxbuf->wp = transferred;
                if(fp->fptr == fp->fsize) {
-                  rxbuf->type = FS_EOF;
+                  rxbuf->type = FS_DATA_EOF;
                } else {
-                  rxbuf->type = FS_WRITE;
+                  rxbuf->type = FS_DATA;
                }
             }
          }
          break;
 
       case FS_WRITE:
-      case FS_EOF:
+      case FS_WRITE_EOF:
          fp = tbl_find_file(channelno);
          if(fp) {
             if(txbuf->rp < txbuf->wp) {
@@ -538,13 +538,13 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
                debug_printf("%d/%d bytes written to #%d, res=%d\n",
                             transferred, len, channelno, fres);
                if(fres == FR_OK) {
-                  // a READ mirrors the WRITE request when ok
-                  txbuf->type = FS_READ;
+                  // a REPLY mirrors the WRITE request when ok
+                  txbuf->type = FS_REPLY;
                   reply_as_usual = false;
                }
             }
          } else {
-            debug_printf("No channel for FS_WRITE/FS_EOF #%d\n", channelno);
+            debug_printf("No channel for FS_WRITE/FS_WRITE_EOF #%d\n", channelno);
             cres = CBM_ERROR_FILE_NOT_OPEN;
          }
 
@@ -589,7 +589,7 @@ cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, bool advanced_wildcards,
       case -1:
          // no channel
          debug_puts("fs_read_dir: no channel!"); debug_putcrlf();
-         packet->type = FS_EOF;
+         packet->type = FS_DATA_EOF;
          return CBM_ERROR_FILE_NOT_OPEN;
          break;
 
@@ -701,7 +701,7 @@ cbm_errno_t fs_read_dir(void *epdata, int8_t channelno, bool advanced_wildcards,
          p[FS_DIR_MODE]  = FS_DIR_MOD_FRE;
          p[FS_DIR_NAME] = 0;
          packet_update_wp(packet, FS_DIR_NAME + strlen(p+FS_DIR_NAME));
-         packet->type = FS_EOF;
+         packet->type = FS_DATA_EOF;
          return CBM_ERROR_OK;
    }
 }

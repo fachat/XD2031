@@ -84,8 +84,10 @@ const char *nameofcmd(int cmdno) {
 	case FS_OPEN_DR:	return "OPEN_DR";
 	case FS_READ:		return "READ";
 	case FS_WRITE:		return "WRITE";
+	case FS_WRITE_EOF:	return "WRITE_EOF";
 	case FS_REPLY:		return "REPLY";
-	case FS_EOF:		return "EOF";
+	case FS_DATA:		return "DATA";
+	case FS_DATA_EOF:	return "DATA_EOF";
 	case FS_SEEK:		return "SEEK";
 	case FS_CLOSE:		return "CLOSE";
 	case FS_MOVE:		return "MOVE";
@@ -528,10 +530,11 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 	file_t *fp = channel_to_file(tfd);
 	//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 	if (fp != NULL) {
-		if (cmd == FS_EOF) {
+		bool_t has_eof = (cmd == FS_WRITE_EOF);
+		if (has_eof) {
 			log_info("WRITE_WITH_EOF(%d)\n", tfd);
 		}
-		rv = fp->handler->writefile(fp, indata, datalen, cmd == FS_EOF);
+		rv = fp->handler->writefile(fp, indata, datalen, has_eof);
 		if (rv < 0) {
 			// if negative, then it's an error
 			rv = -rv;
@@ -943,17 +946,18 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_READ:
+		// note that on the server side, we do not need to handle FS_DATA*, as we only send those
 		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag);
 		if (rv != CBM_ERROR_OK) {
 			retbuf[FSP_DATA] = rv;
 			retbuf[FSP_LEN] = FSP_DATA + 1;
 		} else {
-			retbuf[FSP_CMD] = (readflag & READFLAG_EOF) ? FS_EOF : FS_WRITE;
+			retbuf[FSP_CMD] = (readflag & READFLAG_EOF) ? FS_DATA_EOF : FS_DATA;
 			retbuf[FSP_LEN] = FSP_DATA + outlen;
 		}
 		break;
 	case FS_WRITE:
-	case FS_EOF:
+	case FS_WRITE_EOF:
 		rv = cmd_write(tfd, cmd, buf+FSP_DATA, len-FSP_DATA);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;

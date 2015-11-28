@@ -236,8 +236,8 @@ FS_OPEN_DR
 
 	
 FS_CLOSE
-	This closes a channel - TODO: currently not used, but probably should
-	Note that channels are NOT closed on receiving an FS_EOF packet.
+	This closes a channel. 
+	Note that channels are NOT closed on receiving a packet flagged as EOF.
 
 
 Read and Write
@@ -247,26 +247,33 @@ FS_READ
 	This sends a three byte (zero payload) packet with just the command,
 	the length and the channel number for which to read.
 	It is only sent from the firmware to the server.
-	The server responds either with an FS_WRITE or an FS_EOF for that channel.
+	The server responds either with an FS_DATA or an FS_DATA_EOF for that channel,
+	if no error occurred. If an error occurred, an FS_REPLY with the error 
+	is sent.
 
-	TODO: need to accept FS_REPLY as well, to set error channel appropriately.
 
 FS_WRITE
-	A write command is either sent from the firmware to the server, where it 
-	expects an FS_REPLY, or from the server to the firmware as reply to an FS_READ
-	command.
+FS_WRITE_EOF
+	A write command is sent from the firmware to the server, where it 
+	expects an FS_REPLY.
 
 	The packet is the usual command, length and channel, and the data payload
 	is the data to be transmitted.
 
-FS_EOF
-	This one works exactly like FS_WRITE, except that it signals that there is no
-	further data available on this channel.
+	FS_WRITE_EOF also sends an EOF flag together with the data.
+
+FS_DATA
+FS_DATA_EOF
+	This is the reply to an FS_READ command, when no error occurred.
 	It tries to obeys the Commodore semantics, in that it always should have a valid data
 	byte with it.
-	Receiving an FS_EOF does not automatically close the channel, an FS_CLOSE has to follow.
-	A channel may be "reopened" for example by sending a P (position), or Block read or write
-	command.
+
+	FS_DATA_EOF also signals an EOF.
+
+Receiving an EOF with the data does not automatically close the channel, an FS_CLOSE has to follow.
+A channel may be "reopened" for example by sending a P (position), or Block read or write
+command. Other channel types may even become valid again due to outside events, such as receiving
+data on a telnet channel.
 
 
 File operations
@@ -382,7 +389,7 @@ FS_SEEK
 	Before this command is sent, all pending FS_WRITE requests are processed and all FS_READ
 	requests or yet unread data is discarded for the specified channel.
 	
-	For reading: seeking behind the file position will result in an FS_EOF on a read request.
+	For reading: seeking behind the file position will result in an EOF on a read request.
 	
 	For writing: seeking backward (to the beginning of the file) changes the file to overwrite.
 	Seeking behind the file position fills the space in between with zeros (note this may be

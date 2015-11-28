@@ -177,31 +177,28 @@ uint8_t buffer_write_buffer(uint8_t channel_no, endpoint_t *endpoint,
                 return CBM_ERROR_NO_CHANNEL;
         }
 
-        while (ptype != FS_EOF && restlength != 0 && rv == CBM_ERROR_OK) {
+	// we loop as long as we can write
+        while (ptype == FS_WRITE && restlength != 0 && rv == CBM_ERROR_OK) {
 
                 packet_init(&buf_datapack, DATA_BUFLEN, buffer->buffer + start_of_data + send_nbytes - restlength);
                 packet_init(&buf_cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
 
                 plen = (restlength > DATA_BUFLEN) ? DATA_BUFLEN : restlength;
                 if (plen >= restlength) {
-                        ptype = FS_EOF;
+                        ptype = FS_WRITE_EOF;
                 } else {
                         ptype = FS_WRITE;
                 }
                 packet_set_filled(&buf_datapack, channel_no, ptype, plen);
-
+#if 0
 for (uint8_t i = 0; i < plen; i++) {
         debug_printf(" %02x", buffer->buffer[start_of_data + send_nbytes - restlength + i]);
 }
 debug_puts(" < sent\n");
+#endif
 
                 rv = buf_call(endpoint, endpoint->provdata, channel_no, &buf_datapack, &buf_cmdpack);
-/*
-                cbstat = 0;
-                endpoint->provider->submit_call(endpoint->provdata, channel_no, 
-                        &buf_datapack, &buf_cmdpack, cmd_callback);
-                rv = cmd_wait_cb();
-*/
+
                 if (rv == CBM_ERROR_OK) {
                         restlength -= plen;
                 }
@@ -232,19 +229,15 @@ uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
                 return CBM_ERROR_NO_CHANNEL;
         }
 
-        while (ptype != FS_EOF && lengthread < receive_nbytes) {
+	// we loop as long as we get more data; we break on error or EOF
+        while (ptype == FS_DATA && lengthread < receive_nbytes) {
 
                 packet_init(&buf_datapack, 128, buffer->buffer + lengthread);
                 packet_init(&buf_cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
                 packet_set_filled(&buf_cmdpack, channel_no, FS_READ, 0);
 
                 buf_call(endpoint, endpoint->provdata, channel_no, &buf_cmdpack, &buf_datapack);
-/*      
-                cbstat = 0;
-                endpoint->provider->submit_call(endpoint->provdata, channel_no, 
-                        &buf_cmdpack, &buf_datapack, cmd_callback);
-                cmd_wait_cb();
-*/
+
                 ptype = packet_get_type(&buf_datapack);
 
                 if (ptype == FS_REPLY) {
@@ -252,7 +245,7 @@ uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
                         rv = packet_get_buffer(&buf_datapack)[0];
                         break; // out of loop
                 } else
-                if (ptype == FS_WRITE || ptype == FS_EOF) {
+                if (ptype == FS_DATA || ptype == FS_DATA_EOF) {
 
                         lengthread += packet_get_contentlen(&buf_datapack);
                 }

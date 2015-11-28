@@ -240,7 +240,7 @@ static void push_data_to_packet(int8_t rxdata)
 			// yes, send sync
 			uarthw_send(FS_SYNC);
 		} else
-		if (rxdata == FS_REPLY || rxdata == FS_WRITE || rxdata == FS_EOF 
+		if (rxdata == FS_REPLY || rxdata == FS_DATA || rxdata == FS_DATA_EOF 
 			|| rxdata == FS_SETOPT || rxdata == FS_RESET) {
 			// note EOI flag
 			current_is_eoi = rxdata;
@@ -261,12 +261,10 @@ static void push_data_to_packet(int8_t rxdata)
 
 		for (uint8_t i = 0; i < NUMBER_OF_SLOTS; i++) {
 			if (rx_channels[i].channelno == current_channelno) {
-//if (current_is_eoi == FS_EOF && current_data_left == 0) led_toggle();
 				current_channelpos = i;
 				current_rxpacket = rx_channels[current_channelpos].rxpacket;
 				if (packet_set_write(current_rxpacket, current_channelno,
 						current_is_eoi, current_data_left) >= 0) {
-//if (current_is_eoi == FS_SETOPT && current_channelno == FSFD_SETOPT) led_on();
 					rxstate = RX_DATA;
 				}
 				break;
