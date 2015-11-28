@@ -141,7 +141,7 @@ static int8_t cmd_user_u12(bus_t *bus, uint8_t cmd, char *pars, uint8_t blockfla
 	buf[FS_BLOCK_PAR_CHANNEL] = channel;		// extra compared to B-A/B-F
 
 	packet_init(&buf_cmdpack, CMD_BUFFER_LENGTH, (uint8_t*) buf);
-	// FS_DIRECT packet with 5 data bytes, sent on cmd channel
+	// FS_DIRECT packet with 7 data bytes, sent on cmd channel
 	packet_set_filled(&buf_cmdpack, bus_secaddr_adjust(bus, CMD_SECADDR), FS_BLOCK, FS_BLOCK_PAR_LEN);
 
 	endpoint_t *endpoint = provider_lookup(drive, NULL);

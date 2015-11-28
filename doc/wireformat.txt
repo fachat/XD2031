@@ -369,19 +369,23 @@ FS_BLOCK
 	Before this command is sent, all pending FS_WRITE requests are processed and all FS_READ
 	requests or yet unread data is discarded for the specified channel.
  
-	The payload of the FS_BLOCK command is four bytes for U1/U2/B-R/B-W:
+	The payload of the FS_BLOCK command is seven bytes for U1/U2/B-R/B-W:
 
-	0:	command type to distinguish U1/U2/B-R/B-W/B-P
-	1:	drive number
-	2:	track
-	3:	sector
+	0:	drive number
+	1:	command type to distinguish U1/U2/B-R/B-W/B-P
+	2:	track (2 byte, for later extensions)
+	4:	sector (2 byte, for later extensions)
+	6:	channel number used for transfer (1 byte)
 
-	All numbers are binary. The channel number (in the packet header) is the one for which 
-	the command should be effective.
+	All numbers are binary. The channel number in the packet header is the command channel; the
+	one in the packet is the one for which the command should be effective.
 
-	For B-P the parameters are different:
+	For B-A and B-F the parameters are different in that only the first six bytes of the
+	structure are sent.
 
-	- to be defined - 
+	B-P is different. Here the command string is transferred as character string.
+	It has the format "%*[ :]%d%*[, ]%d" (as scanf() format), where the two parameters are
+	the channel number and the new pointer value.
 
 FS_SEEK
 	This command seeks the file position for read, append, overwrite, write, or read/write files.
@@ -398,8 +402,6 @@ FS_SEEK
 	The command has only one parameter: the new file position in four bytes, low byte first.
 
 	The request is answered with an FS_REPLY packet.
-
-	NOTE: not yet implemented. Will be at least for relative files, or maybe all files.
 
 Misc
 ----
