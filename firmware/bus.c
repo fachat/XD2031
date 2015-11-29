@@ -423,7 +423,8 @@ static void bus_close(bus_t *bus) {
 #endif
         /* Close File */
         if(secaddr == CMD_SECADDR) {
-	    // is this correct or only a convenience?
+            // closing all files when closing the command channel is in fact correct, see discussion of
+	    // issue #151, tested on 1541, 2031, 4040 and 1001 drives (under VICE).
             channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
         } else {
             /* Close a single buffer */
