@@ -115,7 +115,7 @@ static int16_t iecin(uint8_t underatn)
 	// atn hi and clk hi - so we might fall through here;
 	// thus check ATN here again to be sure
 	if (checkatn(underatn)) {
-		return -1;
+		return -2;
 	}
 	
 	datahi();
@@ -125,7 +125,7 @@ static int16_t iecin(uint8_t underatn)
 	// does exactly that but I found only afterwards...
 	do {
 		if (checkatn(underatn))
-			return -1;
+			return -3;
 	} while (is_port_datalo(read_debounced()));
 
 	// set timer with 256 us
@@ -135,7 +135,7 @@ static int16_t iecin(uint8_t underatn)
 		// e9df (vc1541)
 
 		if (checkatn(underatn)) {
-			return -1;
+			return -4;
 		}
 
 		if (timer_is_timed_out()) { 
@@ -150,7 +150,7 @@ static int16_t iecin(uint8_t underatn)
 			// e9fd
 			do {
 				if (checkatn(underatn)) {
-					return -1;
+					return -5;
 				}
 			} while (is_port_clkhi(read_debounced()));
 			
@@ -176,7 +176,7 @@ static int16_t iecin(uint8_t underatn)
 		// ea1a
 		do {
 			if (checkatn(underatn)) {
-				return -1;
+				return -6;
 			}
 		} while (is_port_clkhi(read_debounced()));
 
@@ -210,6 +210,7 @@ static void listenloop() {
 		// read byte from IEC
 		c = iecin(0);
 		enable_interrupts();
+debug_printf("c=%d\n", c);
 		if (c < 0) {
 			break;
 		}
@@ -483,6 +484,11 @@ cmd:
 
 	if(isListening(ser_status))
         {
+		// the C128 may be rather slow releasing ATN after asking to LISTEN.
+		// so here we can - hopefully safely - wait for ATN hi before bailing out
+		// of receiving due to ATN still low. Fixes #152
+		while (satnislo());
+
 		listenloop();
 
 		clkhi();

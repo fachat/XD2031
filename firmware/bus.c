@@ -281,7 +281,7 @@ int16_t bus_sendbyte(bus_t *bus, uint8_t data, uint8_t with_eoi) {
 
     int16_t st = 0;
 #ifdef DEBUG_BUS_DATA
-    debug_printf("sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
+    debug_printf("Bus: sendbyte: %02x (%c)\n", data, (isprint(data) ? data : '-'));
 #endif
 
     if(((bus->secondary & SECADDR_MASK) == CMD_SECADDR) || ((bus->secondary & BUSSEC_MASK) == BUSSEC_OPEN)) {
@@ -339,7 +339,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 	} else {
 	    if (channel == NULL) {
 		// if still NULL, error
-		debug_printf("Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
+		debug_printf("Bus: Setting file not open on secaddr %d\n", bus->secondary & 0x1f);
 
 		set_error_tsd(&error, CBM_ERROR_FILE_NOT_OPEN, 0, 0, errdrive);
 		st = STAT_NODEV | STAT_RDTIMEOUT;
@@ -350,7 +350,7 @@ int16_t bus_receivebyte(bus_t *bus, uint8_t *data, uint8_t preload) {
 			// could not get any data
 			st |= STAT_RDTIMEOUT;
 #ifdef DEBUG_BUS
-			debug_printf("preload on chan %p (%d) gives no data (st=%04x)", channel, 
+			debug_printf("Bus: preload on chan %p (%d) gives no data (st=%04x)", channel, 
 				channel->channel_no, st);
 #endif
 		} else {
@@ -424,7 +424,7 @@ static int16_t bus_prepare(bus_t *bus)
 static void bus_close(bus_t *bus) {
     	uint8_t secaddr = bus->secondary & SECADDR_MASK;
 #ifdef DEBUG_BUS
-	debug_printf("bus_close secaddr=%d\n",secaddr);
+	debug_printf("Bus: close secaddr=%d\n",secaddr);
 #endif
         // Close File 
 	// Note: closing all files when you close the command channel was a bug
@@ -453,6 +453,9 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
         if (is_config_device) {
 		// then process the command
 		// note: may change bus->rtconf.device_address!
+#ifdef DEBUG_BUS
+		debug_printf("Bus: cmd_handler(%s)\n", bus->command.command_buffer);
+#endif
         	st = cmd_handler(bus);
         }
 	// as it's unlisten, we need to wait for ATN end
@@ -467,6 +470,9 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 	      // store device number plus LISTEN/TALK info
 	      // untalk / unlisten fall through here (there b & DEVICEMASK would be 0x1f)
 	      if ((b & DEVICE_MASK) == bus->rtconf.device_address) {
+#ifdef DEBUG_BUS
+		debug_printf("Bus: LISTEN/TALK (%02)\n", b);
+#endif
               	bus->device = b;
 		is_config_device = 1;	// true
 	      }
