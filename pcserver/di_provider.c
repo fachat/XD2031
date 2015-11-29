@@ -167,6 +167,8 @@ static void di_init_fp(const type_t *t, void *obj)
   fp->chp = 0;
   fp->file.handler = &di_file_handler;
   fp->dospattern = NULL;
+  fp->lastpos = 0;
+  fp->maxrecord = 0;
 }
 
 static type_t file_type = {
