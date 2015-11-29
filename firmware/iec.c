@@ -210,7 +210,6 @@ static void listenloop() {
 		// read byte from IEC
 		c = iecin(0);
 		enable_interrupts();
-debug_printf("c=%d\n", c);
 		if (c < 0) {
 			break;
 		}
