@@ -178,11 +178,6 @@ static int16_t cmd_handler (bus_t *bus)
 	// zero termination
 	bus->command.command_buffer[bus->command.command_length++] = 0;
 
-#ifdef DEBUG_BUS
-	debug_printf("received cmd '%s' on secaddr=%d\n", bus->command.command_buffer, secaddr);
-#endif
-
-
 	if (secaddr == CMD_SECADDR) {
       		/* Handle commands */
 		// zero termination
@@ -426,9 +421,11 @@ static void bus_close(bus_t *bus) {
 #ifdef DEBUG_BUS
 	debug_printf("Bus: close secaddr=%d\n",secaddr);
 #endif
-        // Close File 
-	// Note: closing all files when you close the command channel was a bug
-        if(secaddr != CMD_SECADDR) {
+        /* Close File */
+        if(secaddr == CMD_SECADDR) {
+	    // is this correct or only a convenience?
+            channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
+        } else {
             /* Close a single buffer */
             channel_close(bus_secaddr_adjust(bus, secaddr));
         }
