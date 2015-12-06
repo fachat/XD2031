@@ -65,22 +65,27 @@ Command overview
 
 The following DOS commands are implemented:
 
-	I(NITIALIZE)	- do nothing
 	R(ENAME)	- rename a file or directory
 	S(CRATCH)	- delete a file
+	C(OPY)		- copy one or more files into a destination file
+
 	CD / CH(DIR)	- change directory
 	M(D) / M(KDIR)	- make a new directory
 	RD / RM(DIR)	- remove an empty directory
 	A(SSIGN)	- assign drive numbers
 	X		- extension command
 
+	User		- the Ux-commands are partially implemented (see below)
+	Block		- the Block-commands are partially implemented (see below)
+	P(osition)	- Position is implemented where REL files are supported
+
+	I(NITIALIZE)	- do nothing (but set the last used drive if given)
+	V(ALIDATE)	- do nothing
+	N(EW)		- do nothing
+
 In the following the drive is almost always optional,
 then the last used drive is taken.
 
-
-INITIALIZE
-
-This command does nothing but clear the error channel
 
 
 RENAME
@@ -102,6 +107,21 @@ for example
 	S1:foo,ba?x
 The '?' replaces a single character (wildcard), the '*' ignores all
 further characters. The drive is optional again.
+
+
+COPY
+
+Copy one or multiple files into a destination file.
+(currently only works between files on the server, not with files on the SD-card)
+To copy files, send:
+
+	C:targetfile=sourcefile
+	C0:targetfile=1:source1,2:source2
+	C:targetfile=1:so?rce1,2:sou*
+
+The '?' replaces a single character (wildcard), the '*' ignores all
+further characters. The drive is optional again. Note that wildcards
+only match the first entry that is found, not all matching files.
 
 
 CD / CHDIR
@@ -131,6 +151,7 @@ for example
 	RD0:empty_dir
 	RMDIR:empty_dir
 
+
 X
 
 This command allows to change runtime configuration.
@@ -141,7 +162,51 @@ changes the device address,
 changes the last used drive number, for example
 	XU=9
 	XD=1
+
+
+User
+
+These commands are used for direct block access in the drives (among others).
+The following sub-commands are implemented:
+
+	U1	- read a block from disk
+	U2	- write a block to disk
+	U9	- set the status message to the DOS version
+
+Note that these commands are only supported for providers where it makes sense.
+Most notably these are implemented for the disk image provider.
+For more details, esp. on syntax, consult the Commodore disk drive manuals.
+
+
+Block
+
+The block commands also manage blocks on the disk. The following sub-commands
+are implemented:
+
+	B-A	- allocate a block in the disk's block allocation map (BAM)
+	B-F	- free a block in the disk's block allocation map
+	B-P	- set the buffer pointer for read and write operations
+	B-R	- read a block from disk, set number of valid bytes from first byte
+	B-W	- set first byte to write pointer, write buffer to disk
+
 	
+INITIALIZE
+
+This command does nothing but clear the error channel and set the last used drive
+when a drive was given with the command.
+
+
+VALIDATE
+
+Does nothing.
+
+
+NEW
+
+Does nothing
+
+
+
 ASSIGN
 ------
 
@@ -178,6 +243,7 @@ or
 	A4:0=subdir
 
 (Note: the short-cut does currently not work for ftp/http)
+
 
 
 Tools

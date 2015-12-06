@@ -1055,6 +1055,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 	case FS_DUPLICATE:
 		log_warn("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       		break;
+	case FS_CHKDSK:
+		log_warn("VALIDATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
+      		break;
 	case FS_INITIALIZE:
 		log_info("INITIALIZE: %s\n", buf+FSP_DATA);
 		retbuf[FSP_DATA] = CBM_ERROR_OK;

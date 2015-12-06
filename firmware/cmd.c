@@ -79,17 +79,19 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	switch (nameinfo.cmd) {
 		case CMD_INITIALIZE: // If a drive number is given, set the last used drive
-			if (command->command_buffer[1])
-            rtconf->last_used_drive = command->command_buffer[1] - 0x30;
+			if (command->command_buffer[1]) {
+		            rtconf->last_used_drive = command->command_buffer[1] - 0x30;
+			}
+			// pass through
 		case CMD_RENAME:
 		case CMD_SCRATCH:
 		case CMD_CD:
 		case CMD_MKDIR:
 		case CMD_RMDIR:
-      case CMD_VALIDATE:
-      case CMD_COPY:
-      case CMD_DUPLICATE:
-      case CMD_NEW:
+      		case CMD_VALIDATE:
+      		case CMD_COPY:
+      		case CMD_DUPLICATE:
+      		case CMD_NEW:
 			// pass-through commands
 			// those are just being passed to the provider
 			// nameinfo cmd enum definition such that wireformat matches it
