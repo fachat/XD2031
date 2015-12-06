@@ -3,6 +3,8 @@ This file describes how to build and use the XD-2031 firmware.
 Currently supported hardware:
 	- XS-1541
 	- petSD
+	- petSD2
+	- sockserv (for firmware tests only)
 
 Note that there are some subdirectories for "avr", or "xs1541", which apply
 to the architecture (like "avr") or the device (like "xs1541"). A device 
@@ -16,7 +18,16 @@ Type
 
 	make
 
-On a Linux box with AVR cross-compiler installed
+On a Linux box with AVR cross-compiler installed to compile the default (xs1541)
+device, or 
+
+	DEVICE=<device> make
+
+to build your target. For example
+
+	DEVICE=sockserv make
+
+builds the PC version of the firmware required for the firmware tests.
 
 
 INSTALLATION
