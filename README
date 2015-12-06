@@ -13,6 +13,7 @@ Both communicate via a serial line.
 Currently this hardware is supported:
 	- XS-1541 	Communication via serial line over USB
 	- petSD   	Communication via serial line over USB
+	- petSD2   	Communication via serial line over USB
 
 For more information see the README files in the subdirectories
 
