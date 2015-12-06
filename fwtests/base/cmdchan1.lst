@@ -1,0 +1,13 @@
+
+
+  100 d=8
+ 1000 open2,d,1,"file"
+ 1100 open1,d,15
+ 1120 input#1,a,b$,c,d:print a,b$,c,d
+ 1200 close1
+ 1250 print#2,"test"
+ 1300 close2
+
+ 9900 for i=0 to 10000:next
+ 9999 poke2,2:sys2
+

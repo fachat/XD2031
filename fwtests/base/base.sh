@@ -20,17 +20,17 @@ echo "THISDIR=$THISDIR"
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-TESTFILES=""
+TESTFILES="base.d64"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES=""
+COMPAREFILES="base.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v"
+SERVEROPTS="-v -A0:fs=base.d64"
 
 #firmware options
 #FWOPTS=""
