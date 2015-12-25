@@ -1,6 +1,6 @@
 
 
-dsk2file.prg ==0401==
+;dsk2file ==0401==
     0 rem 1541/cbm disk to .d64/dump-file
     1 rem (c) 1998 andre fachat
     2 rem
@@ -18,15 +18,16 @@ dsk2file.prg ==0401==
   210 input"unit to write to";uw:if uw<8 or uw>15 then 210
   215 input"drive to write to";dw
   220 input"filename to create";fi$
+  225 open4,uw,15
   230 open1,uw,1,chr$(48+dw)+":"+fi$
-  235 open2,uw,15:input#2,a,b$,c,d:printa;b$;c;d:close2
+  235 input#4,a,b$,c,d:printa;b$;c;d
   237 if a then print"error opening dump file!":end
   240 open2,ur,15,"i0:":open3,ur,3,"#"
   250 for t=1 to 100:for s=0 to 100
   255 gosub 1000
   260 if a<66 then nexts
   270 if a<70 and s>0 then next t
-  280 close1:close2:close3
+  280 close1:close3:close2:close4
   290 print"done!":print"got";ne;" bad blocks"
   300 end
  1000 print#2,"u1";3;dr;t;s
