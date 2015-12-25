@@ -349,10 +349,11 @@ FS_SETOPT
 	The most useful command is thus: iec:U=9 to set the unit number of the device on the
 	IEC bus to 9. This is initiated on the server by a "-Xiec:U=9" command line parameter.
 
-	FS_SETOPT packets can be sent any time. This is especially working when the server
-	is restarted and the X-command line parameter has to be sent to the device.
+	FS_SETOPT packets can be sent any time. This is especially important when the server
+	is restarted and the X-command line parameter is again sent to the device by the
+	server, noticing the reset (via FS_RESET).
 
-	Note that this created a reentry problem once, but blocks further receive during
+	Note that this created a reentry problem once, but now blocks further receive during
 	command execution - this may be important on later extensions.
 
 
@@ -412,6 +413,11 @@ FS_GETDATIM
 	date and time on the server. Can be used to adjust the local RTC chip (where
 	applicable)
 
+FS_CHARSET
+	Send the zero-terminated name of the character set the device wants to use to talk to the
+	server. Currently only "ASCII" and "PETSCII" are allowed. Server default is "ASCII".
+	With this command character conversions can be avoided, e.g. by sending PETSCII names from
+	the firmware so they can be created in a Dxx file.
 
 Examples
 ========
