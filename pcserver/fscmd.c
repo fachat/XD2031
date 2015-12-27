@@ -54,6 +54,7 @@
 #include "channel.h"
 #include "serial.h"
 #include "handler.h"
+#include "cmdnames.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -67,51 +68,6 @@ static void cmd_dispatch(char *buf, serial_port_t fs);
 static void write_packet(serial_port_t fd, char *retbuf);
 
 static int user_interface_enabled = true;
-
-//------------------------------------------------------------------------------------
-// debug log helper
-
-#if defined DEBUG_CMD || defined DEBUG_WRITE
-
-const char *nameofcmd(int cmdno) {
-	switch (cmdno) {
-	case FS_TERM:		return "TERM";
-	case FS_OPEN_RD:	return "OPEN_RD";
-	case FS_OPEN_WR:	return "OPEN_WR";
-	case FS_OPEN_RW:	return "OPEN_RW";
-	case FS_OPEN_AP:	return "OPEN_AP";
-	case FS_OPEN_OW:	return "OPEN_OW";
-	case FS_OPEN_DR:	return "OPEN_DR";
-	case FS_READ:		return "READ";
-	case FS_WRITE:		return "WRITE";
-	case FS_WRITE_EOF:	return "WRITE_EOF";
-	case FS_REPLY:		return "REPLY";
-	case FS_DATA:		return "DATA";
-	case FS_DATA_EOF:	return "DATA_EOF";
-	case FS_SEEK:		return "SEEK";
-	case FS_CLOSE:		return "CLOSE";
-	case FS_MOVE:		return "MOVE";
-	case FS_DELETE:		return "DELETE";
-	case FS_FORMAT:		return "FORMAT";
-	case FS_CHKDSK:		return "CHKDSK";
-	case FS_RMDIR:		return "RMDIR";
-	case FS_MKDIR:		return "MKDIR";
-	case FS_CHDIR:		return "CHDIR";
-	case FS_ASSIGN:		return "ASSIGN";
-	case FS_SETOPT:		return "SETOPT";
-	case FS_RESET:		return "RESET";
-	case FS_BLOCK:		return "BLOCK";
-	case FS_POSITION:	return "POSITION";
-	case FS_GETDATIM:	return "GETDATIM";
-	case FS_CHARSET:	return "CHARSET";
-	case FS_COPY:    	return "COPY";
-	case FS_DUPLICATE: 	return "DUPLICATE";
-	case FS_INITIALIZE: 	return "INITIALIZE";
-	default:		return "???";
-	}
-}
-
-#endif
 
 
 //------------------------------------------------------------------------------------

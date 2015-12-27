@@ -3,18 +3,18 @@ init
 message testing OPEN of non-existing file with L not given
 
 # open REL file
-send 03 .len 02 00 52 45 4c 32 00 54 3d 4c 00
+send :FS_OPEN_RW .len 02 00 52 45 4c 32 00 54 3d 4c 00
 # file not found error
-expect 09 .len 02 32
+expect :FS_REPLY .len 02 32
 
 message testing OPEN of existing file with L not given
 
 # open REL file
-send 03 .len 02 00 52 45 4c 31 00 54 3d 4c 00
-expect 09 .len 02 02 7f 00
+send :FS_OPEN_RW .len 02 00 52 45 4c 31 00 54 3d 4c 00
+expect :FS_REPLY .len 02 02 7f 00
 
 # close file
-send 0c .len 02
-expect 09 .len 02 00
+send :FS_CLOSE .len 02
+expect :FS_REPLY .len 02 00
 
 

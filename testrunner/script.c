@@ -36,6 +36,7 @@
 #include "log.h"
 #include "registry.h"
 #include "script.h"
+#include "cmdnames.h"
 
 
 // -----------------------------------------------------------------------
@@ -307,6 +308,25 @@ int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 				outp += l;
 			} else {
 				outp += scriptlets[cmd].outlen;
+			}
+		} else
+		if ((*p) == ':') {
+			// find constant value
+			p++;
+			if (p[0] == 'F' && p[1] == 'S' && p[2] == '_') {
+				int l = 3; while (isalnum(p[l]) || p[l]=='_') { l++; };
+				const char *constname = mem_alloc_strn(p, l);
+				int cmdno = numofcmd(constname+3);
+				p += l;
+				if (cmdno < 0) {
+					log_error("Could not parse constant ('%s') as command!\n", constname);
+				} else {
+					buffer[outp++] = (char)cmdno;	
+					
+				}
+				mem_free(constname);
+			} else {
+				log_error("Could not parse constant ('%s')!\n", p);
 			}
 		} else
 		if ((*p) == 0) {

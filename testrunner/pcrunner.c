@@ -91,7 +91,7 @@ static int parse_init(line_t *line, const char *in, char **outbuf, int *outlen) 
 	(void) line; // silence
 	*outlen = 3;
 	*outbuf = mem_alloc_c(3, "init_reset_response_buffer");
-	(*outbuf)[0] = 0x16;
+	(*outbuf)[0] = FS_RESET;
 	(*outbuf)[1] = 0x03;
 	(*outbuf)[2] = 0x7d;
 
