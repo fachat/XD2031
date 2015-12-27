@@ -64,6 +64,7 @@ void usage(int rv) {
                 "               assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
+		"               Note: do not use a trailing '/' on a path.\n"
 		"   -X<bus>:<cmd>\n"
 		"               send an 'X'-command to the specified bus, e.g. to set\n"
 		"               the IEC bus to device number 9 use:\n"
@@ -77,6 +78,10 @@ void usage(int rv) {
 		"   -D          run as daemon, disable user interface\n"
 		"   -v          enable debug log output\n"
 		"   -?          gives you this help text\n"
+		"\n"
+		"Typical examples are:\n"
+		"   fsser -A0:fs=/home/user/8bitdir .\n"
+		"   fsser -d /dev/ttyUSB0 -A0:=/home/user/8bitdir/somegame.d64 /tmp\n"
 	);
 	exit(rv);
 }
@@ -262,7 +267,12 @@ int main(int argc, char *argv[]) {
 		provider_assign(2, "fs",   "/usr/local/xd2031/tools", 1);
 		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", 1);
 		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", 1);
-	} else cmd_assign_from_cmdline(argc, argv);
+	} else {
+		if (cmd_assign_from_cmdline(argc, argv)) {
+			log_error("Error assigning drives! Aborting!\n");
+			usage(EXIT_RESPAWN_NEVER);
+		}
+	}
 
 	int res = cmd_loop(readfd, writefd);
 

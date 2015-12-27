@@ -64,8 +64,8 @@ static int8_t classic_dirmatch(const char *x, const char *y, const char **outpat
 	int i = 0;	// current position
 	char a,b;
 
-	printf("classic dir-enabled match between '%s' (%02x) and '%s' (%02x)\n", 
-				(char*)x, x[0], (char*)y, y[0]);
+	//printf("classic dir-enabled match between '%s' (%02x) and '%s' (%02x)\n", 
+	//			(char*)x, x[0], (char*)y, y[0]);
 
 	while(1) {
 		a = x[i];

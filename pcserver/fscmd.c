@@ -168,9 +168,16 @@ static int cmd_assign(const char *assign_str, int from_cmdline) {
 					provider_len = p - assign_str - 2;
 					provider_parameter = p + 1;
 
+					// make provider name a null-terminated string
 					char *pname = mem_alloc_c(provider_len + 1, "provider_name");
 					strncpy (pname, provider_name, provider_len+1);
 					pname[provider_len] = 0;
+
+					// check trailing '/' on provider parameter
+					int l = strlen(provider_parameter);
+					if (l > 0 && provider_parameter[l-1] == '/') {
+						provider_parameter[l-1] = 0;
+					}
 
 					log_debug("cmdline_assign '%s' = '%s'\n", pname, 
 						provider_parameter);
@@ -194,9 +201,9 @@ static int cmd_assign(const char *assign_str, int from_cmdline) {
 
 /**
  * take the command line, search for "-A<driv>=<name>" parameters and assign
- * the value
+ * the value; returns error code
  */
-void cmd_assign_from_cmdline(int argc, char *argv[]) {
+int cmd_assign_from_cmdline(int argc, char *argv[]) {
 
 	int err = CBM_ERROR_OK;
 
@@ -224,10 +231,12 @@ void cmd_assign_from_cmdline(int argc, char *argv[]) {
 
 			if (err != CBM_ERROR_OK) {
 				log_error("%d Error assigning %s\n", err, argv[i]+2);
+				break;
 			}
 			continue;
 		}
 	}
+	return err;
 }
 
 static void cmd_sync(serial_port_t readfd, serial_port_t writefd) {
