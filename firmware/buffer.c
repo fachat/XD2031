@@ -218,7 +218,7 @@ uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
 
         uint16_t lengthread = 0;
 
-        uint8_t ptype = FS_REPLY;
+        uint8_t ptype = FS_DATA;
 
         uint8_t rv = CBM_ERROR_OK;
 
