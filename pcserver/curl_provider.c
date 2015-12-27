@@ -32,6 +32,8 @@
  * curl-library-based internet access filesystem.
  */
 
+#define DEBUG_CURL
+
 #include "os.h"
 
 #include <curl/curl.h>

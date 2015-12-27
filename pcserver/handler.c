@@ -552,7 +552,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 		case FS_OPEN_RW:
 			if (file == NULL) {
 				if (pars.filetype == FS_DIR_TYPE_REL && pars.recordlen == 0) {
-					err = CBM_ERROR_RECORD_NOT_PRESENT;
+					err = CBM_ERROR_FILE_NOT_FOUND;
 					break;
 				}
 				err = dir->handler->create(dir, &file, pattern, &pars, type);

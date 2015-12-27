@@ -37,7 +37,7 @@
 /// Version number string, will be added to message 73
 const char IN_ROM versionstr[] = SW_NAME " V" VERSION LONGVERSION "/" HW_NAME;
 
-const char IN_ROM STR_OK[]                   = " OK";
+const char IN_ROM STR_OK[]                   = "OK";
 const char IN_ROM STR_SCRATCHED[]            = "FILES SCRATCHED";
 const char IN_ROM STR_READ[]                 = "READ ERROR";
 const char IN_ROM STR_WRITE_PROTECT[]        = "WRITE PROTECT ERROR";
@@ -116,7 +116,7 @@ void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sec
 	err->errorno = errornum;
   	err->readp = 0;
 
-	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
+	rom_sprintf(msg, IN_ROM_STR("%2.2d, "), errornum);	// error number
 	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
 	if (drive < 0) {
 		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track%100, sector%100); // track & sector
