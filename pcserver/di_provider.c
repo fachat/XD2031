@@ -1072,6 +1072,7 @@ static int di_scan_track(di_endpoint_t *diep, uint8_t Track, int is_linear)
 	// number of free blocks in track not null
 	if (is_linear) {
 		Sector = di_scan_BAM_linear(di, bam, 0);
+		di_alloc_BAM(bam, Sector);
 	} else {
 		Sector = di_scan_BAM_interleave(di,bam,Interleave);
 	}
