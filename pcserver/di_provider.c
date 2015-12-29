@@ -1202,7 +1202,12 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
          return di->LBA(diep->CurrentTrack,Sector);
       }
       // other tracks start with sector = 0
-      StartSector = 0;
+      if (diep->DI.Sides > 1) {
+      	StartSector = 0;
+      } else {
+      	StartSector = 1;
+      }
+      is_interleave = 0;
    } while (di_next_track(diep) != StartTrack);
    return -1; // No free block -> DISK FULL
 }
