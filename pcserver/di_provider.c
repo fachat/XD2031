@@ -921,6 +921,9 @@ static int di_scan_BAM_interleave(Disk_Image_t *di, uint8_t *bam, uint8_t start,
    	uint8_t i; // interleave index
    	uint8_t s; // sector index
 
+	log_debug("di_scan_BAM_interleave(bam(%02x %02x %02x %02x), start=%d, interleave=%d)\n", 
+		bam[0], bam[1], bam[2], bam[3], start, interleave);
+
    	// DOS 8250 @ $f9ac
 
   	// note that the algorithm we try to emulate here is rather convoluted...
@@ -1074,7 +1077,7 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
 // di_scan_track
 // *************
 
-static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector, int is_linear)
+static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector, int is_interleave)
 {
    int   Sector;
    int   Interleave;
@@ -1084,14 +1087,21 @@ static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector
 
    // log_debug("di_scan_track(%d)\n",Track);
 
-   if (Track == di->DirTrack) Interleave = di->DirInterleave;
-   else                       Interleave = di->DatInterleave;
+   if (Track == di->DirTrack) {
+	Interleave = di->DirInterleave;
+   } else {
+	if (is_interleave > 1) {
+	        Interleave = 5;
+	} else {
+	        Interleave = di->DatInterleave;
+	}
+   }
 
    di_calculate_BAM(diep, Track, &bam, &fbl);
 
    if (fbl[0]) {
 	// number of free blocks in track not null
-	if (is_linear) {
+	if (!is_interleave) {
 		Sector = di_scan_BAM_linear(di, bam, StartSector);
 		di_alloc_BAM(bam, Sector);
 	} else {
@@ -1103,6 +1113,10 @@ static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector
    if (Sector >= 0) {
 	--fbl[0]; // decrease free blocks counter
    }
+
+   log_debug("di_scan_track(track=%d, startsector=%d, interleave=%d) -> %d (bam=%02x %02x %02x %02x)\n",
+	Track, StartSector, Interleave, Sector, bam[0], bam[1], bam[2], bam[3]);
+
    return Sector;
 }
 
@@ -1165,7 +1179,7 @@ static uint8_t di_next_track(di_endpoint_t *diep)
 // di_find_free_block
 // ******************
 
-static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector, int is_linear)
+static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector, int is_interleave)
 {
    int  StartTrack;     // here begins the scan
    int  Sector;         // sector of next free block
@@ -1177,7 +1191,7 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
 
    do
    {
-      Sector = di_scan_track(diep,diep->CurrentTrack, StartSector, is_linear);
+      Sector = di_scan_track(diep,diep->CurrentTrack, StartSector, is_interleave);
       if (Sector >= 0)
       {
          di_sync_BAM(diep);
@@ -1187,6 +1201,8 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
          log_debug("di_find_free_block (%d/%d)\n",f->cht,f->chs);
          return di->LBA(diep->CurrentTrack,Sector);
       }
+      // other tracks start with sector = 0
+      StartSector = 0;
    } while (di_next_track(diep) != StartTrack);
    return -1; // No free block -> DISK FULL
 }
@@ -1209,7 +1225,7 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    file->Slot.ss_sector = 0;
    file->Slot.recordlen = pars->recordlen;
    if (pars->filetype != FS_DIR_TYPE_REL) {
-   	if (di_find_free_block(diep,file, 0, 1) < 0) {
+   	if (di_find_free_block(diep,file, 0, 0) < 0) {
 		return CBM_ERROR_DISK_FULL;
 	}
    	file->Slot.start_track  = file->cht;
@@ -1691,7 +1707,7 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 		// only update link chain if we're not in the middle of a file
       		f->chp = 0;
       		oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
-      		block = di_find_free_block(diep,f, 0, 0);
+      		block = di_find_free_block(diep,f, 0, 1);
       		if (block < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
@@ -2094,6 +2110,75 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		ssg_dirty[i] = 0;
 	}
 
+   	// read first side sector
+	uint8_t track = f->Slot.ss_track;
+	uint8_t sector = f->Slot.ss_sector;
+
+	// this if() is only to determine last_used_sector for the di_find_free_block() below
+	if (track != 0) {
+		int ss_tr = 0;
+		int ss_sect = 0;
+
+		// find out which track/sector to use to start our search for a new sector
+		if (diep->DI.HasSSB) {
+			// do we have a super side sector?
+			// read it 
+			di_fseek_tsp(diep, track, sector, 0);
+			di_fread(supersector, 1, 256, diep->Ip);
+
+			// find the last side sector group chain
+			o = SSS_OFFSET_SSB_POINTER;
+			for (super = 0; super < SSS_INDEX_SSB_MAX && supersector[o] != 0; super++, o+=2);
+
+			if (super > 0) {
+				super--;
+		
+				// note: may be null if super ran off the list above	
+				ss_tr = supersector[SSS_OFFSET_SSB_POINTER + (super << 1)];
+				ss_sect = supersector[SSS_OFFSET_SSB_POINTER + (super << 1) + 1];
+			} else {
+				// super side sector but no side sector group
+				ss_tr = 0;
+			}
+		} else {
+
+			ss_tr = track;
+			ss_sect = sector;
+		}
+
+		if (ss_tr != 0) {
+   			uint8_t sidesector[256];
+
+			log_debug("Found First SS block at %d/%d\n", ss_tr, ss_sect);
+			// read it 
+			di_fseek_tsp(diep, ss_tr, ss_sect, 0);
+			di_fread(sidesector, 1, 256, diep->Ip);
+
+			// walk the side sector chain to the last side sector
+			// here we have the first side sector of the correct side sector chain in the buffer.
+			for (side = 0; side < SSG_SIDE_SECTORS_MAX && (sidesector[SSB_OFFSET_SSG + (side << 1)] != 0); side ++) {
+				// read side sector number
+				ss_tr = sidesector[SSB_OFFSET_SSG + (side << 1)];
+				ss_sect = sidesector[SSB_OFFSET_SSG + 1 + (side << 1)];
+			}
+			log_debug("Found SS block at %d/%d\n", ss_tr, ss_sect);
+			if (ss_tr != 0) {
+				// read it 
+				di_fseek_tsp(diep, ss_tr, ss_sect, 0);
+				di_fread(sidesector, 1, 256, diep->Ip);
+		
+				// find the last block in the side sector
+				for (int offset = 0; offset < SSB_INDEX_SECTOR_MAX && (sidesector[SSB_OFFSET_SECTOR + (offset << 1)] != 0); offset ++) {
+					ss_tr = sidesector[SSB_OFFSET_SECTOR + (offset << 1)];
+					ss_sect = sidesector[SSB_OFFSET_SECTOR + 1 + (offset << 1)];
+				}
+				log_debug("Found last data block at %d/%d\n", ss_tr, ss_sect);
+				last_used_sector = ss_sect;
+			}
+		}
+	}
+
+
 	// allocate new data block
 	// we're going to do that anyway, and the original DOS allocates it before the
 	// side sector, so we do as well.
@@ -2103,13 +2188,13 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	// file does not yet exist
 	if (f->Slot.start_track == 0) {
 		// note: linear scan, NOT interleaved as with later blocks
-		if (di_find_free_block(diep, f, 0, 1) < 0) {
+		if (di_find_free_block(diep, f, 0, 0) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.start_track = f->cht;
 		f->Slot.start_sector = f->chs;
 	} else {
-		if (di_find_free_block(diep, f, 0, 0) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, 2) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 	}
@@ -2122,10 +2207,6 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	// -----------------------------------------------
    	// find the first non-empty side sector group
   
-   	// read first side sector
-	uint8_t track = f->Slot.ss_track;
-	uint8_t sector = f->Slot.ss_sector;
-
 
 	// do we have a super side sector?
 	// read it resp. set it up to write (if we need to create it)
@@ -2158,7 +2239,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 		// no side sector group so far, create the first one
 		// create super side sector block
-		if (di_find_free_block(diep, f, last_used_sector, 0) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, 1) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.size++;
@@ -2213,7 +2294,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	if (diep->DI.HasSSB) {
 		if (sss_track == 0) {
 			// create super side sector block (interleaved access)
-			if (di_find_free_block(diep, f, last_used_sector, 0) < 0) {
+			if (di_find_free_block(diep, f, last_used_sector, 1) < 0) {
 				return CBM_ERROR_DISK_FULL;
 			}
 			f->Slot.size++;
@@ -2290,7 +2371,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		log_debug(" - allocate new side sector block\n");
 
 		// allocate a new block for a side sector
-		if (di_find_free_block(diep, f, 0, 0) < 0) {
+		if (di_find_free_block(diep, f, 0, 1) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.size++;
