@@ -1090,11 +1090,7 @@ static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector
    if (Track == di->DirTrack) {
 	Interleave = di->DirInterleave;
    } else {
-	if (is_interleave > 1) {
-	        Interleave = 5;
-	} else {
-	        Interleave = di->DatInterleave;
-	}
+        Interleave = di->DatInterleave;
    }
 
    di_calculate_BAM(diep, Track, &bam, &fbl);
