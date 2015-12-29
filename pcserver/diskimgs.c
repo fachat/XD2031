@@ -78,7 +78,7 @@ static int LBA82(int t, int s)
 static int LBA81(int t, int s)
 {
    if((s < 0) || (s > 39) || (t < 1) || (t > 80)) return -1;
-   return s + (t-1) * 40;
+  return s + (t-1) * 40;
 }
 
 // Disk image definitions
@@ -103,7 +103,7 @@ static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA6
 static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};
 static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LBA81, 40, 3, { 40, 1, 40, 2,  0, 0,  0, 0 }, 0};
 static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 7,  0, 2083,  726, LBA80, 39, 1, { 38, 0, 38, 3,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 8,  1, 4166, 4126, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
+static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 5,  1, 4166, 4126, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
 
 
 int diskimg_identify(Disk_Image_t *di, unsigned int filesize) {
