@@ -550,7 +550,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   }
 
   // make sure cht/chs are valid
-  if (!di_update_chx(diep, f, 0)) {
+//  if (!di_update_chx(diep, f, 0)) {
     // not EOF, i.e. cht is not zero
 
   if (f->access_mode == FS_OPEN_WR ||
@@ -588,7 +588,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
   } else {
     log_debug("Closing read only file, no sync required.\n");
   }
-  } // end if update_chx
+//  } // end if update_chx
 
   	if (f->dospattern != NULL) {
 		// discard const
@@ -1790,12 +1790,6 @@ static int di_writefile(file_t *fp, const char *buf, int len, int is_eof)
       if (di_write_byte(diep, file, (uint8_t)buf[i])) {
 	return -CBM_ERROR_DISK_FULL;
       }
-   }
-   if (file->Slot.recordlen == 0) {
-	   // update channel pointer (because di_close doesn't)
-	   di_fseek_tsp(diep,file->cht,file->chs,1);
-	   uint8_t p = file->chp + 1;
-	   di_fwrite(&p,1,1,diep->Ip);
    }
 
    return CBM_ERROR_OK;
