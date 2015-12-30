@@ -196,7 +196,11 @@ else
                if test -f "$i".frs ; then
                        	TESTSCRIPTS="$TESTSCRIPTS $i.frs";
                else
-                       	TESTSCRIPTS="$TESTSCRIPTS $i";
+			if test -f "$i"-"${FILTER}".frs; then
+                       		TESTSCRIPTS="$TESTSCRIPTS $i-${FILTER}.frs";
+			else 
+                       		TESTSCRIPTS="$TESTSCRIPTS $i";
+			fi
                fi
         done;
 fi;
