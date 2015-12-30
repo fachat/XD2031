@@ -22,7 +22,15 @@ f254-4040.frs: File blk.d64 differs!
 f255-4040.frs: Ok
 f255-4040.frs: File blk.d64 differs!
 ./filetests-d82.sh -C -q
+f168488-1001.frs: Ok
+f168488-1001.frs: File blk.d82 differs!
+	==> DOS has residue of previous block written to last block
 f253-1001.frs: Ok
 f254-1001.frs: Ok
 f255-1001.frs: Ok
+f507-1001.frs: Ok
+f508-1001.frs: Ok
+f509-1001.frs: Ok
+f509-1001.frs: File blk.d82 differs!
+	==> DOS has residue of previous block written to last block
 

@@ -41,6 +41,8 @@ function usage() {
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
 	echo "       -q                      will suppress any output except whether test was successful"
+	echo "       +e                      create an expected DIFF that is compared to later outcomes"
+	echo "       -e                      ignore an expected DIFF and show the real results"
 	echo "       -h                      show this help"
 }
 
@@ -49,14 +51,38 @@ function hexdiff() {
 	if ! cmp -b "$1" "$2"; then
                 tmp1="$1".hex;  #`mktemp`
                 tmp2="$2".hex;  #`mktemp`
+		tmp3="$3".expected
+		tmp4="$3".actual
 
 		hexdump -C "$1" > $tmp1
 		hexdump -C "$2" > $tmp2
 
-		diff -u $tmp1 $tmp2
-		diffres=$?
+		#diff -u $tmp1 $tmp2 | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' > $tmp4 # actual
+		echo "--- $tmp1" | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' > $tmp4 # actual
+		echo "+++ $tmp2" | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' >> $tmp4 # actual
+		diff -u $tmp1 $tmp2 | tail -n +3 >> $tmp4 # actual
+		diffres=1	# (as cmp above already told us we're different)
+		if [ $DIFFCREATE -eq 1 ]; then 
+			cp $tmp4 $tmp3
+		fi
+		if [ $DIFFIGNORE -eq 1 -o ! -f $tmp3 ]; then
+			cat $tmp4;	# actual
+		else
+			# compare actual with expected
+			diff -u $tmp3 $tmp4 
+			diffres=$?
+                        if test $? -eq 0; then
+				diffres=2
+				echo "Comparing $1 with $2 gave the expected difference"
+			fi
+		fi;
 
-		rm $tmp1 $tmp2
+		rm $tmp1 $tmp2 $tmp4
+	else
+		# if expected file exists, but no more error, then warn
+		if [ -f $tmp3 ]; then
+			echo "WARN: no difference found, but expected errors file $tmp3 exists"
+		fi;
 	fi;
 	return $diffres
 }
@@ -68,6 +94,9 @@ RDEBUG=""
 CLEAN=1
 QUIET=0
 LOGFILE=""
+
+DIFFCREATE=0
+DIFFIGNORE=0
 
 TMPDIR=`mktemp -d`
 OWNDIR=1	
@@ -130,6 +159,14 @@ while test $# -gt 0; do
 	TMPDIR="$2"
 	OWNDIR=0
 	shift 2;
+	;;
+  +e)
+	DIFFCREATE=1
+	shift;
+	;;
+  -e)
+	DIFFIGNORE=1
+	shift;
 	;;
   -?)
 	echo "Unknown option $1"
@@ -272,6 +309,9 @@ for script in $TESTSCRIPTS; do
 		fi
 		SERVERPID=$!
 
+		# wait till server is up, just to be sure
+		sleep 1;
+
 		############################################
 		# start firmware
 		echo "Starting firmware as: $FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET"
@@ -297,6 +337,8 @@ for script in $TESTSCRIPTS; do
 			$FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET &
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
+
+			sleep 1; # just in case
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script;
@@ -338,22 +380,25 @@ for script in $TESTSCRIPTS; do
 		testname=`basename $script .frs`
 		for i in $COMPAREFILES; do 
 			NAME="${THISDIR}/${i}-${testname}"
+			result=0;
 			if test -f ${NAME}; then
 				echo "Comparing file ${i} with ${NAME}"
-				hexdiff ${NAME} $TMPDIR/${i}
-                                if test $? -ne 0; then
-                                        echo "$script: File ${i} differs!" >&5
-                                fi;
+				hexdiff ${NAME} $TMPDIR/${i} ${NAME}
+				result=$?
+			else
+			    if test -f ${NAME}.gz; then
+                                echo "Comparing file ${i} with ${NAME}.gz"
+                                gunzip -c ${NAME}.gz > ${TMPDIR}/shouldbe_${i}
+                                hexdiff ${TMPDIR}/shouldbe_${i} ${TMPDIR}/${i} ${NAME}
+				result=$?
+                                rm -f ${TMPDIR}/shouldbe_${i}
+			    fi
 			fi
-			if test -f ${NAME}.gz; then
-                                 echo "Comparing file ${i} with ${NAME}.gz"
-                                 gunzip -c ${NAME}.gz > ${TMPDIR}/shouldbe_${i}
-                                 hexdiff ${TMPDIR}/shouldbe_${i} ${TMPDIR}/${i}
-                                 if test $? -ne 0; then
-                                        echo "$script: File ${i} differs!" >&5
-                                 fi;
-                                 rm -f ${TMPDIR}/shouldbe_${i}
-			fi
+                        if test $result -eq 1; then
+                                 echo "$script: File ${i} differs!" >&5
+                        elif test $result -eq 2; then
+                                 echo "$script: File ${i} differs (as expected)!" >&5
+		 	fi
 		done;
 	fi
 
