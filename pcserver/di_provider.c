@@ -1709,7 +1709,7 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 		// only update link chain if we're not in the middle of a file
       		f->chp = 0;
       		oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
-      		block = di_find_free_block(diep,f, 0, 1);
+      		block = di_find_free_block(diep,f, f->chs, 1);
       		if (block < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
@@ -1790,6 +1790,12 @@ static int di_writefile(file_t *fp, const char *buf, int len, int is_eof)
       if (di_write_byte(diep, file, (uint8_t)buf[i])) {
 	return -CBM_ERROR_DISK_FULL;
       }
+   }
+   if (file->Slot.recordlen == 0) {
+	   // update channel pointer (because di_close doesn't)
+	   di_fseek_tsp(diep,file->cht,file->chs,1);
+	   uint8_t p = file->chp + 1;
+	   di_fwrite(&p,1,1,diep->Ip);
    }
 
    return CBM_ERROR_OK;
