@@ -234,6 +234,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		}
 	}
 
+
 	// add file type
 	if (type == FS_DIR_MOD_DIR) {
 		outp = append(asciiconv, outp, "dir  ");
@@ -250,7 +251,12 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 			outp = append(asciiconv, outp, "---");
 		}
 		*outp++ = (attribs & FS_DIR_ATTR_LOCKED) ? '<' : ' ';
-		*outp++ = ' ';
+		*outp = ' '; outp++;
+		
+		// spaces after file type compensating for block size
+		if (lineno > 10) { *outp = ' '; outp++; }
+		if (lineno > 100) { *outp = ' '; outp++; }
+		if (lineno > 1000) { *outp = ' '; outp++; }
 	} else
 	if (type == FS_DIR_MOD_FRE || type == FS_DIR_MOD_FRS) {
 		outp = append(asciiconv, outp, "blocks free."); 
