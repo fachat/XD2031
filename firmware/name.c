@@ -205,10 +205,13 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 
 	if (!result->access) {
 		// if access is not set on a REL file, it's read & write
-		if (result->type == 'L') result->access = 'X';
-		else                     result->access = 'R';
+		if (result->type == 'L') {
+			result->access = 'X';
+		}
 	}
-	if ((p = (uint8_t *)strchr((char *)result->name,','))) *p = 0; // cut off options
+	if ((p = (uint8_t *)strchr((char *)result->name,','))) {
+		*p = 0; // cut off options
+	}
 	result->namelen = strlen((char *)result->name);
 }
 
@@ -230,6 +233,7 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	int8_t len = in->command_length;	//  includes the zero-byte
 
 	result->access = 0;
+	result->type = 0;
 
 	// copy over command to the end of the buffer, so we can
 	// construct it from the parts at the beginning after parsing it
@@ -248,12 +252,14 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint) {
 	// init output
 	memset(result, 0, sizeof(*result));
 	result->drive  = NAMEINFO_UNUSED_DRIVE;
-	for (uint8_t i=0; i < MAX_NAMEINFO_FILES ; ++i)
+	for (uint8_t i=0; i < MAX_NAMEINFO_FILES ; ++i) {
 		result->file[i].drive = NAMEINFO_UNUSED_DRIVE;
+	}
 	result->cmd    = CMD_NONE;	// no command
 
-	if (parsehint & PARSEHINT_COMMAND) parse_cmd(p, len, result);
-	else {
+	if (parsehint & PARSEHINT_COMMAND) {
+		parse_cmd(p, len, result);
+	} else {
 		result->name = p;	// full name
 		result->namelen = len;	// default
 		parse_open(p, parsehint & PARSEHINT_LOAD, len, result);

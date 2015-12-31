@@ -84,14 +84,18 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	rtconfig_t *rtconf = &(bus->rtconf);
 
 #ifdef DEBUG_FILE
-	debug_printf("OPEN FILE: FOR CHAN: %d WITH NAME: %s\n",
-		channel_no, (char*)&(command->command_buffer));
+	debug_printf("OPEN FILE: FOR CHAN: %d WITH NAME: '%s', OPENFLAG=%d\n",
+		channel_no, (char*)&(command->command_buffer), openflag);
 #endif
 
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
 	parse_filename(command, &nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
+
+#ifdef DEBUG_FILE
+	debug_printf("  PARSE -> ACCESS=%c, TYPE=%c\n", nameinfo.access, nameinfo.type);
+#endif
 
 	// drive handling needed for error message drive
 	if (nameinfo.drive == NAMEINFO_LAST_DRIVE) {
@@ -134,6 +138,29 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	uint8_t type = FS_OPEN_RD;
 
+	// file access default
+	if (nameinfo.access == 0) {
+	 	if (openflag == OPENFLAG_LOAD) {
+			nameinfo.access = 'R';
+		} else
+		if (openflag == OPENFLAG_SAVE) {
+			nameinfo.access = 'W';
+		}
+	}
+
+	// file type defaults
+	if (nameinfo.type == 0) {
+		// do we create a file (access=='W')?
+		if (nameinfo.access == 'W') {
+			// write (like save)
+			if (openflag == OPENFLAG_SAVE) {
+				nameinfo.type = 'P';
+			} else {
+				nameinfo.type = 'S';
+			}
+		}
+	}
+
 	if (nameinfo.access == 'X') {
 		// trying to open up a R/W channel
 		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
@@ -149,8 +176,8 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		type = FS_OPEN_DIRECT;
 	}
 
-	// either ",W" or secondary address is one, i.e. save
-	if ((nameinfo.access == 'W') || (openflag & OPENFLAG_SAVE)) {
+	// if ",W" or secondary address is one, i.e. save
+	if (nameinfo.access == 'W') {
 		type = FS_OPEN_WR;
 	}
 	if (nameinfo.access == 'A') {

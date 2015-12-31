@@ -440,8 +440,8 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 		provider_t *prov = (provider_t*) ep->ptype;
 		//provider_convto(prov)(name, convlen, name, convlen);
 		const char *options = get_options(inname + 1, namelen - 1);
-		log_info("OPEN %d (%d->%s:%s)\n", cmd, tfd, 
-			prov->name, name);
+		log_info("OPEN %d (%d->%s:%s,%s)\n", cmd, tfd,
+			prov->name, name, options);
 		rv = handler_resolve_file(ep, &fp, name, options, cmd);
 		if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
 			int record = fp->recordlen;
