@@ -1,0 +1,56 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create a seq files
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1015 rem open file with save
+ 1020 open2,u,1,"file1,s"
+ 1050 gosub 9000
+ 1070 close2
+ 1115 rem open file with ,w (creates seq not usr)
+ 1120 open2,u,2,"file2,w"
+ 1150 gosub 9000
+ 1170 close2
+ 1215 rem open file with ,w and ,p
+ 1220 open2,u,2,"file3,s,w"
+ 1250 gosub 9000
+ 1270 close2
+ 1315 rem open file with ,s (error as it tries to read - file not found)
+ 1320 open2,u,2,"file4,s"
+ 1350 gosub 9000
+ 1370 close2
+ 1315 rem open file with sa>1 no opts (err as it tries to read - f. not found)
+ 1320 open2,u,2,"file5"
+ 1350 gosub 9000
+ 1370 close2
+ 2015 rem open file with load (not ok, created above with u, not prg)
+ 2020 open2,u,0,"file1"
+ 2030 gosub 9000
+ 2040 close2
+ 2055 rem open file with load (ok, created above)
+ 2060 open2,u,0,"file1,s"
+ 2070 gosub 9000
+ 2080 close2
+ 2115 rem open file with ,r (ok, created above, but is seq)
+ 2120 open2,u,2,"file2,r"
+ 2150 gosub 9000
+ 2170 close2
+ 2215 rem open file with ,u,r (ok)
+ 2220 open2,u,2,"file2,s,r"
+ 2250 gosub 9000
+ 2270 close2
+ 2315 rem open file with ,s,r (ok, created above)
+ 2320 open2,u,2,"file3,s,r"
+ 2350 gosub 9000
+ 2370 close2
+ 3210 close1
+ 3230 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+
