@@ -43,15 +43,17 @@ function usage() {
 	echo "       -q                      will suppress any output except whether test was successful"
 	echo "       +e                      create an expected DIFF that is compared to later outcomes"
 	echo "       -e                      ignore an expected DIFF and show the real results"
+	echo "       +E                      create an expected ERR file that is compared to later outcomes"
+	echo "       -E                      ignore an expected ERR file and show the real results"
 	echo "       -h                      show this help"
 }
 
 function hexdiff() {
 	diffres=0
+	tmp3="$3".expected
 	if ! cmp -b "$1" "$2"; then
                 tmp1="$1".hex;  #`mktemp`
                 tmp2="$2".hex;  #`mktemp`
-		tmp3="$3".expected
 		tmp4="$3".actual
 
 		hexdump -C "$1" > $tmp1
@@ -82,6 +84,7 @@ function hexdiff() {
 		# if expected file exists, but no more error, then warn
 		if [ -f $tmp3 ]; then
 			echo "WARN: no difference found, but expected errors file $tmp3 exists"
+			diffres=3
 		fi;
 	fi;
 	return $diffres
@@ -97,6 +100,9 @@ LOGFILE=""
 
 DIFFCREATE=0
 DIFFIGNORE=0
+
+ERRCREATE=0
+ERRIGNORE=0
 
 TMPDIR=`mktemp -d`
 OWNDIR=1	
@@ -166,6 +172,14 @@ while test $# -gt 0; do
 	;;
   -e)
 	DIFFIGNORE=1
+	shift;
+	;;
+  +E)
+	ERRCREATE=1
+	shift;
+	;;
+  -E)
+	ERRIGNORE=1
 	shift;
 	;;
   -?)
@@ -280,10 +294,11 @@ done;
 
 for script in $TESTSCRIPTS; do
 
-	echo "Run script $script"
+	echo "====================== Running script $script" >&5
 
 	SSOCKET=ssocket_$script
 	CSOCKET=csocket_$script
+	RUNNERLOG=runnerlog_$script
 
 	# overwrite test files in each iteration, just in case
 	for i in $TESTFILES; do
@@ -310,11 +325,13 @@ for script in $TESTSCRIPTS; do
 		SERVERPID=$!
 
 		# wait till server is up, just to be sure
-		sleep 1;
+		sleep 0.5;
 
 		############################################
 		# start firmware
 		echo "Starting firmware as: $FIRMWARE $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET"
+
+		did_print_message=0;
 
 		# start testrunner after server/firmware, so we get the return value in the script
 		if test "x$RDEBUG" != "x"; then
@@ -329,7 +346,6 @@ for script in $TESTSCRIPTS; do
 			for i in $RDEBUG; do
 				echo "break $i" >> $DEBUGFILE
 			done;
-			#gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script " $RUNNER
 			gdb -x $DEBUGFILE -ex "run $FWOPTS -S $TMPDIR/$SSOCKET -C $TMPDIR/$CSOCKET" $FIRMWARE
 
 			RESULT=-1
@@ -338,19 +354,39 @@ for script in $TESTSCRIPTS; do
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
 
-			sleep 1; # just in case
+			sleep 0.5; # just in case
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script;
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tee $TMPDIR/$RUNNERLOG;
+			RESULT=${PIPESTATUS[0]}
 			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
-			RESULT=$?
+			#RESULT=$?
+			
+			if [ $ERRCREATE -eq 1 ]; then
+				echo "creating expected errors file at $THISDIR/${script}_expected"
+				cp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected
+			fi
+			if [ $ERRIGNORE -eq 0 ]; then
+				if [ -f $THISDIR/${script}_expected ]; then
+					# expected file exists
+					cmp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected
+					if [ $? -ne 0 ]; then
+						echo ">>> Expected errors differ!" >&5
+					else 
+						echo ">   Errors occured as expected!" >&5
+					fi
+					did_print_message=1;
+				fi
+			fi;
 		fi;
 
-                if test $RESULT -eq 0; then
-                        echo "$script: Ok" >&5
-                else
-                        echo "$script: errors: $RESULT" >&5
-                fi
+		if test $did_print_message -eq 0; then
+	                if test $RESULT -eq 0; then
+        	                echo "    Script Ok" >&5
+                	else
+                	        echo ">>> Script errors: $RESULT" >&5
+                	fi
+		fi
 
 		#kill -TERM $RUNNERPID $SERVERPID
 
@@ -395,9 +431,13 @@ for script in $TESTSCRIPTS; do
 			    fi
 			fi
                         if test $result -eq 1; then
-                                 echo "$script: File ${i} differs!" >&5
+                                 echo ">>> File ${i} differs!" >&5
                         elif test $result -eq 2; then
-                                 echo "$script: File ${i} differs (as expected)!" >&5
+                                 echo ">   File ${i} differs (as expected)!" >&5
+                        elif test $result -eq 3; then
+                                 echo ">>> File ${i} does not differ, but diff was expected!" >&5
+			else
+                                 echo "    File ${i} compare ok!" >&5
 		 	fi
 		done;
 	fi
@@ -406,13 +446,14 @@ for script in $TESTSCRIPTS; do
 		rm -f $TMPDIR/$SSOCKET $TMPDIR/$CSOCKET $DEBUGFILE;
 		rm -f $TMPDIR/$script;
 	fi
+
 done;
 
 if test $CLEAN -ge 2; then
 	echo "Cleaning up directory $TMPDIR"
 
 	for script in $TESTSCRIPTS; do
-		rm -f $TMPDIR/$script.log
+		rm -f $TMPDIR/$script.log $TMPDIR/runnerlog_$script
 	done;
 
 	# gzipped test files are unzipped
@@ -420,8 +461,8 @@ if test $CLEAN -ge 2; then
 		rm -f $TMPDIR/$i;
 	done;
 
-        rm -f $TMPDIR/stdout.log
- 
+        rm -f $TMPDIR/stdout.log  
+
         # only remove work dir if we own it (see option -R)
 	if test $OWNDIR -ge 1; then	
 		rmdir $TMPDIR
