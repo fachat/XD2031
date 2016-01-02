@@ -96,8 +96,7 @@ static int LBA81(int t, int s)
            super side sector */
         /* The SFD cannot create a file with REL 4090 blocks, but it can
            read it.  We will therefore use 4090 as our limit. */
-// Data interleave is taken from VICE's vdrive_bam_get_interleave() method
-// plus one, for a change in algorithm
+
 //                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel   map  Dir_T/S  BAM blocks                   ErrTbl
 static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA64, 18, 1, { 18, 0,  0, 0,  0, 0,  0, 0 }, 0};
 static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};

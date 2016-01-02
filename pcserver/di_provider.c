@@ -67,6 +67,7 @@ typedef struct
    int   number;          // current slot number
    int   pos;             // file position
    int   size;            // file size in (254 byte) blocks
+   uint8_t  dir_sector;	  // sector in which the slot resides
    uint8_t  next_track;   // next directory track
    uint8_t  next_sector;  // next directory sector
    uint8_t  filename[20]; // filename (C string zero terminated)
@@ -837,12 +838,17 @@ static void di_read_slot(di_endpoint_t *diep, slot_t *slot)
 static void di_first_slot(di_endpoint_t *diep, slot_t *slot)
 {
    log_debug("di_first_slot\n");
-   if (diep->DI.ID == 80 || diep->DI.ID == 82)
+   if (diep->DI.ID == 80 || diep->DI.ID == 82) {
       slot->pos  = 256 * diep->DI.LBA(39,1);
-   else if (diep->DI.ID == 81)
+      slot->dir_sector = 1;
+   } else 
+   if (diep->DI.ID == 81) {
       slot->pos  = 256 * diep->DI.LBA(40,3);
-   else
+      slot->dir_sector = 3;
+   } else {
       slot->pos  = 256 * diep->DI.LBA(diep->BAM[0][0],diep->BAM[0][1]);
+      slot->dir_sector = diep->BAM[0][1];
+   }
    slot->number  =   0;
    slot->eod     =   0;
 }
@@ -862,6 +868,7 @@ static int di_next_slot(di_endpoint_t *diep,slot_t *slot)
          return 0; // end of directory
       }
       slot->pos = 256 * diep->DI.LBA(slot->next_track,slot->next_sector);
+      slot->dir_sector = slot->next_sector;
    }  
    else slot->pos += 32;
    return 1;
@@ -886,14 +893,15 @@ static int di_match_slot(di_endpoint_t *diep,slot_t *slot, const uint8_t *name, 
 }
 
 // **************
-// di_clear_block
+// di_clear_dir_block
 // **************
 
-static void di_clear_block(di_endpoint_t *diep, int pos)
+static void di_clear_dir_block(di_endpoint_t *diep, int pos)
 {
    uint8_t p[256];
    
    memset(p,0,256);
+   p[1] = 0xff;
    di_fseek_pos(diep,pos);
    di_fwrite(p,1,256,diep->Ip);
 }
@@ -1125,14 +1133,14 @@ static int di_allocate_new_dir_block(di_endpoint_t *diep, slot_t *slot)
 {
    int sector;
 
-   sector = di_scan_track(diep,diep->DI.DirTrack, 0, 0);
+   sector = di_scan_track(diep,diep->DI.DirTrack, slot->dir_sector, 1);
    if (sector < 0) return 1; // directory full
 
    di_sync_BAM(diep);
    di_update_dir_chain(diep,slot,sector);
    slot->pos = 256 * diep->DI.LBA(diep->DI.DirTrack,sector);
    slot->eod = 0;
-   di_clear_block(diep,slot->pos);
+   di_clear_dir_block(diep,slot->pos);
    slot->next_track  = 0;
    slot->next_sector = 0;
    log_debug("di_allocate_new_dir_block (%d/%d)\n",diep->DI.DirTrack,sector);
