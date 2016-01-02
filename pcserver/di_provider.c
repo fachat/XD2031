@@ -59,6 +59,9 @@
 #undef DEBUG_READ
 #define DEBUG_CMD
 
+#define	ALLOC_LINEAR		0
+#define	ALLOC_INTERLEAVE	1
+#define	ALLOC_FIRST_BLOCK	2
 
 // structure for directory slot handling
 
@@ -122,7 +125,7 @@ static registry_t di_endpoint_registry;
 handler_t di_file_handler;
 
 // prototypes
-static uint8_t di_next_track(di_endpoint_t *diep);
+static uint8_t di_next_track(di_endpoint_t *diep, uint8_t alternate);
 static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector);
 static int di_block_free(di_endpoint_t *diep, uint8_t Track, uint8_t Sector);
 static unsigned int di_rel_record_max(di_endpoint_t *diep, File *f);
@@ -1076,7 +1079,7 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
 		*sector = Sector;
 		return CBM_ERROR_NO_BLOCK;
 	}
-   } while (di_next_track(diep) != *track);
+   } while (di_next_track(diep, 0) != *track);
 
    return CBM_ERROR_DISK_FULL;
 }
@@ -1086,7 +1089,7 @@ static int di_block_alloc(di_endpoint_t *diep, uint8_t *track, uint8_t *sector) 
 // di_scan_track
 // *************
 
-static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector, int is_interleave)
+static int di_scan_track(di_endpoint_t *diep, uint8_t Track, uint8_t StartSector, uint8_t is_interleave)
 {
    int   Sector;
    int   Interleave;
@@ -1166,16 +1169,24 @@ static int di_find_free_slot(di_endpoint_t *diep, slot_t *slot)
 // di_next_track
 // *************
 
-static uint8_t di_next_track(di_endpoint_t *diep)
+static uint8_t di_next_track(di_endpoint_t *diep, uint8_t alternate)
 {
    if (diep->CurrentTrack < diep->DI.DirTrack) // outbound
    {
-      if (--diep->CurrentTrack < 1) diep->CurrentTrack = diep->DI.DirTrack + 1;
+      if (!alternate) {
+	      if (--diep->CurrentTrack < 1) {
+		diep->CurrentTrack = diep->DI.DirTrack + 1;
+	      }
+      }
    }
    else // inbound or move to side 2
    {
-      if (++diep->CurrentTrack > diep->DI.Tracks * diep->DI.Sides)
+      if (++diep->CurrentTrack > diep->DI.Tracks * diep->DI.Sides) {
          diep->CurrentTrack = diep->DI.DirTrack - 1;
+      }
+   }
+   if (alternate) {
+	diep->CurrentTrack = diep->DI.DirTrack - (diep->CurrentTrack - diep->DI.DirTrack);
    }
    return diep->CurrentTrack;
 }
@@ -1184,10 +1195,12 @@ static uint8_t di_next_track(di_endpoint_t *diep)
 // di_find_free_block
 // ******************
 
-static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector, int is_interleave)
+static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector, int alloc_flag)
 {
    int  StartTrack;     // here begins the scan
    int  Sector;         // sector of next free block
+   int  is_interleave = alloc_flag == ALLOC_INTERLEAVE;
+
    Disk_Image_t *di = &diep->DI;
 
    if (diep->CurrentTrack < 1 || diep->CurrentTrack > di->Tracks * di->Sides)
@@ -1207,13 +1220,9 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
          return di->LBA(diep->CurrentTrack,Sector);
       }
       // other tracks start with sector = 0
-//      if (diep->DI.Sides > 1) {
-      	StartSector = 0;
-//      } else {
-//      	StartSector = 1;
-//      }
+      StartSector = 0;
       is_interleave = 0;
-   } while (di_next_track(diep) != StartTrack);
+   } while (di_next_track(diep, alloc_flag == ALLOC_FIRST_BLOCK) != StartTrack);
    return -1; // No free block -> DISK FULL
 }
 
@@ -1235,7 +1244,7 @@ static int di_create_entry(di_endpoint_t *diep, File *file, const char *name, op
    file->Slot.ss_sector = 0;
    file->Slot.recordlen = pars->recordlen;
    if (pars->filetype != FS_DIR_TYPE_REL) {
-   	if (di_find_free_block(diep,file, 0, 0) < 0) {
+   	if (di_find_free_block(diep,file, 0, ALLOC_FIRST_BLOCK) < 0) {
 		return CBM_ERROR_DISK_FULL;
 	}
    	file->Slot.start_track  = file->cht;
@@ -1717,7 +1726,7 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
 		// only update link chain if we're not in the middle of a file
       		f->chp = 0;
       		oldpos = 256 * diep->DI.LBA(f->cht,f->chs);
-      		block = di_find_free_block(diep,f, f->chs, 1);
+      		block = di_find_free_block(diep,f, f->chs, ALLOC_INTERLEAVE);
       		if (block < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
@@ -2198,13 +2207,13 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	// file does not yet exist
 	if (f->Slot.start_track == 0) {
 		// note: linear scan, NOT interleaved as with later blocks
-		if (di_find_free_block(diep, f, 0, 0) < 0) {
+		if (di_find_free_block(diep, f, 0, ALLOC_LINEAR) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.start_track = f->cht;
 		f->Slot.start_sector = f->chs;
 	} else {
-		if (di_find_free_block(diep, f, last_used_sector, 2) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 	}
@@ -2249,7 +2258,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 		// no side sector group so far, create the first one
 		// create super side sector block
-		if (di_find_free_block(diep, f, last_used_sector, 1) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.size++;
@@ -2304,7 +2313,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	if (diep->DI.HasSSB) {
 		if (sss_track == 0) {
 			// create super side sector block (interleaved access)
-			if (di_find_free_block(diep, f, last_used_sector, 1) < 0) {
+			if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
 				return CBM_ERROR_DISK_FULL;
 			}
 			f->Slot.size++;
@@ -2381,7 +2390,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 		log_debug(" - allocate new side sector block\n");
 
 		// allocate a new block for a side sector
-		if (di_find_free_block(diep, f, last_used_sector, 1) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.size++;
@@ -2708,7 +2717,7 @@ static int di_position(di_endpoint_t *diep, File *f, int recordno) {
 }
 
 //***********
-// di_create 
+// di_seek 
 //***********
 
 // this is a simple, stupid seek - just following the block chain

@@ -1,0 +1,5 @@
+]]INF:main: device = /csocket_dir225-1001.frs
+]]INF:Connecting to socket /csocket_dir225-1001.frs
+]]ERR:Detected mismatch at line 22511
+]]Rxd   : 0000  45 0F                                             |E               |
+]]Expect: 0000  44 0F                                             |D               |

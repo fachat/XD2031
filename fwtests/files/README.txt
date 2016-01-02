@@ -18,26 +18,24 @@ dirXXX
 Remaining errors
 ================
 
-make
-./filetests-d64.sh -C -q
-f253-4040.frs: Ok
 f254-4040.frs: errors: 1
 f254-4040.frs: File blk.d64 differs!
 	=> when writing a 254 byte file, and closing it, 4040 DOS allocates a bogus empty sector
 	   This is also reflected in the errorneous blocks free count
+
 f255-4040.frs: Ok
 f255-4040.frs: File blk.d64 differs!
 	=> maybe block allocation error (interleave?)
-./filetests-d82.sh -C -q
+
 f168488-1001.frs: Ok
 f168488-1001.frs: File blk.d82 differs!
 	==> DOS has residue of previous block written to last block
-f253-1001.frs: Ok
-f254-1001.frs: Ok
-f255-1001.frs: Ok
-f507-1001.frs: Ok
-f508-1001.frs: Ok
+
 f509-1001.frs: Ok
 f509-1001.frs: File blk.d82 differs!
 	==> DOS has residue of previous block written to last block
+
+dir145 (4040), dir225 (1001)
+	When a new file is created in a directory that is already full, the CBM DOS
+	allocates a bogus block that is not freed again.
 

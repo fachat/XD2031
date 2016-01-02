@@ -1,0 +1,11 @@
+--- /shouldbe_blk.d82.hex
++++ /blk.d82.hex
+@@ -283,7 +283,7 @@
+ 00043170  ff ff ff 1f 1d ff ff ff  1f 1d ff ff ff 1f 1d ff  |................|
+ 00043180  ff ff 1f 1d ff ff ff 1f  1d ff ff ff 1f 1d ff ff  |................|
+ 00043190  ff 1f 1d ff ff ff 1f 1d  ff ff ff 1f 1d ff ff ff  |................|
+-000431a0  1f 1d ff ff ff 1f 1d ff  ff ff 1f 18 e0 ff ff 1f  |................|
++000431a0  1f 1d ff ff ff 1f 1d ff  ff ff 1f 19 f0 ff ff 1f  |................|
+ 000431b0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+ *
+ 000431d0  00 00 00 00 00 00 00 00  00 00 00 00 00 1b ff ff  |................|

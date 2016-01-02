@@ -24,7 +24,7 @@ TESTFILES="rel.d64"
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES=""
+COMPAREFILES="rel.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
