@@ -103,6 +103,8 @@ typedef struct {
 	// channel push state - only one can be pushed at a time
 	int8_t		push_state;
 	int8_t		last_push_errorno;
+	// channel state
+	uint8_t		had_data;	
 	// packet area
 	packet_t	buf[2];
 	uint8_t		data[2][DATA_BUFLEN];
