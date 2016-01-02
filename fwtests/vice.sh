@@ -39,7 +39,7 @@ else
 fi;
 
 
-${VICEPETBIN} $warp -model 4032 -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}.prg
+${VICEPETBIN} $warp +sound -model 4032 -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}.prg
 
 echo "find resulting image in ${diskname} - you may need to gzip it with"
 echo "    gzip ${diskname}"
