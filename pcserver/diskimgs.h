@@ -62,6 +62,7 @@ typedef struct Disk_Image
    uint8_t HasSSB;		  // when set disk has super side blocks in REL files
    unsigned int  Blocks;          // Size in blocks
    unsigned int  RelBlocks;       // Max REL file size in blocks
+   int (*LSEC)(int t);            // last sector number of a track
    int (*LBA)(int t, int s);      // Logical Block Address calculation
    uint8_t DirTrack;              // Header and directory track
    uint8_t DirSector;             // Sector number of first directory entry block

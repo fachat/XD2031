@@ -33,6 +33,47 @@
 #include "stdbool.h"
 
 
+/* functions for computing last sector number in track */
+
+static int LSEC64(int t) {
+
+   if((t < 1)) return -1; // T      #T  S/T
+   if(t <= 17) return 21; // 01-17 (17) 21
+   if(t <= 24) return 19; // 18-24 ( 7) 19
+   if(t <= 30) return 18; // 25-30 ( 6) 18
+   if(t <= 35) return 17; // 31-35 ( 5) 17
+   return -1;
+}
+
+static int LSEC71(int t)
+{
+   if (t < 36) return LSEC64(t);
+   return LSEC64(t-35);
+}
+
+static int LSEC80(int t) {
+
+   if((t < 1)) return -1;                                            // T      #T  S/T
+   if(t <= 39) return 29; // 01-39 (39) 29
+   if(t <= 53) return 27; // 40-53 (14) 27
+   if(t <= 64) return 25; // 54-64 (11) 25
+   if(t <= 77) return 23; // 65-77 (13) 23
+   return -1;
+}
+
+static int LSEC82(int t)
+{
+   if (t < 78) return LSEC80(t);
+   return LSEC80(t-77);
+}
+
+static int LSEC81(int t)
+{
+  if((t < 1) || (t > 80)) return -1;
+  return 40;
+}
+
+
 /* functions for computing LBA (Logical Block Address) */
 /* return -1 for illegal T/S */
 
@@ -97,12 +138,12 @@ static int LBA81(int t, int s)
         /* The SFD cannot create a file with REL 4090 blocks, but it can
            read it.  We will therefore use 4090 as our limit. */
 
-//                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel   map  Dir_T/S  BAM blocks                   ErrTbl
-static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LBA64, 18, 1, { 18, 0,  0, 0,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LBA81, 40, 3, { 40, 1, 40, 2,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 5,  0, 2083,  726, LBA80, 39, 1, { 38, 0, 38, 3,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 5,  1, 4166, 4126, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
+//                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel  sec/tr   map  Dir_T/S  BAM blocks                   ErrTbl
+static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LSEC64, LBA64, 18, 1, { 18, 0,  0, 0,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LSEC71, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LSEC81, LBA81, 40, 3, { 40, 1, 40, 2,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 5,  0, 2083,  726, LSEC80, LBA80, 39, 1, { 38, 0, 38, 3,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 5,  1, 4166, 4126, LSEC82, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
 
 
 int diskimg_identify(Disk_Image_t *di, unsigned int filesize) {
