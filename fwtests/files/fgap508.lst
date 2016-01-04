@@ -1,0 +1,47 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create a file with 508 bytes
+   20 rem then create another one
+   30 rem scratch the first one and
+   40 rem then create a third one
+   50 n=30
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1020 open2,u,1,"0:file1"
+ 1030 for i = 0 to n
+ 1040 print#2,"0123456789abcde_";
+ 1050 next
+ 1060 print#2,"0123456789ab";
+ 1070 close2
+ 1080 gosub9000
+
+ 1100 open2,u,1,"0:file2,s"
+ 1130 for i = 0 to n
+ 1140 print#2,"file256789abcde_";
+ 1150 next
+ 1160 print#2,"0123456789ab";
+ 1170 close2
+ 1180 gosub 9000
+
+ 1200 print#1,"s0:file1"
+ 1240 gosub 9000
+
+ 1300 open2,u,1,"0:file3,s"
+ 1330 for i = 0 to n
+ 1340 print#2,"file356789abcde_";
+ 1350 next
+ 1360 print#2,"0123456789ab";
+ 1370 close2
+ 1380 gosub 9000
+
+ 8800 close1
+ 8850 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

@@ -38,7 +38,7 @@
 const char IN_ROM versionstr[] = SW_NAME " V" VERSION LONGVERSION "/" HW_NAME;
 
 const char IN_ROM STR_OK[]                   = " OK";
-const char IN_ROM STR_SCRATCHED[]            = "FILES SCRATCHED";
+const char IN_ROM STR_SCRATCHED[]            = " FILES SCRATCHED";
 const char IN_ROM STR_READ[]                 = "READ ERROR";
 const char IN_ROM STR_WRITE_PROTECT[]        = "WRITE PROTECT ERROR";
 const char IN_ROM STR_WRITE_ERROR[]          = "WRITE ERROR";
