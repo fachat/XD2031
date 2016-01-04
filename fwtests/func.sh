@@ -73,7 +73,7 @@ function hexdiff() {
 			# compare actual with expected
 			diff -u $tmp3 $tmp4 
 			diffres=$?
-                        if test $? -eq 0; then
+                        if test $diffres -eq 0; then
 				diffres=2
 				echo "Comparing $1 with $2 gave the expected difference"
 			fi
