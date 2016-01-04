@@ -4,7 +4,10 @@ blkaf1
 
 It seems that the CBM DOS does not write back the BAM block correctly. After the test, the blocks
 T/S= 1/2, 1/2, 1/3 should be allocated. This is correctly reflected in the resulting D64 file
-from pcserver:
+from pcserver, but not in the result from VICE 4040 truedrive emulation. 
+As with the 1001 drive it is written correctly, as well as when opening a direct file "#",
+(see blkaf2) my assumption is that without a write file being closed in 4040, the BAM is 
+not flushed and thus not stored on disk.
 
 --- /tmp/tmp.8T4RMgqPmB/shouldbe_blk.d64.hex    2015-12-27 23:02:12.631026578 +0100
 +++ /tmp/tmp.8T4RMgqPmB/blk.d64.hex     2015-12-27 23:02:12.635026685 +0100
