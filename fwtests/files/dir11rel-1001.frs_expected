@@ -1,0 +1,35 @@
+]]INF:main: device = /csocket_dir11rel-1001.frs
+]]INF:Connecting to socket /csocket_dir11rel-1001.frs
+]]ERR:Detected mismatch at line 177
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 267
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 357
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 447
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 537
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 627
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 717
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 807
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 897
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 987
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1077
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |

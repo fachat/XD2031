@@ -62,6 +62,7 @@
 #define	ALLOC_LINEAR		0
 #define	ALLOC_INTERLEAVE	1
 #define	ALLOC_FIRST_BLOCK	2
+#define	ALLOC_SIDE_SECTOR	3
 
 // structure for directory slot handling
 
@@ -1199,14 +1200,25 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
 {
    int  StartTrack;     // here begins the scan
    int  Sector;         // sector of next free block
-   int  is_interleave = alloc_flag == ALLOC_INTERLEAVE;
+   int  is_interleave = (alloc_flag == ALLOC_INTERLEAVE) || (alloc_flag == ALLOC_SIDE_SECTOR);
+   int  is_alternate = (alloc_flag == ALLOC_FIRST_BLOCK);
+   //int  is_alternate = (alloc_flag == ALLOC_FIRST_BLOCK) || (alloc_flag == ALLOC_SIDE_SECTOR);
 
    Disk_Image_t *di = &diep->DI;
 
-   if (diep->CurrentTrack < 1 || diep->CurrentTrack > di->Tracks * di->Sides)
+   if (alloc_flag == ALLOC_FIRST_BLOCK || diep->CurrentTrack < 1 || diep->CurrentTrack > di->Tracks * di->Sides) {
       diep->CurrentTrack = di->DirTrack - 1; // start track
+   }
    StartTrack = diep->CurrentTrack;
-
+#if 0
+   if (alloc_flag == ALLOC_SIDE_SECTOR) {
+    	// the next line fixes dir9rel, but would break dir223
+	if (diep->DI.LBA(StartTrack, StartSector + diep->DI.DatInterleave) < 0) {
+		di_next_track(diep, 1);
+		StartSector += diep->DI.DatInterleave;
+	}
+   }
+#endif
    do
    {
       Sector = di_scan_track(diep,diep->CurrentTrack, StartSector, is_interleave);
@@ -1220,9 +1232,13 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
          return di->LBA(diep->CurrentTrack,Sector);
       }
       // other tracks start with sector = 0
+   if (alloc_flag == ALLOC_SIDE_SECTOR) {
+      StartSector += diep->DI.DatInterleave;
+   } else {
       StartSector = 0;
+   }
       is_interleave = 0;
-   } while (di_next_track(diep, alloc_flag == ALLOC_FIRST_BLOCK) != StartTrack);
+   } while (di_next_track(diep, is_alternate) != StartTrack);
    return -1; // No free block -> DISK FULL
 }
 
@@ -2204,10 +2220,11 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	f->Slot.size++;
 
 
-	// file does not yet exist
 	if (f->Slot.start_track == 0) {
-		// note: linear scan, NOT interleaved as with later blocks
-		if (di_find_free_block(diep, f, 0, ALLOC_LINEAR) < 0) {
+		// file does not yet exist
+		// note: linear scan, NOT interleaved as with later blocks, but
+		// with tracks alternating from above and below the dir track
+		if (di_find_free_block(diep, f, 0, ALLOC_FIRST_BLOCK) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.start_track = f->cht;
@@ -2258,7 +2275,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 
 		// no side sector group so far, create the first one
 		// create super side sector block
-		if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
+		if (di_find_free_block(diep, f, last_used_sector, ALLOC_SIDE_SECTOR) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
 		f->Slot.size++;

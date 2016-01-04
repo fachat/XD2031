@@ -14,6 +14,12 @@ dirXXX
 	a track below the dir track to a track above the dir track (16 -> 19, resp.
 	track 37 -> 40)
 
+dirXXXrel
+	create N number of relative files; note they only test on 1001, as 4040 has a block
+	allocation bug that mixes all up. 1001 "only" has the error that a rel file has 0 blocks
+	instead of 3, but we can expect that.
+	Note: dir10rel (unexpectedly?) changes the track from 37 to 40 even though there is still
+	space in the track.
 
 Remaining errors
 ================

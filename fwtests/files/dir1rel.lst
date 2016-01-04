@@ -1,0 +1,27 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create N REL files to see how DIR creation 
+   20 rem and block allocation works
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1011 get a$:if a$="" then 1011
+ 1012 for i=1 to 1
+ 1013 h%=i/100
+ 1014 d%=i/10-10*h%
+ 1015 e%=i-10*d%-100*h%
+ 1016 f$="file"+chr$(48+h%)+chr$(48+d%)+chr$(48+e%)+",l,"+chr$(127)
+ 1020 open2,u,2,f$
+ 1070 close2
+ 2050 gosub9000
+ 2060 next i
+ 3210 close1
+ 3230 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

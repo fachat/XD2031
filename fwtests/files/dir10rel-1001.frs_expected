@@ -1,0 +1,32 @@
+]]INF:main: device = /csocket_dir10rel-1001.frs
+]]INF:Connecting to socket /csocket_dir10rel-1001.frs
+]]ERR:Detected mismatch at line 170
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 260
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 350
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 440
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 530
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 620
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 710
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 800
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 890
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 980
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
