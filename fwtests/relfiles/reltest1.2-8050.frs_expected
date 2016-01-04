@@ -1,0 +1,5 @@
+]]INF:main: device = /csocket_reltest1.2-8050.frs
+]]INF:Connecting to socket /csocket_reltest1.2-8050.frs
+]]ERR:Detected mismatch at line 122
+]]Rxd   : 0000  02 00                                             |                |
+]]Expect: 0000  00 00                                             |                |

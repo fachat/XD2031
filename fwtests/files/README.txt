@@ -20,6 +20,8 @@ dirXXXrel
 	instead of 3, but we can expect that.
 	Note: dir10rel (unexpectedly?) changes the track from 37 to 40 even though there is still
 	space in the track.
+	Note: dir46rel breaks when the side sector is not allocated with ALLOC_SIDE_SECTOR
+
 
 Remaining errors
 ================

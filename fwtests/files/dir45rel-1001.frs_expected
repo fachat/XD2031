@@ -1,0 +1,137 @@
+]]INF:main: device = /csocket_dir45rel-1001.frs
+]]INF:Connecting to socket /csocket_dir45rel-1001.frs
+]]ERR:Detected mismatch at line 415
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 505
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 595
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 685
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 775
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 865
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 955
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1045
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1135
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1225
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1315
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1405
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1495
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1585
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1675
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1765
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1855
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 1945
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2035
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2125
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2215
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2305
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2395
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2485
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2575
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2665
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2755
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2845
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 2935
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3025
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3115
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3205
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3295
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3385
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3475
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3565
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3655
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3745
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3835
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 3925
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 4015
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 4105
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 4195
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 4285
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |
+]]ERR:Detected mismatch at line 4375
+]]Rxd   : 0000  03 00                                             |                |
+]]Expect: 0000  00 00                                             |                |

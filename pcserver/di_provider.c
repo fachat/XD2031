@@ -1196,10 +1196,11 @@ static uint8_t di_next_track(di_endpoint_t *diep, uint8_t alternate)
 // di_find_free_block
 // ******************
 
-static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector, int alloc_flag)
+static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t pStartSector, int alloc_flag)
 {
    int  StartTrack;     // here begins the scan
    int  Sector;         // sector of next free block
+   int  StartSector = pStartSector;
    int  is_interleave = (alloc_flag == ALLOC_INTERLEAVE) || (alloc_flag == ALLOC_SIDE_SECTOR);
    int  is_alternate = (alloc_flag == ALLOC_FIRST_BLOCK);
    //int  is_alternate = (alloc_flag == ALLOC_FIRST_BLOCK) || (alloc_flag == ALLOC_SIDE_SECTOR);
@@ -1228,15 +1229,17 @@ static int di_find_free_block(di_endpoint_t *diep, File *f, uint8_t StartSector,
          f->chp = 0;
          f->cht = diep->CurrentTrack;
          f->chs = Sector;
-         log_debug("di_find_free_block (%d/%d)\n",f->cht,f->chs);
+         log_debug("di_find_free_block (start=%d/%d, alloc=%d) -> (%d/%d)\n",StartTrack, pStartSector, alloc_flag, f->cht,f->chs);
          return di->LBA(diep->CurrentTrack,Sector);
       }
       // other tracks start with sector = 0
    if (alloc_flag == ALLOC_SIDE_SECTOR) {
       StartSector += diep->DI.DatInterleave;
    } else {
+      // (or maybe from the BAM block they read last?)
       StartSector = 0;
    }
+
       is_interleave = 0;
    } while (di_next_track(diep, is_alternate) != StartTrack);
    return -1; // No free block -> DISK FULL
@@ -2330,7 +2333,7 @@ int di_rel_add_sectors(di_endpoint_t *diep, File *f, unsigned int nrecords) {
 	if (diep->DI.HasSSB) {
 		if (sss_track == 0) {
 			// create super side sector block (interleaved access)
-			if (di_find_free_block(diep, f, last_used_sector, ALLOC_INTERLEAVE) < 0) {
+			if (di_find_free_block(diep, f, last_used_sector, ALLOC_SIDE_SECTOR) < 0) {
 				return CBM_ERROR_DISK_FULL;
 			}
 			f->Slot.size++;
