@@ -5,7 +5,7 @@
    20 rem then create another one
    30 rem scratch the first one and
    40 rem then create a third one (one block larger)
-   50 n=30
+   50 n=189
   100 u=8
  1000 open1,u,15,"i0"
  1010 gosub 9000

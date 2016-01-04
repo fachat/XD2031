@@ -7,6 +7,10 @@ fXXX
 	create files of the given length, and check if the file on disk matches
 	This is a test for block allocation and data pointer arithmetic in last block
 
+fgapXXX	
+	create a long file, another long file, scratch the first file, then create a longer
+	file, to see how block allocation works with gaps in the BAM
+
 
 Remaining errors
 ================
