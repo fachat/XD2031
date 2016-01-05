@@ -1,18 +1,18 @@
 
+Notes
+=====
+
+Note that shell-d64.sh tests the same test cases as base-d64.sh, but using the "inner.d64" 
+disk image stored in the shell.d80 image. This tests the correctness of the cascaded mounts.
+
+Note that assign1 and assign2 will probably change in the future, as they re-assign the 
+same disk images already used in drive 0 to drive 1
+
 Remaining errors
 ================
 
 make
 ./base.sh -C -q
-assign1-4040.frs: Ok
-assign2-4040.frs: Ok
 base1-4040.frs: errors: 3
 	=> this is expected, as it is a test of error detection in test runner
-cmdchan1-4040.frs: Ok
-cmdchan1-4040.frs: File base.d64 differs!
-	=> opening a file for write, and closing cmd channel seems to temporarily create a block
-	   in 4040 CBM DOS (not in 1001/8250 DOS, see below)
-xunit-4040.frs: Ok
-./base-d82.sh -C -q
-cmdchan1-1001.frs: Ok
 

@@ -412,6 +412,10 @@ for script in $TESTSCRIPTS; do
 	#echo "Killing server (pid $SERVERPID)"
 	#kill -TERM $SERVERPID
 
+	if test "x$CUSTOMPOSTCMD" != "x"; then
+		(cd $TMPDIR; sh -c "$CUSTOMPOSTCMD");
+	fi
+
 	if test "x$COMPAREFILES" != "x"; then
 		testname=`basename $script .frs`
 		for i in $COMPAREFILES; do 
