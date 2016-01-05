@@ -613,11 +613,7 @@ void channel_close_range(uint8_t fromincl, uint8_t toincl) {
 
 	for (uint8_t i = fromincl; i <= toincl; i++) {
 		// simple, brute force...
-		channel_t *chan = channel_find(i);
-		if (chan != NULL) {
-			// force
-			channel_close_int(chan);
-		}
+		channel_close(i);
 	}
 }
 
