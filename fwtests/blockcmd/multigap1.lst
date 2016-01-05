@@ -1,0 +1,43 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem allocate many blocks
+   20 rem then free some holes into this list
+   30 rem then allocate some new ones
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1015 directory
+ 1020 open2,u,2,"#"
+ 2000 t=1:s=1
+ 2010 for i=1 to 600
+ 2020 print#1,"b-a: 0";t;s
+ 2050 gosub9000
+ 2060 if a=65 then t=c:s=d:goto 2020
+ 2065 if a=66 then 3000
+ 2070 next i
+ 2999 rem free some blocks in the middle
+ 3000 for t=5 to 7
+ 3010 for s=5 to 7
+ 3020 print#1,"b-f: 0";t;s
+ 3030 gosub9000
+ 3040 next s
+ 3050 next t
+ 3999 rem allocate some more blocks
+ 4000 t=1:s=1
+ 4010 for i=1 to 200
+ 4020 print#1,"b-a: 0";t;s
+ 4050 gosub9000
+ 4060 if a=65 then t=c:s=d:goto 4020
+ 4065 if a=66 then 8200
+ 4070 next i
+ 8200 close2
+ 8210 close1
+ 8230 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

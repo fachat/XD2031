@@ -13,8 +13,8 @@ dirXXX
 
 dirXXXrel
 	create N number of relative files; note they only test on 1001, as 4040 has a block
-	allocation bug that mixes all up. 1001 "only" has the error that a rel file has 0 blocks
-	instead of 3, but we can expect that.
+	allocation bug that mixes all up. 
+	Note: 1001 "only" has the error that a rel file has 0 blocks instead of 3, but we expect that.
 	Note: dir10rel (unexpectedly?) changes the track from 37 to 40 even though there is still
 	space in the track.
 	Note: dir46rel breaks when the side sector is not allocated with ALLOC_SIDE_SECTOR

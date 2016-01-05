@@ -1,0 +1,9239 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect "%" 10
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
+atn 28 f2
+send "#"
+atn 3f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,01,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 1  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,02,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 2  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,03,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 3  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,04,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 4  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,05,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 5  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,06,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 6  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,07,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 7  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,08,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 8  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,09,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 9  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,10,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 10  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,11,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 11  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,12,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 12  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,13,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 13  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,14,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 14  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,15,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 15  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,16,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 16  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,17,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 17  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,18,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 18  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,19,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 19  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,20,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 20  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,21,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 21  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,22,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 22  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  16 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,17"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  17 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,18"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  18 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,19"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  19 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,20"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  20 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,21"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  21 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,22"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  22 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,23"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  23 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,24"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  24 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,25"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  25 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,26"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  26 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,27"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  27 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,23,28"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 23  28 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,00"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  0 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  0 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,01"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  1 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,02"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  2 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,03"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  3 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,04"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  4 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,05"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  5 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,06"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  6 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,07"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  7 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,08"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  8 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,09"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  9 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,10"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  10 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,11"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  11 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,12"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  12 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,13"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  13 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,14"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  14 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,15"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  15 " 0d
+atn 3f
+atn 48 6f
+expect "65,NO BLOCK,24,16"
+recv ",0" 0d
+atn 5f
+atn 28 6f
+send "B-A: 0 24  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 ef 3f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "8"
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect "z" 0d
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f
