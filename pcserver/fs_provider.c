@@ -60,7 +60,7 @@
 
 #include "log.h"
 
-#define DEBUG_READ
+#undef DEBUG_READ
 #define DEBUG_CMD
 #define DEBUG_BLOCK
 
@@ -1623,8 +1623,8 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
 	File *f = (File*) fp;
 #ifdef DEBUG_READ
-	log_debug("fs_readfile file=%p (fp=%p, dp=%p, block=%p, *readflag=%d)\n",
-		f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, *readflag);
+	log_debug("fs_readfile file=%p (fp=%p, dp=%p, block=%p, len=%d, *readflag=%d)\n",
+		f, f==NULL ? NULL : f->fp, f == NULL ? NULL : f->dp, f == NULL ? NULL : f->block, len, *readflag);
 #endif
 	int rv = fs_open_temp(f);
 	if (rv != CBM_ERROR_OK) {

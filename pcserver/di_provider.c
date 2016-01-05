@@ -291,8 +291,6 @@ static void di_ep_free(endpoint_t *ep) {
 //
 static file_t* di_root(endpoint_t *ep) {
 
-	log_debug("di_root:\n");
-
    	di_endpoint_t *diep = (di_endpoint_t*) ep;
 
 	File *file = di_reserve_file(diep);
@@ -305,7 +303,7 @@ static file_t* di_root(endpoint_t *ep) {
 	// TODO: move from global to file
         di_first_slot(diep,&diep->Slot);
 
-	log_debug("di_root -> root=%p\n", file);
+	log_debug("di_root: diep=%p -> root=%p\n", file);
 
 	return (file_t*)file;
 }
@@ -456,7 +454,8 @@ static int di_assert_ts(di_endpoint_t *diep, uint8_t track, uint8_t sector)
 static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uint8_t ptr)
 {
    long seekpos = ptr+256*diep->DI.LBA(track,sector);
-   log_debug("seeking to position %ld for t/s/p=%d/%d/%d\n", seekpos, track, sector, ptr);
+   log_debug("di_fseek_tsp: diep=%p, seeking to position %ld (0x%lx) for t/s/p=%d/%d/%d\n", 
+		diep, seekpos, seekpos, track, sector, ptr);
    di_fseek(diep->Ip, seekpos,SEEKFLAG_ABS);
 }
 
@@ -466,7 +465,9 @@ static void di_fseek_tsp(di_endpoint_t *diep, uint8_t track, uint8_t sector, uin
 
 static void di_fseek_pos(di_endpoint_t *diep, int pos)
 {
-   di_fseek(diep->Ip,pos,SEEKFLAG_ABS);
+	log_debug("di_fseek_pos: diep=%p, pos=%d (0x%x)\n", diep, pos, pos);
+
+   	di_fseek(diep->Ip,pos,SEEKFLAG_ABS);
 }
 
 // ************
@@ -546,7 +547,7 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
 {
   uint8_t t,s,p;
 
-  log_debug("Closing file %p (%s) access mode = %d\n", f, f->file.filename, f->access_mode);
+  log_debug("di_close_fd: diep=%p Closing file %p (%s) access mode = %d\n", diep, f, f->file.filename, f->access_mode);
 
   if (f->access_mode == 0) {
 	// no access mode - not opened, so just return
@@ -567,11 +568,11 @@ static int di_close_fd(di_endpoint_t *diep, File *f)
      di_fseek_tsp(diep,f->cht,f->chs,0);
      di_fwrite(&t,1,1,diep->Ip);
      di_fwrite(&s,1,1,diep->Ip);
-     log_debug("Updated chain to (%d/%d)\n",t,s);
+     log_debug("%p: Updated chain to (%d/%d)\n",diep, t,s);
      di_write_slot(diep,&f->Slot); // Save new status of directory entry
-     log_debug("Status of directory entry saved\n");
+     log_debug("%p: Status of directory entry saved\n", diep);
      di_sync_BAM(diep);            // Save BAM status
-     log_debug("BAM saved.\n");
+     log_debug("%p: BAM saved.\n", diep);
      di_fsync(diep->Ip);
   } else 
   if (f->access_mode == FS_OPEN_RW) {
@@ -1064,7 +1065,7 @@ static int di_allocate_new_dir_block(di_endpoint_t *diep, slot_t *slot)
    di_clear_dir_block(diep,slot->pos);
    slot->next_track  = 0;
    slot->next_sector = 0;
-   log_debug("di_allocate_new_dir_block (%d/%d)\n",diep->DI.DirTrack,sector);
+   log_debug("di_allocate_new_dir_block diep=%p, (%d/%d)\n",diep, diep->DI.DirTrack,sector);
    return 0; // OK
 }
 
@@ -1236,8 +1237,8 @@ static int di_find_free_block_NXTTS(di_endpoint_t *diep, uint8_t *start_t, uint8
          	di_sync_BAM(diep);
 		diep->CurrentTrack = track;
 		
-         	log_debug("di_find_free_block_NXTTS (%d/%d, intrlv=%d, lstsec=%d, bam=%02x %02x %02x %02x) -> (%d/%d)\n", 
-			*start_t, *start_s, interleave, lastsector, 
+         	log_debug("di_find_free_block_NXTTS (diep=%p, %d/%d, intrlv=%d, lstsec=%d, bam=%02x %02x %02x %02x) -> (%d/%d)\n", 
+			diep, *start_t, *start_s, interleave, lastsector, 
 			bam[0], bam[1], bam[2], bam[3],
 			track,sector);
 
@@ -1738,7 +1739,11 @@ static int di_write_byte(di_endpoint_t *diep, File *f, uint8_t ch)
    // log_debug("di_write_byte %2.2x\n",ch);
    if (f->chp > 253)
    {
-    	if (f->access_mode == FS_OPEN_RW) {
+	// note: when the file is wrapped into a new endpoint, 
+	// then access mode is not set. Esp. when *f is a d80 file
+ 	// containing a d64 file that is updated with this method.
+	// example is test case fwtests/base/cmdchan1
+    	if (true /*f->access_mode == FS_OPEN_RW*/) {
 		// to make sure we're not in the middle of a file
 		// check the link track number
      		di_fseek_tsp(diep,f->cht,f->chs,0);
@@ -1816,7 +1821,7 @@ static int di_writefile(file_t *fp, const char *buf, int len, int is_eof)
       return CBM_ERROR_OK;
    }
 
-   log_debug("write to file %p, lastpos=%d\n", file, file->lastpos);
+   log_debug("di_writefile: diep=%p, write to file %p, lastpos=%d, len=%d\n", diep, file, file->lastpos, len);
 
    if (file->lastpos > 0) {
 	err = di_expand_rel(diep, file, file->lastpos - 1);
@@ -2771,6 +2776,8 @@ static int di_seek(file_t *file, long position, int flag) {
 	File *f = (File*) file;
 	di_endpoint_t *diep = (di_endpoint_t*)file->endpoint;
 
+	log_debug("di_seek(diep=%p, position=%d (0x%x), flag=%d)\n", diep, position, position, flag);
+
 	f->lastpos = 0;
 	if (f->file.recordlen > 0) {
 		// store position value for di_position / di_expand_rel
@@ -3175,6 +3182,7 @@ static int di_to_endpoint(file_t *file, endpoint_t **outep) {
 	// reset counter
 	ep->is_assigned--;
 
+	log_debug("di_to_endpoint: file=%p -> diep=%p\n", file, *outep);
 
 	return CBM_ERROR_OK;
 }
