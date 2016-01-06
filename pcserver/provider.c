@@ -501,7 +501,11 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
                 if (ept->drive == drive) {
 			if (outname != NULL) {
-				*outname = malloc_path(ept->cdpath, inname);
+				if (inname != NULL) {
+					*outname = malloc_path(ept->cdpath, inname);
+				} else {
+					*outname = NULL;
+				}
 			}
                         return ept->ep;
                 }
