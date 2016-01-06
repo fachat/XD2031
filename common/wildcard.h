@@ -30,7 +30,8 @@
  * and returns true if it matches.
  * Both names are null-terminated
  */
-int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wildcards);
+int8_t compare_pattern(const char *name, const char *pattern,
+		       bool advanced_wildcards);
 
 /**
  * compares the given name to the given pattern
@@ -39,7 +40,7 @@ int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wild
  * and the pattern ends with a path separator, the name still matches.
  * Also returns the rest of the pattern in the outpattern pointer
  */
-int8_t compare_dirpattern(const char *name, const char *pattern, const char **outpattern);
+int8_t compare_dirpattern(const char *name, const char *pattern,
+			  const char **outpattern);
 
 #endif
-

@@ -39,5 +39,3 @@ int xcmd_num_options();
 // get the Nth option
 // pos from zero to xcmd_num_options()-1
 const char *xcmd_option(int pos);
- 
-

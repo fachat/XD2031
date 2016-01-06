@@ -24,24 +24,22 @@
 
 /* This file contains arch-specific stuff included by system.h */
 
-
 //--------------------------
 // CALC FREE RAM SPACE
 static inline uint16_t BytesFree()
 {
-        return 0;
+	return 0;
 }
 
-static inline int32_t FreqKHz() {
-        return 0;
+static inline int32_t FreqKHz()
+{
+	return 0;
 }
 
-static inline void enable_interrupts (void) 
+static inline void enable_interrupts(void)
 {
 }
 
-static inline void disable_interrupts (void) 
+static inline void disable_interrupts(void)
 {
 }
-
-

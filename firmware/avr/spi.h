@@ -37,40 +37,44 @@
 /*-----------------------------------------------------------------------*/
 
 /* Exchange a byte */
-static inline __attribute__((always_inline)) 
-uint8_t xchg_spi (      /* Returns received data */
-    uint8_t dat         /* Data to be sent */
-)
+static inline __attribute__ ((always_inline))
+uint8_t xchg_spi(		/* Returns received data */
+			uint8_t dat	/* Data to be sent */
+    )
 {
-    SPDR = dat;
-    loop_until_bit_is_set(SPSR, SPIF);
-    return SPDR;
+	SPDR = dat;
+	loop_until_bit_is_set(SPSR, SPIF);
+	return SPDR;
 }
 
 /* Send a data block */
-static inline __attribute__((always_inline)) 
-void xmit_spi_multi (
-    const uint8_t *p,   /* Data block to be sent */
-    uint16_t cnt        /* Size of data block */
-)
+static inline __attribute__ ((always_inline))
+void xmit_spi_multi(const uint8_t * p,	/* Data block to be sent */
+		    uint16_t cnt	/* Size of data block */
+    )
 {
-    do {
-        SPDR = *p++; loop_until_bit_is_set(SPSR,SPIF);
-        SPDR = *p++; loop_until_bit_is_set(SPSR,SPIF);
-    } while (cnt -= 2);
+	do {
+		SPDR = *p++;
+		loop_until_bit_is_set(SPSR, SPIF);
+		SPDR = *p++;
+		loop_until_bit_is_set(SPSR, SPIF);
+	} while (cnt -= 2);
 }
 
 /* Receive a data block */
-static inline __attribute__((always_inline))   
-void rcvr_spi_multi (
-    uint8_t *p,         /* Data buffer */
-    uint16_t cnt        /* Size of data block */
-)
+static inline __attribute__ ((always_inline))
+void rcvr_spi_multi(uint8_t * p,	/* Data buffer */
+		    uint16_t cnt	/* Size of data block */
+    )
 {
-    do {
-        SPDR = 0xFF; loop_until_bit_is_set(SPSR,SPIF); *p++ = SPDR;
-        SPDR = 0xFF; loop_until_bit_is_set(SPSR,SPIF); *p++ = SPDR;
-    } while (cnt -= 2);
+	do {
+		SPDR = 0xFF;
+		loop_until_bit_is_set(SPSR, SPIF);
+		*p++ = SPDR;
+		SPDR = 0xFF;
+		loop_until_bit_is_set(SPSR, SPIF);
+		*p++ = SPDR;
+	} while (cnt -= 2);
 
 }
 

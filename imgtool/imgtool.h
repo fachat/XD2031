@@ -28,43 +28,41 @@
 #endif
 #endif
 
-
 // Maximum number of disk images, each copied into RAM
 #define MAX_IMG 6502
 
 typedef struct {
-   char *          filename;
-   Disk_Image_t    di;
-   uint8_t *       image;
-   uint8_t *       error_table;
-   unsigned int    number_of_bad_blocks;
+	char *filename;
+	Disk_Image_t di;
+	uint8_t *image;
+	uint8_t *error_table;
+	unsigned int number_of_bad_blocks;
 } di_t;
 
 typedef struct {
-   unsigned int    number_of_images;   // number of images
-   int             bad_images;         // number of images with bad blocks
-   di_t            di[MAX_IMG];
-   bool *          weak_block;         // Array of bools per track indicating
-                                       // if a block holds "weak" data, that is
-                                       // blocks read as good but data differs
-                                       // across multiple images
+	unsigned int number_of_images;	// number of images
+	int bad_images;		// number of images with bad blocks
+	di_t di[MAX_IMG];
+	bool *weak_block;	// Array of bools per track indicating
+	// if a block holds "weak" data, that is
+	// blocks read as good but data differs
+	// across multiple images
 } imgset_t;
 
 typedef struct {
-   int     filetype;
-   uint8_t start_track;
-   uint8_t start_sector;
-   uint8_t ss_track;
-   uint8_t ss_sector;
-   uint8_t reclen;
-   int     blocks;
-   char    ascii_filename[16 + 1];
-   char    petscii_filename[16 + 1];
+	int filetype;
+	uint8_t start_track;
+	uint8_t start_sector;
+	uint8_t ss_track;
+	uint8_t ss_sector;
+	uint8_t reclen;
+	int blocks;
+	char ascii_filename[16 + 1];
+	char petscii_filename[16 + 1];
 } file_t;
 
-
-int scandisk(di_t *di, bool testing, bool *weak);
+int scandisk(di_t * di, bool testing, bool * weak);
 
 int is_bad_block(int fdc_err);
 
-bool scan(di_t *di, bool *weak);
+bool scan(di_t * di, bool * weak);

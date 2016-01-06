@@ -24,8 +24,6 @@
 
 ****************************************************************************/
 
-
 const char *nameofcmd(int cmdno);
 
 int numofcmd(const char *name);
-

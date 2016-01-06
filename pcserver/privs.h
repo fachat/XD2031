@@ -34,4 +34,3 @@
 void drop_privileges();
 
 #endif
-

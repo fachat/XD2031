@@ -28,7 +28,8 @@
 #ifndef TIMERHW_H
 #define TIMERHW_H
 
-static inline void timerhw_init(void) {
+static inline void timerhw_init(void)
+{
 }
 
 // the next ones are only used so that the inline methods compile, but are never used
@@ -38,7 +39,7 @@ uint8_t timerhw_has_timed_out();
 
 void timerhw2_set_ms(uint16_t ms);
 
-uint8_t timer2hw_has_timed_out (void);
+uint8_t timer2hw_has_timed_out(void);
 
 #if 0
 
@@ -47,8 +48,8 @@ uint8_t timer2hw_has_timed_out (void);
 
 uint16_t timer10ms;
 
-
-static inline void timerhw_set_us(uint16_t us) {
+static inline void timerhw_set_us(uint16_t us)
+{
 	// we run at 1.75MHz, so approx. 2MHz, thus divide us by 2 to get counter value
 	OCR0A = 0xff & (us >> 2);
 	TCNT0 = 0;
@@ -56,20 +57,22 @@ static inline void timerhw_set_us(uint16_t us) {
 	TIFR0 |= _BV(TOV0) | _BV(OCF0A);
 }
 
-static inline uint8_t timerhw_has_timed_out() {
+static inline uint8_t timerhw_has_timed_out()
+{
 	return TIFR0 & _BV(OCF0A);
 	//return TIFR0 & _BV(TOV0);
 }
 
-static inline void timerhw2_set_ms(uint16_t ms) {
+static inline void timerhw2_set_ms(uint16_t ms)
+{
 	// resolution is 10 ms, thus divide by 10 to get counter value
-	ATOMIC_BLOCK(ATOMIC_FORCEON)
-	{
+	ATOMIC_BLOCK(ATOMIC_FORCEON) {
 		timer10ms = ms / 10;
 	}
 }
 
-static inline uint8_t timer2hw_has_timed_out (void) {
+static inline uint8_t timer2hw_has_timed_out(void)
+{
 	return (timer10ms ? 0 : 1);
 }
 #endif

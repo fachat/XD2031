@@ -20,7 +20,6 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
    errormsg.h: Definitions for the error message generator
 
 */
@@ -38,21 +37,22 @@
 #include "config.h"
 #include "errors.h"
 
-
 typedef struct {
-	uint8_t		errorno;
+	uint8_t errorno;
 	// callback that is called when the buffer is to be reset
-	//void 		(*set_ok_message)();	// (struct errormsg_t *err);
+	//void          (*set_ok_message)();    // (struct errormsg_t *err);
 	// error buffer
-	uint8_t 	error_buffer[CONFIG_ERROR_BUFFER_SIZE];
-	uint8_t		readp;	// read index in error_buffer
-} errormsg_t ;
+	uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
+	uint8_t readp;		// read index in error_buffer
+} errormsg_t;
 
-void set_error_tsd(errormsg_t *error, uint8_t errornum, uint8_t track, uint8_t sector, int8_t drive);
+void set_error_tsd(errormsg_t * error, uint8_t errornum, uint8_t track,
+		   uint8_t sector, int8_t drive);
 
-void set_status(errormsg_t *err, char* s);
+void set_status(errormsg_t * err, char *s);
 
-static inline void set_error(errormsg_t *error, uint8_t errornum) {
+static inline void set_error(errormsg_t * error, uint8_t errornum)
+{
 	// note: ignores possible changes in T&S
 	if (error->errorno != errornum || error->readp != 0) {
 		set_error_tsd(error, errornum, 0, 0, 0);

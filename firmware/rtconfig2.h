@@ -32,14 +32,13 @@
 #include "errors.h"
 #include "provider.h"
 
-
-void rtconfig_init(endpoint_t *ep);
+void rtconfig_init(endpoint_t * ep);
 
 // initialize a runtime config block
-void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr);
+void rtconfig_init_rtc(rtconfig_t * rtc, uint8_t devaddr);
 
 // set from an X command
-cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd);
+cbm_errno_t rtconfig_set(rtconfig_t * rtc, const char *cmd);
 
 // send an FS_RESET packet and pull in cmdline options
 // also tries to send the preferred character set

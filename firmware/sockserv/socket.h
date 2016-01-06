@@ -24,5 +24,3 @@
 int socket_open(const char *socket_name);
 
 #endif
-
-

@@ -20,7 +20,6 @@
 
 *************************************************************************/
 
-
 #ifndef NVCONFIG_H
 #define NVCONFIG_H
 
@@ -33,21 +32,35 @@
 uint8_t nv_read_byte(uint16_t addr);
 bool nv_write_byte(uint16_t addr, uint8_t byte);
 
-
 #ifdef HAS_EEPROM
 
-bool nv_save_config (const rtconfig_t *rtc);
-bool nv_restore_config (rtconfig_t *rtc);
-bool nv_save_common_config (void);
-bool nv_restore_common_config (void);
+bool nv_save_config(const rtconfig_t * rtc);
+bool nv_restore_config(rtconfig_t * rtc);
+bool nv_save_common_config(void);
+bool nv_restore_common_config(void);
 
 #else
 
-static bool nv_save_config (const rtconfig_t *rtc)	{ return true; }
-static bool nv_restore_config(rtconfig_t *rtc)		{ return true; }
-static bool nv_save_common_config (void)		{ return true; }
-static bool nv_restore_common_config (void)		{ return true; }
+static bool nv_save_config(const rtconfig_t * rtc)
+{
+	return true;
+}
 
-#endif // HAS_EEPROM
+static bool nv_restore_config(rtconfig_t * rtc)
+{
+	return true;
+}
 
-#endif // NVCONFIG_H
+static bool nv_save_common_config(void)
+{
+	return true;
+}
+
+static bool nv_restore_common_config(void)
+{
+	return true;
+}
+
+#endif				// HAS_EEPROM
+
+#endif				// NVCONFIG_H

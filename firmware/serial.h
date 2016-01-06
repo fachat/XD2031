@@ -83,8 +83,6 @@ void serial_delay();
 //void serial_submit_call(int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
 //                void (*callback)(int8_t channelno, int8_t errnum));
 
-
 extern provider_t serial_provider;
 
 #endif
-

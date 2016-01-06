@@ -33,34 +33,41 @@
 #include <string.h>
 #include "stdio.h"
 
-static inline void debug_flush(void) {
+static inline void debug_flush(void)
+{
 	fflush(stdout);
 }
 
-static inline void term_rom_puts(char *s) {
+static inline void term_rom_puts(char *s)
+{
 	printf("%s", s);
 }
 
-static inline void debug_putcrlf(void) {
+static inline void debug_putcrlf(void)
+{
 	printf("\n");
 }
 
 #define nullstring "<NULL>"
 
 #define IN_ROM
-static inline uint8_t rom_read_byte(uint8_t *a) {
+static inline uint8_t rom_read_byte(uint8_t * a)
+{
 	return *a;
 }
 
-static inline size_t rom_strlen(const char *s) {
+static inline size_t rom_strlen(const char *s)
+{
 	return strlen(s);
 }
 
-static inline void* rom_memcpy(void *dest, const void *src, size_t n) {
+static inline void *rom_memcpy(void *dest, const void *src, size_t n)
+{
 	return memcpy(dest, src, n);
 }
 
-static inline void* rom_read_pointer(void *p) {
+static inline void *rom_read_pointer(void *p)
+{
 	return p;
 }
 
@@ -74,18 +81,21 @@ static inline void* rom_read_pointer(void *p) {
 #include <string.h>
 #include <inttypes.h>
 
-#define	IN_ROM		
+#define	IN_ROM
 #define	IN_ROM_STR(s)	(s)
 
-static inline size_t rom_strlen(const char *s) {
+static inline size_t rom_strlen(const char *s)
+{
 	return strlen(s);
 }
 
-static inline void* rom_memcpy(void *dest, const void *src, size_t n) {
+static inline void *rom_memcpy(void *dest, const void *src, size_t n)
+{
 	return memcpy(dest, src, n);
 }
 
-static inline char* rom_strcat(char *dest, const char *src) {
+static inline char *rom_strcat(char *dest, const char *src)
+{
 	return strcat(dest, src);
 }
 
@@ -95,10 +105,9 @@ static inline char* rom_strcat(char *dest, const char *src) {
 #define	rom_read_byte(addr)	(*(addr))
 #define rom_read_pointer(addr)	(*(addr))
 
-
 int rom_snprintf(char *buf, int buflen, const char *format, ...);
 
-#endif // PC
+#endif				// PC
 
 // ---------- Atmel AVR 8 bit microcontroller ------------------------------
 #ifdef __AVR__
@@ -107,15 +116,18 @@ int rom_snprintf(char *buf, int buflen, const char *format, ...);
 #define	IN_ROM		PROGMEM
 #define	IN_ROM_STR(s)	PSTR(s)
 
-static inline size_t rom_strlen(const char *s) {
+static inline size_t rom_strlen(const char *s)
+{
 	return strlen_P(s);
 }
 
-static inline void* rom_memcpy(void *dest, const void *src, size_t n) {
+static inline void *rom_memcpy(void *dest, const void *src, size_t n)
+{
 	return memcpy_P(dest, src, n);
 }
 
-static inline char* rom_strcat(char *dest, const char *src) {
+static inline char *rom_strcat(char *dest, const char *src)
+{
 	return strcat_P(dest, src);
 }
 
@@ -125,9 +137,8 @@ static inline char* rom_strcat(char *dest, const char *src) {
 #define	rom_read_byte(addr)	pgm_read_byte((addr))
 #define rom_read_pointer(addr)	pgm_read_word((addr))
 
-
 int rom_snprintf(char *buf, int buflen, const char *format, ...);
 
-#endif // AVR
+#endif				// AVR
 
-#endif // ARCHCOMPAT_H
+#endif				// ARCHCOMPAT_H

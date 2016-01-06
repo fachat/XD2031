@@ -22,30 +22,28 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, 
     MA  02110-1301, USA.
 
-**************************************************************************/
-
-
+**************************************************************************/  
+     
 #ifndef CONFIG_H
 #define CONFIG_H
-
+    
 #define F_CPU                           18432000UL
-
+    
 // compile time default device address
 #define DEV_ADDR                        8
-
+    
 // max. opened files for FAT provider (SD card)
 #define FAT_MAX_FILES                   4
-
+    
 // max. drives for the FAT provider (each holds a current directory)
 #define FAT_MAX_ASSIGNS			10
-
+    
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46
-
+    
 // number of direct buffers (for U1/U2/B-* commands)
 #define CONFIG_NUM_DIRECT_BUFFERS       4
-
-
-#endif
-
+     
+#endif	/*  */
+    

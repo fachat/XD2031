@@ -17,24 +17,22 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA  02110-1301, USA.
-*/
-
+*/  
+    
 #ifndef TERM_H
 #define TERM_H
-
+    
 #include <stdio.h>
 #include "provider.h"
+void term_init();
+void term_set_endpoint(endpoint_t * ep);
+void term_flush(void);
+void term_putc(char c);
+void term_putcrlf(void);
+void term_puts(const char *);
+void term_rom_puts(const char *);
+void term_printf(const char *, ...);
+void term_rom_printf(const char *, ...);
+ int term_putchar(char c, FILE * stream);	// stdout
 
-void term_init();
-void term_set_endpoint(endpoint_t *ep);
-void term_flush(void);
-void term_putc(char c);
-void term_putcrlf(void);
-void term_puts(const char *);
-void term_rom_puts(const char *);
-void term_printf(const char *, ...);
-void term_rom_printf(const char *, ...);
-
-int term_putchar(char c, FILE *stream); // stdout
-
-#endif
+#endif	/*  */

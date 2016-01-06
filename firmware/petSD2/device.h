@@ -24,7 +24,6 @@
 
 **************************************************************************/
 
-
 #ifndef DEVICE_H
 #define DEVICE_H
 
@@ -32,25 +31,30 @@
 
 void device_init(void);
 
-static inline void device_led_on (void) {
-    LED_PORT &= ~_BV(LED_BIT);
+static inline void device_led_on(void)
+{
+	LED_PORT &= ~_BV(LED_BIT);
 }
 
-static inline void device_active_led_on (void) {
-    ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
+static inline void device_active_led_on(void)
+{
+	ACTIVE_LED_PORT &= ~_BV(ACTIVE_LED_BIT);
 }
 
-static inline void device_leds_off (void) {
-    LED_PORT |= _BV(LED_BIT);
-    ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
+static inline void device_leds_off(void)
+{
+	LED_PORT |= _BV(LED_BIT);
+	ACTIVE_LED_PORT |= _BV(ACTIVE_LED_BIT);
 }
 
-static inline uint8_t sd_card_write_protected(void) {
-    return (INPUT_SD_WP & _BV(PIN_SD_WP));
+static inline uint8_t sd_card_write_protected(void)
+{
+	return (INPUT_SD_WP & _BV(PIN_SD_WP));
 }
 
-static inline uint8_t sd_card_inserted(void) {
-    return (!(INPUT_SD_CD & _BV(PIN_SD_CD)));
+static inline uint8_t sd_card_inserted(void)
+{
+	return (!(INPUT_SD_CD & _BV(PIN_SD_CD)));
 }
 
 #endif

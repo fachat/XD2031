@@ -47,11 +47,13 @@ charset_t cconv_getcharset(const char *charsetname);
 // must work with in = out buffer (i.e. in place conversion), zero-bytes in the input
 // that must be converted to zero in the output (so multiple strings are converted 
 // in one call), 
-typedef void (*charconv_t)(const char *in, const uint8_t inlen, char *out, const uint8_t outlen);
+typedef void (*charconv_t) (const char *in, const uint8_t inlen, char *out,
+			    const uint8_t outlen);
 
 // fallback
 //charconv_t cconv_identity;
-void cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen);
+void cconv_identity(const char *in, const uint8_t inlen, char *out,
+		    const uint8_t outlen);
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
@@ -60,4 +62,3 @@ charconv_t cconv_converter(charset_t from, charset_t to);
 const char *cconv_charsetname(charset_t cnum);
 
 #endif
-

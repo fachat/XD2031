@@ -27,46 +27,60 @@
 #ifndef PETSCII_H
 #define PETSCII_H
 
-
 /**
  * simple conversion
  */
-static inline uint8_t petscii_to_ascii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x20;	// lower PETSCII to lower ASCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// upper C64 PETSCII to upper ASCII
-	if (v < 0xc1) return v;
-	if (v < 0xdb) return v & 0x7f;	// upper PET PETSCII to upper ASCII
+static inline uint8_t petscii_to_ascii(uint8_t v)
+{
+	if (v < 0x41)
+		return v;
+	if (v < 0x5b)
+		return v + 0x20;	// lower PETSCII to lower ASCII
+	if (v < 0x61)
+		return v;
+	if (v < 0x7b)
+		return v - 0x20;	// upper C64 PETSCII to upper ASCII
+	if (v < 0xc1)
+		return v;
+	if (v < 0xdb)
+		return v & 0x7f;	// upper PET PETSCII to upper ASCII
 	return v;
 }
 
 /**
  * simple conversion
  */
-static inline uint8_t ascii_to_petscii(uint8_t v) {
-	if (v < 0x41) return v;	
-	if (v < 0x5b) return v+0x80;	// upper ASCII to upper PETSCII
-	if (v < 0x61) return v;
-	if (v < 0x7b) return v-0x20;	// lower ASCII to lower C64/PET PETSCII
+static inline uint8_t ascii_to_petscii(uint8_t v)
+{
+	if (v < 0x41)
+		return v;
+	if (v < 0x5b)
+		return v + 0x80;	// upper ASCII to upper PETSCII
+	if (v < 0x61)
+		return v;
+	if (v < 0x7b)
+		return v - 0x20;	// lower ASCII to lower C64/PET PETSCII
 	return v;
 }
 
 /**
  * string ASCII --> PETSCII
  */
-static inline void str_ascii_to_petscii(uint8_t *a, uint8_t *b) {
-   while (*a) *b++ = ascii_to_petscii(*a++);
-   *b = 0;
+static inline void str_ascii_to_petscii(uint8_t * a, uint8_t * b)
+{
+	while (*a)
+		*b++ = ascii_to_petscii(*a++);
+	*b = 0;
 }
 
 /**
  * string PETSCII --> ASCII
  */
-static inline void str_petscii_to_ascii(uint8_t *a, uint8_t *b) {
-   while (*a) *b++ = petscii_to_ascii(*a++);
-   *b = 0;
+static inline void str_petscii_to_ascii(uint8_t * a, uint8_t * b)
+{
+	while (*a)
+		*b++ = petscii_to_ascii(*a++);
+	*b = 0;
 }
-
 
 #endif

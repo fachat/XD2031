@@ -24,24 +24,22 @@
  * This file implements the disk drive commands
  */
 
-
 #ifndef RELFILE_H
 #define RELFILE_H
 
-
-
 void relfile_init();
 
-
 // proxies a relative file through the bufcmd layer
-int8_t relfile_open(endpoint_t **ep, uint8_t channel_no, uint16_t reclen);
+int8_t relfile_open(endpoint_t ** ep, uint8_t channel_no, uint16_t reclen);
 
 // execute a P command
-int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *errormsg);
+int8_t relfile_position(bus_t * bus, char *cmdpars, uint8_t namelen,
+			errormsg_t * errormsg);
 
 // wraps the opened channel on the original real_endpoint through the
 // relative file provider, when an "CBM_ERROR_OPEN_REL" is received from the 
 // server.
-int8_t relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t reclen);
+int8_t relfile_proxy(uint8_t channel_no, endpoint_t * real_endpoint,
+		     uint16_t reclen);
 
 #endif

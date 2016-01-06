@@ -22,7 +22,6 @@
 
 #ifndef MAIN_H
 #define MAIN_H
-
-void fuse_info(void);
-
-#endif
+void fuse_info(void);
+ 
+#endif	/*  */

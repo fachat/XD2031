@@ -24,16 +24,13 @@
  * This file implements the disk drive commands
  */
 
-
 #ifndef CMD2_H
 #define CMD2_H
 
 #include "channel.h"
 #include "bus.h"
 
-int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
-						void (*callback)(int8_t errnum, uint8_t *rxdata));
-
-
+int8_t command_execute(uint8_t channel_no, bus_t * bus, errormsg_t * errormsg,
+		       void (*callback) (int8_t errnum, uint8_t * rxdata));
 
 #endif

@@ -20,16 +20,10 @@
 
 ***************************************************************************/
 
-
-int process_relfile(
-      di_t *img, 
-      uint8_t start_track, 
-      uint8_t start_sector, 
-      uint8_t ss_track, 
-      uint8_t ss_sector,
-      uint8_t reclen,
-      bool testing,
-      bool dump,
-      bool *weak,
-      char *filename
-);
+int process_relfile(di_t * img,
+		    uint8_t start_track,
+		    uint8_t start_sector,
+		    uint8_t ss_track,
+		    uint8_t ss_sector,
+		    uint8_t reclen,
+		    bool testing, bool dump, bool * weak, char *filename);

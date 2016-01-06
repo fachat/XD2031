@@ -26,7 +26,6 @@
 
 #include "wildcard.h"
 
-
 /**
  * classic Commodore pattern matching:
  * 	"*" - only works as the last pattern char and matches everything
@@ -34,19 +33,24 @@
  * 	"?" - single character is ignored, but required
  */
 
-static int8_t classic_match(const char *name, const char *pattern) {
-	int i = 0;	// current position
+static int8_t classic_match(const char *name, const char *pattern)
+{
+	int i = 0;		// current position
 	char n, p;
 
 	//printf("classic match between '%s' and '%s'\n", (char*)x, (char*)y);
 
-	while(1) {
+	while (1) {
 		n = name[i];
 		p = pattern[i++];
-		if (n ==  0  && p ==  0 ) return 1; // match
-		if (p == '*')             return 1; // match
-		if (p == '?' && n)        continue; // wild letter
-		if (n != p) break;
+		if (n == 0 && p == 0)
+			return 1;	// match
+		if (p == '*')
+			return 1;	// match
+		if (p == '?' && n)
+			continue;	// wild letter
+		if (n != p)
+			break;
 	}
 	return 0;
 }
@@ -60,33 +64,38 @@ static int8_t classic_match(const char *name, const char *pattern) {
  * outpattern points into the second compare string (the pattern)
  */
 
-static int8_t classic_dirmatch(const char *x, const char *y, const char **outpattern) {
-	int i = 0;	// current position
-	char a,b;
+static int8_t classic_dirmatch(const char *x, const char *y,
+			       const char **outpattern)
+{
+	int i = 0;		// current position
+	char a, b;
 
 	//printf("classic dir-enabled match between '%s' (%02x) and '%s' (%02x)\n", 
-	//			(char*)x, x[0], (char*)y, y[0]);
+	//                      (char*)x, x[0], (char*)y, y[0]);
 
-	while(1) {
+	while (1) {
 		a = x[i];
 		b = y[i];
-		*outpattern = y+i;
-		if (a ==  0  && b ==  0 ) return 1; // match
+		*outpattern = y + i;
+		if (a == 0 && b == 0)
+			return 1;	// match
 		if (a == '*' || b == '*') {
 			// move on to path separator (if any)
 			while (**outpattern && **outpattern != '/') {
 				(*outpattern)++;
 			}
-			return 1; // match
+			return 1;	// match
 		}
-		if (a ==  0  && b == '/') return 1;	// match
+		if (a == 0 && b == '/')
+			return 1;	// match
 		i++;
-		if (a == '?' || b == '?') continue; // wild letter
-		if (a != b) break;
+		if (a == '?' || b == '?')
+			continue;	// wild letter
+		if (a != b)
+			break;
 	}
 	return 0;
 }
-
 
 /**
  * advanced pattern matching (CBM 1581):
@@ -95,7 +104,8 @@ static int8_t classic_dirmatch(const char *x, const char *y, const char **outpat
  *	"?" - single character is ignored, but required
  */
 
-static int8_t advanced_match(const char *name, const char *pattern) {
+static int8_t advanced_match(const char *name, const char *pattern)
+{
 	bool match = true;
 	const char *after_name_ptr = NULL;
 	const char *after_pattern_ptr = NULL;
@@ -105,7 +115,8 @@ static int8_t advanced_match(const char *name, const char *pattern) {
 		n = *name;
 		p = *pattern;
 		if (!n) {
-			if (!p) break;
+			if (!p)
+				break;
 			if (p == '*') {
 				pattern++;
 				continue;
@@ -127,14 +138,16 @@ static int8_t advanced_match(const char *name, const char *pattern) {
 					after_pattern_ptr = ++pattern;
 					after_name_ptr = name;
 					p = *pattern;
-					if (!p) break;
+					if (!p)
+						break;
 					continue;
 				}
 				if (after_pattern_ptr) {
 					if (after_pattern_ptr != pattern) {
 						pattern = after_pattern_ptr;
 						p = *pattern;
-						if (n == p) pattern++;
+						if (n == p)
+							pattern++;
 					}
 					name++;
 					continue;
@@ -150,20 +163,20 @@ static int8_t advanced_match(const char *name, const char *pattern) {
 	return match;
 }
 
-
 /**
  * compares the given name to the given pattern
  * and returns true if it matches.
  * Both names are null-terminated
  */
 
-int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wildcards) {
+int8_t compare_pattern(const char *name, const char *pattern,
+		       bool advanced_wildcards)
+{
 	if (advanced_wildcards)
 		return advanced_match(name, pattern);
 	else
 		return classic_match(name, pattern);
 }
-
 
 /**
  * compares the given name to the given pattern
@@ -173,7 +186,9 @@ int8_t compare_pattern(const char *name, const char *pattern, bool advanced_wild
  * Also returns the rest of the pattern in the outpattern pointer
  */
 
-int8_t compare_dirpattern(const char *name, const char *pattern, const char **outpattern) {
+int8_t compare_dirpattern(const char *name, const char *pattern,
+			  const char **outpattern)
+{
 	// 1581 matching style not yet implemented
 	// so do always a "classic" matching:
 	return classic_dirmatch(name, pattern, outpattern);

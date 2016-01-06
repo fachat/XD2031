@@ -28,34 +28,35 @@
 #ifndef TIMER_H
 #define	TIMER_H
 
-
 #include "timerhw.h"
 
-
-static inline void timer_init(void) {
+static inline void timer_init(void)
+{
 	timerhw_init();
 }
 
-
 // set the timer to underflow after the given number of us
-static inline void timer_set_us(uint16_t us) {
+static inline void timer_set_us(uint16_t us)
+{
 	timerhw_set_us(us);
 }
 
 // returns !=0 when the timer has underflown
-static inline uint8_t timer_is_timed_out() {
+static inline uint8_t timer_is_timed_out()
+{
 	return timerhw_has_timed_out();
 }
 
 // start timer to count down to zero within the given number of us
 // resolution 10 ms
-static inline void timer2_set_ms(uint16_t ms) {
+static inline void timer2_set_ms(uint16_t ms)
+{
 	timerhw2_set_ms(ms);
 }
 
-static inline uint8_t timer2_is_timed_out(void) {
+static inline uint8_t timer2_is_timed_out(void)
+{
 	return timer2hw_has_timed_out();
 }
 
 #endif
-

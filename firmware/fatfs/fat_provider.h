@@ -33,5 +33,4 @@
 
 extern provider_t fat_provider;
 
-#endif // FAT_PROVIDER_H
-
+#endif				// FAT_PROVIDER_H

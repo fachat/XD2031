@@ -20,7 +20,6 @@
 
 ***************************************************************************/
 
-
 /* ----- FatFs FRESULT errors vs CBM cbm_errno_t errors --------------------------
 
    Some FatFs functions depend on the error code of other internal functions,
@@ -37,6 +36,6 @@
 #include "errors.h"
 
 cbm_errno_t conv_fresult(FRESULT fres);
-cbm_errno_t combine (cbm_errno_t cres, FRESULT fres);
+cbm_errno_t combine(cbm_errno_t cres, FRESULT fres);
 
 #endif

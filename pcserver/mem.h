@@ -36,15 +36,16 @@ void mem_init(void);
 void mem_free(const void *ptr);
 
 // alloc single object
-void *mem_alloc_(const type_t *type, char *file, int line);
+void *mem_alloc_(const type_t * type, char *file, int line);
 #define mem_alloc(t) mem_alloc_(t, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
-void *mem_alloc_n_(size_t n, const type_t *type, char *file, int line);
+void *mem_alloc_n_(size_t n, const type_t * type, char *file, int line);
 #define mem_alloc_n(n, type) mem_alloc_n_(n, type, __FILE__, __LINE__)
 
 // re-alloc multiple object, returning a pointer to an array
-void *mem_realloc_n_(size_t n, const type_t *type, void *ptr, char *file, int line);
+void *mem_realloc_n_(size_t n, const type_t * type, void *ptr, char *file,
+		     int line);
 #define mem_realloc_n(n, type, ptr) mem_realloc_n_(n, type, ptr, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
@@ -71,6 +72,7 @@ char *malloc_path(const char *base, const char *name);
  * to by baseptr will be mem_free'd!
  */
 void mem_append_str2(char **baseptr, const char *s1, const char *s2);
-void mem_append_str5(char **baseptr, const char *s1, const char *s2, const char *s3, const char *s4, const char *s5);
+void mem_append_str5(char **baseptr, const char *s1, const char *s2,
+		     const char *s3, const char *s4, const char *s5);
 
 #endif

@@ -25,4 +25,3 @@
 int socket_open(const char *socketname, int dowait);
 
 #endif
-

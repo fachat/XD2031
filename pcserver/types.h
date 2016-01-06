@@ -20,7 +20,6 @@
 
 ****************************************************************************/
 
-
 #ifndef TYPES_H
 #define TYPES_H
 
@@ -28,13 +27,12 @@ typedef struct _type type_t;
 
 // more or less a class definition type
 struct _type {
-	const char 	*name;
-	unsigned int	sizeoftype;
-	void		(*constructor)(const type_t *type, void *obj);
-	//type_t		*parent;	// super class - used in constructor call
+	const char *name;
+	unsigned int sizeoftype;
+	void (*constructor) (const type_t * type, void *obj);
+	//type_t                *parent;        // super class - used in constructor call
 };
 
-typedef int 	bool_t;
+typedef int bool_t;
 
 #endif
-

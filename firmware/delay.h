@@ -33,19 +33,20 @@
 // this is in main.c, but as it is used for delays, it is defined here
 void main_delay();
 
-static inline void delayms(uint8_t t) {
-	uint8_t ms = t;	
+static inline void delayms(uint8_t t)
+{
+	uint8_t ms = t;
 	do {
 		main_delay();
 		delayhw_ms(1);
-		ms--;	
+		ms--;
 	}
 	while (ms > 0);
 }
 
-static inline void delayus(uint8_t us) {
+static inline void delayus(uint8_t us)
+{
 	delayhw_us(us);
 }
 
 #endif
-

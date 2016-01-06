@@ -20,13 +20,12 @@
 
 ***************************************************************************/
 
-
 #ifndef CMDNAMES_H
 #define CMDNAMES_H
 
 #include "cmd.h"
 
-command_t command_find(uint8_t *input, uint8_t *len);
+command_t command_find(uint8_t * input, uint8_t * len);
 const char *command_to_name(command_t cmd);
 
 #endif

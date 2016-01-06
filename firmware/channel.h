@@ -45,13 +45,13 @@
  * The READWRITE files use buffer 0 to send to host, and buffer 1
  * to receive from host only, so no double-buffering is done there.
  */
-#define	WTYPE_READONLY		0		
+#define	WTYPE_READONLY		0
 #define	WTYPE_WRITEONLY		1
 #define	WTYPE_READWRITE		2
 
-#define	WTYPE_MASK		0x03		// mask to get rid of the following options
+#define	WTYPE_MASK		0x03	// mask to get rid of the following options
 
-#define	WTYPE_NONBLOCKING	128		// ORd with one of the other three
+#define	WTYPE_NONBLOCKING	128	// ORd with one of the other three
 
 /**
  * R/W buffer definitions
@@ -63,22 +63,22 @@
  * pull_state values. The delay callback updates the state
  * pull means read (pull) data from the server
  */
-#define	PULL_OPEN	0		// after open
-#define	PULL_PRELOAD	1		// during read pre-load
-#define	PULL_ONECONV	2		// first buffer is read, but may need to be converted
-#define	PULL_ONEREAD	3		// one buffer read, the other unused
-#define	PULL_PULL2ND	4		// one buffer in use, the other is being pulled
-#define	PULL_TWOCONV	5		// second buffer is read, but may still need to be converted
-#define	PULL_TWOREAD	6		// both buffers read and valid
+#define	PULL_OPEN	0	// after open
+#define	PULL_PRELOAD	1	// during read pre-load
+#define	PULL_ONECONV	2	// first buffer is read, but may need to be converted
+#define	PULL_ONEREAD	3	// one buffer read, the other unused
+#define	PULL_PULL2ND	4	// one buffer in use, the other is being pulled
+#define	PULL_TWOCONV	5	// second buffer is read, but may still need to be converted
+#define	PULL_TWOREAD	6	// both buffers read and valid
 
 /**
  * push_state values. The delay callback updates the state
  * push means send (push) data to the server
  */
-#define	PUSH_OPEN	0		// after open
-#define	PUSH_FILLONE	1		// filling the first buffer
-#define	PUSH_FILLTWO	2		// filling the second buffer
-#define	PUSH_CLOSE	3		// channel has been closed
+#define	PUSH_OPEN	0	// after open
+#define	PUSH_FILLONE	1	// filling the first buffer
+#define	PUSH_FILLTWO	2	// filling the second buffer
+#define	PUSH_CLOSE	3	// channel has been closed
 
 #define	PUT_FLUSH	0x01
 #define	PUT_SYNC	0x02
@@ -89,25 +89,26 @@
 
 typedef struct {
 	// channel globals
-	int8_t		channel_no;
-	uint8_t		current;
-	uint8_t		writetype;
-	uint8_t		options;
-	endpoint_t	*endpoint;
+	int8_t channel_no;
+	uint8_t current;
+	uint8_t writetype;
+	uint8_t options;
+	endpoint_t *endpoint;
 	// directory handling
-	uint8_t		drive;
-	int8_t		(*directory_converter)(void *ep, packet_t *packet, uint8_t drive);
+	uint8_t drive;
+	 int8_t(*directory_converter) (void *ep, packet_t * packet,
+				       uint8_t drive);
 	// channel pull state - only one can be pulled at a time
-	int8_t		pull_state;
-	int8_t		last_pull_errorno;
+	int8_t pull_state;
+	int8_t last_pull_errorno;
 	// channel push state - only one can be pushed at a time
-	int8_t		push_state;
-	int8_t		last_push_errorno;
+	int8_t push_state;
+	int8_t last_push_errorno;
 	// channel state
-	uint8_t		had_data;	
+	uint8_t had_data;
 	// packet area
-	packet_t	buf[2];
-	uint8_t		data[2][DATA_BUFLEN];
+	packet_t buf[2];
+	uint8_t data[2][DATA_BUFLEN];
 } channel_t;
 
 /*
@@ -121,16 +122,16 @@ void channel_init(void);
  *
  * writetype is either 0 for read only, 1 for write, (as seen from ieee device)
  */
-int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t *prov, 
-		int8_t (*dirconverter)(void *ep, packet_t *, uint8_t drive),
-		uint8_t drive);
+int8_t channel_open(int8_t chan, uint8_t writetype, endpoint_t * prov,
+		    int8_t(*dirconverter) (void *ep, packet_t *, uint8_t drive),
+		    uint8_t drive);
 
 /*
  * re-open a file to wrap the channel for a relative file
  */
-int8_t channel_reopen(int8_t chan, uint8_t writetype, endpoint_t *prov);
+int8_t channel_reopen(int8_t chan, uint8_t writetype, endpoint_t * prov);
 
-channel_t* channel_find(int8_t chan);
+channel_t *channel_find(int8_t chan);
 
 /**
  * flushes all messages, i.e. waits until writes are acknowledged
@@ -152,19 +153,19 @@ v* eof is set when an EOF has been received, cleared otherwise
  *
  * returns 0 on ok, -1 on error
  */
-int8_t channel_get(channel_t *chan, uint8_t *data, uint8_t *iseof, int8_t *err, uint8_t flags);
+int8_t channel_get(channel_t * chan, uint8_t * data, uint8_t * iseof,
+		   int8_t * err, uint8_t flags);
 
 /*
  * send a byte
  *
  * for forceflush use the PUT_* flags from above.
  */
-int8_t channel_put(channel_t *chan, uint8_t c, uint8_t forceflush);
+int8_t channel_put(channel_t * chan, uint8_t c, uint8_t forceflush);
 
 void channel_close(int8_t secondary_address);
 
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl);
-
 
 #endif

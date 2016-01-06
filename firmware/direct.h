@@ -24,21 +24,20 @@
  * This file implements the disk drive commands
  */
 
-
 #ifndef DIRECT_H
 #define DIRECT_H
 
-
-
-int8_t cmd_user(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv);
-int8_t cmd_block(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, uint8_t *err_drv); 
+int8_t cmd_user(bus_t * bus, char *cmdbuf, uint8_t * err_trk, uint8_t * err_sec,
+		uint8_t * err_drv);
+int8_t cmd_block(bus_t * bus, char *cmdbuf, uint8_t * err_trk,
+		 uint8_t * err_sec, uint8_t * err_drv);
 
 void direct_init();
 
-endpoint_t* direct_provider(void);
+endpoint_t *direct_provider(void);
 
-int8_t direct_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
-                        void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t *name);
-
+int8_t direct_open(uint8_t channel_no, bus_t * bus, errormsg_t * errormsg,
+		   void (*callback) (int8_t errnum, uint8_t * rxdata),
+		   uint8_t * name);
 
 #endif

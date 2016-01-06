@@ -30,27 +30,28 @@
 #define	LED_H
 
 typedef enum {
-	IDLE	= 0,
-	OFF	= 1,
-	ON	= 2,
-	ACTIVE	= 3,
-	ERROR	= 4,
-	PANIC	= 5
+	IDLE = 0,
+	OFF = 1,
+	ON = 2,
+	ACTIVE = 3,
+	ERROR = 4,
+	PANIC = 5
 } led_t;
 
 void led_set(led_t signal);
 
 void led_init();
 
-static inline void led_on() {
+static inline void led_on()
+{
 	led_set(ON);
 }
 
-static inline void led_off() {
+static inline void led_off()
+{
 	led_set(OFF);
 }
 
 void led_toggle();
 
 #endif
-

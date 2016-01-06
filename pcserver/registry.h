@@ -34,31 +34,32 @@
 typedef struct _registry registry_t;
 
 struct _registry {
-        const char      *name;
-        int             numentries;
-        int             capacity;
-        void            **entries;
+	const char *name;
+	int numentries;
+	int capacity;
+	void **entries;
 };
 
 // initialize a registry
-void reg_init(registry_t *reg, const char *name, int initial_capacity);
+void reg_init(registry_t * reg, const char *name, int initial_capacity);
 
 // adds a pre-allocated struct
-void reg_append(registry_t *reg, void *ptr);
+void reg_append(registry_t * reg, void *ptr);
 
 // get a struct pointer back using the position as index
 // returns NULL if position is behind last entry
-void *reg_get(registry_t *reg, int position);
+void *reg_get(registry_t * reg, int position);
 
 // remove an entry from the registry
 // Note: linear with registry size
-void reg_remove(registry_t *reg, void *ptr);
+void reg_remove(registry_t * reg, void *ptr);
 
 // return the number of entries in the registry
-int reg_size(registry_t *reg);
+int reg_size(registry_t * reg);
 
 // clear out the registry, and free all allocated memory
 // Use the given function on each entry left if not NULL
-void reg_free(registry_t *reg, void (*entry_free)(registry_t *reg, void *entry));
+void reg_free(registry_t * reg,
+	      void (*entry_free) (registry_t * reg, void *entry));
 
 #endif

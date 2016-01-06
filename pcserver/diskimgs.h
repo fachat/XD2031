@@ -26,7 +26,6 @@
  * Commodore disk images of type d64, d71, d80, d81, d82
  */
 
-
 #ifndef DISKIMG_H
 #define DISKIMG_H
 
@@ -47,30 +46,28 @@
 #define	SSB_OFFSET_SSG		4	/* start of side sector addresses in current side sector group */
 #define	SSB_OFFSET_SECTOR	16	/* start of sector addresses in ss */
 
-
-typedef struct Disk_Image
-{
-   uint8_t ID;                    // Image type (64,71,80,81,82)
-   uint8_t Tracks;                // Tracks per side
-   uint8_t Sectors;               // Max. sectors per track
-   uint8_t Sides;                 // Sides (2 for D71 and D82)
-   uint8_t BAMBlocks;             // Number of BAM blocks
-   uint8_t BAMOffset;             // Start of BAM in block
-   uint8_t TracksPerBAM;          // Tracks per BAM
-   uint8_t DirInterleave;         // Interleave on directory track
-   uint8_t DatInterleave;         // Interleave on data tracks
-   uint8_t HasSSB;		  // when set disk has super side blocks in REL files
-   unsigned int  Blocks;          // Size in blocks
-   unsigned int  RelBlocks;       // Max REL file size in blocks
-   int (*LSEC)(int t);            // last sector number of a track
-   int (*LBA)(int t, int s);      // Logical Block Address calculation
-   uint8_t DirTrack;              // Header and directory track
-   uint8_t DirSector;             // Sector number of first directory entry block
-   uint8_t bamts[8];		  // up to four BAM block addresses (t/s)
-   uint8_t HasErrorTable;         // Error table appended
+typedef struct Disk_Image {
+	uint8_t ID;		// Image type (64,71,80,81,82)
+	uint8_t Tracks;		// Tracks per side
+	uint8_t Sectors;	// Max. sectors per track
+	uint8_t Sides;		// Sides (2 for D71 and D82)
+	uint8_t BAMBlocks;	// Number of BAM blocks
+	uint8_t BAMOffset;	// Start of BAM in block
+	uint8_t TracksPerBAM;	// Tracks per BAM
+	uint8_t DirInterleave;	// Interleave on directory track
+	uint8_t DatInterleave;	// Interleave on data tracks
+	uint8_t HasSSB;		// when set disk has super side blocks in REL files
+	unsigned int Blocks;	// Size in blocks
+	unsigned int RelBlocks;	// Max REL file size in blocks
+	int (*LSEC) (int t);	// last sector number of a track
+	int (*LBA) (int t, int s);	// Logical Block Address calculation
+	uint8_t DirTrack;	// Header and directory track
+	uint8_t DirSector;	// Sector number of first directory entry block
+	uint8_t bamts[8];	// up to four BAM block addresses (t/s)
+	uint8_t HasErrorTable;	// Error table appended
 } Disk_Image_t;
 
-int diskimg_identify(Disk_Image_t *di, unsigned int filesize);
+int diskimg_identify(Disk_Image_t * di, unsigned int filesize);
 
 /* Commodore Floppy Formats
 
@@ -88,7 +85,6 @@ S  Track  #S  Bl.          S  Track   #S   Bl.          S  Track  #S   Bl.
 1  60-65  18  108          1 131-141  25   275
 1  66-70  17   85  1366    1 142-154  23   299  4166                  3200
 =======================    =========================   ===================
-
 
 BAM Block for D64 & D71 (track 18 / sector 0)
 
@@ -160,6 +156,4 @@ E0 :                8. directory entry
 
 */
 
-
 #endif
-

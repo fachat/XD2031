@@ -21,11 +21,8 @@
 
 ****************************************************************************/
 
-
 #ifndef IEEE_H
 #define IEEE_H
-
-
 
 // general functions
 
@@ -34,4 +31,3 @@ void ieee_init(uint8_t deviceno);
 void ieee_mainloop_iteration(void);
 
 #endif
-

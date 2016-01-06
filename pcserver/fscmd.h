@@ -27,13 +27,11 @@
 #ifndef FSCMD_H
 #define FSCMD_H
 
-
 /* status values */
 /* Note: not really used at themoment, only F_FREE is set in the init */
 #define F_FREE          0	/* must be 0 */
 
 #define MAXFILES        16
-
 
 void cmd_init();
 
@@ -46,4 +44,3 @@ int cmd_loop(serial_port_t readfs, serial_port_t writefd);
 void disable_user_interface(void);
 
 #endif
-

@@ -30,7 +30,6 @@
 #ifndef UARTHW_H
 #define	UARTHW_H
 
-
 /***********************************************************************************
  * UART stuff
  */
@@ -65,4 +64,3 @@ void uarthw_send(int8_t data);
 int16_t uarthw_receive();
 
 #endif
-

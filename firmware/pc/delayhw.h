@@ -33,5 +33,4 @@
 void delayhw_ms(uint16_t len);
 void delayhw_us(uint16_t len);
 
-
 #endif

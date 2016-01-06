@@ -36,7 +36,6 @@
 void channel_init();
 file_t *channel_to_file(int chan);
 void channel_free(int channo);
-void channel_set(int channo, file_t *fp);
+void channel_set(int channo, file_t * fp);
 
 #endif
-

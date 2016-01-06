@@ -26,31 +26,29 @@
 
 #include <avr/interrupt.h>
 
+static inline void enable_interrupts(void) __attribute__ ((always_inline));
+static inline void disable_interrupts(void) __attribute__ ((always_inline));
 
-static inline void enable_interrupts (void) __attribute__((always_inline));
-static inline void disable_interrupts (void) __attribute__((always_inline));
-
-static inline void enable_interrupts (void) 
+static inline void enable_interrupts(void)
 {
-  sei();
+	sei();
 }
 
-static inline void disable_interrupts (void) 
+static inline void disable_interrupts(void)
 {
-  cli();
+	cli();
 }
 
-static inline int32_t FreqKHz() {
-	return (int32_t)(F_CPU/1000);
+static inline int32_t FreqKHz()
+{
+	return (int32_t) (F_CPU / 1000);
 }
-
 
 //--------------------------
 // CALC FREE RAM SPACE
 static inline uint16_t BytesFree()
 {
-        extern unsigned char __heap_start;
-        uint16_t momentan_frei = SP - (uint16_t) &__heap_start;
-        return momentan_frei;
+	extern unsigned char __heap_start;
+	uint16_t momentan_frei = SP - (uint16_t) & __heap_start;
+	return momentan_frei;
 }
-

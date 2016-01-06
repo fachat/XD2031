@@ -24,39 +24,54 @@
 
 **************************************************************************/
 
-
-
 #include <avr/io.h>
 #include "config.h"
 #include "device.h"
 
-static inline __attribute__((always_inline)) void slow_spi_clk(void) {
-    /* Set SPI clock to 14.7456 MHz / 64 = 230.4 kHz  during card init */
-    SPSR = _BV(SPI2X);
-    SPCR |= _BV(SPR1) | _BV(SPR0);
+static inline __attribute__ ((always_inline))
+void slow_spi_clk(void)
+{
+	/* Set SPI clock to 14.7456 MHz / 64 = 230.4 kHz  during card init */
+	SPSR = _BV(SPI2X);
+	SPCR |= _BV(SPR1) | _BV(SPR0);
 }
 
-static inline __attribute__((always_inline)) void fast_spi_clk(void) {
-    /* Set SPI clock to 14.7456 MHz / 8 = 1.843 MHz after card init */
-    SPSR = _BV(SPI2X);
-    SPCR &= ~_BV(SPR1);
-    SPCR |= _BV(SPR0);
+static inline __attribute__ ((always_inline))
+void fast_spi_clk(void)
+{
+	/* Set SPI clock to 14.7456 MHz / 8 = 1.843 MHz after card init */
+	SPSR = _BV(SPI2X);
+	SPCR &= ~_BV(SPR1);
+	SPCR |= _BV(SPR0);
 }
 
-static inline __attribute__((always_inline)) void spi_init (void) {                                     
-    SPI_PORT |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);   // SCK/MOSI as output
-    SPI_DDR |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);
+static inline __attribute__ ((always_inline))
+void spi_init(void)
+{
+	SPI_PORT |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);	// SCK/MOSI as output
+	SPI_DDR |= _BV(SPI_PIN_SCK) | _BV(SPI_PIN_MOSI);
 
-    PORT_SD_CS |= _BV(PIN_SD_CS);               // SD chip select = high
-    DDR_SD_CS |= _BV(PIN_SD_CS);                // SD_CS as output
+	PORT_SD_CS |= _BV(PIN_SD_CS);	// SD chip select = high
+	DDR_SD_CS |= _BV(PIN_SD_CS);	// SD_CS as output
 
-    SPCR = 0x52;            /* Enable SPI function in mode 0 */ 
-    SPSR = 0x01;            /* SPI 2x mode */           
+	SPCR = 0x52;		/* Enable SPI function in mode 0 */
+	SPSR = 0x01;		/* SPI 2x mode */
 }
-
 
 /* When the target system does not support socket power control, there   */
 /* is nothing to do in these functions and chk_power always returns 1.   */
-static inline __attribute__((always_inline)) uint8_t power_status (void) { return 1; }
-static inline __attribute__((always_inline)) void power_on (void) { }
-static inline __attribute__((always_inline)) void power_off(void) { }
+static inline __attribute__ ((always_inline))
+uint8_t power_status(void)
+{
+	return 1;
+}
+
+static inline __attribute__ ((always_inline))
+void power_on(void)
+{
+}
+
+static inline __attribute__ ((always_inline))
+void power_off(void)
+{
+}

@@ -28,7 +28,7 @@
 #ifndef DELAYHW_H
 #define DELAYHW_H
 
-#include "config.h"         // F_CPU
+#include "config.h"		// F_CPU
 #define __DELAY_BACKWARD_COMPATIBLE__
 #include <util/delay.h>
 
@@ -37,11 +37,11 @@
 #define	delayhw_us(a)	_delay_us(a)
 
 //static inline void delayms(uint16_t len) {
-//	_delay_ms(len);
+//      _delay_ms(len);
 //}
 
 //static inline void delayus(uint16_t len) {
-//	_delay_us(len);
+//      _delay_us(len);
 //}
 
 #endif

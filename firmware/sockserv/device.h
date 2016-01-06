@@ -34,11 +34,12 @@ void device_init(void);
 
 void device_setup(int argc, const char *argv[]);
 
-static inline void device_led_on (void) {
+static inline void device_led_on(void)
+{
 }
 
-static inline void device_leds_off (void) {
+static inline void device_leds_off(void)
+{
 }
-
 
 #endif

@@ -24,42 +24,38 @@
  * This file implements the disk drive commands
  */
 
-
 #ifndef BUFFER_H
 #define BUFFER_H
-
-
 
 // ----------------------------------------------------------------------------------
 // buffer handling (#-file, U1/U2/B-W/B-R/B-P
 // we only have a single buffer
 
-
 typedef struct {
-        // what channel has the buffer, -1 unused
-        int8_t          channel_no;
-        // read and write pointers in the buffer
-        // wptr is one "behind" the rptr (which is incremented below), to
-        // accomodate for the preload byte
-        uint8_t         rptr;                   // read pointer
-        uint8_t         wptr;                   // read pointer
-        // preload flag
-        uint8_t         pflag;                  // see PFLAG defines below
-        // pointer to the last valid bytes (can be 0-255, where 0 is only the pointer is valid)
-        uint8_t         lastvalid;
-        // relative file information
-        // the proxied endpoint for rel files
-        endpoint_t      *real_endpoint;
-        // record length (max 254 byte)
-        uint8_t         recordlen;
-        // the record number for the (first) record in the buffer
-        uint16_t        buf_recordno;
-        // position of current record in buffer (multiple may be loaded in one read)
-        uint8_t         pos_of_record;
-        // current position in record
-        uint8_t         cur_pos_in_record;
-        // the actual 256 byte buffer
-        uint8_t         buffer[256];
+	// what channel has the buffer, -1 unused
+	int8_t channel_no;
+	// read and write pointers in the buffer
+	// wptr is one "behind" the rptr (which is incremented below), to
+	// accomodate for the preload byte
+	uint8_t rptr;		// read pointer
+	uint8_t wptr;		// read pointer
+	// preload flag
+	uint8_t pflag;		// see PFLAG defines below
+	// pointer to the last valid bytes (can be 0-255, where 0 is only the pointer is valid)
+	uint8_t lastvalid;
+	// relative file information
+	// the proxied endpoint for rel files
+	endpoint_t *real_endpoint;
+	// record length (max 254 byte)
+	uint8_t recordlen;
+	// the record number for the (first) record in the buffer
+	uint16_t buf_recordno;
+	// position of current record in buffer (multiple may be loaded in one read)
+	uint8_t pos_of_record;
+	// current position in record
+	uint8_t cur_pos_in_record;
+	// the actual 256 byte buffer
+	uint8_t buffer[256];
 
 } cmdbuf_t;
 
@@ -70,9 +66,8 @@ extern cmdbuf_t buffers[];
 
 extern char buf[];
 
-#define PFLAG_PRELOAD           1               // preload has happened
-#define PFLAG_ISREAD            2               // buffer has been read from (for rel files)
-
+#define PFLAG_PRELOAD           1	// preload has happened
+#define PFLAG_ISREAD            2	// buffer has been read from (for rel files)
 
 void buffer_init();
 
@@ -88,19 +83,16 @@ cmdbuf_t *buf_find(int8_t channel_no);
 // free a buffer
 uint8_t buf_free(int8_t channel_no);
 
-
 // set up cmdpack to send and datapack to receive, then call cmdbuf_call()
 extern packet_t buf_cmdpack;
 extern packet_t buf_datapack;
-uint8_t buf_call(endpoint_t *ep, void *provdata, uint8_t channelno, packet_t *sendbuf, packet_t *rxbuf);
+uint8_t buf_call(endpoint_t * ep, void *provdata, uint8_t channelno,
+		 packet_t * sendbuf, packet_t * rxbuf);
 
-
-void buffer_close(uint8_t channel_no, endpoint_t *endpoint);
-uint8_t buffer_write_buffer(uint8_t channel_no, endpoint_t *endpoint,
-                uint8_t start_of_data, uint16_t send_nbytes);
-uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t receive_nbytes);
-
-
-
+void buffer_close(uint8_t channel_no, endpoint_t * endpoint);
+uint8_t buffer_write_buffer(uint8_t channel_no, endpoint_t * endpoint,
+			    uint8_t start_of_data, uint16_t send_nbytes);
+uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t * endpoint,
+			   uint16_t receive_nbytes);
 
 #endif

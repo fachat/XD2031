@@ -19,11 +19,7 @@
 
 ****************************************************************************/
 
-
 /**
  * open a named unix socket, listen on it and return the first connection
  */
 int socket_open(const char *socketname);
-
-
-

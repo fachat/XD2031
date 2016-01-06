@@ -24,4 +24,4 @@
 
 #include "arch.h"
 
-void reset_mcu (void);
+void reset_mcu(void);

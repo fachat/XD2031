@@ -18,27 +18,26 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA  02110-1301, USA.
-*/
-
+*/  
+    
 #ifndef CONFIG_H
 #define CONFIG_H
-
-
+     
 // compile time default device address
 #define DEV_ADDR                        8
-
+    
 // buffer sizes
 #define CONFIG_COMMAND_BUFFER_SIZE      120
 #define CONFIG_ERROR_BUFFER_SIZE        46
-
+    
 // number of direct buffers (for U1/U2/B-* commands)
 // Note: 12 is the number of buffers in the old dual drives, which we use to test
 #define	CONFIG_NUM_DIRECT_BUFFERS	12
-
+    
 // max. opened files for FAT provider (SD card provider)
 #define FAT_MAX_FILES			4
-
+    
 // max. drives for the FAT provider (each holds a current directory)
 #define FAT_MAX_ASSIGNS                 10
-
-#endif
+    
+#endif	/*  */

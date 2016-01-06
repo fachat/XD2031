@@ -20,7 +20,6 @@
 
 //    assertion macros
 
-
 #ifndef ASSERT_H
 #define ASSERT_H
 
@@ -32,7 +31,5 @@
 			debug_puts((m));			\
 		}						\
 	} while(0)
-			
 
 #endif
-	

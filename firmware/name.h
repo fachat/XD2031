@@ -46,25 +46,25 @@
 #define MAX_NAMEINFO_FILES 4
 
 typedef struct {
-	uint8_t drive;        // starts from 0 (real zero, not $30 = ASCII "0")
-	uint8_t *drivename;   // name of drive ("FTP", ...)
-	uint8_t *name;        // pointer to the actual name
-	uint8_t namelen;      // length of file name
+	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")
+	uint8_t *drivename;	// name of drive ("FTP", ...)
+	uint8_t *name;		// pointer to the actual name
+	uint8_t namelen;	// length of file name
 } drive_and_name_t;
 
 typedef struct {
-	uint8_t	drive;		// starts from 0 (real zero, not $30 = ASCII "0")
+	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")
 	command_t cmd;		// command, "$" for directory open
-	uint8_t	type;		// file type requested ("S", "P", ...)
+	uint8_t type;		// file type requested ("S", "P", ...)
 	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
 	uint8_t options;	// access options, as bit mask
-	uint8_t *drivename;     // name of drive ("FTP", ...)
+	uint8_t *drivename;	// name of drive ("FTP", ...)
 	uint8_t *name;		// pointer to the actual name
-	uint8_t	namelen;	// length of file name
+	uint8_t namelen;	// length of file name
 	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
 	uint16_t recordno;	// record number from P command
-	uint8_t num_files;   // number of secondary drive_filenames
-	drive_and_name_t file[MAX_NAMEINFO_FILES]; // drive_name info
+	uint8_t num_files;	// number of secondary drive_filenames
+	drive_and_name_t file[MAX_NAMEINFO_FILES];	// drive_name info
 } nameinfo_t;
 
 // nameinfo option bits
@@ -80,7 +80,7 @@ extern nameinfo_t nameinfo;
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.
  */
-void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint);
+void parse_filename(cmd_t * in, nameinfo_t * result, uint8_t parsehint);
 
 #define	PARSEHINT_COMMAND	1	// when called from command handler
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
@@ -95,7 +95,6 @@ void parse_filename(cmd_t *in, nameinfo_t *result, uint8_t parsehint);
  * 
  * it returns the number of bytes in the buffer
  */
-uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo);
+uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
 
 #endif
-

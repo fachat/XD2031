@@ -69,11 +69,10 @@
 #define	IEEE_A_DDR		DDRD
 #define	IEEE_A_PORT		PORTD
 
-
 /* interrupt init from sd2iec */
 
-#  define IEEE_ATN_INT          PCINT3
-#  define IEEE_PCINT            PCINT27
+#define IEEE_ATN_INT          PCINT3
+#define IEEE_PCINT            PCINT27
 
 //#define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
 

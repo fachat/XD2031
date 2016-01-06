@@ -38,19 +38,16 @@ char *splitpath(char *path, char **dir);
  * returns ERROR_FILE_NAME_TOO_LONG if the buffer cannot take the resulting path
  * otherwise returns ERROR_OK
  */
-cbm_errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir, const char *name);
+cbm_errno_t concat_path_filename(char *path, uint16_t pathmax, const char *dir,
+				 const char *name);
 
+cbm_errno_t dummy_action(const char *dir, const char *name);	// just a dummy action for debug purposes
+cbm_errno_t traverse(char *path,	// path string (may contain wildcards and path separators)
+		     bool advanced_wildcards, uint16_t max_matches,	// abort if this number of matches is reached
+		     uint16_t * matches,	// count number of total matches
+		     uint8_t required_flags,	// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
+		     uint8_t forbidden_flags,	// AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
+		     cbm_errno_t(*action) (const char *path)	// function called by each match
+    );
 
-cbm_errno_t dummy_action(const char *dir, const char *name); // just a dummy action for debug purposes
-cbm_errno_t traverse(
-        char 		*path,                  // path string (may contain wildcards and path separators)
-        bool            advanced_wildcards,
-        uint16_t        max_matches,            // abort if this number of matches is reached
-        uint16_t        *matches,               // count number of total matches
-        uint8_t         required_flags,         // AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
-        uint8_t         forbidden_flags,        // AM_DIR | AM_RDO | AM_HID | AM_SYS | AM_ARC
-        cbm_errno_t  (*action)(const char *path)	// function called by each match
-);
-  
-
-#endif /* DIR_H */
+#endif				/* DIR_H */

@@ -21,7 +21,6 @@
 
 ****************************************************************************/
 
-
 #ifndef IECHW_H
 #define IECHW_H
 
@@ -51,118 +50,135 @@ extern uint8_t is_dataout;
 // ATN handling
 // (input only)
 
-static inline void atn_init() {
-      	IEC_DDR_ATN &= (uint8_t)~_BV(IEC_PIN_ATN);    	// ATN as input
-	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);             	// Enable pull-up
+static inline void atn_init()
+{
+	IEC_DDR_ATN &= (uint8_t) ~ _BV(IEC_PIN_ATN);	// ATN as input
+	IEC_PORT_ATN |= _BV(IEC_PIN_ATN);	// Enable pull-up
 }
 
-static inline uint8_t satnislo() {
+static inline uint8_t satnislo()
+{
 	return !(IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
 }
 
-static inline uint8_t satnishi() {
+static inline uint8_t satnishi()
+{
 	return (IEC_INPUT_ATN & _BV(IEC_PIN_ATN));
 }
 
 // DATA & CLK handling
 
-static inline void dataforcelo() {
-      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_DATA);    	// DATA low
-      	IEC_DDR |= _BV(IEC_PIN_DATA);              	// DATA as output
+static inline void dataforcelo()
+{
+	IEC_PORT &= (uint8_t) ~ _BV(IEC_PIN_DATA);	// DATA low
+	IEC_DDR |= _BV(IEC_PIN_DATA);	// DATA as output
 }
 
-static inline void datalo() {
+static inline void datalo()
+{
 	dataforcelo();
 	is_dataout = 0;
 }
 
-static inline void clklo() {
-      	IEC_PORT &= (uint8_t)~_BV(IEC_PIN_CLK);   	// CLK low
-      	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);    	// CLK as output
+static inline void clklo()
+{
+	IEC_PORT &= (uint8_t) ~ _BV(IEC_PIN_CLK);	// CLK low
+	IEC_DDR |= (uint8_t) _BV(IEC_PIN_CLK);	// CLK as output
 }
 
-static inline void datahi() {
+static inline void datahi()
+{
 	// note: do not fiddle with ints, as iecout and iecin
 	// alread run interrupt-protected
 
 	// setting DATA hi
 	if (satnishi() || is_satna) {
-	      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_DATA);    // DATA as input
-      		IEC_PORT |= _BV(IEC_PIN_DATA);             // Enable pull-up
+		IEC_DDR &= (uint8_t) ~ _BV(IEC_PIN_DATA);	// DATA as input
+		IEC_PORT |= _BV(IEC_PIN_DATA);	// Enable pull-up
 	}
 	is_dataout = 1;
 }
 
-static inline void clkhi() {
-      	IEC_DDR &= (uint8_t)~_BV(IEC_PIN_CLK);    // CLK as input
-      	IEC_PORT |= _BV(IEC_PIN_CLK);             // Enable pull-up
+static inline void clkhi()
+{
+	IEC_DDR &= (uint8_t) ~ _BV(IEC_PIN_CLK);	// CLK as input
+	IEC_PORT |= _BV(IEC_PIN_CLK);	// Enable pull-up
 }
 
-static inline uint8_t dataislo() {
+static inline uint8_t dataislo()
+{
 	return !(IEC_INPUT & _BV(IEC_PIN_DATA));
 }
 
-static inline uint8_t dataishi() {
+static inline uint8_t dataishi()
+{
 	return (IEC_INPUT & _BV(IEC_PIN_DATA));
 }
 
-
-static inline uint8_t clkislo() {
+static inline uint8_t clkislo()
+{
 	return !(IEC_INPUT & _BV(IEC_PIN_CLK));
 }
 
-static inline uint8_t clkishi() {
+static inline uint8_t clkishi()
+{
 	return (IEC_INPUT & _BV(IEC_PIN_CLK));
 }
 
 // returns a debounced port byte, to be checked with 
 // the methods is_port_*(port_byte)
 // only check for changes in the actual IEC bus lines
-static inline uint8_t read_debounced() {
+static inline uint8_t read_debounced()
+{
 	uint8_t port;
 
 	do {
 		port = IEC_INPUT;
-	} while ( (port ^ IEC_INPUT) & (_BV(IEC_PIN_CLK) | _BV(IEC_PIN_DATA)) );
-	
+	} while ((port ^ IEC_INPUT) & (_BV(IEC_PIN_CLK) | _BV(IEC_PIN_DATA)));
+
 	return port;
 }
 
-static inline uint8_t is_port_clklo(uint8_t port) {
+static inline uint8_t is_port_clklo(uint8_t port)
+{
 	return !(port & _BV(IEC_PIN_CLK));
 }
 
-static inline uint8_t is_port_clkhi(uint8_t port) {
+static inline uint8_t is_port_clkhi(uint8_t port)
+{
 	return port & _BV(IEC_PIN_CLK);
 }
 
-static inline uint8_t is_port_datahi(uint8_t port) {
+static inline uint8_t is_port_datahi(uint8_t port)
+{
 	return port & _BV(IEC_PIN_DATA);
 }
 
-static inline uint8_t is_port_datalo(uint8_t port) {
+static inline uint8_t is_port_datalo(uint8_t port)
+{
 	return !(port & _BV(IEC_PIN_DATA));
 }
-
-
 
 // ATNA handling
 // (ATN acknowledge logic)
 
 // acknowledge ATN
-static inline void satnahi() {
+static inline void satnahi()
+{
 	is_satna = 0;
 }
 
 // disarm ATN acknowledge handling
-static inline void satnalo() {
+static inline void satnalo()
+{
 	is_satna = 1;
 	if (is_dataout) {
 		datahi();
 	}
 }
 
-static inline uint8_t satna() {
+static inline uint8_t satna()
+{
 	return !is_satna;
 }
 
@@ -173,6 +189,4 @@ void iechw_init();
 // resets the IEEE hardware after a transfer
 void iechw_setup();
 
-
 #endif
-

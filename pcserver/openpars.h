@@ -18,7 +18,6 @@
     MA  02110-1301, USA.
 */
 
-
 #ifndef OPENPARS_H
 #define OPENPARS_H
 
@@ -29,19 +28,18 @@
 // further possible options:
 // - ignore wrapper, so we see real names (not x00 names for example)
 typedef struct {
-	uint8_t 	filetype;
-	uint16_t	recordlen;
+	uint8_t filetype;
+	uint16_t recordlen;
 } openpars_t;
 
 /**
  * process options and fill parameter struct
  */
-void openpars_process_options(const uint8_t *opts, openpars_t *pars);
+void openpars_process_options(const uint8_t * opts, openpars_t * pars);
 
 /**
  * fill in default values 
  */
-void openpars_init_options(openpars_t *pars);
+void openpars_init_options(openpars_t * pars);
 
 #endif
-

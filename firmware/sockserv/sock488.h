@@ -21,17 +21,14 @@
 #ifndef SOCK4488_H
 #define SOCK4488_H
 
+#define	S488_ATN	0x01	/* M->D send a byte with ATN */
+#define	S488_SEND	0x02	/* M->D send a byte to device */
+#define	S488_REQ	0x03	/* M->D request a byte from device */
+#define	S488_OFFER	0x04	/* D->M offer a byte for a receive */
 
-#define	S488_ATN	0x01		/* M->D send a byte with ATN */
-#define	S488_SEND	0x02		/* M->D send a byte to device */
-#define	S488_REQ	0x03		/* M->D request a byte from device */
-#define	S488_OFFER	0x04		/* D->M offer a byte for a receive */
-
-#define	S488_TIMEOUT	0x20		/* Read timeout */
-#define	S488_ACK	0x40		/* ACKnowledge a byte to receiver as part of a REQ */
-#define	S488_EOF	0x80		/* when set on SEND or OFFER, transfer with EOF */
-
-
+#define	S488_TIMEOUT	0x20	/* Read timeout */
+#define	S488_ACK	0x40	/* ACKnowledge a byte to receiver as part of a REQ */
+#define	S488_EOF	0x80	/* when set on SEND or OFFER, transfer with EOF */
 
 void sock488_init(void);
 
@@ -39,8 +36,4 @@ void sock488_set_socket(const char *socket_name);
 
 void sock488_mainloop_iteration();
 
-
-
 #endif
-
-
