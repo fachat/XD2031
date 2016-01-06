@@ -41,6 +41,7 @@ function usage() {
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
 	echo "       -q                      will suppress any output except whether test was successful"
+	echo "                               (implies -C)"
 	echo "       +e                      create an expected DIFF that is compared to later outcomes"
 	echo "       -e                      ignore an expected DIFF and show the real results"
 	echo "       +E                      create an expected ERR file that is compared to later outcomes"
@@ -155,6 +156,7 @@ while test $# -gt 0; do
 	;;
   -q)
 	QUIET=1
+	CLEAN=2
 	shift;
 	;;
   -R)	

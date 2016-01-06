@@ -27,6 +27,8 @@
 // -----------------------------------------------------------------------
 // script handling
 
+#define	CMD_COMMENT	(-1)
+
 /** 
  * read script, and build up memory structure
  */
@@ -37,6 +39,7 @@ typedef struct {
 	int		cmd;		// command for the line
 	int		num;
 	char 		*buffer;	// pointer to malloc'd line buffer
+	char		*mask;		// mask for compare (if set)
 	int		length;		// length of buffer (amount of data in it, NOT capacity)
 	registry_t	scriptlets;
 } line_t;
@@ -64,6 +67,7 @@ struct _scriptlet {
 // parse a buffer line (i.e. a series of hex numbers and strings, possibly with scriplets)
 // return length of out bytes
 int exec_len(line_t *line, scriptlet_t *scr);
+int exec_ign(line_t *line, scriptlet_t *scr);
 
 int scr_dsb(char *trg, int trglen, const char **parseptr, int *outparam);
 

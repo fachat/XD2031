@@ -1,3 +1,3 @@
 
 tests:
-	for i in relfiles; do make -C $$i tests; done
+	for i in relfiles handler; do make -C $$i tests; done

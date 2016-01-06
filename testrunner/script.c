@@ -54,6 +54,7 @@ static void line_init(const type_t *type, void *obj) {
 	line_t *line = (line_t*) obj;
 
 	line->buffer = NULL;
+	line->mask = NULL;
 	line->length = 0;
 
 	reg_init(&line->scriptlets, "line_scriptlets", 2);
@@ -162,6 +163,13 @@ static type_t scriptlet_type = {
 int exec_len(line_t *line, scriptlet_t *scr) {
 
 	line->buffer[scr->pos] = line->length;
+
+	return 1;
+}
+
+int exec_ign(line_t *line, scriptlet_t *scr) {
+
+	line->mask[scr->pos] = 0;
 
 	return 1;
 }
@@ -370,7 +378,13 @@ int parse_line(const char *buffer, int n, line_t **linep, int num) {
 	while (isspace(*p)) { p++; }
 
 	if (*p == '#') {
-		// ignore, comment
+		// comment
+		line_t *line = mem_alloc(&line_type);
+		line->cmd = CMD_COMMENT;
+		line->num = num;
+		line->length = strlen(p);
+		line->buffer = mem_alloc_str(p);
+		*linep = line;
 		return 0;
 	}
 

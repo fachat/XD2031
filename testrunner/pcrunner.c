@@ -80,6 +80,7 @@ void assert_single_char(char *argv) {
 scriptlet_tab_t scriptlets[] = {
 	{ "len", 3, 1, NULL, exec_len },
 	{ "dsb", 3, 0, scr_dsb, NULL },
+	{ "ign", 3, 1, NULL, exec_ign },
 	{ NULL, 0, 0, NULL, NULL }
 };
 
@@ -203,7 +204,7 @@ int read_packet(int fd, char *outbuf, int buflen) {
 
 // -----------------------------------------------------------------------
 
-int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos) {
+int compare_packet(int fd, const char *inbuffer, const char *mask, const int inbuflen, int curpos) {
 	char buffer[8192];
 	ssize_t cnt = 0;
 	int err = 0;
@@ -215,9 +216,27 @@ int compare_packet(int fd, const char *inbuffer, const int inbuflen, int curpos)
 		log_errno("Error reading from socket at line %d\n", curpos);
 		err = 2;
 	} else {
-		if (memcmp(inbuffer, buffer, inbuflen)) {
-			log_error("Detected mismatch at line %d\n", curpos);
-			err = 1;
+		if (inbuflen > 0) {
+			// only check data when we actually expect something
+			if (cnt == inbuflen) {
+				// expected length
+				if (mask == NULL) {
+					if (memcmp(inbuffer, buffer, inbuflen)) {
+						log_error("Detected mismatch at line %d\n", curpos);
+						err = 1;
+					}
+				} else {
+					for (int i = 0; i < inbuflen; i++) {
+						if ((inbuffer[i] ^ buffer[i]) & mask[i]) {
+							log_error("Detected mismatch at line %d\n", curpos);
+							err = 1;
+						}
+					}
+				}
+			} else {
+				// length mismatch
+				err = 1;
+			}
 		}
 		// print data lines
 		if (trace || err) {
@@ -253,6 +272,11 @@ int execute_script(int sockfd, registry_t *script) {
 		lineno = line->num;
 
 		switch (line->cmd) {
+		case CMD_COMMENT:
+			if (!trace) {
+				break;
+			}
+			// fall-through
 		case CMD_MESSAGE:
 			log_info("> %s\n", line->buffer);
 			break;
@@ -276,12 +300,16 @@ int execute_script(int sockfd, registry_t *script) {
 			}
 			break;
 		case CMD_EXPECT:
+			line->mask = mem_alloc_c(line->length, "line_mask");
+			memset(line->mask, 0xff, line->length);
 			for (int i = 0; (scr = reg_get(&line->scriptlets, i)) != NULL; i++) {
 				if (scr->exec != NULL) {
 					scr->exec(line, scr);
 				}
 			}
-			err = compare_packet(sockfd, line->buffer, line->length, lineno);
+			err = compare_packet(sockfd, line->buffer, line->mask, line->length, lineno);
+			mem_free(line->mask);
+			line->mask = NULL;
 
 			if (err != 0) {
 				if (errmsg != NULL) {
@@ -292,7 +320,7 @@ int execute_script(int sockfd, registry_t *script) {
 			break;
 		case CMD_INIT:
 			send_sync(sockfd);
-			err = compare_packet(sockfd, line->buffer, line->length, lineno);
+			err = compare_packet(sockfd, line->buffer, NULL, line->length, lineno);
 			if (err != 0) {
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);

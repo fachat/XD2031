@@ -25,24 +25,51 @@ function usage() {
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
 	echo "       -q                      will suppress any output except whether test was successful"
+	echo "                               (implies -C)"
+	echo "       -t                      Trace the output of a script, to possibly create a new one"
 	echo "       -h                      show this help"
 }
 
 function hexdiff() {
-	diffres=0
-	if ! cmp -b "$1" "$2"; then
-		tmp1="$1".hex;	#`mktemp`
-		tmp2="$2".hex;	#`mktemp`
+        diffres=0
+        tmp3="$3".expected
+        if ! cmp -b "$1" "$2"; then
+                tmp1="$1".hex;  #`mktemp`
+                tmp2="$2".hex;  #`mktemp`
+                tmp4="$3".actual
 
-		hexdump -C "$1" > $tmp1
-		hexdump -C "$2" > $tmp2
+                hexdump -C "$1" > $tmp1
+                hexdump -C "$2" > $tmp2
 
-		diff -u $tmp1 $tmp2
-		diffres=$?
+                #diff -u $tmp1 $tmp2 | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' > $tmp4 # actual
+                echo "--- $tmp1" | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' > $tmp4 # actual
+                echo "+++ $tmp2" | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' >> $tmp4 # actual
+                diff -u $tmp1 $tmp2 | tail -n +3 >> $tmp4 # actual
+                diffres=1       # (as cmp above already told us we're different)
+                if [ $DIFFCREATE -eq 1 ]; then
+                        cp $tmp4 $tmp3
+                fi
+                if [ $DIFFIGNORE -eq 1 -o ! -f $tmp3 ]; then
+                        cat $tmp4;      # actual
+                else
+                        # compare actual with expected
+                        diff -u $tmp3 $tmp4
+                        diffres=$?
+                        if test $diffres -eq 0; then
+                                diffres=2
+                                echo "Comparing $1 with $2 gave the expected difference"
+                        fi
+                fi;
 
-		rm $tmp1 $tmp2
-	fi;
-	return $diffres
+                rm $tmp1 $tmp2 $tmp4
+        else
+                # if expected file exists, but no more error, then warn
+                if [ -f $tmp3 ]; then
+                        echo "WARN: no difference found, but expected errors file $tmp3 exists"
+                        diffres=3
+                fi;
+        fi;
+        return $diffres
 }
 
 VERBOSE=""
@@ -51,6 +78,7 @@ DEBUG=""
 RDEBUG=""
 CLEAN=1
 QUIET=0
+TRACE=""
 
 TMPDIR=`mktemp -d`
 OWNDIR=1	
@@ -99,6 +127,11 @@ while test $# -gt 0; do
 	;;
   -q)
 	QUIET=1
+	CLEAN=2
+	shift;
+	;;
+  -t)
+	TRACE="-t"
 	shift;
 	;;
   -R)	
@@ -147,33 +180,38 @@ fi
 ##################################################################
 # scripts to run
 
+# scripts to run
 if [ "x$*" = "x" ]; then
-        SCRIPTS=$THISDIR/*.trs
+        SCRIPTS=$THISDIR/*${FILTER}*.trs
         SCRIPTS=`basename -a $SCRIPTS`;
 
-	TESTSCRIPTS=""
+        TESTSCRIPTS=""
 
-	if test "x$EXCLUDE" != "x"; then
-		exarr=( $EXCLUDE )
-		scrarr=( $SCRIPTS )
-		for scr in "${scrarr[@]}"; do 
-			if ! contains "${scr}" "${exarr[@]}"; then
-				TESTSCRIPTS="$TESTSCRIPTS $scr";
-			fi
-		done;
-	else
-		TESTSCRIPTS="$SCRIPTS"
-	fi;
+        if test "x$EXCLUDE" != "x"; then
+                exarr=( $EXCLUDE )
+                scrarr=( $SCRIPTS )
+                for scr in "${scrarr[@]}"; do
+                        if ! contains "${scr}" "${exarr[@]}"; then
+                                TESTSCRIPTS="$TESTSCRIPTS $scr";
+                        fi
+                done;
+        else
+                TESTSCRIPTS="$SCRIPTS"
+        fi;
 else
         TESTSCRIPTS="";
 
-	for i in "$@"; do
-		if test -f "$i".trs ; then
-			TESTSCRIPTS="$TESTSCRIPTS $i.trs";
-		else
-			TESTSCRIPTS="$TESTSCRIPTS $i";
-		fi
-	done;
+        for i in "$@"; do
+               if test -f "$i".trs ; then
+                        TESTSCRIPTS="$TESTSCRIPTS $i.trs";
+               else
+                        if test -f "$i"-"${FILTER}".trs; then
+                                TESTSCRIPTS="$TESTSCRIPTS $i-${FILTER}.trs";
+                        else
+                                TESTSCRIPTS="$TESTSCRIPTS $i";
+                        fi
+               fi
+        done;
 fi;
 
 #echo "TESTSCRIPTS=$TESTSCRIPTS"
@@ -210,7 +248,7 @@ fi
 
 for script in $TESTSCRIPTS; do
 
-	echo "Run script $script"
+        echo "====================== Running script $script" >&5
 
 	SOCKET=socket_$script
 
@@ -241,14 +279,14 @@ for script in $TESTSCRIPTS; do
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
 		else
 			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script;
+			$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script;
 		fi;
 
 		RESULT=$?
 		if test $RESULT -eq 0; then
-			echo "$script: Ok" >&5
+			echo "    Script Ok" >&5
 		else
-			echo "$script: errors: $RESULT" >&5
+			echo ">>> Script errors: $RESULT" >&5
 		fi
 
 		#if test $RESULT -ne 0; then
@@ -277,21 +315,28 @@ for script in $TESTSCRIPTS; do
                 testname=`basename $script .trs`
                 for i in $COMPAREFILES; do
                         NAME="${THISDIR}/${i}-${testname}"
+                        result=0;
                         if test -f ${NAME}; then
-                                echo "Comparing file ${i} with $NAME"
-                                hexdiff ${NAME} $TMPDIR/${i}
-				if test $? -ne 0; then
-					echo "$script: File ${i} differs!" >&5
-				fi;
-                        fi
-                        if test -f ${NAME}.gz; then
+                                echo "Comparing file ${i} with ${NAME}"
+                                hexdiff ${NAME} $TMPDIR/${i} ${NAME}
+                                result=$?
+                        else
+                            if test -f ${NAME}.gz; then
                                 echo "Comparing file ${i} with ${NAME}.gz"
                                 gunzip -c ${NAME}.gz > ${TMPDIR}/shouldbe_${i}
-                                hexdiff ${TMPDIR}/shouldbe_${i} ${TMPDIR}/${i}
-				if test $? -ne 0; then
-					echo "$script: File ${i} differs!" >&5
-				fi;
+                                hexdiff ${TMPDIR}/shouldbe_${i} ${TMPDIR}/${i} ${NAME}
+                                result=$?
                                 rm -f ${TMPDIR}/shouldbe_${i}
+                            fi
+                        fi
+                        if test $result -eq 1; then
+                                 echo ">>> File ${i} differs!" >&5
+                        elif test $result -eq 2; then
+                                 echo ">   File ${i} differs (as expected)!" >&5
+                        elif test $result -eq 3; then
+                                 echo ">>> File ${i} does not differ, but diff was expected!" >&5
+                        else
+                                 echo "    File ${i} compare ok!" >&5
                         fi
                 done;
         fi
