@@ -97,6 +97,9 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 // handles P00, S00, ... files
 void x00_handler_init();
 
+// handles files ending with ",p" or ",S", or ",R123"
+void typed_handler_init();
+
 
 /*
  * default implementations

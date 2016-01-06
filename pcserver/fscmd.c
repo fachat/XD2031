@@ -82,6 +82,8 @@ void cmd_init() {
 
 	// init P00/S00/R00/... file handler
 	x00_handler_init();
+	// init ",P"/",R123"/ ... file handler
+	typed_handler_init();
 
 	// default
 	provider_set_ext_charset("PETSCII");
