@@ -235,6 +235,7 @@ int compare_packet(int fd, const char *inbuffer, const char *mask, const int inb
 				}
 			} else {
 				// length mismatch
+				log_error("Detected mismatch at line %d\n", curpos);
 				err = 1;
 			}
 		}
