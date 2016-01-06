@@ -157,7 +157,7 @@ struct _handler {
         const char      *name;                          // handler name, for debugging
 
         int             (*resolve)(file_t *infile, file_t **outfile,
-                                uint8_t type, const char *name, const openpars_t *pars, const char **outname);
+                                uint8_t type, const char *name, const char **outname);
 
                                                         // close the file; do so recursively by closing
                                                         // parents if recurse is set

@@ -17,7 +17,7 @@
 THISDIR=`dirname $0`
 
 # necessary files to copy to temp
-TESTFILES="F1,p P2.P00 F3.S00 F4,S T1.U00 T2,u"
+TESTFILES="F1,p P2.P00 F3.S00 F4,S T1.U00 T2,u REL2.R00 Rel1,l20"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.trs",

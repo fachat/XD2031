@@ -71,7 +71,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const openpars_t *pars, const char **outname) {
+static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const char **outname) {
 
 	(void) type;
 
@@ -176,16 +176,6 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
-	// check opts parameters
-	
-	if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != ftype) {
-		log_debug("Expected file type %d, found file type %d\n", pars->filetype, ftype);
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-
-	if (ftype == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != x00_buf[0x19])) {
-		return CBM_ERROR_RECORD_NOT_PRESENT;
-	}
 
 	// done, alloc x00_file and prepare for operation
 	// no seek necessary, read pointer is already at start of payload
@@ -251,7 +241,22 @@ static int x00_write(file_t *file, const char *buf, int len, int writeflg) {
 
 static int x00_open(file_t *file, openpars_t *pars, int opentype) {
 
-	cbm_errno_t rv = file->parent->handler->open(file->parent, pars, opentype);
+	// check opts parameters
+	
+	if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != file->type) {
+		log_debug("Expected file type %d, found file type %d\n", pars->filetype, file->type);
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
+	if (file->type == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != file->recordlen)) {
+		return CBM_ERROR_RECORD_NOT_PRESENT;
+	}
+
+	openpars_t wrappedpars;
+	wrappedpars.filetype = FS_DIR_TYPE_UNKNOWN;
+	wrappedpars.recordlen = 0;
+
+	cbm_errno_t rv = file->parent->handler->open(file->parent, &wrappedpars, opentype);
 	if (rv == CBM_ERROR_OK) {
 		rv = x00_seek(file, 0, SEEKFLAG_ABS);
 	}

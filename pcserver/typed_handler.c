@@ -80,11 +80,11 @@ static type_t typed_file_type = {
  *
  * name is the current file name
  */
-static int typed_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const openpars_t *pars, const char **outname) {
+static int typed_resolve(file_t *infile, file_t **outfile, uint8_t opentype, const char *inname, const char **outname) {
 
-	(void) type;
+	(void) opentype;
 
-	log_debug("typed_resolve: infile=%s, type=%02x\n", infile->filename, type);
+	log_debug("typed_resolve: infile=%s\n", infile->filename);
 
 	// check the file name of the given file_t, if it actually is a ,P file.
 
@@ -129,6 +129,8 @@ static int typed_resolve(file_t *infile, file_t **outfile, uint8_t type, const c
 		break;
 	case 'R':
 	case 'r':
+	case 'L':
+	case 'l':
 		ftype = FS_DIR_TYPE_REL;
 		break;
 	default:
@@ -167,17 +169,6 @@ static int typed_resolve(file_t *infile, file_t **outfile, uint8_t type, const c
 	// now compare the original file name with the search pattern
 	if (!compare_dirpattern(name, inname, outname)) {
 		return CBM_ERROR_FILE_NOT_FOUND;
-	}
-
-	// check opts parameters
-	
-	if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != ftype) {
-		log_debug("Expected file type %d, found file type %d\n", pars->filetype, ftype);
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-
-	if (ftype == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != recordlen)) {
-		return CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 
 	// done, alloc typed_file and prepare for operation
@@ -235,7 +226,20 @@ static int typed_write(file_t *file, const char *buf, int len, int writeflg) {
 
 static int typed_open(file_t *file, openpars_t *pars, int opentype) {
 
-	cbm_errno_t rv = file->parent->handler->open(file->parent, pars, opentype);
+        if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != file->type) {
+                log_debug("Expected file type %d, found file type %d\n", pars->filetype, file->type);
+                return CBM_ERROR_FILE_TYPE_MISMATCH;
+        }
+
+        if (file->type == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != file->recordlen)) {
+                return CBM_ERROR_RECORD_NOT_PRESENT;
+        }
+
+        openpars_t wrappedpars;
+        wrappedpars.filetype = FS_DIR_TYPE_UNKNOWN;
+        wrappedpars.recordlen = 0;
+
+	cbm_errno_t rv = file->parent->handler->open(file->parent, &wrappedpars, opentype);
 	if (rv == CBM_ERROR_OK) {
 		rv = typed_seek(file, 0, SEEKFLAG_ABS);
 	}

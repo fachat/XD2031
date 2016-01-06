@@ -1,39 +1,40 @@
 init
 
 ###############################
-message testing OPEN of various handled files (x00 and typed) as SEQ
+message testing OPEN of various handled files (x00 and typed) as PRG
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F1' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 00 'F4' 00 "T=U" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
-# open SEQ file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 'F2' 00 "T=S" 00
+# open PRG file - note, is "hidden" in P2.P01
+send :FS_OPEN_RD .len 00 00 'F2' 00 "T=U" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F3' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 00 'T1' 00 "T=U" 00
 # file type mismatch
 expect :FS_REPLY .len 00 00
 
 # start reading
 send :FS_READ .len 00 
-expect 0C 09 00 48 45 4C 4C 4F  0D
+# don't specify returned value (ignored)
+expect 
 
 # close file
 send :FS_CLOSE .len 00
 expect :FS_REPLY .len 00 00
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F4' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 00 'T2' 00 "T=U" 00
 # file type mismatch
 expect :FS_REPLY .len 00 00
 
 # start reading
 send :FS_READ .len 00 
-expect 0C 09 00 48 45 4C 4C 4F  0D
+expect 
 
 # close file
 send :FS_CLOSE .len 00

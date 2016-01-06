@@ -63,28 +63,6 @@ void handler_init(void) {
 	reg_init(&handlers, "handlers", 10);
 }
 
-/*
-// unused as of now
-file_t* handler_find(file_t *parent, uint8_t type, const char *name, const char *opts, const char **outname) {
-
-	file_t *newfile = NULL;
-
-	for (int i = 0; ; i++) {
-		handler_t *handler = reg_get(&handlers, i);
-		if (handler == NULL) {
-			// not found
-			return NULL;
-		}
-		int err = handler->resolve(parent, &newfile, type, name, opts, outname);
-		if (err != CBM_ERROR_OK) {
-			log_error("Got %d as error\n", err);
-			return NULL;
-		}
-	}
-
-	return newfile;
-}
-*/
 
 void path_append(char **path, const char *filename) {
 	// construct path
@@ -111,10 +89,6 @@ void path_append(char **path, const char *filename) {
 int handler_next(file_t *infile, uint8_t type, const char *pattern,  
 		const char **outpattern, file_t **outfile) {
 
-	openpars_t pars;
-	pars.recordlen = 0;
-	pars.filetype = FS_DIR_TYPE_UNKNOWN;
-
 	log_debug("handler_next(infile=%s, pattern=%s)\n", infile->filename, pattern);
 
 	int err = CBM_ERROR_FILE_NOT_FOUND;
@@ -127,7 +101,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 			break;
 		}
 		// outpattern then points into the pattern string
-		if ( handler->resolve(infile, outfile, type, pattern, &pars, outpattern) == CBM_ERROR_OK) {
+		if ( handler->resolve(infile, outfile, type, pattern, outpattern) == CBM_ERROR_OK) {
 			// worked ok.
 			if (*outfile != NULL) {
 				// found a handler
