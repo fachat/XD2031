@@ -47,7 +47,6 @@ void openpars_process_options(const uint8_t *opts, openpars_t *pars) {
 		return;
 	}
 
-	log_debug("openpars options: %s\n", opts);
 
         while (*p != 0) {
                 switch(*(p++)) {
@@ -57,11 +56,17 @@ void openpars_process_options(const uint8_t *opts, openpars_t *pars) {
                                 typechar = *(p++);
                                 switch(typechar) {
                                 case 'u':
-                                case 'U':       pars->filetype = FS_DIR_TYPE_USR; break;
+                                case 'U':       
+					pars->filetype = FS_DIR_TYPE_USR; 
+					break;
                                 case 'P':
-                                case 'p':       pars->filetype = FS_DIR_TYPE_PRG; break;
+                                case 'p':       
+					pars->filetype = FS_DIR_TYPE_PRG; 
+					break;
                                 case 'S':
-                                case 's':       pars->filetype = FS_DIR_TYPE_SEQ; break;
+                                case 's':       
+					pars->filetype = FS_DIR_TYPE_SEQ; 
+					break;
                                 case 'L':
                                 case 'l':
                                         pars->filetype = FS_DIR_TYPE_REL;
@@ -90,6 +95,7 @@ void openpars_process_options(const uint8_t *opts, openpars_t *pars) {
                         return;
                 }
         }
+	log_debug("openpars options: %s -> type=%d, reclen=%d\n", opts, pars->filetype, pars->recordlen);
 }
 
 /**
