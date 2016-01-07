@@ -287,7 +287,8 @@ static void di_ep_free(endpoint_t * ep)
 }
 
 // *********
-// di_root
+// di_root - get the a directory file_t for the root directory, "$" in this case
+// Used in starting a file name parse, when this endpoint is assigned to a drive.
 // *********
 //
 static file_t *di_root(endpoint_t * ep)
@@ -317,6 +318,9 @@ static file_t *di_root(endpoint_t * ep)
 // wrap a file_t that represents a Dxx file into a temporary endpoint, 
 // and return the root file_t of it to access the directory of the 
 // Dxx image.
+//
+// This is called when traversing a path, so Dxx files can be "seen" as 
+// subdirectories e.g. in another container (larger Dxx file, zip file etc).
 
 static int di_wrap(file_t * file, file_t ** wrapped)
 {
@@ -404,6 +408,7 @@ static int di_wrap(file_t * file, file_t ** wrapped)
 	return err;
 }
 
+
 // ------------------------------------------------------------------
 // adapter methods to handle indirection via file_t instead of FILE*
 // note: this provider reads/writes single bytes in many cases
@@ -439,6 +444,23 @@ static inline void di_fsync(file_t * file)
 	// if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
 
 	file->handler->flush(file);
+}
+
+// ------------------------------------------------------------------
+
+static int di_format(endpoint_t * ep, const char *name)
+{
+
+	const char *p = index(name, ',');
+	
+	if (p != NULL) {
+		// we have an ID part, so we have to fully clear the disk image
+
+	}
+
+	// Now setup the new disk header, empty directory and BAM
+
+	return CBM_ERROR_DRIVE_NOT_READY;
 }
 
 // ************
@@ -3353,6 +3375,6 @@ provider_t di_provider = {
 	di_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	di_wrap,		// wrap while CDing into D64 file
 	di_direct,
-	NULL,			// format
+	di_format,		// format
 	di_dump			// dump
 };
