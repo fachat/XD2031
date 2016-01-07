@@ -199,16 +199,6 @@ static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const cha
 	return CBM_ERROR_OK;
 }
 
-static void x00_close(file_t *file, int recurse) {
-	x00_file_t *xfile = (x00_file_t*)file;
-
-	// no resources to clean here, so just forward the close
-	// we are a resolve wrapper, so close the inner file as well
-	xfile->file.parent->handler->close(xfile->file.parent, recurse);
-
-	// and then free the file struct memory
-	mem_free(xfile);
-}
 
 static int x00_seek(file_t *file, long pos, int flag) {
 
@@ -229,65 +219,6 @@ static int x00_truncate(file_t *file, long pos) {
 	return file->parent->handler->truncate(file->parent, pos + X00_HEADER_LEN);
 }
 
-static int x00_read(file_t *file, char *buf, int len, int *readflg) {
-
-	return file->parent->handler->readfile(file->parent, buf, len, readflg );
-}
-
-static int x00_write(file_t *file, const char *buf, int len, int writeflg) {
-
-	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
-}
-
-static int x00_open(file_t *file, openpars_t *pars, int opentype) {
-
-	// check opts parameters
-	
-	if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != file->type) {
-		log_debug("Expected file type %d, found file type %d\n", pars->filetype, file->type);
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-
-	if (file->type == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != file->recordlen)) {
-		return CBM_ERROR_RECORD_NOT_PRESENT;
-	}
-
-	openpars_t wrappedpars;
-	wrappedpars.filetype = FS_DIR_TYPE_UNKNOWN;
-	wrappedpars.recordlen = 0;
-
-	cbm_errno_t rv = file->parent->handler->open(file->parent, &wrappedpars, opentype);
-	if (rv == CBM_ERROR_OK) {
-		rv = x00_seek(file, 0, SEEKFLAG_ABS);
-	}
-	return rv;
-}
-
-static int x00_scratch(file_t *file) {
-
-	cbm_errno_t rv = file->parent->handler->scratch(file->parent);
-
-	if (rv == CBM_ERROR_OK) {	
-		// parent file is closed
-		mem_free(file);
-	}
-
-	return rv;
-}
-
-static file_t* x00_parent(file_t *file) {
-	if (file->parent != NULL) {
-		return file->parent->handler->parent(file->parent);
-	}
-	return NULL;
-}
-
-static int x00_flush(file_t *file) {
-	if (file->parent != NULL) {
-		return file->parent->handler->flush(file->parent);
-	}
-	return CBM_ERROR_FAULT;
-}
 
 static void x00_dump(file_t *file, int recurse, int indent) {
 
@@ -327,25 +258,25 @@ static handler_t x00_handler = {
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
 
-	x00_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
+	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
-	x00_open,	//int		(*open)(file_t *fp); 	// open a file
+	default_open,	//int		(*open)(file_t *fp); 	// open a file
 
 	// -------------------------
 			// get converter for DIR entries
 //	NULL,
 
-	x00_parent,	// file_t* parent(file_t*)
+	default_parent,	// file_t* parent(file_t*)
 
 	// -------------------------
 	
 	x00_seek,	// position the file
 			//int		(*seek)(file_t *fp, long abs_position);
 
-	x00_read,	// read file data
+	default_read,	// read file data
 			//int		(*readfile)(file_t *fp, char *retbuf, int len, int *readflag);	
 
-	x00_write,	// write file data
+	default_write,	// write file data
 			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
 
 	x00_truncate,	// truncate	(file_t *fp, long size);
@@ -358,13 +289,13 @@ static handler_t x00_handler = {
 
 	// -------------------------
 
-	x00_flush,
+	default_flush,
 
 	x00_equals,
 
 	x00_realsize,
 
-	x00_scratch,
+	default_scratch,
 
 	NULL,		// mkdir not supported
 

@@ -107,4 +107,28 @@ void typed_handler_init();
 
 file_t *handler_parent(file_t * file);
 
+// --------------------------------------------------------------------
+// default implementation for handlers
+
+void default_close(file_t *file, int recurse);
+
+int default_seek(file_t *file, long pos, int flag);
+
+int default_truncate(file_t *file, long pos);
+
+int default_read(file_t *file, char *buf, int len, int *readflg);
+
+int default_write(file_t *file, const char *buf, int len, int writeflg);
+
+int default_open(file_t *file, openpars_t *pars, int opentype);
+
+int default_scratch(file_t *file);
+
+file_t* default_parent(file_t *file);
+
+int default_flush(file_t *file);
+
+size_t default_realsize(file_t *file);
+
+
 #endif

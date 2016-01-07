@@ -682,5 +682,99 @@ file_t *handler_parent(file_t *file) {
 	return file->parent;
 }
 
+// --------------------------------------------------------------------------------------------
+// default implementations for handler
+
+void default_close(file_t *file, int recurse) {
+
+	if (file->filename) {
+		mem_free(file->filename);
+		file->filename = NULL;
+	}
+
+	// we are a resolve wrapper, so close the inner file as well
+	file->parent->handler->close(file->parent, recurse);
+
+	// and then free the file struct memory
+	mem_free(file);
+}
+
+int default_seek(file_t *file, long pos, int flag) {
+
+	return file->parent->handler->seek(file->parent, pos, flag );
+}
+
+int default_truncate(file_t *file, long pos) {
+
+	return file->parent->handler->truncate(file->parent, pos);
+}
+
+int default_read(file_t *file, char *buf, int len, int *readflg) {
+
+	return file->parent->handler->readfile(file->parent, buf, len, readflg );
+}
+
+int default_write(file_t *file, const char *buf, int len, int writeflg) {
+
+	return file->parent->handler->writefile(file->parent, buf, len, writeflg );
+}
+
+int default_open(file_t *file, openpars_t *pars, int opentype) {
+
+        if (pars->filetype != FS_DIR_TYPE_UNKNOWN && pars->filetype != file->type) {
+                log_debug("Expected file type %d, found file type %d\n", pars->filetype, file->type);
+                return CBM_ERROR_FILE_TYPE_MISMATCH;
+        }
+
+        if (file->type == FS_DIR_TYPE_REL && (pars->recordlen != 0 && pars->recordlen != file->recordlen)) {
+                return CBM_ERROR_RECORD_NOT_PRESENT;
+        }
+
+        openpars_t wrappedpars;
+        wrappedpars.filetype = FS_DIR_TYPE_UNKNOWN;
+        wrappedpars.recordlen = 0;
+
+	cbm_errno_t rv = file->parent->handler->open(file->parent, &wrappedpars, opentype);
+	if (rv == CBM_ERROR_OK) {
+		rv = file->handler->seek(file, 0, SEEKFLAG_ABS);
+	}
+	return rv;
+}
+
+int default_scratch(file_t *file) {
+
+	cbm_errno_t rv = file->parent->handler->scratch(file->parent);
+
+	if (rv == CBM_ERROR_OK) {	
+		// parent file is closed
+		mem_free(file);
+	}
+
+	return rv;
+}
+
+file_t* default_parent(file_t *file) {
+	if (file->parent != NULL) {
+		return file->parent->handler->parent(file->parent);
+	}
+	return NULL;
+}
+
+int default_flush(file_t *file) {
+	if (file->parent != NULL) {
+		return file->parent->handler->flush(file->parent);
+	}
+	return CBM_ERROR_FAULT;
+}
+
+
+size_t default_realsize(file_t *file) {
+
+	if (file->parent != NULL) {
+		return file->parent->handler->realsize(file->parent);
+	}
+	return CBM_ERROR_FAULT;
+}
+
 
 
