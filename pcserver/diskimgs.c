@@ -138,12 +138,12 @@ static int LBA81(int t, int s)
         /* The SFD cannot create a file with REL 4090 blocks, but it can
            read it.  We will therefore use 4090 as our limit. */
 
-//                          ID  Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel  sec/tr   map  Dir_T/S  BAM blocks                   ErrTbl
-static Disk_Image_t d64 = { 64, 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LSEC64, LBA64, 18, 1, { 18, 0,  0, 0,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d71 = { 71, 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LSEC71, LBA71, 18, 1, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d81 = { 81, 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LSEC81, LBA81, 40, 3, { 40, 1, 40, 2,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d80 = { 80, 77, 29, 1, 2,  6, 50, 3, 5,  0, 2083,  726, LSEC80, LBA80, 39, 1, { 38, 0, 38, 3,  0, 0,  0, 0 }, 0};
-static Disk_Image_t d82 = { 82, 77, 29, 2, 4,  6, 50, 3, 5,  1, 4166, 4126, LSEC82, LBA82, 39, 1, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
+//                          ID DOSVer Tr  Se  S  B  Of  TB  D  I  SS  Blck   Rel  sec/tr   map  Dir_T/S Hdr_S/P  BAM blocks                   ErrTbl
+static Disk_Image_t d64 = { 64, "2A", 35, 21, 1, 1,  4, 35, 3, 11, 0,  683,  706, LSEC64, LBA64, 18, 1, 0, 144, { 18, 0,  0, 0,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d71 = { 71, "2A", 35, 21, 2, 2,  4, 35, 3, 11, 0, 1366,  706, LSEC71, LBA71, 18, 1, 0, 144, { 18, 0, 53, 0,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d81 = { 81, "30", 80, 40, 1, 2, 16, 40, 1, 2,  1, 3200, 3026, LSEC81, LBA81, 40, 3, 0,   4, { 40, 1, 40, 2,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d80 = { 80, "2C", 77, 29, 1, 2,  6, 50, 3, 5,  0, 2083,  726, LSEC80, LBA80, 39, 1, 0,   6, { 38, 0, 38, 3,  0, 0,  0, 0 }, 0};
+static Disk_Image_t d82 = { 82, "2C", 77, 29, 2, 4,  6, 50, 3, 5,  1, 4166, 4126, LSEC82, LBA82, 39, 1, 0,   6, { 38, 0, 38, 3, 38, 6, 38, 9 }, 0};
 
 
 int diskimg_identify(Disk_Image_t *di, unsigned int filesize) {

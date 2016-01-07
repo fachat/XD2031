@@ -126,18 +126,6 @@ handler_t di_file_handler;
 static void di_read_BAM(di_endpoint_t * diep);
 static void di_write_slot(di_endpoint_t * diep, slot_t * slot);
 static void di_dump_file(file_t * fp, int recurse, int indent);
-#if 0
-static int di_find_free_block_NXTTS(di_endpoint_t * diep, uint8_t * start_t,
-				    uint8_t * start_s);
-static int di_block_alloc(di_endpoint_t * diep, uint8_t * track,
-			  uint8_t * sector);
-static int di_block_free(di_endpoint_t * diep, uint8_t Track, uint8_t Sector);
-static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f);
-static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno);
-static int di_position(di_endpoint_t * ep, File * fp, int recordno);
-static void di_first_slot(di_endpoint_t * diep, slot_t * slot);
-
-#endif
 
 // ------------------------------------------------------------------
 // management of endpoints
@@ -324,23 +312,6 @@ static inline void di_fsync(file_t * file)
 	// if(res) log_error("os_fsync failed: (%d) %s\n", os_errno(), os_strerror(os_errno()));
 
 	file->handler->flush(file);
-}
-
-// ------------------------------------------------------------------
-
-static int di_format(endpoint_t * ep, const char *name)
-{
-
-	const char *p = index(name, ',');
-	
-	if (p != NULL) {
-		// we have an ID part, so we have to fully clear the disk image
-
-	}
-
-	// Now setup the new disk header, empty directory and BAM
-
-	return CBM_ERROR_DRIVE_NOT_READY;
 }
 
 // ------------------------------------------------------------------
@@ -2207,20 +2178,11 @@ static int di_directory_header(char *dest, di_endpoint_t * diep)
 	memset(dest + FS_DIR_YEAR, 0, 6);	// date+time
 	dest[FS_DIR_MODE] = FS_DIR_MOD_NAM;
 
-	if (diep->DI.ID == 80 || diep->DI.ID == 82) {
-		di_fseek_tsp(diep, 39, 0, 6);
-		di_fread(dest + FS_DIR_NAME, 1, 16, diep->Ip);
-		di_fseek_tsp(diep, 39, 0, 24);
-		di_fread(dest + FS_DIR_NAME + 16, 1, 5, diep->Ip);
-	} else if (diep->DI.ID == 81) {
-		di_fseek_tsp(diep, 40, 0, 4);
-		di_fread(dest + FS_DIR_NAME, 1, 16, diep->Ip);
-		di_fseek_tsp(diep, 40, 0, 22);
-		di_fread(dest + FS_DIR_NAME + 16, 1, 5, diep->Ip);
-	} else {
-		memcpy(dest + FS_DIR_NAME, diep->BAM[0] + 0x90, 16);
-		memcpy(dest + FS_DIR_NAME + 16, diep->BAM[0] + 0xA2, 5);
-	}
+	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, diep->DI.HdrOffset);
+	di_fread(dest + FS_DIR_NAME, 1, 16, diep->Ip);
+	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, diep->DI.HdrOffset + 18);
+	di_fread(dest + FS_DIR_NAME + 16, 1, 5, diep->Ip);
+
 	// fix up $a0 into $20 characters
 	for (int i = FS_DIR_NAME; i < FS_DIR_NAME + 22; i++) {
 		if (dest[i] == 0xa0) {
@@ -2713,6 +2675,96 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 
 // ------------------------------------------------------------------
 // commands
+
+
+static int di_format(endpoint_t * ep, const char *name)
+{
+	di_endpoint_t *diep = (di_endpoint_t *) ep;
+	Disk_Image_t *di = &diep->DI;
+
+	uint8_t idbuffer[5];
+	uint8_t buf[256];
+
+	const char *p = index(name, ',');
+	int len = strlen(name);
+
+	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, diep->DI.HdrOffset + 18);
+	di_fread(idbuffer, 1, 5, diep->Ip);
+
+	memset(buf, 0, 256);
+
+	if (p != NULL) {
+		len = p - name;
+		p++;
+
+		// we have an ID part, so we have to fully clear the disk image
+
+		uint8_t track = 1;
+		uint8_t sector = 0;
+
+		while (track < di->Tracks) {
+		
+			uint8_t maxsect = di->LSEC(track);
+
+			while (sector < maxsect) {
+				di_fseek_tsp(diep, track, sector, 0);
+				di_fwrite(buf, 1, 256, diep->Ip);
+				sector++;
+			}
+			sector = 0;
+			track++;
+		}
+	}
+
+	// Now setup the new disk header, empty directory and BAM
+
+	// disk name block
+	buf[0] = di->bamts[0];
+	buf[1] = di->bamts[1];
+	// disk header
+	memset(buf + di->HdrOffset, 0xa0, 27);
+	if (len > 16) 
+		len = 16;
+	if (len == 0) {
+		buf[di->HdrOffset] = 0x0d;
+	} else {
+		strncpy((char*)buf + di->HdrOffset, name, len);
+	}
+	// restore original ID
+	memcpy(buf + di->HdrOffset + 18, idbuffer, 2);
+	// did we format with ID?
+	if (p && *p) {
+		len = strlen(p);
+		if (len > 2) 
+			len = 2;
+		memcpy(buf + di->HdrOffset + 18, p, len);
+		if (len == 1) {
+			buf[di->HdrOffset + 19] = 0x0d;
+		}
+	}
+	// DOS version
+	buf[2] = di->dosver[1];
+	memcpy(buf + di->HdrOffset + 21, di->dosver, 2);
+
+	if (di->HdrSector != di->bamts[0]) {
+		// header is NOT in the first BAM block (as in the D64 files), so
+		// we need to save this block now
+
+		di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, 0);
+		di_fwrite(buf, 1, 256, diep->Ip);
+		memset(buf, 0, 256);
+	}
+
+	// prepare BAM
+
+	// prepare first directory block
+	memset(buf, 0, 256);
+	buf[1] = 0xff;
+	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.DirSector, 0);
+	di_fwrite(buf, 1, 256, diep->Ip);
+	
+	return CBM_ERROR_DRIVE_NOT_READY;
+}
 
 // **************
 // di_delete_file

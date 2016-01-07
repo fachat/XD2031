@@ -48,6 +48,7 @@
 
 typedef struct Disk_Image {
 	uint8_t ID;		// Image type (64,71,80,81,82)
+	const char *dosver;	// DOS version string, e.g. "2C"
 	uint8_t Tracks;		// Tracks per side
 	uint8_t Sectors;	// Max. sectors per track
 	uint8_t Sides;		// Sides (2 for D71 and D82)
@@ -63,6 +64,8 @@ typedef struct Disk_Image {
 	int (*LBA) (int t, int s);	// Logical Block Address calculation
 	uint8_t DirTrack;	// Header and directory track
 	uint8_t DirSector;	// Sector number of first directory entry block
+	uint8_t HdrSector;	// Sector where disk name is stored
+	uint8_t HdrOffset;	// Offset of header name and id in sector
 	uint8_t bamts[8];	// up to four BAM block addresses (t/s)
 	uint8_t HasErrorTable;	// Error table appended
 } Disk_Image_t;

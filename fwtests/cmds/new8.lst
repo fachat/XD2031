@@ -1,0 +1,24 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem format a disk image
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1015 for i = 0 to 20
+ 1016 nm$="file"+chr$(65+i)
+ 1020 open2,u,1,nm$
+ 1070 close2
+ 1080 next i
+ 2050 gosub9000
+ 3300 print#1,"n:newly formatted"
+ 3310 gosub9000
+ 3340 close1
+ 3350 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+
