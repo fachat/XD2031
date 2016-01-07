@@ -87,7 +87,7 @@ int handler_resolve_block(endpoint_t * ep, int chan, file_t ** outfile);
  * subdirectories or file can be matched against this part.
  * 
  */
-int handler_next(file_t * infile, uint8_t type, const char *pattern,
+int handler_next(file_t * infile, const char *pattern,
 		 const char **outpattern, file_t ** outfile);
 
 /*

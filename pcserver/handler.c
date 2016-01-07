@@ -86,8 +86,7 @@ void path_append(char **path, const char *filename) {
 //----------------------------------------------------------------------------
 
 
-int handler_next(file_t *infile, uint8_t type, const char *pattern,  
-		const char **outpattern, file_t **outfile) {
+int handler_next(file_t *infile, const char *pattern, const char **outpattern, file_t **outfile) {
 
 	log_debug("handler_next(infile=%s, pattern=%s)\n", infile->filename, pattern);
 
@@ -101,7 +100,7 @@ int handler_next(file_t *infile, uint8_t type, const char *pattern,
 			break;
 		}
 		// outpattern then points into the pattern string
-		if ( handler->resolve(infile, outfile, type, pattern, outpattern) == CBM_ERROR_OK) {
+		if ( handler->resolve(infile, outfile, pattern, outpattern) == CBM_ERROR_OK) {
 			// worked ok.
 			if (*outfile != NULL) {
 				// found a handler

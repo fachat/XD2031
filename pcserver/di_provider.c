@@ -1682,7 +1682,7 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 			}
 
 			if (handler_next
-			    ((file_t *) entry, FS_OPEN_DR, file->dospattern,
+			    ((file_t *) entry, file->dospattern,
 			     outpattern, &wrapfile) == CBM_ERROR_OK) {
 				*outentry = wrapfile;
 				rv = CBM_ERROR_OK;

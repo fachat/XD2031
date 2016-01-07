@@ -71,9 +71,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, uint8_t type, const char *inname, const char **outname) {
-
-	(void) type;
+static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
 
 	//log_debug("x00_resolve: infile=%s\n", infile->filename);
 

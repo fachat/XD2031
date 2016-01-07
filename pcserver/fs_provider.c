@@ -1213,7 +1213,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 					}
 
 					// wrap and/or match name
-					if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, outpattern, &wrapfile)
+					if ( handler_next((file_t*)retfile, fp->pattern, outpattern, &wrapfile)
 						== CBM_ERROR_OK) {
 	  	    				*outentry = wrapfile;
 						rv = CBM_ERROR_OK;

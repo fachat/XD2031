@@ -80,9 +80,7 @@ static type_t typed_file_type = {
  *
  * name is the current file name
  */
-static int typed_resolve(file_t *infile, file_t **outfile, uint8_t opentype, const char *inname, const char **outname) {
-
-	(void) opentype;
+static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
 
 	log_debug("typed_resolve: infile=%s\n", infile->filename);
 

@@ -649,7 +649,7 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
         retfile->file.filename = name;
 	retfile->file.isdir = 1;	// just in case
 
-        if ( handler_next((file_t*)retfile, FS_OPEN_DR, fp->pattern, outpattern, &wrapfile)
+        if ( handler_next((file_t*)retfile, fp->pattern, outpattern, &wrapfile)
                                 == CBM_ERROR_OK) {
 	        *outentry = wrapfile;
                 int rv = CBM_ERROR_OK;
