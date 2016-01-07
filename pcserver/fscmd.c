@@ -814,6 +814,24 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 	return rv;
 }
 
+int cmd_format(int tfd, const char *inname, int namelen, char *outbuf, int *outlen) {
+	
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	const char *name = NULL;
+	file_t *fp = NULL;
+	*outlen = 0;
+
+	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
+	if (ep != NULL) {
+		provider_t *prov = (provider_t*) ep->ptype;
+		if (prov->format != NULL) {
+			rv = prov->format(ep, inname + 1);
+		}
+	}
+	return rv;
+}
+
+	
 // ----------------------------------------------------------------------------------
 
 /**
@@ -1017,6 +1035,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_FORMAT:
+		rv = cmd_format(tfd, buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
+		retbuf[FSP_DATA] = rv;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		log_warn("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       		break;
 	case FS_DUPLICATE:

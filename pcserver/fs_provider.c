@@ -1962,6 +1962,7 @@ provider_t fs_provider = {
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	NULL,			// wrap not needed on fs_provider
 	fs_direct,
+	NULL,			// format
 	fs_dump			// dump
 };
 

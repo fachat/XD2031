@@ -1090,6 +1090,7 @@ provider_t ftp_provider = {
 	curl_root,
 	NULL,	// wrap
 	NULL, 	// direct
+	NULL,	// format
 	curl_dump 	// dump
 };
 
@@ -1104,6 +1105,7 @@ provider_t http_provider = {
 	curl_root,
 	NULL,	// wrap
 	NULL, 	// direct
+	NULL,	// format
 	curl_dump 	// dump
 };
 

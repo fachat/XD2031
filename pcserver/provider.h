@@ -95,6 +95,10 @@ typedef struct {
 	// B-A/B-F
 	int (*block) (endpoint_t * ep, const char *buf, char *retbuf,
 		      int *retlen);
+	
+	// format a disk image (where applicable)
+	int (*format) (endpoint_t * ep, const char *name);
+
 	// dump / debug
 	void (*dump) (int indent);
 } provider_t;

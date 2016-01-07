@@ -3353,5 +3353,6 @@ provider_t di_provider = {
 	di_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
 	di_wrap,		// wrap while CDing into D64 file
 	di_direct,
+	NULL,			// format
 	di_dump			// dump
 };
