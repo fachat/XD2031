@@ -408,6 +408,10 @@ static void di_read_BAM(di_endpoint_t * diep)
 	int i;
 
 	for (i = 0; i < diep->DI.BAMBlocks; ++i) {
+		if (diep->BAM[i]) {
+			// free memory
+			free(diep->BAM[i]);
+		}
 		diep->BAM[i] = (uint8_t *) malloc(256);
 		di_fseek_pos(diep, diep->BAMpos[i]);
 		di_fread(diep->BAM[i], 1, 256, diep->Ip);
@@ -2693,29 +2697,35 @@ static int di_format(endpoint_t * ep, const char *name)
 
 	memset(buf, 0, 256);
 
+	// -------------------------------------------------------------------
+	// clear disk when formatted with ID
+
 	if (p != NULL) {
 		len = p - name;
 		p++;
+		if (*p) {
 
-		// we have an ID part, so we have to fully clear the disk image
+			// we have an ID part, so we have to fully clear the disk image
 
-		uint8_t track = 1;
-		uint8_t sector = 0;
+			uint8_t track = 1;
+			uint8_t sector = 0;
 
-		while (track < di->Tracks) {
+			while (track < di->Tracks) {
 		
-			uint8_t maxsect = di->LSEC(track);
+				uint8_t maxsect = di->LSEC(track);
 
-			while (sector < maxsect) {
-				di_fseek_tsp(diep, track, sector, 0);
-				di_fwrite(buf, 1, 256, diep->Ip);
-				sector++;
+				while (sector < maxsect) {
+					di_fseek_tsp(diep, track, sector, 0);
+					di_fwrite(buf, 1, 256, diep->Ip);
+					sector++;
+				}
+				sector = 0;
+				track++;
 			}
-			sector = 0;
-			track++;
 		}
 	}
 
+	// -------------------------------------------------------------------
 	// Now setup the new disk header, empty directory and BAM
 
 	// disk name block
@@ -2726,7 +2736,12 @@ static int di_format(endpoint_t * ep, const char *name)
 	if (len > 16) 
 		len = 16;
 	if (len == 0) {
-		buf[di->HdrOffset] = 0x0d;
+		if (p) {
+			buf[di->HdrOffset] = ',';
+			buf[di->HdrOffset + 27] = 0xa0;
+		} else {
+			buf[di->HdrOffset] = 0x0d;
+		}
 	} else {
 		strncpy((char*)buf + di->HdrOffset, name, len);
 	}
@@ -2746,7 +2761,7 @@ static int di_format(endpoint_t * ep, const char *name)
 	buf[2] = di->dosver[1];
 	memcpy(buf + di->HdrOffset + 21, di->dosver, 2);
 
-	if (di->HdrSector != di->bamts[0]) {
+	if (di->DirTrack != di->bamts[0] || di->HdrSector != di->bamts[1]) {
 		// header is NOT in the first BAM block (as in the D64 files), so
 		// we need to save this block now
 
@@ -2755,15 +2770,105 @@ static int di_format(endpoint_t * ep, const char *name)
 		memset(buf, 0, 256);
 	}
 
+	// -------------------------------------------------------------------
 	// prepare BAM
 
+	// note: first block is not cleared, as in D64 this already contains the disk header
+        uint8_t BAM_Number;         // BAM block for current track
+	uint8_t BAM_Increment;
+        uint8_t track;
+	uint8_t first_track;	// of current BAM block
+	uint8_t maxsec;
+	uint8_t idx;
+
+        BAM_Number = 0;
+        BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
+        track = 1;
+
+        while (BAM_Number < di->BAMBlocks) {
+		first_track = track;
+		// BAM link address
+		if (BAM_Number == di->BAMBlocks - 1) {
+			buf[0] = di->DirTrack;
+			buf[1] = di->DirSector;
+		} else {
+			buf[0] = di->bamts[BAM_Number*2+2];
+			buf[1] = di->bamts[BAM_Number*2+3];
+		}
+		// BAM version
+		buf[2] = di->dosver[1];
+			
+		// Track list with free block count and BAM per track
+		for (uint8_t cnt = 0; cnt < di->TracksPerBAM && track <= di->Tracks * di->Sides; cnt++, track++) {
+			idx = cnt * BAM_Increment + di->BAMOffset;
+			// prepare BAM itself
+			maxsec = di->LSEC(track);
+			buf[idx++] = maxsec;	// free blocks number for track
+			while (maxsec > 7) {
+				buf[idx++] = 0xff;
+				maxsec -= 8;
+			}
+			buf[idx] = 0;
+			while (maxsec > 0) {
+				buf[idx] = 1 + (buf[idx] << 1);
+				maxsec--;
+			}
+		}
+		if (di->ID == 71 && BAM_Number == 0) {
+			// free block list for second half of BAM in 1571
+			for (uint8_t cnt = 0; cnt < di->TracksPerBAM && track <= di->Tracks * di->Sides; cnt++, track++) {
+				idx = 221 + cnt;
+				maxsec = di->LSEC(track);
+				buf[idx] = maxsec;
+			}
+			// reset track counter
+			track = di->Tracks;
+		}
+		// now mask out DIR and BAM blocks
+		if (di->DirTrack >= first_track && di->DirTrack < track) {
+			idx = (di->DirTrack - 1) * BAM_Increment + di->BAMOffset;
+			buf[idx]--;	// free blocks
+			buf[idx + 1 + (di->DirSector >> 3)] &= (0xff - (1 << (di->DirSector & 7)));
+			// don't free the same block twice; Dir header may be mixed into first BAM (D64)
+			if (di->DirTrack != di->bamts[0] || di->HdrSector != di->bamts[1]) {
+				buf[idx]--;	// free blocks
+				buf[idx + 1 + (di->HdrSector >> 3)] &= (0xff - (1 << (di->HdrSector & 7)));
+			}
+		}
+		for (uint8_t cnt = 0; cnt < di->BAMBlocks; cnt++) {
+			if (di->bamts[cnt*2] >= first_track && di->bamts[cnt*2] < track) {
+				idx = (di->bamts[cnt * 2] - 1) * BAM_Increment + di->BAMOffset;
+				buf[idx]--;	// free blocks
+				buf[idx + 1 + (di->bamts[cnt*2+1] >> 3)] &= (0xff - (1 << (di->bamts[cnt*2+1] & 7)));
+			}
+		}
+
+		// start and end track for BAM
+		if (di->BAMOffset >= 6) {
+			buf[4] = first_track;
+			buf[5] = track;
+		}
+		// write out BAM block
+		di_fseek_tsp(diep, diep->DI.bamts[BAM_Number *2], diep->DI.bamts[BAM_Number * 2 + 1], 0);
+		di_fwrite(buf, 1, 256, diep->Ip);
+
+		// clear buffer
+		memset(buf, 0, 256);
+
+                ++BAM_Number;
+        }
+
+	// -------------------------------------------------------------------
 	// prepare first directory block
 	memset(buf, 0, 256);
 	buf[1] = 0xff;
 	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.DirSector, 0);
 	di_fwrite(buf, 1, 256, diep->Ip);
+
+	// re-read BAM
+	di_read_BAM(diep);
 	
-	return CBM_ERROR_DRIVE_NOT_READY;
+	return CBM_ERROR_OK;
 }
 
 // **************
