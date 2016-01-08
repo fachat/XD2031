@@ -246,13 +246,14 @@ else
         TESTSCRIPTS="";
 
         for i in "$@"; do
-               if test -f "$i".frs ; then
-                       	TESTSCRIPTS="$TESTSCRIPTS $i.frs";
+		name=`basename -s .lst $i`
+               if test -f "${name}".frs ; then
+                       	TESTSCRIPTS="$TESTSCRIPTS ${name}.frs";
                else
-			if test -f "$i"-"${FILTER}".frs; then
-                       		TESTSCRIPTS="$TESTSCRIPTS $i-${FILTER}.frs";
+			if test -f "${name}"-"${FILTER}".frs; then
+                       		TESTSCRIPTS="$TESTSCRIPTS ${name}-${FILTER}.frs";
 			else 
-                       		TESTSCRIPTS="$TESTSCRIPTS $i";
+                       		TESTSCRIPTS="$TESTSCRIPTS ${name}";
 			fi
                fi
         done;
@@ -327,7 +328,7 @@ for script in $TESTSCRIPTS; do
 		SERVERPID=$!
 
 		# wait till server is up, just to be sure
-		sleep 0.5;
+		sleep 0.1;
 
 		############################################
 		# start firmware
@@ -356,7 +357,7 @@ for script in $TESTSCRIPTS; do
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
 
-			sleep 0.5; # just in case
+			sleep 0.1; # just in case
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tee $TMPDIR/$RUNNERLOG;
