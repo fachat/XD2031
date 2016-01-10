@@ -3,6 +3,10 @@ The file vice+sock488.diff is an experimental diff to VICE version 2.4,
 so it writes a firmware test runner script into the file "sock488.trace"
 for all actions being done on a true drive emulation emulated drive.
 
+The file vice+sockiec.diff is an experimental diff like the one above,
+but it implements the IEC bus tracing for the serial IEC bus of the
+x64, x128 etc emulators.
+
 The file vice+jamexit.diff is an experimental file that makes VICE exit
 when the processor runs on a JAM opcode, like opcode 2. In some of the
 tests you will thus find a sequence "POKE2,2:SYS2" to exit VICE.
@@ -16,11 +20,13 @@ source tar file and use the "patch" file utility:
 (Note the single "<" is literal. An example is
 	cd /home/user/vice-2.4
 	patch -p1 < ../xd2031/fwtests/vice+jamexit.diff
+	patch -p1 < ../xd2031/fwtests/vice+sock488.diff
+	patch -p1 < ../xd2031/fwtests/vice+sockiec.diff
 )
-The build VICE with
+Then build VICE with
 	./configure
 	make
-and use the newly built "xpet" in the following tests.
+and use the newly built "xpet" or "x64" in the following tests.
 (You may have to install "readline-devel", "libX11-devel", "libXt-devel", "libXmu-devel" and "libXaw-devel"
 to compile the Xaw port of VICE)
 
@@ -36,7 +42,7 @@ For best experience run it like
 
 	./src/xpet -model 4032 -truedrive -drive8type 4040 -8 <<disk-image-for-test>> -autostartprgmode 1 <<BASIC-file-to-test>>
 
-In fact some of the subdirectories there is a "runvice.sh" or "runvice-d82.sh", 
+In fact in most of the fwtests subdirectories there is a "runvice-1541.sh" or "runvice-d82.sh", 
 that runs a test program as given on the command line with the appropriate 
 VICE parameters. For example running
 
@@ -45,4 +51,9 @@ VICE parameters. For example running
 runs the reltest1.2.lst BASIC program. For this it translates it into a BASIC binary
 (the reltest1.2.prg file) and executes it. After executing it gives you instructions
 on how to move files to make the result an official test case.
+
+As you usually will not install the patched VICE, you will most likely use the "VICE"
+environment variable to tell the "runvice" script which VICE to run. Like so:
+
+	VICE=../../vice-2.4/src ./runvice.sh reltest1.2
 
