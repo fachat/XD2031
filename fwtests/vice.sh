@@ -55,6 +55,7 @@ else
 fi;
 
 
+echo "Running VICE as: ${VICEPETBIN} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg"
 ${VICEPETBIN} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg
 
 echo "find resulting image in ${diskname} - you may need to gzip it with"
