@@ -1,7 +1,7 @@
 # First target, invoked by "make" without parameters
 code:	pcserver/fsser firmware imgtool
 
-all:	pcserver/fsser firmware doc samples imgtool
+all:	pcserver/fsser testrunner firmware doc samples imgtool
 
 samples: sample/telnet sample/u1test sample/webcat
 
