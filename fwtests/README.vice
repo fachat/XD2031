@@ -57,3 +57,5 @@ environment variable to tell the "runvice" script which VICE to run. Like so:
 
 	VICE=../../vice-2.4/src ./runvice.sh reltest1.2
 
+For even more convenience, you can source the file "setenv.sh" (after editing setenv-example.sh) 
+to point to the patched VICE source.

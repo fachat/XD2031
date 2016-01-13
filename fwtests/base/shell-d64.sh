@@ -22,7 +22,7 @@ TESTFILES="shell.d80 base.d64"
 
 # custom command to be executed after a test, but before the compare
 # Here used to extract the inner D64 from the shell D80 file
-CUSTOMPOSTCMD="c1541 -attach shell.d80 -read inner.d64 base.d64"
+CUSTOMPOSTCMD="$VICE/c1541 -attach shell.d80 -read inner.d64 base.d64"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",

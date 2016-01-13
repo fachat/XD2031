@@ -10,6 +10,7 @@ if [ "x$MODEL" = "x" ]; then
 	POST=""
 	PETCAT_OPTS="-w4 -l 0401"
 	FILTER="_______"
+	DIR="PET"
 else
 	# Note we use simons basic here because we use DIRECTORY
 	MODEL="x64 -basicload"
@@ -17,6 +18,7 @@ else
 	POST="_64"
 	PETCAT_OPTS="-w2 -l 0801"
 	FILTER="directory"
+	DIR=C64
 fi
 
 diskname=${imgname}-${testname}-${drivetype}
@@ -27,6 +29,12 @@ if [ "x$VICE" = "x" ]; then
 else
 	PETCATBIN=${VICE}/petcat
 	VICEPETBIN=${VICE}/"$MODEL"
+fi
+
+if [ "x$VICEDATA" = "x" ]; then
+	VICEPAR=""
+else
+	VICEPAR="-directory $VICEDATA/$DIR"
 fi
 	
 
@@ -55,8 +63,8 @@ else
 fi;
 
 
-echo "Running VICE as: ${VICEPETBIN} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg"
-${VICEPETBIN} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg
+echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg"
+${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${testname}${POST}.prg
 
 echo "find resulting image in ${diskname} - you may need to gzip it with"
 echo "    gzip ${diskname}"
