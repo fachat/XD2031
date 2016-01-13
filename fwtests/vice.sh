@@ -34,7 +34,7 @@ fi
 if [ "x$VICEDATA" = "x" ]; then
 	VICEPAR=""
 else
-	VICEPAR="-directory $VICEDATA/$DIR"
+	VICEPAR="-directory $VICEDATA/$DIR -dos${drivetype} ${VICEDATA}/DRIVES/dos${drivetype}"
 fi
 	
 
