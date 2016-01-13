@@ -1,6 +1,6 @@
 
 tests:
-	./relfiles-d64.sh -C -q
-	./relfiles-d80.sh -C -q
-	./relfiles-d82.sh -C -q
+	./relfiles-4040.sh -C -q
+	./relfiles-8050.sh -C -q
+	./relfiles-8250.sh -C -q
 
