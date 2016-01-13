@@ -381,6 +381,9 @@ int execute_script(int sockfd, registry_t *script) {
 			}
 			curpos++;
 			break;
+		case CMD_COMMENT:
+			curpos++;
+			break;
 		}
 	}
 
