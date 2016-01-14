@@ -1458,6 +1458,8 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 	// comprising of all side sectors. So if a new side sector group
 	// is needed, the last sector in the previous side sector group must
 	// get the correct block link as well.
+	uint8_t new_track2 = 0;
+	uint8_t new_sector2 = 0;
 	if (j == SSB_INDEX_SECTOR_MAX) {
 
 		log_debug(" - allocate new side sector block\n");
@@ -1466,10 +1468,23 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 		track = last_used_track;
 		sector = last_used_sector;
 
+
 		// allocate a new block for a side sector
 		if (di_find_free_block_NXTTS(diep, &track, &sector) < 0) {
 			return CBM_ERROR_DISK_FULL;
 		}
+		f->Slot.size++;
+
+		// allocate a new data block 
+		// note that the DOS does not write it into the side sector, but we do
+		new_track2 = track;
+		new_sector2 = sector;
+		track = last_used_track;
+		sector = last_used_sector;
+		if (di_find_free_block_NXTTS(diep, &track, &sector) < 0) {
+			return CBM_ERROR_DISK_FULL;
+		}
+
 		f->Slot.size++;
 		slot_dirty = 1;
 
@@ -1516,6 +1531,7 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 			// no, sector group is not full, update old group
 			// "side" contains the number of the new side sector in this group
 			side++;
+
 
 			di_read_sidesector_group(diep, sidesectorgroup,
 						 ssg_track, ssg_sector,
@@ -1565,10 +1581,12 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 		// update side sector contents
 		sidesectorgroup[o + BLK_OFFSET_NEXT_TRACK] = 0;
 		sidesectorgroup[o + BLK_OFFSET_NEXT_SECTOR] =
-		    SSB_OFFSET_SECTOR + 1;
+		    SSB_OFFSET_SECTOR + 3;
 		sidesectorgroup[o + SSB_OFFSET_RECORD_LEN] = f->Slot.recordlen;
 		sidesectorgroup[o + SSB_OFFSET_SECTOR] = new_track;
 		sidesectorgroup[o + SSB_OFFSET_SECTOR + 1] = new_sector;
+		sidesectorgroup[o + SSB_OFFSET_SECTOR + 2] = new_track2;
+		sidesectorgroup[o + SSB_OFFSET_SECTOR + 3] = new_sector2;
 	} else {
 		// last side sector is not full
 		// just update with new data
@@ -1631,34 +1649,45 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 		di_fwrite(datasector, 1, 256, diep->Ip);
 	}
 
-	/* Fill new sector with maximum records */
-	o = 2;
-	while (o < 256) {
-		if (k == 0)
-			datasector[o] = 0xff;
-		else
-			datasector[o] = 0x00;
-		k = (k + 1) % f->Slot.recordlen;
-		/* increment the maximum records each time we complete a full
-		   record. */
-		if (k == 0)
-			f->maxrecord++;
-		o++;
-	}
+	do {
+		/* Fill new sector with maximum records */
+		o = 2;
+		while (o < 256) {
+			if (k == 0)
+				datasector[o] = 0xff;
+			else
+				datasector[o] = 0x00;
+			k = (k + 1) % f->Slot.recordlen;
+			/* increment the maximum records each time we complete a full
+			   record. */
+			if (k == 0)
+				f->maxrecord++;
+			o++;
+		}
 
-	/* set as last sector in REL file */
-	datasector[BLK_OFFSET_NEXT_TRACK] = 0;
+		if (new_track2 == 0) {
+			/* set as last sector in REL file */
+			datasector[BLK_OFFSET_NEXT_TRACK] = 0;
 
-	log_debug("set last sector (%d/%d) size to %d\n", new_track, new_sector,
-		  255 - k);
+			log_debug("set last sector (%d/%d) size to %d\n", new_track, new_sector,
+				  255 - k);
 
-	/* Update the last byte based on how much of the last record we
-	   filled. */
-	datasector[BLK_OFFSET_NEXT_SECTOR] = 255 - k;
+			/* Update the last byte based on how much of the last record we
+			   filled. */
+			datasector[BLK_OFFSET_NEXT_SECTOR] = 255 - k;
+		} else {
+			datasector[BLK_OFFSET_NEXT_TRACK] = new_track2;
+			datasector[BLK_OFFSET_NEXT_SECTOR] = new_sector2;
+		}
 
-	// write back data sector
-	di_fseek_tsp(diep, new_track, new_sector, 0);
-	di_fwrite(datasector, 1, 256, diep->Ip);
+		// write back data sector
+		di_fseek_tsp(diep, new_track, new_sector, 0);
+		di_fwrite(datasector, 1, 256, diep->Ip);
+
+		new_track = new_track2;
+		new_sector = new_sector2;
+		new_track2 = 0;
+	} while (new_track != 0);
 
 	return CBM_ERROR_OK;
 }
