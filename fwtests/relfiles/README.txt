@@ -4,6 +4,15 @@ REL file tests
 
 The remaining errors are:
 
+1) DOS does not correctly update the block count for REL files 
+   when it is created.
+2) When a new side sector starts, DOS allocates an extra data
+   block, but only puts it into the data file chain. It is neiter
+   included in the side sector, nor is it initialized with 0xff
+   at the beginning of each record.
+3) 2031 disk drives are considered broken for REL files and
+   are not included.
+
 make
 ./relfiles.sh -C -q
 reltest1.2-4040.frs: Ok
