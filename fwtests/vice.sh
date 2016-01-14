@@ -12,8 +12,9 @@ if [ "x$MODEL" = "x" ]; then
 	FILTER="_______"
 	DIR="PET"
 else
-	# Note we use simons basic here because we use DIRECTORY
-	MODEL="x64 -basicload"
+	# Note we simulate a drive 9, as the trace facility otherwise does not
+	# trace data sent from the drive 8.
+	MODEL="x64 -basicload -iecdevice9"
 	SOCKLOG="sockiec.trace"
 	POST="_64"
 	PETCAT_OPTS="-w2 -l 0801"
