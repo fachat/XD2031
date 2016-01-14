@@ -12,6 +12,7 @@
   840 goto 500
  2200 remprint"create 14 recs, pos rec 8500 (almost full d64 disk)"
  2201 print"create 14 recs, pos rec 1525 (just over 120 blocks)
+ 2202 print"i.e. start of second side sector block"
  2205 n=2
  2210 gosub9100
  2220 print#1,"p"chr$(2)chr$(14)chr$(0);

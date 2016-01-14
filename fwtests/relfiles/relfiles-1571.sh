@@ -18,17 +18,17 @@ THISDIR=`dirname $0`
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-TESTFILES="rel.d64"
+TESTFILES="rel.d71"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES="rel.d64"
+COMPAREFILES="rel.d71"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=rel.d64"
+SERVEROPTS="-v -A0:fs=rel.d71"
 
 #firmware options
 FWOPTS=-Xsock488:E=-
@@ -36,9 +36,8 @@ FWOPTS=-Xsock488:E=-
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
-#shopt -s extglob
-#FILTER='+(2031|4040)'
-FILTER=4040
+shopt -s extglob
+FILTER='1571'
 
 ########################
 # source and execute actual functionality

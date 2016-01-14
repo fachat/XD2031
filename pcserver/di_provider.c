@@ -1496,6 +1496,7 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 
 			memset(sidesectorgroup, 0, 256);
 			sidesectorgroup[SSB_OFFSET_SECTOR_NUM] = 0;
+			sidesectorgroup[SSB_OFFSET_RECORD_LEN] = f->Slot.recordlen;
 			sidesectorgroup[SSB_OFFSET_SSG] = track;
 			sidesectorgroup[SSB_OFFSET_SSG + 1] = sector;
 
@@ -1545,6 +1546,7 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 			memset(sidesectorgroup + (side * 256), 0, 256);
 			sidesectorgroup[(side * 256) + SSB_OFFSET_SECTOR_NUM] =
 			    side;
+			sidesectorgroup[(side * 256) + SSB_OFFSET_RECORD_LEN] = f->Slot.recordlen;
 			// copy side sector track and sector list from first side sector
 			for (k = 0; k < SSG_SIDE_SECTORS_MAX * 2; k++) {
 				sidesectorgroup[(side * 256) + SSB_OFFSET_SSG +
