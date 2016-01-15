@@ -163,9 +163,6 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			if (openflag == OPENFLAG_LOAD) {
 				// on load, 'P' is the default
 				nameinfo.type = 'P';
-			} else {
-				// otherwise it is SEQ
-				nameinfo.type = 'S';
 			}
 		}
 	}
