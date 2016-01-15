@@ -16,34 +16,36 @@
 
 THISDIR=`dirname $0`
 
+#echo "THISDIR=$THISDIR"
+
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-TESTFILES="shell.d80 base.d64"
-
-# custom command to be executed after a test, but before the compare
-# Here used to extract the inner D64 from the shell D80 file
-CUSTOMPOSTCMD="${VICE}c1541 -attach shell.d80 -read inner.d64 base.d64"
+TESTFILES="blk.d64"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES="base.d64 shell.d80"
+COMPAREFILES="blk.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=shell.d80/inner.d64"
+SERVEROPTS="-v -A0:fs=blk.d64"
 
 #firmware options
-#FWOPTS=""
-FWOPTS=-Xsock488:E=-
-
+# switch off drive in error messages; also restricts track/sector to two chars
+FWOPTS="-Xsock488:E=-"
 
 # tsr scripts from the directory to exclude
+# Note that the 2031 drive is "worse" in a sense that some useful features are
+# only in the dual drives. Like 12 direct buffers (as sockserv), or track/sector numbers
+# > 100 being handled correctly in the error message. So as reference we only use the 4040 
+# tests
 #EXCLUDE="position1.frs"
-EXCLUDE="*-1001.frs"
-
-FILTER=
+EXCLUDE=""
+#shopt -s extglob
+#FILTER='+(2031|4040)'
+FILTER='1541'
 
 ########################
 # source and execute actual functionality

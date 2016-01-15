@@ -1,0 +1,24 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create a seq files
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1215 rem open file with ,w and ,s
+ 1220 open2,u,2,"file3,s,w"
+ 1250 gosub 9000
+ 2270 close2
+ 2315 rem open file with ,r only
+ 2320 open2,u,2,"file3,r"
+ 2350 gosub 9000
+ 2370 close2
+ 3210 close1
+ 3230 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

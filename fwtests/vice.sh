@@ -14,7 +14,7 @@ if [ "x$MODEL" = "x" ]; then
 else
 	# Note we simulate a drive 9, as the trace facility otherwise does not
 	# trace data sent from the drive 8.
-	MODEL="x64 -basicload -iecdevice9"
+	MODEL="x64 -basicload -iecdevice9 +iecdevice10 +iecdevice11 +iecdevice8"
 	SOCKLOG="sockiec.trace"
 	POST="_64"
 	PETCAT_OPTS="-w2 -l 0801"

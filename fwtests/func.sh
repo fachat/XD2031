@@ -328,7 +328,7 @@ for script in $TESTSCRIPTS; do
 		SERVERPID=$!
 
 		# wait till server is up, just to be sure
-		sleep 0.1;
+		while [ ! -S $TMPDIR/$SSOCKET ]; do sleep 0.1; done
 
 		############################################
 		# start firmware
@@ -357,7 +357,8 @@ for script in $TESTSCRIPTS; do
 			FWPID=$!
 			trap "kill -TERM $SERVERPID $FWPID" INT
 
-			sleep 0.1; # just in case
+			# wait till server is up, just to be sure
+			while [ ! -S $TMPDIR/$CSOCKET ]; do sleep 0.1; done
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
 			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tee $TMPDIR/$RUNNERLOG;

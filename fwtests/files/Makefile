@@ -1,5 +1,5 @@
 
 tests:
-	./filetests-d64.sh -C -q
-	./filetests-d82.sh -C -q
+	./filetests-4040.sh -C -q
+	./filetests-8250.sh -C -q
 
