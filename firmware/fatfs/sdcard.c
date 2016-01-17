@@ -2,7 +2,7 @@
 /* MMCv3/SDv1/SDv2 (in SPI mode) control module  (C)ChaN, 2010           */
 /*-----------------------------------------------------------------------*/
 
-#include "device.h"     /* Device dependent I/O definitions */
+#include "hwdevice.h"     /* Device dependent I/O definitions */
 #include "diskio.h"
 #include "sdcard.h"
 #include "spi.h"

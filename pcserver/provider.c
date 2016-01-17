@@ -321,7 +321,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 			for (int i = 0; ; i++) {
 				providers_t *p = reg_get(&providers, i);
 				if (p != NULL) {
-					log_debug("Compare to provider %s\n", p->provider->name);
+					log_debug("Compare to provider '%s'\n", p->provider->name);
 					const char *pname = p->provider->name;
 					if (!strcmp(pname, ascname)) {
 						// got one

@@ -26,7 +26,7 @@
 
 #include <avr/io.h>
 #include "config.h"
-#include "device.h"
+//#include "hwdevice.h"
 
 static inline __attribute__ ((always_inline))
 void slow_spi_clk(void)

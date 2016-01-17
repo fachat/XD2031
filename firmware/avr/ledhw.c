@@ -35,7 +35,7 @@
 #include <inttypes.h>
 
 #include "hwdefines.h"
-#include "device.h"
+#include "hwdevice.h"
 #include "led.h"
 
 // -----------------------------------------------------------------------------

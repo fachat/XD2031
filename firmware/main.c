@@ -53,17 +53,6 @@
 #include "nvconfig.h"
 #endif
 
-// those are currently still needed for *_mainloop_iteration
-#ifdef HAS_IEC
-#include "iec.h"
-#endif
-#ifdef HAS_IEEE
-#include "ieee.h"
-#endif
-#ifdef HAS_SOCK488
-#include "sock488.h"
-#endif
-
 #ifdef USE_FAT
 #include "fat_provider.h"
 #endif
@@ -99,6 +88,14 @@ void ListVersion()
 
 
 static endpoint_t term_endpoint;
+
+static uint8_t is_locked = 1;
+
+void device_unlock(void) {
+
+	term_rom_puts(IN_ROM_STR("Unlocking devices!\n"));
+	is_locked = 0;
+}
 
 // -------------------------
 // delay loop, to keep all maintenance running while
@@ -208,22 +205,15 @@ int main(int argc, const char *argv[])
 	term_putcrlf();
 	term_putcrlf();
 
+
 	while (1)  			// Mainloop-Begin
 	{
 		// keep data flowing on the serial line
 		main_delay();
-#ifdef HAS_IEEE
-		// handle IEEE488 bus
-		ieee_mainloop_iteration();
-#endif
-#ifdef HAS_IEC
-		// handle IEC bus
-		iec_mainloop_iteration();
-#endif
-#ifdef HAS_SOCK488
-		// handle IEC bus
-		sock488_mainloop_iteration();
-#endif
+
+		if (!is_locked) 
+			device_loop();
+
 		// send out log messages
 		term_flush();
 	}

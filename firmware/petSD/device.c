@@ -62,3 +62,15 @@ void device_init(void) {
         ieeehw_init();                  // IEEE-488 hardware
         ieee_init(8);                   // hardware-independent part; registers as bus
 }
+
+void device_loop(void) {
+#ifdef HAS_IEEE
+        // handle IEEE488 bus
+        ieee_mainloop_iteration();
+#endif
+#ifdef HAS_IEC
+        // handle IEC bus
+        iec_mainloop_iteration();
+#endif
+}
+

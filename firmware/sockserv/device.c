@@ -74,3 +74,8 @@ void device_setup(int argc, const char *argv[]) {
 }
 
 
+void device_loop(void) {
+
+	sock488_mainloop_iteration();
+}
+

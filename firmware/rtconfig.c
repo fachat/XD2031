@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "device.h"
 #include "rtconfig.h"
 #include "rtconfig2.h"
 #include "errors.h"
@@ -125,6 +126,7 @@ static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) 
 			break;
 		}
         }
+	device_unlock();
 	// callback returns 1 to continue receiving on this channel
         return 0;
 }
@@ -134,7 +136,7 @@ static void do_charset(void) {
 	// set the communication charset to PETSCII
 	strcpy(outbuf, cconv_charsetname(current_charset));
 
-        // prepare FS_RESET packet
+        // prepare FS_CHARSET packet
         packet_set_filled(&outpack, FSFD_CMD, FS_CHARSET, strlen(outbuf)+1);
 
 	// send the FS_CHARSET packet

@@ -83,4 +83,14 @@ void device_init(void) {
 	enable_ints();
 }
 
+void device_loop(void) {
+#ifdef HAS_IEEE
+        // handle IEEE488 bus
+        ieee_mainloop_iteration();
+#endif
+#ifdef HAS_IEC
+        // handle IEC bus
+        iec_mainloop_iteration();
+#endif
+}
 
