@@ -348,27 +348,46 @@ static type_t buf_type = {
 	buf_init
 };
 
-
-static cbm_errno_t di_GETBUF(buf_t **bufp, di_endpoint_t *diep, uint8_t track, uint8_t sector) {
+/*
+ * get a detached buffer; can be set (with SETBUF) to any t/s address and written to
+ */
+static cbm_errno_t di_GETBUF(buf_t **bufp, di_endpoint_t *diep) {
 
 	buf_t *p = *bufp;
 
 	if (p == NULL) {
 		p = mem_alloc(&buf_type);
 		p->buf = mem_alloc_c(256, "di_buf_block");
-		log_debug("GETBUF(%d,%d) -> new buffer at %p\n", track, sector, p);
+		log_debug("GETBUF() -> new buffer at %p\n", p);
 		*bufp = p;
 	} else {
-		log_debug("GETBUF(%d,%d) -> reuse buffer at %p\n", track, sector, p);
+		log_debug("GETBUF() -> reuse buffer at %p\n", p);
 	}
 
 	p->diep = diep;
-	p->track = track;
-	p->sector = sector;
+	p->track = 0;
+	p->sector = 0;
 
 	return CBM_ERROR_OK;
 }
 
+static cbm_errno_t di_RDBUF(buf_t *bufp);
+
+/* 
+ * get a (possibly) mapped buffer. Can only be used to read
+ * t/s address. 
+ */
+static cbm_errno_t di_MAPBUF(buf_t *bufp, uint8_t track, uint8_t sector) {
+
+	bufp->track = track;
+	bufp->sector = sector;
+
+	return di_RDBUF(bufp);
+}
+
+/*
+ * prepare a buffer for writing to the given t/s
+ */
 static void di_SETBUF(buf_t *bufp, uint8_t track, uint8_t sector) {
 
 	bufp->track = track;
@@ -412,7 +431,7 @@ static void di_FREBUF(buf_t **bufp) {
 
 	buf_t *p = *bufp;
 
-	log_debug("FREBUF(%d,%d (%p))\n", p->track, p->sector, p);
+	log_debug("FREBUF(%d,%d (%p))\n", p == NULL ? 0 : p->track, p == NULL ? 0 : p->sector, p);
 
 	if (p != NULL) {
 		p->diep = NULL;
@@ -1077,91 +1096,112 @@ static void di_pos_append(di_endpoint_t * diep, File * f)
 
 static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
 {
+	uint8_t o;
+	// number of groups
+	uint8_t group;
+	// number of side sectors in group
+	uint8_t side;
+	// number of sectors in side sector
+	uint8_t sect;
+	// bytes in last data sector
+	uint8_t byt;
 
-	uint8_t sidesector[256];
+	// super side sector address
+	uint8_t super_track;
+	uint8_t super_sector;
+	// side sector address
+	uint8_t	side_track;
+	uint8_t side_sector;
+	// file sector address
+	uint8_t data_track;
+	uint8_t data_sector;
 
-	unsigned int super, side;
-	unsigned int j, k, l, o;
+	// return value
+	unsigned int k = 0;
+
+	// buffer to use
+	buf_t *bp = NULL;
 
 	// find the number of side sector groups
 
 	// read first side sector
-	uint8_t ss_track = f->Slot.ss_track;
-	uint8_t ss_sector = f->Slot.ss_sector;
+	super_track = f->Slot.ss_track;
+	super_sector = f->Slot.ss_sector;
 
-	if (ss_track == 0) {
+	if (super_track == 0) {
 		// not a REL file or a new one
-		return 0;
+		goto end;
 	}
 	// read the first side sector
-	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-	di_fread(sidesector, 1, 256, diep->Ip);
+	di_GETBUF(&bp, diep);
+	di_MAPBUF(bp, super_track, super_sector);
 
-	super = 0;
 	// number of side sector groups
-	if (sidesector[SSB_OFFSET_SUPER_254] == 0xfe) {
+	if (bp->buf[SSB_OFFSET_SUPER_254] == 0xfe) {
 		// sector is a super side sector
-		// count how many side sector groups are used -> side
+		// count how many side sector groups are used -> groups
 		o = SSS_OFFSET_SSB_POINTER;
-		for (super = 0; super < SSS_INDEX_SSB_MAX && sidesector[o] != 0;
-		     super++, o += 2) ;
+		for (group = 0; group < SSS_INDEX_SSB_MAX && bp->buf[o] != 0;
+		     group++, o += 2) ;
 
-		if (super == 0) {
+		if (group == 0) {
+			di_FREBUF(&bp);
 			return 0;
 		}
-		super--;
+		group--;
 
 		// last side sector group 
-		ss_track = sidesector[SSS_OFFSET_SSB_POINTER + (super << 1)];
-		ss_sector =
-		    sidesector[SSS_OFFSET_SSB_POINTER + (super << 1) + 1];
+		side_track = bp->buf[SSS_OFFSET_SSB_POINTER + (group << 1)];
+		side_sector = bp->buf[SSS_OFFSET_SSB_POINTER + (group << 1) + 1];
 
-		di_fseek_tsp(diep, ss_track, ss_sector, 0);
-		di_fread(sidesector, 1, 256, diep->Ip);
+		di_MAPBUF(bp, side_track, side_sector);
 	}
-	// now sidesector contains the first block of the last side sector group
+
+	// now buf contains the first block of the last side sector group
 	// find last sector in side sector group (guaranteed to find)
 	o = SSB_OFFSET_SSG;
-	for (side = 0; side < SSG_SIDE_SECTORS_MAX && sidesector[o] != 0;
+	for (side = 0; side < SSG_SIDE_SECTORS_MAX && bp->buf[o] != 0;
 	     side++, o += 2) ;
 
 	side--;
 	if (side > 0) {
 		// not the first one (which is already in the buffer)
-		ss_track = sidesector[SSB_OFFSET_SSG + (side << 1)];
-		ss_sector = sidesector[SSB_OFFSET_SSG + (side << 1) + 1];
+		side_track = bp->buf[SSB_OFFSET_SSG + (side << 1)];
+		side_sector = bp->buf[SSB_OFFSET_SSG + (side << 1) + 1];
 
-		di_fseek_tsp(diep, ss_track, ss_sector, 0);
-		di_fread(sidesector, 1, 256, diep->Ip);
+		di_MAPBUF(bp, side_track, side_sector);
 	}
+
 	// here we have the last side sector of the last side sector chain in the buffer.
 	// obtain the last byte of the sector according to the index 
-	j = (sidesector[BLK_OFFSET_NEXT_SECTOR] + 1 - SSB_OFFSET_SECTOR) / 2;
+	sect = (bp->buf[BLK_OFFSET_NEXT_SECTOR] + 1 - SSB_OFFSET_SECTOR) / 2;
 	// now get the track and sector of the last block
-	j--;
-	o = SSB_OFFSET_SECTOR + 2 * j;
-	ss_track = sidesector[o];
-	ss_sector = sidesector[o + 1];
+	sect--;
+	o = SSB_OFFSET_SECTOR + 2 * sect;
+	data_track = bp->buf[o];
+	data_sector = bp->buf[o + 1];
 
 	// read the last sector of the file
-	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-	di_fread(sidesector, 1, 256, diep->Ip);
+	di_MAPBUF(bp, data_track, data_sector);
 
 	// number of bytes in this last sector
-	o = sidesector[BLK_OFFSET_NEXT_SECTOR] - 1;
+	byt = bp->buf[BLK_OFFSET_NEXT_SECTOR] - 1;
 
 	/* calculate the total bytes based on the number of super side, side
 	   sectors, and last byte index */
-	k = super * SSG_SIDE_SECTORS_MAX + side;	// side sector
+	k = group * SSG_SIDE_SECTORS_MAX; // side sector group
+	k += side;			// side sector in group
 	k *= SSB_INDEX_SECTOR_MAX;	// times numbers of sectors per side sector
-	k += j;			// plus sector in the side sector
-	k *= 254;		// times bytes per sector
-	k += o;			// plus bytes in last sector
+	k += sect;			// plus sector in the side sector
+	k *= 254;			// times bytes per sector
+	k += byt;			// plus bytes in last sector
 
 	/* divide by the record length, and get the maximum records */
-	l = k / f->Slot.recordlen;
+	k = k / f->Slot.recordlen;
+end:
+	di_FREBUF(&bp);
 
-	return l;
+	return k;
 }
 
 // flush all dirty side sectors in the given group
@@ -2839,8 +2879,8 @@ static int di_format(endpoint_t * ep, const char *name)
 	buf_t *bp = NULL;
 
 	// read original disk ID and save it
-	di_GETBUF(&bp, diep, diep->DI.DirTrack, diep->DI.HdrSector);
-	di_RDBUF(bp);
+	di_GETBUF(&bp, diep);
+	di_MAPBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
 
 	buf = bp->buf;
 
@@ -2850,6 +2890,8 @@ static int di_format(endpoint_t * ep, const char *name)
 	// -------------------------------------------------------------------
 	// clear disk when formatted with ID
 
+	// SETBUF prepares for writing, so need to do that before memset()
+	di_SETBUF(bp, 1, 0);
 	memset(buf, 0, 256);
 
 	if (p != NULL) {
@@ -2863,12 +2905,13 @@ static int di_format(endpoint_t * ep, const char *name)
 			uint8_t sector = 0;
 
 			while (track < di->Tracks) {
+
+				di_SETBUF(bp, track, sector);
 		
 				uint8_t maxsect = di->LSEC(track);
 
 				while (sector < maxsect) {
 
-					di_SETBUF(bp, track, sector);
 					di_WRBUF(bp);
 					sector++;
 				}
@@ -2880,6 +2923,8 @@ static int di_format(endpoint_t * ep, const char *name)
 
 	// -------------------------------------------------------------------
 	// Now setup the new disk header, empty directory and BAM
+
+	di_SETBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
 
 	// disk name block
 	if (di->ID == 81) {
@@ -2927,7 +2972,6 @@ static int di_format(endpoint_t * ep, const char *name)
 		// header is NOT in the first BAM block (as in the D64 files), so
 		// we need to save this block now
 
-		di_SETBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
 		di_WRBUF(bp);
 		memset(buf, 0, 256);
 	}
@@ -2951,6 +2995,10 @@ static int di_format(endpoint_t * ep, const char *name)
 
         while (BAM_Number < di->BAMBlocks) {
 		first_track = track;
+
+		// prepare buffer to write
+		di_SETBUF(bp, diep->DI.bamts[BAM_Number *2], diep->DI.bamts[BAM_Number * 2 + 1]);
+
 		// BAM link address
 		if (BAM_Number == di->BAMBlocks - 1 || di->ID == 71) {
 			if (di->ID == 81) {
@@ -3051,7 +3099,6 @@ printf("bamts = %02x %02x %02x %02x, Number=%d\n", di->bamts[0], di->bamts[1], d
 			}
 		}
 		// write out BAM block
-		di_SETBUF(bp, diep->DI.bamts[BAM_Number *2], diep->DI.bamts[BAM_Number * 2 + 1]);
 		di_WRBUF(bp);
 
 		// clear buffer
@@ -3063,9 +3110,9 @@ printf("bamts = %02x %02x %02x %02x, Number=%d\n", di->bamts[0], di->bamts[1], d
 	// -------------------------------------------------------------------
 	// prepare first directory block
 
+	di_SETBUF(bp, diep->DI.DirTrack, diep->DI.DirSector);
 	memset(buf, 0, 256);
 	buf[1] = 0xff;
-	di_SETBUF(bp, diep->DI.DirTrack, diep->DI.DirSector);
 	di_WRBUF(bp);
 
 	di_FREBUF(&bp);
