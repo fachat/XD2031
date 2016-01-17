@@ -419,6 +419,8 @@ for script in $TESTSCRIPTS; do
         	                echo "    Script Ok" >&5
                 	else
                 	        echo ">>> Script errors: $RESULT" >&5
+				CNT_ERROR=$(($CNT_ERROR+1))
+				R=${R_ERR}
                 	fi
 		fi
 
@@ -475,7 +477,7 @@ for script in $TESTSCRIPTS; do
                         elif test $result -eq 2; then
                                 echo ">   File ${i} differs (as expected)!" >&5
 				CNT_EXPECTED=$(($CNT_EXPECTED+1))
-				if [ "$R" == "${R_OK}" ]; then
+				if [ "$R" = "${R_OK}" ]; then
 					R=${R_EXP}
 				fi
                         elif test $result -eq 3; then

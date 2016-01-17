@@ -1,6 +1,6 @@
 
 tests:
-	./base-d64.sh -C -q
-	./base-d82.sh -C -q
-	./shell-d64.sh -C -q
+	./base-d64.sh -qq
+	./base-d82.sh -qq
+	./shell-d64.sh -qq
 
