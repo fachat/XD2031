@@ -498,7 +498,7 @@ for script in $TESTSCRIPTS; do
 	fi
 done;
 
-if [ $QUIT -eq 2 ]; then
+if [ $QUIET -eq 2 ]; then
 	echo >&6
 fi
 echo "$CNT_TOTAL scripts executed, $CNT_EXPECTED expected diffs, $CNT_ERROR errors!" >&6
