@@ -17,7 +17,10 @@ dirXXXrel
 	Note: 1001 "only" has the error that a rel file has 0 blocks instead of 3, but we expect that.
 	Note: dir10rel (unexpectedly?) changes the track from 37 to 40 even though there is still
 	space in the track.
-	Note: dir46rel breaks when the side sector is not allocated with ALLOC_SIDE_SECTOR
+
+dir9rel
+	It seems there is a problem in the drive writing back the BAM of the directory track,
+	as it is all zeroed out
 
 
 Remaining errors
@@ -27,4 +30,8 @@ Remaining errors
 dir145 (4040), dir225 (1001)
 	When a new file is created in a directory that is already full, the CBM DOS
 	allocates a bogus block that is not freed again.
+
+1581 tests
+	The first 8 file blocks contain bogus remainders from the directory header block
+
 
