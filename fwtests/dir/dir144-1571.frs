@@ -1434,4 +1434,14 @@ atn 28 e1 3f
 atn 48 6f
 recv "00, OK,00,00" 0d
 atn 5f
+atn 28 f1
+send "FILE144"
+atn 3f
+atn 28 61
+send "FOO" 0d
+atn 3f
+atn 28 e1 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
 atn 28 ef 3f

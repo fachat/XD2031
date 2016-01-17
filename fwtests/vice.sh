@@ -14,7 +14,7 @@ if [ "x$MODEL" = "x" ]; then
 else
 	# Note we simulate a drive 9, as the trace facility otherwise does not
 	# trace data sent from the drive 8.
-	MODEL="x64 -basicload -iecdevice9 +iecdevice10 +iecdevice11 +iecdevice8"
+	MODEL="${MODEL} -basicload -iecdevice9 +iecdevice10 +iecdevice11 +iecdevice8"
 	SOCKLOG="sockiec.trace"
 	POST="_64"
 	PETCAT_OPTS="-w2 -l 0801"
@@ -23,6 +23,12 @@ else
 fi
 
 diskname=${imgname}-${testname}-${drivetype}
+
+if [ ${drivetype} == "8050" ]; then
+	dostype="1001"
+else
+	dostype="${drivetype}"
+fi
 
 if [ "x$VICE" = "x" ]; then
 	PETCATBIN=petcat
@@ -35,7 +41,7 @@ fi
 if [ "x$VICEDATA" = "x" ]; then
 	VICEPAR=""
 else
-	VICEPAR="-directory $VICEDATA/$DIR -dos${drivetype} ${VICEDATA}/DRIVES/dos${drivetype}"
+	VICEPAR="-directory $VICEDATA/$DIR -dos${dostype} ${VICEDATA}/DRIVES/dos${dostype}"
 fi
 	
 
