@@ -282,6 +282,8 @@ static void di_ep_free(endpoint_t * ep)
 // note: this provider reads/writes single bytes in many cases
 // always(?) preceeded by a seek, so there is room for improvements
 
+// OLD Style (deprectated)
+
 static inline cbm_errno_t di_fseek(file_t * file, long pos, int whence)
 {
 	return file->handler->seek(file, pos, whence);
@@ -313,6 +315,116 @@ static inline void di_fsync(file_t * file)
 
 	file->handler->flush(file);
 }
+
+
+// NEW style
+
+// the new style centers around a buffer for a disk block. A buf_t struct describes
+// the buffer. The API assumes that a buffer is reserved for a specific track/sector(!)
+// The API uses (buf_t **) in/out params, so you get the error number as return code, and the
+// buffer in the out parameter. If you input a buf_t, it will be reused.
+// The idea is that the shell can reuse and existing in-memory buffer that way.
+// A buffer must be returned via FREBUF when not needed anymore
+ 
+typedef struct {
+	di_endpoint_t	*diep;
+	uint8_t 	*buf;
+	uint8_t		track;
+	uint8_t		sector;
+} buf_t;
+
+static void buf_init(const type_t * t, void *obj)
+{
+	(void)t;		// silence unused warning
+	buf_t *p = (buf_t *) obj;
+	p->track = 0;
+	p->sector = 0;
+	p->buf = NULL;
+}
+
+static type_t buf_type = {
+	"di_buf_t",
+	sizeof(buf_t),
+	buf_init
+};
+
+
+static cbm_errno_t di_GETBUF(buf_t **bufp, di_endpoint_t *diep, uint8_t track, uint8_t sector) {
+
+	buf_t *p = *bufp;
+
+	if (p == NULL) {
+		p = mem_alloc(&buf_type);
+		p->buf = mem_alloc_c(256, "di_buf_block");
+		log_debug("GETBUF(%d,%d) -> new buffer at %p\n", track, sector, p);
+		*bufp = p;
+	} else {
+		log_debug("GETBUF(%d,%d) -> reuse buffer at %p\n", track, sector, p);
+	}
+
+	p->diep = diep;
+	p->track = track;
+	p->sector = sector;
+
+	return CBM_ERROR_OK;
+}
+
+static void di_SETBUF(buf_t *bufp, uint8_t track, uint8_t sector) {
+
+	bufp->track = track;
+	bufp->sector = sector;
+}
+
+static cbm_errno_t di_RDBUF(buf_t *bufp) {
+
+	cbm_errno_t err;
+	int readfl;
+	di_endpoint_t *diep = bufp->diep;
+	file_t *file = diep->Ip;
+
+	long seekpos = 256 * diep->DI.LBA(bufp->track, bufp->sector);
+	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
+	if (err == CBM_ERROR_OK) 
+		err = file->handler->readfile(file, (char *)(bufp->buf), 256, &readfl);
+
+	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, *bufp, err);
+
+	return err;
+}
+
+static cbm_errno_t di_WRBUF(buf_t *p) {
+
+	cbm_errno_t err;
+	di_endpoint_t *diep = p->diep;
+	file_t *file = diep->Ip;
+
+	long seekpos = 256 * diep->DI.LBA(p->track, p->sector);
+	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
+	if (err == CBM_ERROR_OK) 
+		err = file->handler->writefile(file, (char *)(p->buf), 256, 0);
+
+	log_debug("WRBUF(%d,%d (%p)) -> %d\n", p->track, p->sector, p, err);
+
+	return err;
+}
+
+static void di_FREBUF(buf_t **bufp) {
+
+	buf_t *p = *bufp;
+
+	log_debug("FREBUF(%d,%d (%p))\n", p->track, p->sector, p);
+
+	if (p != NULL) {
+		p->diep = NULL;
+		if (p->buf != NULL) {
+			mem_free(p->buf);
+			p->buf = NULL;
+		}
+		mem_free(p);
+	}
+	*bufp = NULL;
+}
+
 
 // ------------------------------------------------------------------
 // Track/sector calculations and checks
@@ -2718,18 +2830,27 @@ static int di_format(endpoint_t * ep, const char *name)
 	Disk_Image_t *di = &diep->DI;
 
 	uint8_t idbuffer[5];
-	uint8_t buf[256];
+	uint8_t *buf;
 
 	const char *p = index(name, ',');
 	int len = strlen(name);
 
-	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, diep->DI.HdrOffset + 18);
-	di_fread(idbuffer, 1, 5, diep->Ip);
+	// the buffer we are going to use for format
+	buf_t *bp = NULL;
 
-	memset(buf, 0, 256);
+	// read original disk ID and save it
+	di_GETBUF(&bp, diep, diep->DI.DirTrack, diep->DI.HdrSector);
+	di_RDBUF(bp);
+
+	buf = bp->buf;
+
+	memcpy(idbuffer, buf+diep->DI.HdrOffset+18, 5);
+
 
 	// -------------------------------------------------------------------
 	// clear disk when formatted with ID
+
+	memset(buf, 0, 256);
 
 	if (p != NULL) {
 		len = p - name;
@@ -2746,8 +2867,9 @@ static int di_format(endpoint_t * ep, const char *name)
 				uint8_t maxsect = di->LSEC(track);
 
 				while (sector < maxsect) {
-					di_fseek_tsp(diep, track, sector, 0);
-					di_fwrite(buf, 1, 256, diep->Ip);
+
+					di_SETBUF(bp, track, sector);
+					di_WRBUF(bp);
 					sector++;
 				}
 				sector = 0;
@@ -2805,8 +2927,8 @@ static int di_format(endpoint_t * ep, const char *name)
 		// header is NOT in the first BAM block (as in the D64 files), so
 		// we need to save this block now
 
-		di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector, 0);
-		di_fwrite(buf, 1, 256, diep->Ip);
+		di_SETBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
+		di_WRBUF(bp);
 		memset(buf, 0, 256);
 	}
 
@@ -2929,8 +3051,8 @@ printf("bamts = %02x %02x %02x %02x, Number=%d\n", di->bamts[0], di->bamts[1], d
 			}
 		}
 		// write out BAM block
-		di_fseek_tsp(diep, diep->DI.bamts[BAM_Number *2], diep->DI.bamts[BAM_Number * 2 + 1], 0);
-		di_fwrite(buf, 1, 256, diep->Ip);
+		di_SETBUF(bp, diep->DI.bamts[BAM_Number *2], diep->DI.bamts[BAM_Number * 2 + 1]);
+		di_WRBUF(bp);
 
 		// clear buffer
 		memset(buf, 0, 256);
@@ -2943,8 +3065,10 @@ printf("bamts = %02x %02x %02x %02x, Number=%d\n", di->bamts[0], di->bamts[1], d
 
 	memset(buf, 0, 256);
 	buf[1] = 0xff;
-	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.DirSector, 0);
-	di_fwrite(buf, 1, 256, diep->Ip);
+	di_SETBUF(bp, diep->DI.DirTrack, diep->DI.DirSector);
+	di_WRBUF(bp);
+
+	di_FREBUF(&bp);
 
 	// re-read BAM
 	di_read_BAM(diep);
