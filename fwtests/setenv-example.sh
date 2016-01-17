@@ -18,7 +18,7 @@ VICESRC="${THISDIR}/../../vice-2.4"
 # VICE="${THISDIR}/../../vice-2.4/src
 
 if [ "x${VICESRC}" != "x" ]; then
-	VICE=${VICESRC}/src
+	VICE=${VICESRC}/src/
 	VICEDATA="${VICESRC}/data"
 else 
 	VICEPAR=""
