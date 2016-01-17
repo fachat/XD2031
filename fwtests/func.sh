@@ -40,8 +40,9 @@ function usage() {
 	echo "       -C                      always clean up complete run directory"
 	echo "       -R <run directory>      use given run directory instead of tmp folder (note:"
 	echo "                               will not be rmdir'd on -C"
-	echo "       -q                      will suppress any output except whether test was successful"
+	echo "       -q                      will suppress any output except whether each test was successful"
 	echo "                               (implies -C)"
+	echo "       -qq                     only print a summary output over all the tests"
 	echo "       +e                      create an expected DIFF that is compared to later outcomes"
 	echo "       -e                      ignore an expected DIFF and show the real results"
 	echo "       +E                      create an expected ERR file that is compared to later outcomes"
@@ -156,6 +157,11 @@ while test $# -gt 0; do
 	;;
   -q)
 	QUIET=1
+	CLEAN=2
+	shift;
+	;;
+  -qq)
+	QUIET=2
 	CLEAN=2
 	shift;
 	;;
@@ -275,12 +281,19 @@ DEBUGFILE="$TMPDIR"/gdb.ex
 # stdout
 
 # remember stdout for summary output
-exec 5>&1
+exec 6>&1
+
+if test $QUIET -ge 2 ; then 
+	exec 5>$TMPDIR/summary.log
+else
+	exec 5>&1
+fi
 
 # redirect log when quiet
 if test $QUIET -ge 1 ; then 
        exec 1>$TMPDIR/stdout.log
 fi
+
 
 ########################
 # prepare files
@@ -292,12 +305,25 @@ done;
 
 
 ########################
+# counter
+
+CNT_TOTAL=0
+CNT_EXPECTED=0
+CNT_ERROR=0
+
+########################
 # run scripts
 #
+
+R_OK='.'
+R_EXP='x'
+R_ERR='X'
 
 for script in $TESTSCRIPTS; do
 
 	echo "====================== Running script $script" >&5
+	CNT_TOTAL=$(($CNT_TOTAL+1))
+	R=${R_OK}
 
 	SSOCKET=ssocket_$script
 	CSOCKET=csocket_$script
@@ -376,8 +402,12 @@ for script in $TESTSCRIPTS; do
 					cmp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected
 					if [ $? -ne 0 ]; then
 						echo ">>> Expected errors differ!" >&5
+						CNT_ERROR=$(($CNT_ERROR+1))
+						R=${R_ERR}
 					else 
 						echo ">   Errors occured as expected!" >&5
+						CNT_EXPECTED=$(($CNT_EXPECTED+1))
+						R=${R_EXP}
 					fi
 					did_print_message=1;
 				fi
@@ -439,13 +469,21 @@ for script in $TESTSCRIPTS; do
 			    fi
 			fi
                         if test $result -eq 1; then
-                                 echo ">>> File ${i} differs!" >&5
+                                echo ">>> File ${i} differs!" >&5
+				CNT_ERROR=$(($CNT_ERROR+1))
+				R=${R_ERR}
                         elif test $result -eq 2; then
-                                 echo ">   File ${i} differs (as expected)!" >&5
+                                echo ">   File ${i} differs (as expected)!" >&5
+				CNT_EXPECTED=$(($CNT_EXPECTED+1))
+				if [ "$R" == "${R_OK}" ]; then
+					R=${R_EXP}
+				fi
                         elif test $result -eq 3; then
-                                 echo ">>> File ${i} does not differ, but diff was expected!" >&5
+                                echo ">>> File ${i} does not differ, but diff was expected!" >&5
+				CNT_ERROR=$(($CNT_ERROR+1))
+				R=${R_ERR}
 			else
-                                 echo "    File ${i} compare ok!" >&5
+                                echo "    File ${i} compare ok!" >&5
 		 	fi
 		done;
 	fi
@@ -455,7 +493,15 @@ for script in $TESTSCRIPTS; do
 		rm -f $TMPDIR/$script;
 	fi
 
+	if [ $QUIET -eq 2 ]; then
+		echo -n "$R" >&6
+	fi
 done;
+
+if [ $QUIT -eq 2 ]; then
+	echo >&6
+fi
+echo "$CNT_TOTAL scripts executed, $CNT_EXPECTED expected diffs, $CNT_ERROR errors!" >&6
 
 if test $CLEAN -ge 2; then
 	echo "Cleaning up directory $TMPDIR"
@@ -470,6 +516,7 @@ if test $CLEAN -ge 2; then
 	done;
 
         rm -f $TMPDIR/stdout.log  
+        rm -f $TMPDIR/summary.log  
 
         # only remove work dir if we own it (see option -R)
 	if test $OWNDIR -ge 1; then	
