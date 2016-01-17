@@ -1,0 +1,84 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE001,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE002,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE003,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE004,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE005,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE006,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE007,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE008,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE009,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE010,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 f2
+send "FILE011,L," 7f
+atn 3f
+atn 28 e2 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 ef 3f
