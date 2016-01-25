@@ -169,7 +169,10 @@ $(THISBINDIR):
 	$(V1) mkdir -p $@
 
 tests:
-	@make --no-print-directory -C pctest tests
+	@make --no-print-directory -C pctest 
+
+sockserver: 
+	DEVICE=sockserv make
 
 dumppar:
 	@printf "Target: $(DEVICE)   MCU: $(MCU)   Version: $(VERSION)\n"

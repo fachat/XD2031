@@ -875,7 +875,7 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		log_debug("cmd %s :%d bytes @%p : \n", nameofcmd(255&buf[FSP_CMD]), n, buf);
+		log_info("cmd %s :%d bytes @%p : \n", nameofcmd(255&buf[FSP_CMD]), n, buf);
 		log_hexdump(buf, n, 0);
 	}
 #endif

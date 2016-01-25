@@ -403,8 +403,10 @@ static cbm_errno_t di_RDBUF(buf_t *bufp) {
 
 	long seekpos = 256 * diep->DI.LBA(bufp->track, bufp->sector);
 	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
-	if (err == CBM_ERROR_OK) 
-		err = file->handler->readfile(file, (char *)(bufp->buf), 256, &readfl);
+	if (err == CBM_ERROR_OK) {
+		// TODO: error on read?
+		file->handler->readfile(file, (char *)(bufp->buf), 256, &readfl);
+	}
 
 	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, *bufp, err);
 
@@ -419,8 +421,10 @@ static cbm_errno_t di_WRBUF(buf_t *p) {
 
 	long seekpos = 256 * diep->DI.LBA(p->track, p->sector);
 	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
-	if (err == CBM_ERROR_OK) 
-		err = file->handler->writefile(file, (char *)(p->buf), 256, 0);
+	if (err == CBM_ERROR_OK) {
+		// TODO: error on read?
+		file->handler->writefile(file, (char *)(p->buf), 256, 0);
+	}
 
 	log_debug("WRBUF(%d,%d (%p)) -> %d\n", p->track, p->sector, p, err);
 
@@ -1097,15 +1101,17 @@ static void di_pos_append(di_endpoint_t * diep, File * f)
 static int di_rel_navigate(di_endpoint_t * diep, 
 		uint8_t *ss_track, uint8_t *ss_sector, 
 		uint8_t *dt_track, uint8_t *dt_sector, 
-		uint8_t recordlen, unsigned int targetrec, unsigned int *wasrecord);
+		uint8_t recordlen, 
+		unsigned int targetrec, unsigned int *wasrecord, unsigned int *allocated);
 
 static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f) {
 
 	unsigned int numrecs = 0;
+	unsigned int allocated = 0;
 
 	// navigate the super/side sectors, find how many records are there (return in outparam numrecs)
 	// then expand the file to the given number of records	
-	di_rel_navigate(diep, &f->Slot.ss_track, &f->Slot.ss_sector, NULL, NULL, f->file.recordlen, 1, &numrecs);
+	di_rel_navigate(diep, &f->Slot.ss_track, &f->Slot.ss_sector, NULL, NULL, f->file.recordlen, 1, &numrecs, &allocated);
 
 	return numrecs;
 }
@@ -1119,14 +1125,11 @@ static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f) {
 // returns super side sector (for disks that have one) or first side sector group block address in *ss_
 // returns the (first) allocated data block in *dt_, for the file creation; dt_* may be NULL
 //
-// TODO: return allocated side sector address for slot
-// TODO: slot dirty
-// TODO: increase number of allocated blocks
-//
 static int di_rel_navigate(di_endpoint_t * diep, 
 		uint8_t *ss_track, uint8_t *ss_sector, 
 		uint8_t *dt_track, uint8_t *dt_sector, 
-		uint8_t recordlen, unsigned int targetrec, unsigned int *wasrecord)
+		uint8_t recordlen, 
+		unsigned int targetrec, unsigned int *wasrecord, unsigned int *allocated)
 {
 	int err = CBM_ERROR_OK;
 
@@ -1166,6 +1169,9 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// position in record	
 	uint8_t rec_pos = 0;
 
+      	log_debug("di_navigate ss: %d/%d, reclen=%d, target=%d\n", *ss_track, *ss_sector,
+			recordlen, targetrec);
+
 	// buffer to use
 	buf_t *superp = NULL;
 	buf_t *sidep = NULL;
@@ -1175,7 +1181,10 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	di_GETBUF(&sidep, diep);
 	di_GETBUF(&datap, diep);
 
-	if (ss_track == 0) {
+
+	*allocated = 0;
+
+	if (*ss_track == 0) {
 		// not a REL file or a new one
 		goto end;
 	}
@@ -1262,15 +1271,13 @@ end:
 	// output
 	*wasrecord = numrecords;
 
-	if (numrecords >= targetrec) {
-		goto end2;
-	}
-
-	// else expand the file
-
 	// last block is in datap buffer (or data_track is null)
 	last_track = data_track;
 	last_sector = data_sector;
+
+    while (numrecords < targetrec) {
+
+	// else expand the file
 
 	// check if there is space left in the super-/side sector structures
 	if (side == SSG_SIDE_SECTORS_MAX && side_pos == SSB_INDEX_SECTOR_MAX) {
@@ -1295,6 +1302,7 @@ end:
 		}
 		if (err != CBM_ERROR_OK) 
 			goto end2;
+		(*allocated)++;
 
 		if (side_track == 0) {
 			// we need to create the first side sector group for the file
@@ -1311,6 +1319,7 @@ end:
 			err = di_find_free_block_NXTTS(diep, &side_track, &side_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
+			(*allocated)++;
 
 			di_SETBUF(sidep, side_track, side_sector);
 
@@ -1331,6 +1340,7 @@ end:
 			err = di_find_free_block_NXTTS(diep, &super_track, &super_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
+			(*allocated)++;
 
 			di_SETBUF(superp, super_track, super_sector);
 
@@ -1356,12 +1366,14 @@ end:
 			err = di_find_free_block_NXTTS(diep, &data2_track, &data2_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
+			(*allocated)++;
 
 			side_track = data_track;
 			side_sector = data_sector;
 			err = di_find_free_block_NXTTS(diep, &side_track, &side_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
+			(*allocated)++;
 
 			uint8_t side_sectors[SSG_SIDE_SECTORS_MAX * 2];
 
@@ -1441,8 +1453,12 @@ end:
 
 			sidep->buf[SSB_OFFSET_SECTOR + 2] = data2_track;
 			sidep->buf[SSB_OFFSET_SECTOR + 3] = data2_sector;
-		}
 
+			// number of sectors in side sector
+			sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + 3;
+		} else {
+			sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + 1;
+		}
 		// update side sector with data block address
 		sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2)] = data_track;
 		sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2) + 1] = data_sector;
@@ -1474,7 +1490,6 @@ end:
 		*dt_sector = data_sector;
 
 	// default if last_track is 0
-	o = 0;
         do {
 		// last_track is the one we manipulate and it's already in datap
 		// if we create the file, last_track is 0, but data_track is not!
@@ -1522,12 +1537,19 @@ end:
                 data_sector = data2_sector;
                 data2_track = 0;
 
-		if (last_track != 0)
-			di_SETBUF(datap, data_track, data_sector);
+		if (last_track != 0) {
+			di_SETBUF(datap, last_track, last_sector);
+			memset(datap->buf, 0, 256);
+                	datap->buf[BLK_OFFSET_NEXT_SECTOR] = 1;
+		}
 
         } while (last_track != 0);
 
+    } // end while target > numrecords
+
 end2:	
+	*wasrecord = numrecords;
+
 	di_FREBUF(&datap);
 	di_FREBUF(&sidep);
 	di_FREBUF(&superp);
@@ -2181,7 +2203,6 @@ int di_rel_add_sectors(di_endpoint_t * diep, File * f, unsigned int nrecords)
 //***********
 //
 // internal function to expand a REL file to the given record (so that the record given exists)
-// algorithm partly taken from the VICE vdrive_rel_grow() function.
 // The algorithm adds a sector to the rel file until we meet the required records
 
 static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
@@ -2192,10 +2213,24 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 
 	int err = CBM_ERROR_OK;
 
-	// recordno starts at 0, maxrecord == 0 indicates new file, therefore also add on equal
-	while (err == CBM_ERROR_OK && recordno >= f->maxrecord) {
-		// each step adds one (or more) sectors to the REL file
-		err = di_rel_add_sectors(diep, f, recordno - f->maxrecord);
+	if (recordno == 1) {
+		unsigned int wasrecord = 0;
+		unsigned int allocated = 0;
+
+		err = di_rel_navigate(diep, 
+			&f->Slot.ss_track, &f->Slot.ss_sector,
+			&f->Slot.start_track, &f->Slot.start_sector,
+			f->file.recordlen, recordno, &wasrecord, &allocated);
+
+		f->maxrecord = wasrecord;
+		f->Slot.size = allocated;
+	} else {
+
+		// recordno starts at 0, maxrecord == 0 indicates new file, therefore also add on equal
+		while (err == CBM_ERROR_OK && recordno >= f->maxrecord) {
+			// each step adds one (or more) sectors to the REL file
+			err = di_rel_add_sectors(diep, f, recordno - f->maxrecord);
+		}
 	}
 
 	return err;
@@ -2637,13 +2672,13 @@ di_create_entry(di_endpoint_t * diep, File * file, const char *name,
 
 		// store number of actual records in file; will store 0 on new file
 		file->maxrecord = 0;
+		file->file.recordlen = pars->recordlen;
 
 		// expand file to at least one record (which extends to the first block)
 		di_expand_rel(diep, file, 1);
 
 		log_debug("Setting maxrecord to %d\n", file->maxrecord);
 
-		file->file.recordlen = pars->recordlen;
 	}
 	di_write_slot(diep, &file->Slot);
 
@@ -3015,7 +3050,6 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 			file->file.recordlen = pars->recordlen;
 			// store number of actual records in file; will store 0 on new file
 			file->maxrecord = di_rel_record_max(diep, file);
-			log_debug("Setting maxrecord to %d\n", file->maxrecord);
 
 		} else {
 			// not a rel file

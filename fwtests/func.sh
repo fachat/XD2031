@@ -212,16 +212,19 @@ function contains() {
 
 ERR=0
 if test ! -e $RUNNER; then
-       echo "$RUNNER does not exist! Maybe forgot to compile?"
-	ERR=1
+       echo "$RUNNER does not exist! Maybe forgot to compile? Doing it for you!"
+	(cd ${BASEDIR}/testrunner; make);
+	#ERR=1
 fi
 if test ! -e $SERVER; then
-       echo "$SERVER does not exist! Maybe forgot to compile?"
-	ERR=1
+       echo "$SERVER does not exist! Maybe forgot to compile? Doing it for you!"
+	(cd ${BASEDIR}/pcserver; make);
+	#ERR=1
 fi
 if test ! -e $FIRMWARE; then
-       echo "$FIRMWARE does not exist! Maybe forgot to compile?"
-	ERR=1
+       echo "$FIRMWARE does not exist! Maybe forgot to compile? Doing it for you!"
+	(cd ${BASEDIR}/firmware; make sockserver);
+	#ERR=1
 fi
 if [ $ERR -ge 1 ]; then
 	echo "Aborting!"

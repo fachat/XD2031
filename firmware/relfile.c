@@ -21,16 +21,7 @@
 
 #include <stdint.h>
 #include <string.h>
-/*
-#include <errno.h>
-#include <stdlib.h>
 
-#include "channel.h"
-#include "packet.h"
-
-#include "term.h"
-#include "led.h"
-*/
 #include "bus.h"
 #include "errormsg.h"
 #include "provider.h"
@@ -102,7 +93,7 @@ static int8_t relfile_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 	debug_flush();
 #endif
 
-	relfile_send_position(buffer, channel);
+	rv = relfile_send_position(buffer, channel);
 
 	if (is_write) {
 		rv = buffer_write_buffer(channel, buffer->real_endpoint, 
