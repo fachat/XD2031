@@ -29,7 +29,7 @@
 #include "relfile.h"
 #include "debug.h"
 
-#undef	DEBUG_RELFILE
+#define	DEBUG_RELFILE
 
 
                	
@@ -244,7 +244,7 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 	cmdbuf_t *buffer = buf_find(channelno);
 	if (buffer != NULL) {
 #ifdef DEBUG_RELFILE
-		debug_printf("wptr=%d, pflag=%02x, 1st data=%d (%02x)\n", 
+		debug_printf("relfile_put: wptr=%d, pflag=%02x, 1st data=%d (%02x)\n", 
 					buffer->wptr, 
 					buffer->pflag, c, c);
 #endif
@@ -298,7 +298,9 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 	} else {
 		err = CBM_ERROR_NO_CHANNEL;
 	}
-debug_printf("-> send err %02x\n", err);
+#ifdef DEBUG_RELFILE
+	debug_printf("-> send err %02x\n", err);
+#endif
 
 	return err;
 }
@@ -312,6 +314,11 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
 
+	// cut off final CR
+	if (cmdpars[namelen-1] == 0x0d) {
+		cmdpars[namelen-1] = 0;
+	}
+
 	uint8_t channel = (uint8_t)cmdpars[0];
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
 	uint8_t position = (namelen == 3) ? 0 : ((uint8_t)(cmdpars[3]));
@@ -320,7 +327,9 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 	// so we need to mask that away!
 	channel &= 0x1f;
 
-debug_printf("position: chan=%d, recordno=%d, in record=%d\n", channel, recordno, position);
+#ifdef DEBUG_RELFILE
+	debug_printf("relfile_position: chan=%d, recordno=%d, in record=%d\n", channel, recordno, position);
+#endif
 
 	cmdbuf_t *buffer = buf_find(channel);
 	if (buffer == NULL) {
