@@ -1304,7 +1304,7 @@ end:
 			goto end2;
 		}
 		// ok, we have reached a full side sector group, we need to create a new one
-		side_track = 0;
+		//side_track = 0;
 	}
 
 	if (numrecords == 0 || ((targetrec - numrecords) * recordlen) + data_pos > 254) {
