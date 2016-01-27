@@ -741,7 +741,7 @@ static int di_find_free_block_INTTS(di_endpoint_t * diep, uint8_t *out_track, ui
 		*out_track = track;
 		*out_sector = sector;
 
-		log_debug("di_find_free_block_INTTS () -> (%d/%d)\n", track, sector);
+		log_debug("di_find_free_block_INTTS () -> (%d,%d)\n", track, sector);
 
 		return CBM_ERROR_OK;
 	}
@@ -842,7 +842,7 @@ di_find_free_block_NXTTS(di_endpoint_t * diep, uint8_t * inout_track,
 		diep->CurrentTrack = track;
 
 		log_debug
-		    ("di_find_free_block_NXTTS (diep=%p, %d/%d, intrlv=%d, lstsec=%d, bam=%02x %02x %02x %02x) -> (%d/%d)\n",
+		    ("di_find_free_block_NXTTS (diep=%p, %d/%d, intrlv=%d, lstsec=%d, bam=%02x %02x %02x %02x) -> (%d,%d)\n",
 		     diep, *inout_track, *inout_sector, interleave, lastsector, bam[0],
 		     bam[1], bam[2], bam[3], track, sector);
 
@@ -1436,7 +1436,8 @@ end:
 				// update pointer to new side sector
 				sidep->buf[SSB_OFFSET_SSG + (side * 2)] = side_track;
 				sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] = side_sector;
-				log_debug("di_navigate: write previous last side sector\n");
+				log_debug("di_navigate: write previous last side sector (side=%d -> %d,%d)\n",
+					side, side_track, side_sector);
 				err = di_WRBUF(sidep);
 				if (err != CBM_ERROR_OK) 
 					goto end2;
@@ -1447,7 +1448,8 @@ end:
 				// now update all sectors in the side sector group. We take advantage that 
 				// all side sectors contain the list of sectors in that group
 				for (o = 0; o+1 < side; o++) {
-					log_debug("di_navigate: update new side sector in sectors of the group\n");
+					log_debug("di_navigate: update new side sector in sector (%d,%d) of the group\n",
+						side_sectors[o * 2], side_sectors[o * 2 + 1]);
 					err = di_MAPBUF(sidep, side_sectors[o * 2], side_sectors[o * 2 + 1]); 
 					if (err != CBM_ERROR_OK) 
 						goto end2;
@@ -1478,19 +1480,13 @@ end:
 			// list of side sectors
 			memcpy(&sidep->buf[SSB_OFFSET_SSG], side_sectors, SSG_SIDE_SECTORS_MAX * 2);
 			// and pointer to self
+			log_debug("di_navigate: set side sector (side=%d -> %d,%d)\n",
+				side, side_track, side_sector);
 			sidep->buf[SSB_OFFSET_SSG + (side * 2)] = side_track;
 			sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] = side_sector;
 
 			side_pos = 0;
 			side++;
-
-			if (data2_track != 0) {
-				// DOS bug: allocate another data block, link it, but do not write into side sector
-				// TODO: check when the DOS has created such a file, how do we handle it?
-
-				sidep->buf[SSB_OFFSET_SECTOR + 2] = data2_track;
-				sidep->buf[SSB_OFFSET_SECTOR + 3] = data2_sector;
-			}
 		}
 
 		// update side sector with data block address
@@ -1500,7 +1496,14 @@ end:
 		sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + side_pos * 2 + 1;
 		side_pos++;
 		if (data2_track != 0) {
+			// DOS bug: allocate another data block, link it, but do not write into side sector
+			// TODO: check when the DOS has created such a file, how do we handle it?
+			log_debug("di_navigate: set data2 sector (side_pos=%d -> %d,%d)\n",
+					side_pos, data2_track, data2_sector);
+			sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2)] = data2_track;
+			sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2) + 1] = data2_sector;
 			sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + side_pos * 2 + 1;
+			side_pos++;
 		}
 	}
 	
@@ -1552,7 +1555,6 @@ end:
                                 	numrecords++;
                         	o++;
                 	}
-			//numrecords--;
 
                 	if (data_track == 0) {
                         	/* set as last sector in REL file */
