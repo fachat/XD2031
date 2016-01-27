@@ -1146,17 +1146,17 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// super side sector address
 	uint8_t super_track = 0;
 	uint8_t super_sector;
-	uint8_t super_pos;
+	uint8_t super_pos = 0;
 
 	// side sector address
 	uint8_t	side_track = 0;
 	uint8_t side_sector;
-	uint8_t side_pos;
+	uint8_t side_pos = 0;
 
 	// file sector address
 	uint8_t data_track = 0;
 	uint8_t data_sector;
-	uint8_t data_pos;
+	uint8_t data_pos = 0;
 
 	// for additional data block due to DOS bug
 	uint8_t data2_track = 0;
@@ -1223,6 +1223,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 
 		di_MAPBUF(sidep, side_track, side_sector);
 	} else {
+		super_pos = 1;
+
 		side_track = *ss_track;
 		side_sector = *ss_sector;
 
@@ -1235,9 +1237,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	for (side = 0; side < SSG_SIDE_SECTORS_MAX && sidep->buf[o] != 0;
 	     side++, o += 2) ;
 	// side points to the first entry with track == 0
-	side--;
 
-	if (side > 0) {
+	if (side > 1) {
 		// not the first one (which is already in the buffer)
 		side_track = sidep->buf[SSB_OFFSET_SSG + (side << 1)];
 		side_sector = sidep->buf[SSB_OFFSET_SSG + (side << 1) + 1];
@@ -1265,7 +1266,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	   sectors, and last byte index */
 	file_size = (super_pos - 1);		// side sector group
 	file_size *= SSG_SIDE_SECTORS_MAX; 	// times size of SSG in sectors
-	file_size += side;			// side sector in group
+	file_size += (side - 1);		// side sector in group
 	file_size *= SSB_INDEX_SECTOR_MAX;	// times numbers of sectors per side sector
 	file_size += (side_pos - 1);		// plus sector position in the side sector
 	file_size *= 254;			// times bytes per sector
@@ -1274,6 +1275,9 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// divide by the record length, and get the maximum records 
 	// round up to full records
 	numrecords = file_size / recordlen;
+
+	log_debug("di_navigate: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> file_size=%d, numrecords=%d\n",
+			super_pos, side, side_pos, data_pos, recordlen, file_size, numrecords);
 end:
 	// output
 	*wasrecord = numrecords;
@@ -1288,6 +1292,8 @@ end:
     while (numrecords < targetrec) {
 
 	// else expand the file
+	log_debug("di_navigate: expand: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> numrecords=%d\n",
+			super_pos, side, side_pos, data_pos, recordlen, numrecords);
 
 	// check if there is space left in the super-/side sector structures
 	if (side == SSG_SIDE_SECTORS_MAX && side_pos == SSB_INDEX_SECTOR_MAX) {
@@ -1304,6 +1310,9 @@ end:
 	if (numrecords == 0 || ((targetrec - numrecords) * recordlen) + data_pos > 254) {
 		// a new data sector is needed
 
+		data2_track = 0;
+
+		log_debug("di_navigate: allocate new data sector\n");
 		if (super_track == 0) {
 			// file does not yet exist
 			err = di_find_free_block_INTTS(diep, &data_track, &data_sector);
@@ -1326,6 +1335,7 @@ end:
 			side_track = data_track;
 			side_sector = data_sector;
 
+			log_debug("di_navigate: allocate first side sector group for file\n");
 			err = di_find_free_block_NXTTS(diep, &side_track, &side_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
@@ -1347,6 +1357,7 @@ end:
 
 			super_track = data_track;
 			super_sector = data_sector;
+			log_debug("di_navigate: allocate super side sector\n");
 			err = di_find_free_block_NXTTS(diep, &super_track, &super_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
@@ -1370,9 +1381,10 @@ end:
 		if (side_pos == SSB_INDEX_SECTOR_MAX) {
 			// current side sector is full, need another one
 
-			// DOS bug: allocates two side sector blocks, but looses one - we at least don't loose it
+			// DOS bug: allocates two blocks, but looses one - we at least don't loose it
 			data2_track = data_track;
 			data2_sector = data_sector;
+			log_debug("di_navigate: allocate data2 block\n");
 			err = di_find_free_block_NXTTS(diep, &data2_track, &data2_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
@@ -1380,12 +1392,17 @@ end:
 
 			side_track = data_track;
 			side_sector = data_sector;
+			log_debug("di_navigate: allocate new side sector\n");
 			err = di_find_free_block_NXTTS(diep, &side_track, &side_sector);
 			if (err != CBM_ERROR_OK)
 				goto end2;
 			(*allocated)++;
 
 			uint8_t side_sectors[SSG_SIDE_SECTORS_MAX * 2];
+
+			// update link chain to point to first block of new side sector group
+			sidep->buf[0] = side_track;
+			sidep->buf[1] = side_sector;
 
 			// do we need a new side sector group?
 			if (diep->DI.HasSSB && side == SSG_SIDE_SECTORS_MAX) {
@@ -1394,9 +1411,8 @@ end:
 
 				side = 0;
 
-				// update link chain to point to first block of new side sector group
-				sidep->buf[0] = side_track;
-				sidep->buf[1] = side_sector;
+				log_debug("di_navigate: write link to new %d/%d in last side sector of previous group\n",
+					side_track, side_sector);
 
 				err = di_WRBUF(sidep);
 				if (err != CBM_ERROR_OK) 
@@ -1407,16 +1423,31 @@ end:
 
 				memset(side_sectors, 0, SSG_SIDE_SECTORS_MAX * 2);
 
+				if (diep->DI.HasSSB) {
+					log_debug("di_navigate: update super side sector @ super_pos=%d\n", super_pos);
 
+					superp->buf[SSS_OFFSET_SSB_POINTER + (super_pos * 2)] = side_track;
+					superp->buf[SSS_OFFSET_SSB_POINTER + (super_pos * 2) + 1] = side_sector;
+				}
 			} else
 			if (side < SSG_SIDE_SECTORS_MAX) {
 				// current group is not full yet, create a new side sector in it
 
+				// update pointer to new side sector
+				sidep->buf[SSB_OFFSET_SSG + (side * 2)] = side_track;
+				sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] = side_sector;
+				log_debug("di_navigate: write previous last side sector\n");
+				err = di_WRBUF(sidep);
+				if (err != CBM_ERROR_OK) 
+					goto end2;
+
+				// save list of side sectors
 				memcpy(side_sectors, &sidep->buf[SSB_OFFSET_SSG], SSG_SIDE_SECTORS_MAX * 2);
 
 				// now update all sectors in the side sector group. We take advantage that 
 				// all side sectors contain the list of sectors in that group
-				for (o = 0; o < side; o++) {
+				for (o = 0; o+1 < side; o++) {
+					log_debug("di_navigate: update new side sector in sectors of the group\n");
 					err = di_MAPBUF(sidep, side_sectors[o * 2], side_sectors[o * 2 + 1]); 
 					if (err != CBM_ERROR_OK) 
 						goto end2;
@@ -1425,11 +1456,6 @@ end:
 					sidep->buf[SSB_OFFSET_SSG + (side * 2)] = side_track;
 					sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] = side_sector;
 		
-					if ((o + 1) == side) {
-						// link chain for the previously last sector in side sector group
-						sidep->buf[BLK_OFFSET_NEXT_TRACK] = side_track;
-						sidep->buf[BLK_OFFSET_NEXT_SECTOR] = side_sector;
-					}
 					err = di_WRBUF(sidep);
 					if (err != CBM_ERROR_OK) 
 						goto end2;
@@ -1447,7 +1473,6 @@ end:
 
         	        sidep->buf[SSB_OFFSET_SECTOR_NUM] = side;
 
-        	        sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR - 1;        // no pointer in file
                 	sidep->buf[SSB_OFFSET_RECORD_LEN] = recordlen;
 
 			// list of side sectors
@@ -1457,12 +1482,15 @@ end:
 			sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] = side_sector;
 
 			side_pos = 0;
+			side++;
 
-			// DOS bug: allocate another data block, link it, but do not write into side sector
-			// TODO: check when the DOS has created such a file, how do we handle it?
+			if (data2_track != 0) {
+				// DOS bug: allocate another data block, link it, but do not write into side sector
+				// TODO: check when the DOS has created such a file, how do we handle it?
 
-			sidep->buf[SSB_OFFSET_SECTOR + 2] = data2_track;
-			sidep->buf[SSB_OFFSET_SECTOR + 3] = data2_sector;
+				sidep->buf[SSB_OFFSET_SECTOR + 2] = data2_track;
+				sidep->buf[SSB_OFFSET_SECTOR + 3] = data2_sector;
+			}
 		}
 
 		// update side sector with data block address
@@ -1471,6 +1499,9 @@ end:
 		// number of sectors in side sector
 		sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + side_pos * 2 + 1;
 		side_pos++;
+		if (data2_track != 0) {
+			sidep->buf[BLK_OFFSET_NEXT_SECTOR] = SSB_OFFSET_SECTOR + side_pos * 2 + 1;
+		}
 	}
 	
 	// metadata done; write back
@@ -1521,6 +1552,7 @@ end:
                                 	numrecords++;
                         	o++;
                 	}
+			//numrecords--;
 
                 	if (data_track == 0) {
                         	/* set as last sector in REL file */
