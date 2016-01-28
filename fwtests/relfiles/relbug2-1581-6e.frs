@@ -1,0 +1,32 @@
+atn 28 f2
+send "0:REL6.2,L," 14
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 0e 00
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "FOO" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 c6 "#"
+atn 3f
+atn 48 6f
+expect "50, RECORD NOT PR"
+recv "ESENT,00,00" 0d
+atn 5f
+atn 28 62
+send "12345" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f

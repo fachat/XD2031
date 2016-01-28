@@ -39,6 +39,8 @@ The remaining errors are:
 
 bug1) DOS does not correctly update the block count for REL files 
    when it is created.
+   Interestingly the 4040 drive does not seem to be affected, while
+   all(!) newer drives are.
 bug2) When a new side sector starts, DOS allocates an extra data
    block, but only puts it into the data file chain. It is neiter
    included in the side sector, nor is it initialized with 0xff
@@ -74,13 +76,14 @@ bug1)
 bug2)
 	reltest6.7-1541		(second side sector contains 2 instead of one block)
 	reltest6.7-4040
-	reltest6.a-1541		(third side sector contains 2 instead of one block)
 	reltest6.7-1571		(second side sector has 2 blocks)
 	reltest6.7-8050
-	reltest6.d-1581
+	reltest6.7-1581
 	reltest6.7-1001
+	reltest6.a-1541		(third side sector contains 2 instead of one block)
 	reltest6.a-1001
 	reltest6.d-1001
+	reltest6.d-1581
 	reltest6.g-1001
 	reltest6.g-1581
 	
