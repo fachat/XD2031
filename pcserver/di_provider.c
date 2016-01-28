@@ -1313,7 +1313,7 @@ end:
 		data2_track = 0;
 
 		log_debug("di_navigate: allocate new data sector\n");
-		if (super_track == 0) {
+		if (side_track == 0) {
 			// file does not yet exist
 			err = di_find_free_block_INTTS(diep, &data_track, &data_sector);
 		} else {
