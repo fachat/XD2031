@@ -234,35 +234,19 @@ atn 28 6f
 send "P" 02 02 00 00 0d
 atn 3f
 atn 48 6f
-expect "66,ILLEGAL TRACK "
-recv "OR SECTOR,50,50" 0d
-atn 5f
-atn 48 62
-expect "4"
-atn 5f
-atn 48 62
-expect "4"
-atn 5f
-atn 48 62
-expect "4"
-atn 5f
-atn 48 62
-recv 0d
-atn 5f
-atn 48 6f
 recv "00, OK,00,00" 0d
 atn 5f
-atn 28 62
-send "555" 0d
-atn 3f
-atn 48 6f
-recv "00, OK,00,00" 0d
+atn 48 62
+expect "2"
 atn 5f
-atn 28 62
-send "666" 0d
-atn 3f
-atn 48 6f
-recv "00, OK,00,00" 0d
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
 atn 5f
 atn 28 e2 3f
 atn 28 f2
@@ -275,8 +259,7 @@ atn 28 6f
 send "P" 02 03 00 05 0d
 atn 3f
 atn 48 6f
-expect "50, RECORD NOT PR"
-recv "ESENT,00,00" 0d
+recv "00, OK,00,00" 0d
 atn 5f
 atn 28 62
 send "888"
