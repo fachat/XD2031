@@ -1,0 +1,325 @@
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 01 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "1111111111"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 02 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "2222222222"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 03 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "3333333333"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 04 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "1111111111"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "2222222"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "333"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 04 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+expect "1"
+atn 5f
+atn 48 62
+recv "1"
+atn 5f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+recv "2"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+recv "3"
+atn 5f
+atn 48 62
+recv ff
+atn 5f
+atn 48 62
+recv ff
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 01 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "444" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+expect "2"
+atn 5f
+atn 48 62
+recv "2"
+atn 5f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 48 62
+expect "3"
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 02 00 00 0d
+atn 3f
+atn 48 6f
+expect "66,ILLEGAL TRACK "
+recv "OR SECTOR,50,50" 0d
+atn 5f
+atn 48 62
+expect "4"
+atn 5f
+atn 48 62
+expect "4"
+atn 5f
+atn 48 62
+expect "4"
+atn 5f
+atn 48 62
+recv 0d
+atn 5f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "555" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "666" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.1,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 03 00 05 0d
+atn 3f
+atn 48 6f
+expect "50, RECORD NOT PR"
+recv "ESENT,00,00" 0d
+atn 5f
+atn 28 62
+send "888"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.2,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 00 00 05 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "888"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL4.2,L," 0a
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 6f
+send "P" 02 05 00
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 62
+send "FOO" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00" 0d
+atn 5f
+atn 28 e2 3f

@@ -235,7 +235,7 @@ fi
 
 # scripts to run
 if [ "x$*" = "x" ]; then
-        SCRIPTS=$THISDIR/*${FILTER}*.frs
+        SCRIPTS=$THISDIR/*${FILTER}.frs
         SCRIPTS=`basename -a $SCRIPTS`;
 
 	TESTSCRIPTS=""

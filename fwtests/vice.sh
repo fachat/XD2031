@@ -23,6 +23,12 @@ else
 fi
 
 diskname=${imgname}-${testname}-${drivetype}
+outfilename=${testname}-${drivetype}
+
+if [ "x${variant}" != "x" ]; then
+	diskname=${diskname}-${variant}
+	outfilename=${outfilename}-${variant}
+fi
 
 if [ ${drivetype} == "8050" ]; then
 	dostype="1001"
@@ -75,6 +81,6 @@ ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} -8 ${d
 
 echo "find resulting image in ${diskname} - you may need to gzip it with"
 echo "    gzip ${diskname}"
-echo "find runner script in 'sock488.trace' - you may need to move it with"
-echo "    mv ${SOCKLOG} ${testname}-${drivetype}.frs"
+echo "find runner script in ${SOCKLOG} - you may need to move it with"
+echo "    mv ${SOCKLOG} ${outfilename}.frs"
 echo "or edit the ${testname}.lst file if it exists and run again."
