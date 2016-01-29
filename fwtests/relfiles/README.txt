@@ -54,6 +54,11 @@ bug3) 2031 disk drives (in the VICE version at least) are considered
 buf4) The 1571 drive at some point returns an ILLEGAL TRACK OR SECTOR
    instead of a RECORD NOT PRESENT.
 
+Note: 
+	bug2 seems not to recover well in DOS. when expanding the REL file 
+	over that additional block, the block is discarded and a new one
+	allocated. However, this still seems to mess up the start address of
+	the record in the block, at least it writes the $ff marker wrongly.
 
 Here is the list of "expected" changes due to these bugs:
 

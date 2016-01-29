@@ -1181,6 +1181,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// return value
 	unsigned int file_size = 0;
 	unsigned int numrecords = 0;
+	unsigned int side_blocks = 0;
+	unsigned int data_blocks = 0;
 
 	// position in record   
 	uint8_t rec_pos = 0;
@@ -1268,16 +1270,68 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// read the last sector of the file
 	di_MAPBUF(datap, data_track, data_sector);
 
-	// number of bytes in this last sector
-	data_pos = datap->buf[BLK_OFFSET_NEXT_SECTOR] - 1;
+ end:
+	// calculate the total number of blocks - because we need it for bug2 situation below, to get data_pos
+	data_blocks = 0;
+	side_blocks = 0;
+	if (diep->DI.HasSSB && super_track != 0) {
+		side_blocks += 1;			// super side sector
+		if (super_pos > 0) {
+			side_blocks += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * 1; // side sectors in groups
+			data_blocks += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * SSB_INDEX_SECTOR_MAX; // data sectors
+		}
+	}
+	if (side > 0) {
+		data_blocks += (side - 1) * SSB_INDEX_SECTOR_MAX;	// data sectors
+		side_blocks += (side - 1) * 1;	// side sectors
+		data_blocks += side_pos;	// blocks in last side sector
+		side_blocks += 1;		// last side sector
+	}
+	*blocks = side_blocks + data_blocks;
+
+	// check for bug2 situation and truncate if necessary
+
+	if (datap->track != 0) {
+		if (datap->buf[0] != 0) {
+			// Here datap should contain the last data block of the file.
+			// But we still have a followup pointer in the data block in the buffer
+			// ("bug2" situation). We don't produce it, but DOS does
+			// We do the same as DOS here - we truncate it away, as DOS
+			// that discards it and all data written to it
+			// in the meantime
+	
+			log_debug("di_navigate: discarding non-side-sector data block in chain (DOS bug) at %d,%d\n",
+					datap->buf[0], datap->buf[1]);
+
+			data_pos = 254 - (data_blocks * 254) % recordlen;
+
+			log_debug("di_navigate: setting data_pos=%d, data_blocks=%d, recordlen=%d\n",
+					data_pos, data_blocks, recordlen);
+
+			datap->buf[0] = 0;
+			datap->buf[1] = data_pos + 1;
+
+		}  else {
+
+			// number of bytes in this last sector
+			data_pos = datap->buf[BLK_OFFSET_NEXT_SECTOR] - 1;
+		}
+	}
 
 	/* calculate the total bytes based on the number of super side, side
 	   sectors, and last byte index */
-	file_size = (super_pos - 1);	// side sector group
+	file_size = 0;
+	if (super_pos > 0) {
+		file_size = (super_pos - 1);	// side sector group
+	}
 	file_size *= SSG_SIDE_SECTORS_MAX;	// times size of SSG in sectors
-	file_size += (side - 1);	// side sector in group
+	if (side > 0) {
+		file_size += (side - 1);	// side sector in group
+	}
 	file_size *= SSB_INDEX_SECTOR_MAX;	// times numbers of sectors per side sector
-	file_size += (side_pos - 1);	// plus sector position in the side sector
+	if (side_pos > 0) {
+		file_size += (side_pos - 1);	// plus sector position in the side sector
+	}
 	file_size *= 254;	// times bytes per sector
 	file_size += data_pos;	// plus bytes in last sector
 
@@ -1285,22 +1339,6 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// round up to full records
 	numrecords = file_size / recordlen;
 
- end:
-	/* calculate the total number of blocks */
-	*blocks = 0;
-	if (diep->DI.HasSSB && super_track != 0) {
-		(*blocks) += 1;			// super side sector
-		if (super_pos > 0) {
-			(*blocks) += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * 1; // side sectors in groups
-			(*blocks) += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * SSB_INDEX_SECTOR_MAX; // data sectors
-		}
-	}
-	if (side > 0) {
-		(*blocks) += (side - 1) * SSB_INDEX_SECTOR_MAX;	// data sectors
-		(*blocks) += (side - 1) * 1;	// side sectors
-		(*blocks) += side_pos;	// blocks in last side sector
-		(*blocks) += 1;		// last side sector
-	}
 	
 	log_debug
 	    ("di_navigate: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> file_size=%d, blocks=%d, numrecords=%d\n",
@@ -1353,20 +1391,10 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							     &data_sector);
 				(*blocks)++;
 			} else {
-				if (datap->track != 0 && datap->buf[0] != 0) {
-					// we already have a data block in the buffer
-					// ("bug2" situation) and reuse it
-					data_track = datap->buf[0];
-					data_sector = datap->buf[1];
-	
-					log_debug("di_navigate: reuse data block %d,%d\n",
-						data_track, data_sector);
-				} else {
-					err =
-				    		di_find_free_block_NXTTS(diep, &data_track,
-							     &data_sector);
-					(*blocks)++;
-				}
+				err =
+			    		di_find_free_block_NXTTS(diep, &data_track,
+						     &data_sector);
+				(*blocks)++;
 			}
 			if (err != CBM_ERROR_OK)
 				goto end2;
@@ -1644,6 +1672,10 @@ static int di_rel_navigate(di_endpoint_t * diep,
 
 				/* Fill new sector with maximum records */
 				o = datap->buf[BLK_OFFSET_NEXT_SECTOR] + 1;
+
+				log_debug("di_navigate: writing to datap(%d,%d) at offset %d (rec_pos=%d)\n",
+					datap->track, datap->sector, o, rec_pos);
+
 				while (o != 0) {	// wraps over from 255 to 0
 					if (rec_pos == 0) {
 						datap->buf[o] = 0xff;
@@ -1663,11 +1695,11 @@ static int di_rel_navigate(di_endpoint_t * diep,
 					datap->buf[BLK_OFFSET_NEXT_TRACK] = 0;
 
 					log_debug
-					    ("set last sector (%d/%d) size to %d\n",
+					    ("set last sector (%d/%d) size to %d (rec_pos=%d)\n",
 					     last_track, last_sector,
-					     255 - rec_pos);
+					     255 - rec_pos, rec_pos);
 
-					/* Update the last byte based on how much of the last record we
+					/* Update the last byte pointer based on how much of the last record we
 					   filled. */
 					datap->buf[BLK_OFFSET_NEXT_SECTOR] =
 					    255 - rec_pos;

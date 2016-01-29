@@ -23,8 +23,12 @@
  2240 ex=-1:gosub9000
  2250 print#2,"1234567890123456789";
  2260 ex=-1:gosub9000
- 2270 close2
- 2399 return
+ 2330 print#1,"p"chr$(2)chr$(5)chr$(6);
+ 2340 ex=-1:gosub9000
+ 2350 print#2,"2345678901234567890";
+ 2360 ex=-1:gosub9000
+ 2970 close2
+ 2999 return
  9000 input#1,a,b$,t,s
  9010 if a<>ex thenprinta","b$","t","s
  9015 ex=0
