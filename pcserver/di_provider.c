@@ -67,9 +67,9 @@
 // structure for directory slot handling
 
 typedef struct {
-	int number;		// current slot number
-	int pos;		// file position
-	int size;		// file size in (254 byte) blocks
+	unsigned int number;	// current slot number
+	unsigned int pos;	// file position
+	unsigned int size;	// file size in (254 byte) blocks
 	uint8_t dir_sector;	// sector in which the slot resides
 	uint8_t next_track;	// next directory track
 	uint8_t next_sector;	// next directory sector
@@ -411,7 +411,7 @@ static cbm_errno_t di_RDBUF(buf_t * bufp)
 					&readfl);
 	}
 
-	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, *bufp,
+	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, bufp,
 		  err);
 
 	return err;
@@ -1142,7 +1142,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 			   uint8_t * dt_track, uint8_t * dt_sector,
 			   uint8_t recordlen,
 			   unsigned int targetrec, unsigned int *wasrecord,
-			   unsigned int *allocated)
+			   unsigned int *blocks)
 {
 	int err = CBM_ERROR_OK;
 
@@ -1150,7 +1150,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	uint8_t o;
 
 	// number of side sectors in group
-	uint8_t side;
+	uint8_t side = 0;
 
 	// super side sector address
 	uint8_t super_track = 0;
@@ -1196,8 +1196,6 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	di_GETBUF(&superp, diep);
 	di_GETBUF(&sidep, diep);
 	di_GETBUF(&datap, diep);
-
-	*allocated = 0;
 
 	if (*ss_track == 0) {
 		// not a REL file or a new one
@@ -1251,8 +1249,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 
 	if (side > 1) {
 		// not the first one (which is already in the buffer)
-		side_track = sidep->buf[SSB_OFFSET_SSG + (side << 1)];
-		side_sector = sidep->buf[SSB_OFFSET_SSG + (side << 1) + 1];
+		side_track = sidep->buf[SSB_OFFSET_SSG + ((side - 1) << 1)];
+		side_sector = sidep->buf[SSB_OFFSET_SSG + ((side - 1) << 1) + 1];
 
 		di_MAPBUF(sidep, side_track, side_sector);
 	}
@@ -1287,11 +1285,28 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	// round up to full records
 	numrecords = file_size / recordlen;
 
-	log_debug
-	    ("di_navigate: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> file_size=%d, numrecords=%d\n",
-	     super_pos, side, side_pos, data_pos, recordlen, file_size,
-	     numrecords);
  end:
+	/* calculate the total number of blocks */
+	*blocks = 0;
+	if (diep->DI.HasSSB && super_track != 0) {
+		(*blocks) += 1;			// super side sector
+		if (super_pos > 0) {
+			(*blocks) += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * 1; // side sectors in groups
+			(*blocks) += (super_pos - 1) * SSG_SIDE_SECTORS_MAX * SSB_INDEX_SECTOR_MAX; // data sectors
+		}
+	}
+	if (side > 0) {
+		(*blocks) += (side - 1) * SSB_INDEX_SECTOR_MAX;	// data sectors
+		(*blocks) += (side - 1) * 1;	// side sectors
+		(*blocks) += side_pos;	// blocks in last side sector
+		(*blocks) += 1;		// last side sector
+	}
+	
+	log_debug
+	    ("di_navigate: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> file_size=%d, blocks=%d, numrecords=%d\n",
+	     super_pos, side, side_pos, data_pos, recordlen, file_size,
+	     *blocks, numrecords);
+
 	// output
 	*wasrecord = numrecords;
 
@@ -1306,9 +1321,9 @@ static int di_rel_navigate(di_endpoint_t * diep,
 
 		// else expand the file
 		log_debug
-		    ("di_navigate: expand: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> numrecords=%d\n",
+		    ("di_navigate: expand: super_pos=%d, side=%d, side_pos=%d, data_pos=%d reclen=%d -> blocks=%d, numrecords=%d\n",
 		     super_pos, side, side_pos, data_pos, recordlen,
-		     numrecords);
+		     *blocks, numrecords);
 
 		// check if there is space left in the super-/side sector structures
 		if (side == SSG_SIDE_SECTORS_MAX
@@ -1336,14 +1351,25 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				err =
 				    di_find_free_block_INTTS(diep, &data_track,
 							     &data_sector);
+				(*blocks)++;
 			} else {
-				err =
-				    di_find_free_block_NXTTS(diep, &data_track,
+				if (datap->track != 0 && datap->buf[0] != 0) {
+					// we already have a data block in the buffer
+					// ("bug2" situation) and reuse it
+					data_track = datap->buf[0];
+					data_sector = datap->buf[1];
+	
+					log_debug("di_navigate: reuse data block %d,%d\n",
+						data_track, data_sector);
+				} else {
+					err =
+				    		di_find_free_block_NXTTS(diep, &data_track,
 							     &data_sector);
+					(*blocks)++;
+				}
 			}
 			if (err != CBM_ERROR_OK)
 				goto end2;
-			(*allocated)++;
 
 			if (side_track == 0) {
 				// we need to create the first side sector group for the file
@@ -1364,7 +1390,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							     &side_sector);
 				if (err != CBM_ERROR_OK)
 					goto end2;
-				(*allocated)++;
+				(*blocks)++;
 
 				di_SETBUF(sidep, side_track, side_sector);
 
@@ -1389,7 +1415,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							     &super_sector);
 				if (err != CBM_ERROR_OK)
 					goto end2;
-				(*allocated)++;
+				(*blocks)++;
 
 				di_SETBUF(superp, super_track, super_sector);
 
@@ -1423,7 +1449,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							     &data2_sector);
 				if (err != CBM_ERROR_OK)
 					goto end2;
-				(*allocated)++;
+				(*blocks)++;
 
 				side_track = data_track;
 				side_sector = data_sector;
@@ -1434,7 +1460,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							     &side_sector);
 				if (err != CBM_ERROR_OK)
 					goto end2;
-				(*allocated)++;
+				(*blocks)++;
 
 				uint8_t side_sectors[SSG_SIDE_SECTORS_MAX * 2];
 
@@ -1708,7 +1734,7 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 	int err = CBM_ERROR_OK;
 
 	unsigned int wasrecord = 0;
-	unsigned int allocated = 0;
+	unsigned int blocks = 0;
 	uint8_t track = f->Slot.start_track;
 	uint8_t sector = f->Slot.start_sector;
 	uint8_t dirty = 0;
@@ -1717,10 +1743,14 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 			      &f->Slot.ss_track, &f->Slot.ss_sector,
 			      &track, &sector,
 			      f->file.recordlen, recordno, &wasrecord,
-			      &allocated);
+			      &blocks);
 
 	f->maxrecord = wasrecord;
-	f->Slot.size += allocated;
+
+	if (f->Slot.size != blocks) {
+		dirty = 1;
+	}
+	f->Slot.size = blocks;
 
 	if (f->Slot.start_track == 0) {
 		f->Slot.start_track = track;
@@ -1728,7 +1758,7 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 		dirty = 1;
 	}
 
-	if (dirty || allocated > 0) {
+	if (dirty) {
 		di_write_slot(diep, &f->Slot);
 	}
 

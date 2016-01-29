@@ -18,17 +18,17 @@ THISDIR=`dirname $0`
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-TESTFILES="rel.d81"
+TESTFILES="relbug1.d64"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES="rel.d81"
+COMPAREFILES="relbug1.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=rel.d81"
+SERVEROPTS="-v -A0:fs=relbug1.d64"
 
 #firmware options
 FWOPTS=-Xsock488:E=-
@@ -37,9 +37,9 @@ FWOPTS=-Xsock488:E=-
 #EXCLUDE="position1.frs"
 EXCLUDE=""
 shopt -s extglob
-FILTER='reltest*1581'
+FILTER='relbug1*4040'
 
-DRIVETYPE=1581
+DRIVETYPE=4040
 
 ########################
 # source and execute actual functionality

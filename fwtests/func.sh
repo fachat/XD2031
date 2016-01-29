@@ -256,15 +256,15 @@ else
 
         for i in "$@"; do
 		name=`basename -s .lst $i`
-               if test -f "${name}".frs ; then
+               	if test -f "${name}".frs ; then
                        	TESTSCRIPTS="$TESTSCRIPTS ${name}.frs";
-               else
-			if test -f "${name}"-"${FILTER}".frs; then
-                       		TESTSCRIPTS="$TESTSCRIPTS ${name}-${FILTER}.frs";
-			else 
-                       		TESTSCRIPTS="$TESTSCRIPTS ${name}";
-			fi
-               fi
+               	elif test -f "${name}"-"${DRIVETYPE}".frs; then
+                	TESTSCRIPTS="$TESTSCRIPTS ${name}-${DRIVETYPE}.frs";
+		elif test -f "${name}"-"${FILTER}".frs; then
+                  	TESTSCRIPTS="$TESTSCRIPTS ${name}-${FILTER}.frs";
+		else 
+               		TESTSCRIPTS="$TESTSCRIPTS ${name}";
+               	fi
         done;
 fi;
 

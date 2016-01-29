@@ -39,6 +39,8 @@ EXCLUDE=""
 shopt -s extglob
 FILTER='relbug2-1541-*'
 
+DRIVETYPE=1541
+
 ########################
 # source and execute actual functionality
 . ../func.sh

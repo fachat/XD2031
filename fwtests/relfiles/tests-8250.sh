@@ -33,7 +33,9 @@ SERVEROPTS="-v -A0:fs=rel.d82"
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
-FILTER=1001
+FILTER='reltest*1001'
+
+DRIVETYPE=8250
 
 ########################
 # source and execute actual functionality

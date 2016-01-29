@@ -36,9 +36,11 @@ FWOPTS=-Xsock488:E=-
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
 EXCLUDE=""
-#shopt -s extglob
+shopt -s extglob
 #FILTER='+(2031|4040)'
-FILTER=4040
+FILTER='reltest*4040'
+
+DRIVETYPE=4040
 
 ########################
 # source and execute actual functionality

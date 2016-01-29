@@ -37,7 +37,9 @@ FWOPTS=-Xsock488:E=-
 #EXCLUDE="position1.frs"
 EXCLUDE=""
 shopt -s extglob
-FILTER='1541'
+FILTER='reltest*1541'
+
+DRIVETYPE=1541
 
 ########################
 # source and execute actual functionality
