@@ -1818,7 +1818,9 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 	unsigned int super, side, byt;	// super side sector index, side sector index
 	unsigned int offset;	// temp for the number of file bytes pointed to by blocks in a sss or ss
 
-	uint8_t next_track, next_sector;
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	buf_t *bufp = NULL;
 
 	log_debug("di_position: set position to record no %d\n", recordno);
 
@@ -1850,8 +1852,12 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 	byt = rec_long % 254;
 
 	log_debug
-	    ("di_position to super=%d, side=%d, offset=%d, byte=%d, lastpos=%d\n",
+	    ("di_position: to super=%d, side=%d, offset=%d, byte=%d, lastpos=%d\n",
 	     super, side, offset, byt, f->lastpos);
+
+	err = di_GETBUF(&bufp, diep);
+	if (err != CBM_ERROR_OK) 
+		goto end;
 
 	// -----------------------------------------
 	// find the position pointed to in the image
@@ -1860,14 +1866,17 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 
 	if (ss_track == 0) {
 		// not a REL file
-		log_debug("not a REL file\n");
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
+		log_warn("di_position: not a REL file\n");
+		err = CBM_ERROR_FILE_TYPE_MISMATCH;
+		goto end;
 	}
-	// read the first side sector
-	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-	di_fread(sidesector, 1, 256, diep->Ip);
 
-	if (sidesector[SSB_OFFSET_SUPER_254] == 0xfe) {
+	// read the first side sector
+	err = di_MAPBUF(bufp, ss_track, ss_sector);
+	if (err != CBM_ERROR_OK) 
+		goto end;
+
+	if (bufp->buf[SSB_OFFSET_SUPER_254] == 0xfe) {
 		// sector is a super side sector
 		// read the address of the first block of the correct side sector chain
 		ss_track = sidesector[SSS_OFFSET_SSB_POINTER + (super << 1)];
@@ -1875,65 +1884,75 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 		    sidesector[SSS_OFFSET_SSB_POINTER + 1 + (super << 1)];
 
 		if (ss_track == 0) {
-			log_debug("no side sector chain\n");
-			return CBM_ERROR_RECORD_NOT_PRESENT;
+			// disk image inconsistent
+			log_warn("di_position: no side sector chain\n");
+			err = CBM_ERROR_RECORD_NOT_PRESENT;
+			goto end;
 		}
-		di_fseek_tsp(diep, ss_track, ss_sector, 0);
-		di_fread(sidesector, 1, 256, diep->Ip);
+		err = di_MAPBUF(bufp, ss_track, ss_sector);
+		if (err != CBM_ERROR_OK) 
+			goto end;
 	} else {
 		// no super side sectors, but sector number too large for single side sector chain
 		if (super > 0) {
-			log_debug("sector to large for side sector chain\n");
-			return CBM_ERROR_RECORD_NOT_PRESENT;
+			log_info("di_position: sector to large for side sector chain\n");
+			err = CBM_ERROR_RECORD_NOT_PRESENT;
+			goto end;
 		}
 	}
 	// here we have the first side sector of the correct side sector chain in the buffer.
 	if (side > 0) {
 		// need to read the correct side sector first
 		// read side sector number
-		ss_track = sidesector[SSB_OFFSET_SSG + (side << 1)];
-		ss_sector = sidesector[SSB_OFFSET_SSG + 1 + (side << 1)];
+		ss_track = bufp->buf[SSB_OFFSET_SSG + (side << 1)];
+		ss_sector = bufp->buf[SSB_OFFSET_SSG + 1 + (side << 1)];
 		if (ss_track == 0) {
-			log_debug("side sector not yet allocated\n");
+			log_debug("di_position: side sector not yet allocated\n");
 			// sector in a part of the side sector group that isn't created yet
-			return CBM_ERROR_RECORD_NOT_PRESENT;
+			err = CBM_ERROR_RECORD_NOT_PRESENT;
+			goto end;
 		}
-		di_fseek_tsp(diep, ss_track, ss_sector, 0);
-		di_fread(sidesector, 1, 256, diep->Ip);
+		err = di_MAPBUF(bufp, ss_track, ss_sector);
+		if (err != CBM_ERROR_OK) 
+			goto end;
 	}
 	// here we have the correct side sector in the buffer.
-	ss_track = sidesector[SSB_OFFSET_SECTOR + (offset << 1)];
-	ss_sector = sidesector[SSB_OFFSET_SECTOR + 1 + (offset << 1)];
+	ss_track = bufp->buf[SSB_OFFSET_SECTOR + (offset << 1)];
+	ss_sector = bufp->buf[SSB_OFFSET_SECTOR + 1 + (offset << 1)];
 	if (ss_track == 0) {
-		log_debug("sector not yet allocated\n");
+		log_debug("di_position: sector not yet allocated\n");
 		// sector in a part of the side sector that is not yet created
-		return CBM_ERROR_RECORD_NOT_PRESENT;
+		err = CBM_ERROR_RECORD_NOT_PRESENT;
+		goto end;
 	}
 	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
 	// record as given in the parameter
-	di_fseek_tsp(diep, ss_track, ss_sector, 0);
-	di_fread(&next_track, 1, 1, diep->Ip);
-	di_fread(&next_sector, 1, 1, diep->Ip);
+	err = di_MAPBUF(bufp, ss_track, ss_sector);
+	if (err != CBM_ERROR_OK) 
+		goto end;
 
 	// is there enough space on the last block?
-	if (next_track == 0 && next_sector < (rec_start + reclen + 1)) {
-		log_debug("not enough space on the last block\n");
-		return CBM_ERROR_RECORD_NOT_PRESENT;
+	if (bufp->buf[0] == 0 && bufp->buf[1] < (rec_start + reclen + 1)) {
+		log_debug("di_position: not enough space on the last block\n");
+		err = CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 
 	f->cht = ss_track;
 	f->chs = ss_sector;
 	f->chp = rec_start;
-	f->next_track = next_track;
-	f->next_sector = next_sector;
+	f->next_track = bufp->buf[0];
+	f->next_sector = bufp->buf[1];
 
 	// clean up the "expand me" flag
 	f->lastpos = 0;
 
-	log_debug("position -> sector %d/%d/%d\n", f->next_track,
-		  f->next_sector, rec_start);
+end:
+	log_debug("di_position -> err=%d, sector %d/%d/%d\n", err, 
+		f->next_track, f->next_sector, rec_start);
 
-	return CBM_ERROR_OK;
+	di_FREBUF(&bufp);
+
+	return err;
 
 }
 
@@ -1943,6 +1962,7 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 
 // this is a simple, stupid seek - just following the block chain
 // TODO: detect loop / break after max len
+// TODO: use di_position on REL files
 static int di_seek(file_t * file, long position, int flag)
 {
 
