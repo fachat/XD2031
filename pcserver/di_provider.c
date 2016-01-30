@@ -1810,7 +1810,6 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 static int di_position(di_endpoint_t * diep, File * f, int recordno)
 {
 
-	uint8_t sidesector[256];
 	uint8_t reclen = 0;
 
 	unsigned int rec_long;	// absolute offset in file
@@ -1879,9 +1878,9 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 	if (bufp->buf[SSB_OFFSET_SUPER_254] == 0xfe) {
 		// sector is a super side sector
 		// read the address of the first block of the correct side sector chain
-		ss_track = sidesector[SSS_OFFSET_SSB_POINTER + (super << 1)];
+		ss_track = bufp->buf[SSS_OFFSET_SSB_POINTER + (super << 1)];
 		ss_sector =
-		    sidesector[SSS_OFFSET_SSB_POINTER + 1 + (super << 1)];
+		    bufp->buf[SSS_OFFSET_SSB_POINTER + 1 + (super << 1)];
 
 		if (ss_track == 0) {
 			// disk image inconsistent
