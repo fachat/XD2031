@@ -91,9 +91,20 @@ static uint8_t _pull_callback(int8_t channel_no, int8_t errorno, packet_t *rxpac
 static uint8_t _close_callback(int8_t channel_no, int8_t errorno, packet_t *rxpacket) {
 	channel_t *p = channel_find(channel_no);
 	if (p != NULL) {
-debug_printf("close_cb: c=%d, errorno=%d, rxp=%p\n", channel_no, errorno, rxpacket);
-                p->last_push_errorno = errorno;
+		if (errorno < 0 || rxpacket == NULL) {
+                	p->last_push_errorno = CBM_ERROR_FAULT;
+		} else if (packet_get_type(rxpacket) == FS_REPLY) {
+			p->last_push_errorno = packet_get_buffer(rxpacket)[0];
+		} else {
+			p->last_push_errorno = CBM_ERROR_OK;
+		}
+debug_printf("close_cb: c=%d, errorno=%d, rxp=%p -> %d (close_cb=%p)\n", channel_no, errorno, rxpacket,
+			p->last_push_errorno, p->close_callback);
 		p->push_state = PUSH_CLOSE;
+
+		if (p->close_callback != NULL) {
+			p->close_callback(p->last_push_errorno, rxpacket->wp > 2 ? packet_get_buffer(rxpacket):NULL);
+		}
 	}
 	return 0;
 }
@@ -165,6 +176,7 @@ int8_t channel_open(int8_t channo, uint8_t writetype, endpoint_t *prov,
 			chan = &channels[i];
 			chan->channel_no = channo;
 			chan->current = 0;
+			chan->close_callback = NULL;
 			chan->writetype = writetype & WTYPE_MASK;
 			chan->options = writetype & ~WTYPE_MASK;
 #ifdef DEBUG_CHANNEL
@@ -345,11 +357,6 @@ static char channel_current_byte(channel_t *chan, uint8_t *iseof) {
  */
 static uint8_t channel_next(channel_t *chan, uint8_t options) {
 
-// commenting this is not necessarily ok, but needed for relative files for now
-//	if (channel_is_eof(chan)) {
-//		return 0;
-//	}
-
 	// make sure we do have something at least
 	int8_t no_data = channel_preload_int(chan, 1);
 
@@ -370,12 +377,8 @@ static uint8_t channel_next(channel_t *chan, uint8_t options) {
 			return 1;	// ok
 		}
 
-// commenting this is not necessarily ok, but needed for relative files for now
-//		if (!packet_is_eof(&chan->buf[pull_slot(chan)])) {
-			// not eof packet, so pull another one
-			channel_refill(chan, options);
-			return 1;
-//		}
+		channel_refill(chan, options);
+		return 1;
 	}
 	return 0;
 }
@@ -393,7 +396,7 @@ static void channel_close_int(channel_t *chan) {
 	packet_init(&chan->buf[1], DATA_BUFLEN, chan->data[1]);
 }
 
-void channel_close(int8_t channel_no) {
+cbm_errno_t channel_close(int8_t channel_no, void (*close_callback)(int8_t errno, uint8_t *rxdata)) {
 
 	channel_t *chan = channel_find(channel_no);
 	if (chan != NULL) {
@@ -406,9 +409,12 @@ void channel_close(int8_t channel_no) {
 		// flush out any remaining data (without EOF)
 		channel_flush_int(chan);
 
+		chan->close_callback = close_callback;
+
 #ifdef DEBUG_CHANNEL
-	debug_printf("channel_close(%p -> %d), push=%d, pull=%d\n", chan, channel_no,
-		chan == NULL ? -1 : chan->push_state, chan == NULL ? -1 : chan->pull_state); debug_flush();
+	debug_printf("channel_close(%p -> %d), push=%d, pull=%d, cb=%p\n", chan, channel_no,
+		chan == NULL ? -1 : chan->push_state, chan == NULL ? -1 : chan->pull_state,
+		close_callback); debug_flush();
 #endif
 
 		// send FS_CLOSE packet
@@ -425,7 +431,10 @@ void channel_close(int8_t channel_no) {
 		}	
 
 		channel_close_int(chan);
+
+		return CBM_ERROR_OK;
 	}
+	return CBM_ERROR_NO_CHANNEL;
 }
 
 /**
@@ -613,7 +622,7 @@ void channel_close_range(uint8_t fromincl, uint8_t toincl) {
 
 	for (uint8_t i = fromincl; i <= toincl; i++) {
 		// simple, brute force...
-		channel_close(i);
+		channel_close(i, NULL);
 	}
 }
 

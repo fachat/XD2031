@@ -146,7 +146,17 @@ static void _cmd_callback(int8_t errnum, uint8_t *rxdata) {
 		} else {
 			bus_for_irq->errparam = 0;
 		}
-    	}
+    	} else 
+	if (errnum == CBM_ERROR_DISK_FULL) {
+		// TODO parameters for DISK FULL from close()
+		if (rxdata != NULL) {
+			bus_for_irq->errparam = rxdata[1];
+			bus_for_irq->errparam2 = rxdata[2];
+		} else {
+			bus_for_irq->errparam = 0;
+			bus_for_irq->errparam2 = 0;
+		}
+	}
     	bus_for_irq->cmd_done = 1;
 }
 
@@ -215,7 +225,6 @@ static int16_t cmd_handler (bus_t *bus)
 		debug_puts("Waiting for callback\n"); debug_flush();
 #endif
 		while (bus_for_irq->cmd_done == 0) {
-			// TODO this should be reworked more backend (serial) independent
 			main_delay();
 		}
 #ifdef DEBUG_BUS
@@ -238,7 +247,7 @@ static int16_t cmd_handler (bus_t *bus)
 
 	        	if (bus_for_irq->errnum != 0) {
 				// close channel on error. Is this ok?
-	        	        channel_close(channel_no);
+	        	        channel_close(channel_no, NULL);
 	        	} else {
 #ifdef DEBUG_BUS
 				debug_printf("preload channel %d\n", channel_no);
@@ -416,19 +425,45 @@ static int16_t bus_prepare(bus_t *bus)
     return st;
 }
 
-static void bus_close(bus_t *bus) {
+
+void bus_close(bus_t *bus) {
     	uint8_t secaddr = bus->secondary & SECADDR_MASK;
+
+	// prepare for callback from interrupt
+	bus->cmd_done = 0;
+	bus_for_irq = bus;
+	bus_for_irq->cmd_done = 0;
+
 #ifdef DEBUG_BUS
-	debug_printf("Bus: close secaddr=%d\n",secaddr);
+	debug_printf("bus_close: secaddr=%d\n",secaddr);
 #endif
         /* Close File */
         if(secaddr == CMD_SECADDR) {
             // closing all files when closing the command channel is in fact correct, see discussion of
-	    // issue #151, tested on 1541, 2031, 4040 and 1001 drives (under VICE).
+	    // issue #151, tested on 1541, 2031, 4040 and 1001 drives (under VICE truedrive emulation).
             channel_close_range(bus_secaddr_adjust(bus, 0), bus_secaddr_adjust(bus, CMD_SECADDR));
         } else {
-            /* Close a single buffer */
-            channel_close(bus_secaddr_adjust(bus, secaddr));
+       		/* Close a single buffer */
+		// callback sets error for DISK FULL on close (when creating a 664 blocks large file
+		// on a D64, DOS emits a DISK FULL on close only... 
+            	if (channel_close(bus_secaddr_adjust(bus, secaddr), _cmd_callback) == CBM_ERROR_OK) {
+
+#ifdef DEBUG_BUS
+			debug_puts("bus_close: Waiting for callback (%p) on channel %d\n", _cmd_callback,
+				bus_secaddr_adjust(bus, secaddr)); debug_flush();
+#endif
+	    		while (bus_for_irq->cmd_done == 0) {
+				main_delay();
+			}
+#ifdef DEBUG_BUS
+			debug_printf("bus_close: Received callback error number: %d\n", bus_for_irq->errnum);
+#endif
+
+			if (bus_for_irq->errnum != CBM_ERROR_OK) {
+				int8_t errdrive = bus->rtconf.errmsg_with_drive ? channel_find(bus_secaddr_adjust(bus, secaddr))->drive : -1;
+				set_error_tsd(&error, bus_for_irq->errnum, bus_for_irq->errparam, bus_for_irq->errparam2, errdrive);
+			}
+		}
         }
 }
 

@@ -282,7 +282,7 @@ static int close_fd(File *file, int recurse) {
 	}
 
 	if (recurse && file->file.parent != NULL) {
-		file->file.parent->handler->close(file->file.parent, recurse);
+		file->file.parent->handler->close(file->file.parent, recurse, NULL, NULL);
 	}
 
 	endpoint_t *ep = file->file.endpoint;
@@ -989,7 +989,7 @@ static file_t *fsp_root(endpoint_t *ep) {
 	}
 
 	if (file != NULL) {
-		file->file.handler->close((file_t*)file, 1);
+		file->file.handler->close((file_t*)file, 1, NULL, NULL);
 	}
 	log_exitr(err);
 	return NULL;
@@ -1046,7 +1046,7 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 				retbuf + FS_DIR_NAME, len - FS_DIR_NAME);
 */
 		// just close the entry
-		entry->handler->close(entry, 0);
+		entry->handler->close(entry, 0, NULL, NULL);
 	}
 
 	log_exitr(rv);
@@ -1220,7 +1220,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 						break;
 					}
 					// cleanup, to read next dir entry
-					retfile->file.handler->close((file_t*)retfile, 0);
+					retfile->file.handler->close((file_t*)retfile, 0, NULL, NULL);
 					retfile = NULL;
 				}
 			}
@@ -1593,7 +1593,7 @@ static int fs_rmdir(file_t *dir) {
 		// ok
 		er = CBM_ERROR_OK;
 	}
-	dir->handler->close(dir, 0);
+	dir->handler->close(dir, 0, NULL, NULL);
 	return er;
 }
 
@@ -1810,13 +1810,19 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpar
 	return rv;
 }
 
-static void fs_close(file_t *fp, int recurse) {
+static int fs_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
+	(void) outbuf;
+
 	log_debug("fs_close(%p '%s', recurse=%d)\n", fp, ((File*)fp)->ospath, recurse);
 
 	//fs_dump_file(fp, 0, 1);
 
 	close_fd((File*)fp, recurse);
 
+	if (outlen != NULL) {
+		*outlen = 0;
+	}
+	return CBM_ERROR_OK;
 }
 
 // ----------------------------------------------------------------------------------

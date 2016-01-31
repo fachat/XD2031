@@ -347,7 +347,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		channel_t *channel = channel_find(channel_no);
 		if (channel != NULL) {
 			// clean up
-			channel_close(channel_no);
+			channel_close(channel_no, NULL);
 			// Note: it seems possible to open the same channel multiple times
 			// on a direct file
 			if (type != FS_OPEN_DIRECT) {

@@ -110,7 +110,7 @@ file_t *handler_parent(file_t * file);
 // --------------------------------------------------------------------
 // default implementation for handlers
 
-void default_close(file_t *file, int recurse);
+int default_close(file_t *file, int recurse, char *outbuf, int *outlen);
 
 int default_seek(file_t *file, long pos, int flag);
 

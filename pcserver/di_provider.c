@@ -57,7 +57,7 @@
 #include "log.h"
 
 // when set, emulate the allocation of a bogus sector when a 254 byte long sector is written in a non-rel file
-//#define	BUG_FILE254
+#define	BUG_FILE254
 
 #undef DEBUG_READ
 #define DEBUG_CMD
@@ -260,7 +260,7 @@ static void di_freeep(endpoint_t * ep)
 
 	// close/free resources
 	if (cep->Ip != NULL) {
-		cep->Ip->handler->close(cep->Ip, 1);
+		cep->Ip->handler->close(cep->Ip, 1, NULL, NULL);
 		cep->Ip = NULL;
 	}
 
@@ -917,6 +917,42 @@ di_find_free_block_NXTTS(di_endpoint_t * diep, uint8_t * inout_track,
 	return CBM_ERROR_DISK_FULL;	// No free block -> DISK FULL
 }
 
+static int di_BAM_blocks_free(di_endpoint_t *diep) {
+	int FreeBlocks;
+	int BAM_Number;		// BAM block for current track
+	int BAM_Increment;
+	int Track;
+	int i;
+	uint8_t *fbl;		// pointer to track free blocks
+	Disk_Image_t *di = &diep->DI;
+
+	FreeBlocks = 0;
+	BAM_Number = 0;
+	BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
+	Track = 1;
+
+	while (BAM_Number < 4 && diep->BAM[BAM_Number]) {
+		fbl = diep->BAM[BAM_Number] + di->BAMOffset;
+		if (di->ID == 71 && Track > di->Tracks) {
+			fbl = diep->BAM[0] + 221;
+			BAM_Increment = 1;
+		}
+		for (i = 0;
+		     i < di->TracksPerBAM && Track <= di->Tracks * di->Sides;
+		     ++i) {
+			if (Track != di->DirTrack)
+				FreeBlocks += *fbl;
+			fbl += BAM_Increment;
+			++Track;
+		}
+		++BAM_Number;
+	}
+
+	log_debug("di_BAM_blocks_free: %u\n", FreeBlocks);
+
+	return FreeBlocks;
+}
+
 // ------------------------------------------------------------------
 // direct/block code
 
@@ -1139,6 +1175,8 @@ di_direct(endpoint_t * ep, const char *buf, char *retbuf, int *retlen)
 
 static void di_pos_start(di_endpoint_t * diep, File * f)
 {
+	(void) diep;
+
 	f->cht = f->Slot.start_track;
 	f->chs = f->Slot.start_sector;
 	f->chp = 0;
@@ -2435,37 +2473,8 @@ static int di_directory_header(char *dest, di_endpoint_t * diep)
 
 static int di_blocks_free(char *dest, di_endpoint_t * diep)
 {
-	int FreeBlocks;
-	int BAM_Number;		// BAM block for current track
-	int BAM_Increment;
-	int Track;
-	int i;
-	uint8_t *fbl;		// pointer to track free blocks
-	Disk_Image_t *di = &diep->DI;
+	int FreeBlocks = di_BAM_blocks_free(diep);
 
-	FreeBlocks = 0;
-	BAM_Number = 0;
-	BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
-	Track = 1;
-
-	while (BAM_Number < 4 && diep->BAM[BAM_Number]) {
-		fbl = diep->BAM[BAM_Number] + di->BAMOffset;
-		if (di->ID == 71 && Track > di->Tracks) {
-			fbl = diep->BAM[0] + 221;
-			BAM_Increment = 1;
-		}
-		for (i = 0;
-		     i < di->TracksPerBAM && Track <= di->Tracks * di->Sides;
-		     ++i) {
-			if (Track != di->DirTrack)
-				FreeBlocks += *fbl;
-			fbl += BAM_Increment;
-			++Track;
-		}
-		++BAM_Number;
-	}
-
-	log_debug("di_blocks_free: %u\n", FreeBlocks);
 	FreeBlocks <<= 8;
 
 	dest[FS_DIR_ATTR] = FS_DIR_ATTR_ESTIMATE;
@@ -2579,7 +2588,7 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 				break;
 			}
 			// cleanup to read next entry
-			entry->file.handler->close((file_t *) entry, 0);
+			entry->file.handler->close((file_t *) entry, 0, NULL, NULL);
 		}
 		// .. and this state is the reason for the stupid copy above...
 		di_next_slot(diep, &diep->Slot);
@@ -2625,7 +2634,7 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len,
 		if (rv == CBM_ERROR_OK && direntry != NULL) {
 			rv = dir_fill_entry_from_file(retbuf,
 						      (file_t *) direntry, len);
-			direntry->file.handler->close((file_t *) direntry, 0);
+			direntry->file.handler->close((file_t *) direntry, 0, NULL, NULL);
 			return rv;
 		}
 	}
@@ -3581,9 +3590,10 @@ static void di_print_block(di_endpoint_t * diep, int pos)
 // di_close_fd
 // ***********
 
-static int di_close_fd(di_endpoint_t * diep, File * f)
+static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 {
 	uint8_t t, s, p;
+	cbm_errno_t err = CBM_ERROR_OK;
 
 	log_debug
 	    ("di_close_fd: diep=%p Closing file %p (%s) access mode = %d\n",
@@ -3607,7 +3617,7 @@ static int di_close_fd(di_endpoint_t * diep, File * f)
 		di_fwrite(&s, 1, 1, diep->Ip);
 		log_debug("%p: Updated chain to (%d/%d)\n", diep, t, s);
 #ifdef BUG_FILE254
-		if (s == 255) {
+		if (s == 255 && diep->DI.ID != 80 && diep->DI.ID != 82) {
 			uint8_t track = f->cht;
 			uint8_t sector = f->chs;
 			di_find_free_block_NXTTS(diep, &track, &sector);
@@ -3620,6 +3630,11 @@ static int di_close_fd(di_endpoint_t * diep, File * f)
 		di_sync_BAM(diep);	// Save BAM status
 		log_debug("%p: BAM saved.\n", diep);
 		di_fsync(diep->Ip);
+
+		int free_blocks = di_BAM_blocks_free(diep);
+		if (free_blocks == 0) {
+			err = CBM_ERROR_DISK_FULL;
+		}
 	} else if (f->access_mode == FS_OPEN_RW) {
 		p = f->chp + 1;
 		di_fseek_tsp(diep, f->cht, f->chs, 0);
@@ -3646,17 +3661,27 @@ static int di_close_fd(di_endpoint_t * diep, File * f)
 		mem_free((char *)f->dospattern);
 	}
 	//di_init_fp(f);
-	return 0;
+	return err;
 }
 
-static void di_close(file_t * fp, int recurse)
+static int di_close(file_t * fp, int recurse, char *outbuf, int *outlen)
 {
 	File *file = (File *) fp;
 	(void)recurse;		// unused, as we have no subdirs
 
 	di_endpoint_t *diep = (di_endpoint_t *) fp->endpoint;
 
-	di_close_fd(diep, file);
+	cbm_errno_t err = di_close_fd(diep, file);
+
+	if (outlen != NULL) {
+		if (err == CBM_ERROR_DISK_FULL && *outlen > 1) {
+			outbuf[0] = file->cht;
+			outbuf[1] = file->chs;
+			*outlen = 2;
+		} else {
+			*outlen = 0;
+		}
+	}
 
 	reg_remove(&diep->base.files, file);
 
@@ -3665,6 +3690,8 @@ static void di_close(file_t * fp, int recurse)
 	}
 
 	mem_free(file);
+
+	return err;
 }
 
 static int di_equals(file_t * thisfile, file_t * otherfile)
@@ -3700,7 +3727,7 @@ static int di_to_endpoint(file_t * file, endpoint_t ** outep)
 	// prevent it from being closed here
 	ep->is_assigned++;
 
-	di_close(file, 1);
+	di_close(file, 1, NULL, NULL);
 
 	// reset counter
 	ep->is_assigned--;
@@ -3788,7 +3815,7 @@ static int di_wrap(file_t * file, file_t ** wrapped)
 			// closing original path
 			log_debug("Closing original file %p (recursive)\n",
 				  diep, file);
-			file->handler->close(file, 1);
+			file->handler->close(file, 1, NULL, NULL);
 
 			return CBM_ERROR_OK;
 		}
@@ -3819,7 +3846,7 @@ static int di_wrap(file_t * file, file_t ** wrapped)
 				}
 				file = file->parent;
 			}
-			parent->handler->close(parent, 1);
+			parent->handler->close(parent, 1, NULL, NULL);
 		}
 
 		err = CBM_ERROR_OK;

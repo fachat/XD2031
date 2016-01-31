@@ -1,4 +1,4 @@
-/****************************************************************************
+/************************************************************************
 
     XD-2031 - Serial line filesystem server for CBMs
     Copyright (C) 2012 Andre Fachat
@@ -94,6 +94,8 @@ typedef struct {
 	uint8_t writetype;
 	uint8_t options;
 	endpoint_t *endpoint;
+	// close callback
+        void (*close_callback)(int8_t errnum, uint8_t *rxdata);
 	// directory handling
 	uint8_t drive;
 	 int8_t(*directory_converter) (void *ep, packet_t * packet,
@@ -163,7 +165,7 @@ int8_t channel_get(channel_t * chan, uint8_t * data, uint8_t * iseof,
  */
 int8_t channel_put(channel_t * chan, uint8_t c, uint8_t forceflush);
 
-void channel_close(int8_t secondary_address);
+cbm_errno_t channel_close(int8_t secondary_address, void (*close_callback)(int8_t errno, uint8_t *rxdata));
 
 // close all channels for channel numbers between (including) the given range
 void channel_close_range(uint8_t fromincl, uint8_t toincl);

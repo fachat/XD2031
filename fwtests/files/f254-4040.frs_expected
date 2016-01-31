@@ -1,5 +1,0 @@
-]]INF:main: device = /csocket_f254-4040.frs
-]]INF:Connecting to socket /csocket_f254-4040.frs
-]]ERR:Detected mismatch at line 245
-]]Rxd   : 0000  97 02                                             |                |
-]]Expect: 0000  96 02                                             |                |

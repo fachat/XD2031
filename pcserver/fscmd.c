@@ -435,7 +435,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
 	file_t *fp = NULL;
-	*outlen = 0;
+	int outln = 0;
 
 	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 	if (ep != NULL) {
@@ -449,14 +449,14 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 			int record = fp->recordlen;
 			outbuf[0] = record & 0xff;
 			outbuf[1] = (record >> 8) & 0xff;
-			*outlen = 2;
+			outln = 2;
 			rv = CBM_ERROR_OPEN_REL;
 		}
 		if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 			channel_set(tfd, fp);
 		} else {
 			if (fp != NULL) {
-				fp->handler->close(fp, 1);
+				fp->handler->close(fp, 1, outbuf, &outln);
 				fp = NULL;
 			}
 			log_rv(rv);
@@ -465,6 +465,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *o
 		provider_cleanup(ep);
 		mem_free(name);
 	}
+	*outlen = outln;
 	return rv;
 }
 
@@ -536,16 +537,17 @@ int cmd_position(int tfd, const char *indata, int datalen) {
 }
 
 
-int cmd_close(int tfd) {
+int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
+	
+	*outlen = 2;
 
 	file_t *fp = channel_to_file(tfd);
 	if (fp != NULL) {
 		log_info("CLOSE(%d)\n", tfd);
-		fp->handler->close(fp, 1);
+		rv = fp->handler->close(fp, 1, outbuf, outlen);
 		channel_free(tfd);
-		rv = CBM_ERROR_OK;
 	}
 	return rv;
 }
@@ -626,7 +628,7 @@ int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int i
 			} else {
 				rv = CBM_ERROR_FAULT;
 			}
-			dir->handler->close(dir, 1);
+			dir->handler->close(dir, 1, NULL, NULL);
 		}
 		mem_free(name);
 		provider_cleanup(ep);
@@ -706,9 +708,9 @@ int cmd_move(const char *inname, int namelen) {
 						log_warn("Drive spec combination not supported\n");
 						err = CBM_ERROR_DRIVE_NOT_READY;
 					}
-					todir->handler->close(todir, 1);
+					todir->handler->close(todir, 1, NULL, NULL);
 				}
-				fromfile->handler->close(fromfile, 1);
+				fromfile->handler->close(fromfile, 1, NULL, NULL);
 			}
 			provider_cleanup(epfrom);
 		}
@@ -773,14 +775,14 @@ int cmd_copy(const char *inname, int namelen) {
 						} while ((err == CBM_ERROR_OK) 
 								&& ((readflag & READFLAG_EOF) == 0));	
 						
-						fromfile->handler->close(fromfile, 1);
+						fromfile->handler->close(fromfile, 1, NULL, NULL);
 					}
 					provider_cleanup(fromep);
 				}
 				fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
 				thislen = namelen - (fromname - inname);
 			}				
-			tofile->handler->close(tofile, 1);
+			tofile->handler->close(tofile, 1, NULL, NULL);
 		}
 		provider_cleanup(epto);
 	}
@@ -815,10 +817,12 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 }
 
 int cmd_format(int tfd, const char *inname, int namelen, char *outbuf, int *outlen) {
+
+	(void) tfd;
+	(void) outbuf;
 	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
-	file_t *fp = NULL;
 	*outlen = 0;
 
 	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
@@ -953,9 +957,9 @@ static void cmd_dispatch(char *buf, serial_port_t fd) {
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_CLOSE:
-		rv = cmd_close(tfd);
+		rv = cmd_close(tfd, retbuf+FSP_DATA+1, &outlen);
 		retbuf[FSP_DATA] = rv;
-		retbuf[FSP_LEN] = FSP_DATA + 1;
+		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 
 		// command operations

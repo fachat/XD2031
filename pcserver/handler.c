@@ -308,10 +308,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 	} else {
 		// this should close all parents as well
 		if (file != NULL) {
-			file->handler->close(file, 1);
+			file->handler->close(file, 1, NULL, NULL);
 		} else
 		if (current_dir != NULL) {
-			current_dir->handler->close(current_dir, 1);
+			current_dir->handler->close(current_dir, 1, NULL, NULL);
 		}
 	}
 	mem_free(name);
@@ -411,14 +411,14 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 
 	if (dir != NULL) {
 		// we want the file here, so we can close the dir and its parents
-		dir->handler->close(dir, 1);
+		dir->handler->close(dir, 1, NULL, NULL);
 		loose_parent(file, dir);
 	}
 	if (err != CBM_ERROR_OK) {
 		*outep = NULL;
 		// on error
 		if (file != NULL) {
-			file->handler->close(file, 0);
+			file->handler->close(file, 0, NULL, NULL);
 		}
 	}
 
@@ -467,11 +467,11 @@ int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpat
 
 	if (file != NULL) {
 		// we want the file here, so we can close the dir and its parents
-		file->handler->close(file, 1);
+		file->handler->close(file, 1, NULL, NULL);
 	} else
 	if (dir != NULL) {
 		// we want the file here, so we can close the dir and its parents
-		dir->handler->close(dir, 1);
+		dir->handler->close(dir, 1, NULL, NULL);
 	}
 
 	if (pattern != NULL) {
@@ -592,13 +592,13 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 	if (err != CBM_ERROR_OK && err != CBM_ERROR_OPEN_REL) {
 		// on error
 		if (file != NULL) {
-			file->handler->close(file, 0);
+			file->handler->close(file, 0, NULL, NULL);
 		}
 		*outfile = NULL;
 	}
 	if (dir != NULL) {
 		// we want the file here, so we can close the dir and its parents
-		dir->handler->close(dir, 1);
+		dir->handler->close(dir, 1, NULL, NULL);
 	}
 
 	if (pattern != NULL) {
@@ -641,7 +641,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 		file_t *parent = NULL;
 		parent = dir->handler->parent(dir);
 		if (parent != NULL) {
-			parent->handler->close(parent, 1);
+			parent->handler->close(parent, 1, NULL, NULL);
 			// forget reference so we don't try to close it again
 			loose_parent(dir, parent);
 		}
@@ -654,14 +654,14 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 		if (err == CBM_ERROR_OK) {
 			*outdir = dir;	
 			if (file != NULL) {
-				file->handler->close(file, 0);
+				file->handler->close(file, 0, NULL, NULL);
 			}
 		} else {
 			if (dir != NULL) {
-				dir->handler->close(dir, 0);
+				dir->handler->close(dir, 0, NULL, NULL);
 			}
 			if (file != NULL) {
-				file->handler->close(file, 0);
+				file->handler->close(file, 0, NULL, NULL);
 			}
 		}
 		
@@ -684,7 +684,7 @@ file_t *handler_parent(file_t *file) {
 // --------------------------------------------------------------------------------------------
 // default implementations for handler
 
-void default_close(file_t *file, int recurse) {
+int default_close(file_t *file, int recurse, char *outbuf, int *outlen) {
 
 	if (file->filename) {
 		mem_free(file->filename);
@@ -692,10 +692,12 @@ void default_close(file_t *file, int recurse) {
 	}
 
 	// we are a resolve wrapper, so close the inner file as well
-	file->parent->handler->close(file->parent, recurse);
+	int err = file->parent->handler->close(file->parent, recurse, outbuf, outlen);
 
 	// and then free the file struct memory
 	mem_free(file);
+
+	return err;
 }
 
 int default_seek(file_t *file, long pos, int flag) {

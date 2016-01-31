@@ -153,15 +153,20 @@ static void tnp_init(void) {
 	reg_init(&endpoints, "tcp_endpoints", 5);
 }
 
-static void tn_close(file_t *fp, int recurse) {
+static int tn_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
+	(void) outbuf;
 
 	close_fd((File*)fp);
 
 	if (recurse) {
 		if (fp->parent != NULL) {
-			fp->parent->handler->close(fp->parent, 1);
+			fp->parent->handler->close(fp->parent, 1, NULL, NULL);
 		}
 	}
+
+	*outlen = 0;
+
+	return CBM_ERROR_OK;
 }
 
 // free the endpoint descriptor
@@ -647,6 +652,7 @@ provider_t tcp_provider = {
 	tnp_root,			// root - basically only a handle to open files (ports)
 	NULL,				// wrap
 	NULL,				// direct
+	NULL,				// format
 	tnp_dump			// dump
 };
 

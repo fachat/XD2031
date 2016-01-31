@@ -55,9 +55,10 @@ typedef struct {
 	uint8_t secondary;	// secondary command byte, includes sec addr and OPEN/CLOSE/...
 
 	// interrupt callback handling for commands and opens
-	uint8_t cmd_done;	// set on a callback from the irq
-	int8_t errnum;		// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
-	uint8_t errparam;	// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
+	volatile uint8_t cmd_done;	// set on a callback from the irq
+	volatile int8_t errnum;		// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
+	volatile uint8_t errparam;	// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
+	volatile uint8_t errparam2;	// from interrupt between BUS_CMDWAIT and BUS_CMDPROCESS
 
 	// command channel
 	cmd_t command;		// command buffer

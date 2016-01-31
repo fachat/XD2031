@@ -70,7 +70,7 @@ static int curl_init_done = 0;
 // list of endpoints
 static registry_t endpoints;
 
-static void curl_close(file_t *fp, int recurse);
+static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen);
 
 typedef enum {
 	PROTO_FTP,
@@ -358,7 +358,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
 	newep->path_buffer = add_parent_path(newep->path_buffer, file);
 
         // free resources
-        curl_close((file_t*)fp, 1);
+        curl_close((file_t*)fp, 1, NULL, NULL);
 
         *outep = (endpoint_t*)newep;
         return CBM_ERROR_OK;
@@ -432,14 +432,19 @@ void curl_pfree(endpoint_t *ep) {
 // commands as sent from the device
 
 // close a file descriptor
-static void curl_close(file_t *fp, int recurse) {
+static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
+	(void) outbuf;
+
         close_fd((File*)fp);
 
         if (recurse) {
                 if (fp->parent != NULL) {
-                        fp->parent->handler->close(fp->parent, 1);
+                        fp->parent->handler->close(fp->parent, 1, NULL, NULL);
                 }
         }
+	if (outlen != NULL) 
+		*outlen = 0;
+	return CBM_ERROR_OK;
 }
 
 static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *user) {
@@ -656,7 +661,7 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
 		return rv;
 	}
 
-	curl_close((file_t*)retfile, 0);
+	curl_close((file_t*)retfile, 0, NULL, NULL);
 
         return CBM_ERROR_OK;
 }
