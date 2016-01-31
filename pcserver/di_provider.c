@@ -1131,6 +1131,18 @@ di_direct(endpoint_t * ep, const char *buf, char *retbuf, int *retlen)
 // REL file handling
 
 // *************
+// di_pos_start
+// *************
+
+static void di_pos_start(di_endpoint_t * diep, File * f)
+{
+	f->cht = f->Slot.start_track;
+	f->chs = f->Slot.start_sector;
+	f->chp = 0;
+	log_debug("di_pos_start (%d/%d) %d\n", f->cht, f->chs, 0);
+}
+
+// *************
 // di_pos_append
 // *************
 
@@ -1178,7 +1190,7 @@ static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
 	// navigate the super/side sectors, find how many records are there (return in outparam numrecs)
 	// then expand the file to the given number of records  
 	di_rel_navigate(diep, &f->Slot.ss_track, &f->Slot.ss_sector, NULL, NULL,
-			f->file.recordlen, 1, &numrecs, &allocated);
+			f->file.recordlen, 0, &numrecs, &allocated);
 
 	return numrecs;
 }
@@ -2314,7 +2326,6 @@ di_create_entry(di_endpoint_t * diep, File * file, const char *name,
 	    ((pars->filetype ==
 	      FS_DIR_TYPE_UNKNOWN) ? FS_DIR_TYPE_PRG : pars->filetype);
 	file->Slot.type = 0x80 | file->file.type;
-	file->chp = 0;
 	file->Slot.ss_track = 0;	// invalid, i.e. new empty file if REL
 	file->Slot.ss_sector = 0;
 	file->Slot.recordlen = pars->recordlen;
@@ -2735,12 +2746,14 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 			pars->filetype = FS_DIR_TYPE_PRG;
 		}
 		rv = di_create_entry(diep, file, filename, pars);
-		if (rv != CBM_ERROR_OK)
+		if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL)
 			return rv;
 	}
 
 	if (di_cmd == FS_OPEN_AP) {
 		di_pos_append(diep, file);
+	} else {
+		di_pos_start(diep, file);
 	}
 	// flag for successful open
 	file->access_mode = di_cmd;
@@ -3281,6 +3294,8 @@ static size_t di_realsize(file_t * file)
 // di_create 
 //***********
 
+static int di_open(file_t * fp, openpars_t * pars, int type);
+
 static int
 di_create(file_t * dirp, file_t ** newfile, const char *pattern,
 	  openpars_t * pars, int type)
@@ -3313,16 +3328,16 @@ di_create(file_t * dirp, file_t ** newfile, const char *pattern,
 	file->access_mode = type;
 	file->file.writable = (type == FS_OPEN_RD) ? 0 : 1;
 	file->file.seekable = 1;
+	file->file.filename = mem_alloc_str(pattern);
 
-	int rv = di_create_entry(diep, file, pattern, pars);
+	int rv = di_open((file_t *) file, pars, type);
 
-	di_fflush(&file->file);
-
-	if (rv != CBM_ERROR_OK) {
+	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
 
 		di_dump_file((file_t *) file, 1, 0);
 
 		reg_remove(&diep->base.files, file);
+		mem_free(file->file.filename);
 		mem_free(file);
 	} else {
 
