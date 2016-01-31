@@ -327,6 +327,7 @@ static inline void di_fsync(file_t * file)
 typedef struct {
 	di_endpoint_t *diep;
 	uint8_t *buf;
+	uint8_t dirty;
 	uint8_t track;
 	uint8_t sector;
 } buf_t;
@@ -335,6 +336,7 @@ static void buf_init(const type_t * t, void *obj)
 {
 	(void)t;		// silence unused warning
 	buf_t *p = (buf_t *) obj;
+	p->dirty = 0;
 	p->track = 0;
 	p->sector = 0;
 	p->buf = NULL;
@@ -364,25 +366,11 @@ static cbm_errno_t di_GETBUF(buf_t ** bufp, di_endpoint_t * diep)
 	}
 
 	p->diep = diep;
+	p->dirty = 0;
 	p->track = 0;
 	p->sector = 0;
 
 	return CBM_ERROR_OK;
-}
-
-static cbm_errno_t di_RDBUF(buf_t * bufp);
-
-/* 
- * get a (possibly) mapped buffer. Can only be used to read
- * t/s address. 
- */
-static cbm_errno_t di_MAPBUF(buf_t * bufp, uint8_t track, uint8_t sector)
-{
-
-	bufp->track = track;
-	bufp->sector = sector;
-
-	return di_RDBUF(bufp);
 }
 
 /*
@@ -393,6 +381,7 @@ static void di_SETBUF(buf_t * bufp, uint8_t track, uint8_t sector)
 
 	bufp->track = track;
 	bufp->sector = sector;
+	bufp->dirty = 0;
 }
 
 static cbm_errno_t di_RDBUF(buf_t * bufp)
@@ -410,6 +399,8 @@ static cbm_errno_t di_RDBUF(buf_t * bufp)
 		file->handler->readfile(file, (char *)(bufp->buf), 256,
 					&readfl);
 	}
+
+	bufp->dirty = 0;
 
 	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, bufp,
 		  err);
@@ -431,9 +422,73 @@ static cbm_errno_t di_WRBUF(buf_t * p)
 		file->handler->writefile(file, (char *)(p->buf), 256, 0);
 	}
 
+	p->dirty = 0;
+
 	log_debug("WRBUF(%d,%d (%p)) -> %d\n", p->track, p->sector, p, err);
 
 	return err;
+}
+
+
+/* 
+ * get a (possibly) mapped buffer. Can only be used to read
+ * t/s address. Although mapped buffer can be set dirty and written later
+ */
+static cbm_errno_t di_FLUSH(buf_t * bufp)
+{
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (bufp->dirty) {
+		err = di_WRBUF(bufp);
+	}
+
+	return err;
+}
+
+/* 
+ * get a (possibly) mapped buffer. Can only be used to read
+ * t/s address. Although mapped buffer can be set dirty and written later
+ */
+static inline void di_DIRTY(buf_t * bufp)
+{
+	bufp->dirty = 1;
+}
+
+/* 
+ * reuse a buffer if t/s match. Otherwise flush (write) dirty buffers and
+ * map the new one t/s
+ */
+static cbm_errno_t di_REUSEFLUSHMAP(buf_t * bufp, uint8_t track, uint8_t sector)
+{
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (bufp->track != track || bufp->sector != sector) {
+
+		if (bufp->dirty) {
+			err = di_WRBUF(bufp);
+		}
+		if (err == CBM_ERROR_OK) {
+			
+			bufp->track = track;
+			bufp->sector = sector;
+
+			err = di_RDBUF(bufp);
+		}
+	}
+	return err;
+}
+
+/* 
+ * get a (possibly) mapped buffer. Can only be used to read
+ * t/s address. Although mapped buffer can be set dirty and written later
+ */
+static cbm_errno_t di_MAPBUF(buf_t * bufp, uint8_t track, uint8_t sector)
+{
+
+	bufp->track = track;
+	bufp->sector = sector;
+
+	return di_RDBUF(bufp);
 }
 
 static void di_FREBUF(buf_t ** bufp)
@@ -1420,7 +1475,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 					goto end2;
 				(*blocks)++;
 
-				di_SETBUF(sidep, side_track, side_sector);
+				di_REUSEFLUSHMAP(sidep, side_track, side_sector);
 
 				// prepare side sector group
 				memset(sidep->buf, 0, 256);
@@ -1429,6 +1484,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				// first entry in side sector addresses list in first side sector points to itself
 				sidep->buf[SSB_OFFSET_SSG] = side_track;
 				sidep->buf[SSB_OFFSET_SSG + 1] = side_sector;
+
+				di_DIRTY(sidep);
 			}
 
 			if (diep->DI.HasSSB && super_track == 0) {
@@ -1445,7 +1502,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 					goto end2;
 				(*blocks)++;
 
-				di_SETBUF(superp, super_track, super_sector);
+				di_REUSEFLUSHMAP(superp, super_track, super_sector);
 
 				memset(superp->buf, 0, 256);
 
@@ -1462,6 +1519,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				    sidep->buf[SSB_OFFSET_SSG];
 				superp->buf[SSS_OFFSET_SSB_POINTER + 1] =
 				    sidep->buf[SSB_OFFSET_SSG + 1];
+
+				di_DIRTY(superp);
 			}
 
 			if (side_pos == SSB_INDEX_SECTOR_MAX) {
@@ -1496,6 +1555,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				sidep->buf[0] = side_track;
 				sidep->buf[1] = side_sector;
 
+				di_DIRTY(sidep);
+
 				// do we need a new side sector group?
 				if (diep->DI.HasSSB
 				    && side == SSG_SIDE_SECTORS_MAX) {
@@ -1508,13 +1569,11 @@ static int di_rel_navigate(di_endpoint_t * diep,
 					    ("di_navigate: write link to new %d/%d in last side sector of previous group\n",
 					     side_track, side_sector);
 
-					err = di_WRBUF(sidep);
+					// now prepare for first side sector block in new group
+					err = di_REUSEFLUSHMAP(sidep, side_track,
+						  side_sector);
 					if (err != CBM_ERROR_OK)
 						goto end2;
-
-					// now prepare for first side sector block in new group
-					di_SETBUF(sidep, side_track,
-						  side_sector);
 
 					memset(side_sectors, 0,
 					       SSG_SIDE_SECTORS_MAX * 2);
@@ -1532,6 +1591,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 						    buf[SSS_OFFSET_SSB_POINTER +
 							(super_pos * 2) + 1] =
 						    side_sector;
+
+						di_DIRTY(superp);
 					}
 				} else if (side < SSG_SIDE_SECTORS_MAX) {
 					// current group is not full yet, create a new side sector in it
@@ -1541,12 +1602,11 @@ static int di_rel_navigate(di_endpoint_t * diep,
 						   (side * 2)] = side_track;
 					sidep->buf[SSB_OFFSET_SSG + (side * 2) +
 						   1] = side_sector;
+					di_DIRTY(sidep);
+
 					log_debug
 					    ("di_navigate: write previous last side sector (side=%d -> %d,%d)\n",
 					     side, side_track, side_sector);
-					err = di_WRBUF(sidep);
-					if (err != CBM_ERROR_OK)
-						goto end2;
 
 					// save list of side sectors
 					memcpy(side_sectors,
@@ -1561,7 +1621,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 						     side_sectors[o * 2],
 						     side_sectors[o * 2 + 1]);
 						err =
-						    di_MAPBUF(sidep,
+						    di_REUSEFLUSHMAP(sidep,
 							      side_sectors[o *
 									   2],
 							      side_sectors[o *
@@ -1578,13 +1638,13 @@ static int di_rel_navigate(di_endpoint_t * diep,
 							   (side * 2) + 1] =
 						    side_sector;
 
-						err = di_WRBUF(sidep);
-						if (err != CBM_ERROR_OK)
-							goto end2;
+						di_DIRTY(sidep);
 					}
 					// prepare new side sector
-					di_SETBUF(sidep, side_track,
+					err = di_REUSEFLUSHMAP(sidep, side_track,
 						  side_sector);
+					if (err != CBM_ERROR_OK) 
+						goto end2;
 
 				} else {
 					err = CBM_ERROR_DISK_FULL;
@@ -1610,6 +1670,8 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				sidep->buf[SSB_OFFSET_SSG + (side * 2) + 1] =
 				    side_sector;
 
+				di_DIRTY(sidep);
+
 				side_pos = 0;
 				side++;
 			}
@@ -1621,7 +1683,9 @@ static int di_rel_navigate(di_endpoint_t * diep,
 			// number of sectors in side sector
 			sidep->buf[BLK_OFFSET_NEXT_SECTOR] =
 			    SSB_OFFSET_SECTOR + side_pos * 2 + 1;
+
 			side_pos++;
+
 			if (data2_track != 0) {
 				// DOS bug: allocate another data block, link it, but do not write into side sector
 				// TODO: check when the DOS has created such a file, how do we handle it?
@@ -1636,23 +1700,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				    SSB_OFFSET_SECTOR + side_pos * 2 + 1;
 				side_pos++;
 			}
-		}
-		// metadata done; write back
-
-		err = di_WRBUF(sidep);
-		if (err != CBM_ERROR_OK)
-			goto end2;
-
-		if (diep->DI.HasSSB) {
-			err = di_WRBUF(superp);
-			if (err != CBM_ERROR_OK)
-				goto end2;
-
-			*ss_track = super_track;
-			*ss_sector = super_sector;
-		} else {
-			*ss_track = sidep->buf[SSB_OFFSET_SSG];
-			*ss_sector = sidep->buf[SSB_OFFSET_SSG + 1];
+			di_DIRTY(sidep);
 		}
 
 		// now fill up the data sector
@@ -1719,7 +1767,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 				}
 
 				// write back data sector
-				di_WRBUF(datap);
+				di_DIRTY(datap);
 			}
 			// shift stack...
 			next_track = data_track;
@@ -1729,7 +1777,7 @@ static int di_rel_navigate(di_endpoint_t * diep,
 			data2_track = 0;
 
 			if (next_track != 0) {
-				di_SETBUF(datap, next_track, next_sector);
+				di_REUSEFLUSHMAP(datap, next_track, next_sector);
 				memset(datap->buf, 0, 256);
 				datap->buf[BLK_OFFSET_NEXT_SECTOR] = 1;
 			}
@@ -1740,6 +1788,28 @@ static int di_rel_navigate(di_endpoint_t * diep,
 		data_sector = last_sector;
 
 	}			// end while target > numrecords
+
+	// write back metadata (flush what has not yet been written)
+
+	err = di_FLUSH(datap);
+	if (err != CBM_ERROR_OK)
+		goto end2;
+
+	err = di_FLUSH(sidep);
+	if (err != CBM_ERROR_OK)
+		goto end2;
+
+	if (diep->DI.HasSSB) {
+		err = di_FLUSH(superp);
+		if (err != CBM_ERROR_OK)
+			goto end2;
+
+		*ss_track = super_track;
+		*ss_sector = super_sector;
+	} else {
+		*ss_track = sidep->buf[SSB_OFFSET_SSG];
+		*ss_sector = sidep->buf[SSB_OFFSET_SSG + 1];
+	}
 
  end2:
 	*wasrecord = numrecords;
