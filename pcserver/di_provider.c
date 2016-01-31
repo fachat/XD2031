@@ -56,6 +56,9 @@
 
 #include "log.h"
 
+// when set, emulate the allocation of a bogus sector when a 254 byte long sector is written in a non-rel file
+//#define	BUG_FILE254
+
 #undef DEBUG_READ
 #define DEBUG_CMD
 
@@ -2336,6 +2339,11 @@ di_create_entry(di_endpoint_t * diep, File * file, const char *name,
 		if (err != CBM_ERROR_OK) {
 			return err;
 		}
+		uint8_t z = 0;
+		di_fseek_tsp(diep, file->Slot.start_track, file->Slot.start_sector, 0);
+		di_fwrite(&z, 1, 1, diep->Ip);
+		di_fwrite(&z, 1, 1, diep->Ip);
+
 		file->Slot.size = 1;
 	} else {
 		file->Slot.size = 0;
@@ -2877,8 +2885,8 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 	}
 
 	log_debug
-	    ("di_writefile: diep=%p, write to file %p, lastpos=%d, len=%d\n",
-	     diep, file, file->lastpos, len);
+	    ("di_writefile: diep=%p, write to file %p, lastpos=%d, chp=%d, len=%d\n",
+	     diep, file, file->lastpos, file->chp, len);
 
 	if (file->lastpos > 0) {
 		err = di_expand_rel(diep, file, file->lastpos);
@@ -3598,6 +3606,15 @@ static int di_close_fd(di_endpoint_t * diep, File * f)
 		di_fwrite(&t, 1, 1, diep->Ip);
 		di_fwrite(&s, 1, 1, diep->Ip);
 		log_debug("%p: Updated chain to (%d/%d)\n", diep, t, s);
+#ifdef BUG_FILE254
+		if (s == 255) {
+			uint8_t track = f->cht;
+			uint8_t sector = f->chs;
+			di_find_free_block_NXTTS(diep, &track, &sector);
+			log_debug("di_close: BUG_FILE254: allocate bogus block at the end of file: %d,%d\n",
+				track, sector);
+		}
+#endif
 		di_write_slot(diep, &f->Slot);	// Save new status of directory entry
 		log_debug("%p: Status of directory entry saved\n", diep);
 		di_sync_BAM(diep);	// Save BAM status
