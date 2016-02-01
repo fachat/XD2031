@@ -86,23 +86,6 @@ typedef struct {
 	uint8_t eod;		// end of directory
 } slot_t;
 
-typedef struct {
-	file_t file;
-	slot_t Slot;		// 
-	uint8_t *buf;		// direct channel block buffer
-	uint8_t CBM_file[20];	// filename with CBM charset
-	const char *dospattern;	// directory match pattern in PETSCII
-	uint8_t is_first;	// is first directory entry?
-	uint8_t next_track;
-	uint8_t next_sector;
-	uint8_t cht;		// chain track
-	uint8_t chs;		// chain sector
-	uint8_t chp;		// chain pointer
-	uint8_t access_mode;
-	uint16_t lastpos;	// last P record number + 1, to expand to on write if > 0
-	uint16_t maxrecord;	// the last record number available in the file
-} File;
-
 typedef struct {		// derived from endpoint_t
 	endpoint_t base;	// payload
 	file_t *Ip;		// Image file pointer
@@ -118,6 +101,36 @@ typedef struct {		// derived from endpoint_t
 	uint8_t U2_sector;	// sector for U2 command
 	slot_t Slot;		// directory slot - should be deprecated!
 } di_endpoint_t;
+
+// buffer handling
+typedef struct {
+	di_endpoint_t *diep;
+	uint8_t *buf;
+	uint8_t dirty;
+	uint8_t track;
+	uint8_t sector;
+	uint8_t ptr;
+} buf_t;
+
+typedef struct {
+	file_t file;
+	slot_t Slot;		// 
+	uint8_t *buf;		// direct channel block buffer
+	uint8_t CBM_file[20];	// filename with CBM charset
+	const char *dospattern;	// directory match pattern in PETSCII
+	buf_t *data;		// data block
+	buf_t *side;		// side sector block (REL file only)
+	buf_t *super;		// super side sector block (REL file only, 8250 and 1581 only)
+	uint8_t is_first;	// is first directory entry?
+	uint8_t next_track;
+	uint8_t next_sector;
+	uint8_t cht;		// chain track
+	uint8_t chs;		// chain sector
+	uint8_t chp;		// chain pointer
+	uint8_t access_mode;
+	uint16_t lastpos;	// last P record number + 1, to expand to on write if > 0
+	uint16_t maxrecord;	// the last record number available in the file
+} File;
 
 extern provider_t di_provider;
 
@@ -327,14 +340,6 @@ static inline void di_fsync(file_t * file)
 // The idea is that the shell can reuse and existing in-memory buffer that way.
 // A buffer must be returned via FREBUF when not needed anymore
 
-typedef struct {
-	di_endpoint_t *diep;
-	uint8_t *buf;
-	uint8_t dirty;
-	uint8_t track;
-	uint8_t sector;
-} buf_t;
-
 static void buf_init(const type_t * t, void *obj)
 {
 	(void)t;		// silence unused warning
@@ -342,6 +347,7 @@ static void buf_init(const type_t * t, void *obj)
 	p->dirty = 0;
 	p->track = 0;
 	p->sector = 0;
+	p->ptr = 0;
 	p->buf = NULL;
 }
 
@@ -375,6 +381,47 @@ static cbm_errno_t di_GETBUF(buf_t ** bufp, di_endpoint_t * diep)
 
 	return CBM_ERROR_OK;
 }
+
+/*
+ * get the current data buffer block for the current file;
+ * allocate one if none exists;
+ * Those buffers should not be freed, but only flushed; they
+ * will be freed on close
+ */
+static cbm_errno_t di_GETBUF_data(buf_t ** bufp, File *file) {
+
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (file->data == NULL) {
+		err = di_GETBUF(&file->data, (di_endpoint_t *)file->file.endpoint);
+	}
+	*bufp = file->data;
+	return err;
+}
+
+static cbm_errno_t di_GETBUF_side(buf_t ** bufp, File *file) {
+
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (file->side == NULL) {
+		err = di_GETBUF(&file->side, (di_endpoint_t *)file->file.endpoint);
+	}
+	*bufp = file->side;
+	return err;
+}
+
+static cbm_errno_t di_GETBUF_super(buf_t ** bufp, File *file) {
+
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (file->super == NULL) {
+		err = di_GETBUF(&file->super, (di_endpoint_t *)file->file.endpoint);
+	}
+	*bufp = file->super;
+	return err;
+}
+
+
 
 /*
  * prepare a buffer for writing to the given t/s
@@ -441,7 +488,7 @@ static cbm_errno_t di_FLUSH(buf_t * bufp)
 {
 	cbm_errno_t err = CBM_ERROR_OK;
 
-	if (bufp->dirty) {
+	if (bufp != NULL && bufp->dirty) {
 		err = di_WRBUF(bufp);
 	}
 
@@ -1212,29 +1259,7 @@ static void di_pos_append(di_endpoint_t * diep, File * f)
 // di_rel_navigate
 //***********
 //
-// find the record_max value to know when we have to expand a REL file
-//
 // If the given targetrec is larger than the one found, the file is expanded
-static int di_rel_navigate(di_endpoint_t * diep,
-			   uint8_t * ss_track, uint8_t * ss_sector,
-			   uint8_t * dt_track, uint8_t * dt_sector,
-			   uint8_t recordlen,
-			   unsigned int targetrec, unsigned int *wasrecord,
-			   unsigned int *allocated);
-
-static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
-{
-
-	unsigned int numrecs = 0;
-	unsigned int allocated = 0;
-
-	// navigate the super/side sectors, find how many records are there (return in outparam numrecs)
-	// then expand the file to the given number of records  
-	di_rel_navigate(diep, &f->Slot.ss_track, &f->Slot.ss_sector, NULL, NULL,
-			f->file.recordlen, 0, &numrecs, &allocated);
-
-	return numrecs;
-}
 
 // navigate the super/side sectors, find how many records are there (return in outparam numrecs)
 // then expand the file to the given number of records  
@@ -1245,7 +1270,7 @@ static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
 // returns super side sector (for disks that have one) or first side sector group block address in *ss_
 // returns the (first) allocated data block in *dt_, for the file creation; dt_* may be NULL
 //
-static int di_rel_navigate(di_endpoint_t * diep,
+static int di_rel_navigate(di_endpoint_t * diep, File *f,
 			   uint8_t * ss_track, uint8_t * ss_sector,
 			   uint8_t * dt_track, uint8_t * dt_sector,
 			   uint8_t recordlen,
@@ -1303,9 +1328,15 @@ static int di_rel_navigate(di_endpoint_t * diep,
 	buf_t *sidep = NULL;
 	buf_t *datap = NULL;
 
-	di_GETBUF(&superp, diep);
-	di_GETBUF(&sidep, diep);
-	di_GETBUF(&datap, diep);
+	// get the buffers, flush if necessary so we can just use MAPBUF below
+	if (diep->DI.HasSSB) {
+		di_GETBUF_super(&superp, f);
+		di_FLUSH(superp);
+	}
+	di_GETBUF_side(&sidep, f);
+	di_FLUSH(sidep);
+	di_GETBUF_data(&datap, f);
+	di_FLUSH(datap);
 
 	if (*ss_track == 0) {
 		// not a REL file or a new one
@@ -1867,10 +1898,27 @@ static int di_rel_navigate(di_endpoint_t * diep,
  end2:
 	*wasrecord = numrecords;
 
-	di_FREBUF(&datap);
-	di_FREBUF(&sidep);
-	di_FREBUF(&superp);
 	return CBM_ERROR_OK;
+}
+
+//***********
+// di_rel_record_max
+//***********
+//
+// find the record_max value to know when we have to expand a REL file
+//
+static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
+{
+
+	unsigned int numrecs = 0;
+	unsigned int allocated = 0;
+
+	// navigate the super/side sectors, find how many records are there (return in outparam numrecs)
+	// then expand the file to the given number of records  
+	di_rel_navigate(diep, f, &f->Slot.ss_track, &f->Slot.ss_sector, NULL, NULL,
+			f->file.recordlen, 0, &numrecs, &allocated);
+
+	return numrecs;
 }
 
 //***********
@@ -1894,7 +1942,7 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 	uint8_t sector = f->Slot.start_sector;
 	uint8_t dirty = 0;
 
-	err = di_rel_navigate(diep,
+	err = di_rel_navigate(diep, f,
 			      &f->Slot.ss_track, &f->Slot.ss_sector,
 			      &track, &sector,
 			      f->file.recordlen, recordno, &wasrecord,
@@ -1930,7 +1978,7 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 // of by the firmware). record 0 does always exist - it is created when the file
 // is created. That is why f->lastpos >0 can be used as flag to fill up the file
 
-static int di_position(di_endpoint_t * diep, File * f, int recordno)
+static int di_position(File * f, int recordno)
 {
 
 	uint8_t reclen = 0;
@@ -1977,7 +2025,7 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 	    ("di_position: to super=%d, side=%d, offset=%d, byte=%d, lastpos=%d\n",
 	     super, side, offset, byt, f->lastpos);
 
-	err = di_GETBUF(&bufp, diep);
+	err = di_GETBUF_data(&bufp, f);
 	if (err != CBM_ERROR_OK) 
 		goto end;
 
@@ -1994,7 +2042,7 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 	}
 
 	// read the first side sector
-	err = di_MAPBUF(bufp, ss_track, ss_sector);
+	err = di_REUSEFLUSHMAP(bufp, ss_track, ss_sector);
 	if (err != CBM_ERROR_OK) 
 		goto end;
 
@@ -2071,8 +2119,6 @@ static int di_position(di_endpoint_t * diep, File * f, int recordno)
 end:
 	log_debug("di_position -> err=%d, sector %d/%d/%d\n", err, 
 		f->next_track, f->next_sector, rec_start);
-
-	di_FREBUF(&bufp);
 
 	return err;
 
@@ -2902,7 +2948,7 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 		if (err != CBM_ERROR_OK) {
 			return -err;
 		}
-		di_position(diep, file, file->lastpos - 1);
+		di_position(file, file->lastpos - 1);
 	}
 	di_fseek_tsp(diep, file->cht, file->chs, 2 + file->chp);
 	for (i = 0; i < len; ++i) {
@@ -3608,8 +3654,14 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 //  if (!di_update_chx(diep, f, 0)) {
 	// not EOF, i.e. cht is not zero
 
+	// flush data if necessary
+	di_FLUSH(f->data);
+	di_FLUSH(f->side);
+	di_FLUSH(f->super);
+
 	if (f->access_mode == FS_OPEN_WR ||
 	    f->access_mode == FS_OPEN_OW || f->access_mode == FS_OPEN_AP) {
+
 		t = 0;
 		s = f->chp + 1;
 		di_fseek_tsp(diep, f->cht, f->chs, 0);
@@ -3636,6 +3688,8 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 			err = CBM_ERROR_DISK_FULL;
 		}
 	} else if (f->access_mode == FS_OPEN_RW) {
+
+
 		p = f->chp + 1;
 		di_fseek_tsp(diep, f->cht, f->chs, 0);
 		di_fread(&t, 1, 1, diep->Ip);
@@ -3655,6 +3709,10 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 		log_debug("Closing read only file, no sync required.\n");
 	}
 //  } // end if update_chx
+
+	di_FREBUF(&f->data);
+	di_FREBUF(&f->side);
+	di_FREBUF(&f->super);
 
 	if (f->dospattern != NULL) {
 		// discard const
