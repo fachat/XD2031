@@ -368,6 +368,7 @@ static cbm_errno_t di_GETBUF(buf_t ** bufp, di_endpoint_t * diep)
 	if (p == NULL) {
 		p = mem_alloc(&buf_type);
 		p->buf = mem_alloc_c(256, "di_buf_block");
+		memset(p->buf, 0, 256);
 		log_debug("GETBUF() -> new buffer at %p\n", p);
 		*bufp = p;
 	} else {
@@ -421,7 +422,12 @@ static cbm_errno_t di_GETBUF_super(buf_t ** bufp, File *file) {
 	return err;
 }
 
-
+// switch double buffering blocks (data <-> side)
+static void di_SWITCH_data_side(File *file) {
+	buf_t *p = file->data;
+	file->data = file->side;
+	file->side = p;
+}
 
 /*
  * prepare a buffer for writing to the given t/s
@@ -599,31 +605,6 @@ static void di_fseek_pos(di_endpoint_t * diep, int pos)
 	di_fseek(diep->Ip, pos, SEEKFLAG_ABS);
 }
 
-// ************
-// check position - make sure cht/chs are valid
-// ************
-
-static int di_update_chx(di_endpoint_t * diep, File * f, int seek)
-{
-	if (f->chp > 253) {
-		f->chp = 0;
-		if (f->next_track == 0) {
-			return READFLAG_EOF;	// EOF
-		}
-		di_fseek_tsp(diep, f->next_track, f->next_sector, 0);
-		f->cht = f->next_track;
-		f->chs = f->next_sector;
-		di_fread(&f->next_track, 1, 1, diep->Ip);
-		di_fread(&f->next_sector, 1, 1, diep->Ip);
-		// log_debug("this block: (%d/%d)\n",f->cht,f->chs);
-		// log_debug("next block: (%d/%d)\n",f->next_track,f->next_sector);
-	} else {
-		if (seek) {
-			di_fseek_tsp(diep, f->cht, f->chs, 2 + f->chp);
-		}
-	}
-	return 0;
-}
 
 // ------------------------------------------------------------------
 // BAM handling
@@ -1220,39 +1201,64 @@ di_direct(endpoint_t * ep, const char *buf, char *retbuf, int *retlen)
 // di_pos_start
 // *************
 
-static void di_pos_start(di_endpoint_t * diep, File * f)
+static cbm_errno_t di_pos_start(di_endpoint_t * diep, File * f, uint8_t readfl)
 {
 	(void) diep;
 
-	f->cht = f->Slot.start_track;
-	f->chs = f->Slot.start_sector;
+	cbm_errno_t err = CBM_ERROR_OK;
+	
+	buf_t *datap = NULL;
+	// allocate side sector as second buffer
+	err = di_GETBUF_side(&datap, f);
+	if (err != CBM_ERROR_OK) 
+		goto end;
+	// allocate data sector as primary buffer
+	err = di_GETBUF_data(&datap, f);
+	if (err != CBM_ERROR_OK) 
+		goto end;
+
+	if (readfl) {
+		err = di_MAPBUF(datap, f->Slot.start_track, f->Slot.start_sector);
+	} else {
+		di_SETBUF(datap, f->Slot.start_track, f->Slot.start_sector);
+	}
+end:
 	f->chp = 0;
-	log_debug("di_pos_start (%d/%d) %d\n", f->cht, f->chs, 0);
+	log_debug("di_pos_start (%d/%d) %d -> %d\n", f->Slot.start_track, f->Slot.start_sector, 0, err);
+
+	return err;
 }
 
 // *************
 // di_pos_append
 // *************
 
-static void di_pos_append(di_endpoint_t * diep, File * f)
+static cbm_errno_t di_pos_append(di_endpoint_t * diep, File * f)
 {
-	uint8_t t, s, nt, ns;
+	(void) diep;
 
-	nt = f->next_track;
-	ns = f->next_sector;
-	while (nt) {
-		t = nt;
-		s = ns;
-		di_fseek_tsp(diep, t, s, 0);
-		di_fread(&nt, 1, 1, diep->Ip);
-		di_fread(&ns, 1, 1, diep->Ip);
-	}
-	f->next_track = 0;
-	f->next_sector = ns;
-	f->cht = t;
-	f->chs = s;
-	f->chp = ns - 1;
-	log_debug("di_pos_append (%d/%d) %d\n", t, s, ns);
+	uint8_t nt, ns;
+
+	cbm_errno_t err = CBM_ERROR_OK;
+	
+	buf_t *datap = NULL;
+	err = di_GETBUF_data(&datap, f);
+	if (err != CBM_ERROR_OK) 
+		goto end;
+
+	nt = f->Slot.start_track;
+	ns = f->Slot.start_sector;
+	do {
+		err = di_MAPBUF(datap, nt, ns);
+	
+		nt = datap->buf[0];
+		ns = datap->buf[1];
+	} while (err == CBM_ERROR_OK && nt != 0);
+end:
+	f->chp = 0;
+	log_debug("di_pos_append (%d/%d) %d -> %d\n", nt, ns, 0, err);
+
+	return err;
 }
 
 //***********
@@ -2796,6 +2802,7 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 	file->chp = 255;
 	log_debug("File starts at (%d/%d)\n", file->next_track,
 		  file->next_sector);
+
 	if (file_required && np == 0) {
 		log_error("Unable to open '%s': file not found\n", filename);
 		return CBM_ERROR_FILE_NOT_FOUND;
@@ -2815,8 +2822,10 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 
 	if (di_cmd == FS_OPEN_AP) {
 		di_pos_append(diep, file);
+	} else if (di_cmd == FS_OPEN_RD || di_cmd == FS_OPEN_RW) {
+		di_pos_start(diep, file, 1);
 	} else {
-		di_pos_start(diep, file);
+		di_pos_start(diep, file, 0);
 	}
 	// flag for successful open
 	file->access_mode = di_cmd;
@@ -2825,98 +2834,44 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 }
 
-// ************
-// di_read_byte
-// ************
 
-static int di_read_byte(di_endpoint_t * diep, File * f, char *retbuf)
-{
-	if (di_update_chx(diep, f, 0)) {
-		return READFLAG_EOF;
-	}
-	di_fread(retbuf, 1, 1, diep->Ip);
-	++f->chp;
-	// log_debug("di_read_byte %2.2x\n",(uint8_t)*retbuf);
-	if (f->next_track == 0 && f->chp + 1 >= f->next_sector) {
-		return READFLAG_EOF;
-	}
-	return 0;
-}
-
-// *************
-// di_write_byte
-// *************
-
-static int di_write_byte(di_endpoint_t * diep, File * f, uint8_t ch)
-{
-	int oldpos;
-	int err;
-	uint8_t t = 0, s = 0;
-	uint8_t zero = 0;
-	// log_debug("di_write_byte %2.2x\n",ch);
-	if (f->chp > 253) {
-		// note: when the file is wrapped into a new endpoint, 
-		// then access mode is not set. Esp. when *f is a d80 file
-		// containing a d64 file that is updated with this method.
-		// example is test case fwtests/base/cmdchan1
-		if (true /*f->access_mode == FS_OPEN_RW */ ) {
-			// to make sure we're not in the middle of a file
-			// check the link track number
-			di_fseek_tsp(diep, f->cht, f->chs, 0);
-			di_fread(&t, 1, 1, diep->Ip);
-			di_fread(&s, 1, 1, diep->Ip);
-		}
-		if (t == 0) {
-			// only update link chain if we're not in the middle of a file
-			f->chp = 0;
-			oldpos = 256 * diep->DI.LBA(f->cht, f->chs);
-			err = di_find_free_block_NXTTS(diep, &f->cht, &f->chs);
-			if (err != CBM_ERROR_OK) {
-				return err;
-			}
-			di_fseek_pos(diep, oldpos);
-			di_fwrite(&f->cht, 1, 1, diep->Ip);
-			di_fwrite(&f->chs, 1, 1, diep->Ip);
-			di_fseek_tsp(diep, f->cht, f->chs, 0);
-			di_fwrite(&zero, 1, 1, diep->Ip);	// new link track
-			di_fwrite(&zero, 1, 1, diep->Ip);	// new link sector
-			++f->Slot.size;	// increment filesize
-			// log_debug("next block: (%d/%d)\n",f->cht,f->chs);
-		} else {
-			// position at next (existing) block
-			f->chp = 0;
-			f->cht = t;
-			f->chs = s;
-			di_fseek_tsp(diep, t, s, 2);
-		}
-	}
-	di_fwrite(&ch, 1, 1, diep->Ip);
-	++f->chp;
-	return CBM_ERROR_OK;
-}
 
 // ***********
 // di_read_seq
 // ***********
 
 static int
-di_read_seq(di_endpoint_t * diep, File * file, char *retbuf, int len, int *eof)
+di_read_seq(File * file, char *retbuf, int len, int *eof)
 {
 	int i;
 	log_debug("di_read_seq(fp %d, len=%d)\n", file, len);
 
-	// we need to seek before the actual read, to make sure a parallel access does not
-	// disturb the position. Only at the first byte of the file, cht/chs is invalid...
-	if (di_update_chx(diep, file, 1)) {
+	buf_t *datap = NULL;
+	di_GETBUF_data(&datap, file);
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (datap->buf[0] == 0 && file->chp + 1 >= datap->buf[1]) {
 		*eof = READFLAG_EOF;
 		return 0;
 	}
 
 	for (i = 0; i < len; ++i) {
-		*eof = di_read_byte(diep, file, retbuf + i);
+		*(retbuf + i) = datap->buf[file->chp + 2];
+
+		++file->chp;
+
+		// log_debug("di_read_byte %2.2x\n",(uint8_t)*retbuf);
+		if (datap->buf[0] == 0 && file->chp + 1 >= datap->buf[1]) {
+			*eof = READFLAG_EOF;
+		}
+		if (datap->buf[0] != 0 && file->chp + 1 >= 255) {
+			err = di_MAPBUF(datap, datap->buf[0], datap->buf[1]);
+		}
 		if (*eof)
 			return i + 1;
 	}
+	if (err != CBM_ERROR_OK) 
+		return -err;
 	return len;
 }
 
@@ -2950,14 +2905,46 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 		}
 		di_position(file, file->lastpos - 1);
 	}
-	di_fseek_tsp(diep, file->cht, file->chs, 2 + file->chp);
-	for (i = 0; i < len; ++i) {
-		if (di_write_byte(diep, file, (uint8_t) buf[i])) {
-			return -CBM_ERROR_DISK_FULL;
-		}
-	}
 
+	buf_t *data = NULL;
+	di_GETBUF_data(&data, file);
+	di_DIRTY(data);
+	for (i = 0; i < len; ++i) {
+		if (file->chp > 253) {
+			uint8_t t = 0, s = 0;
+			file->chp = 0;
+			t = data->buf[0];
+			if (t == 0) {
+				// only update link chain if we're not in the middle of a file
+				t = data->track;
+				s = data->sector;
+				err = di_find_free_block_NXTTS(diep, &t, &s);
+				if (err != CBM_ERROR_OK) {
+					goto end;
+				}
+				data->buf[0] = t;
+				data->buf[1] = s;
+				di_WRBUF(data);
+				di_SWITCH_data_side(file);
+				di_GETBUF_data(&data, file);
+				di_SETBUF(data, t, s);
+				data->buf[0] = 0;
+				data->buf[1] = 0;
+				++file->Slot.size;	// increment filesize
+				// log_debug("next block: (%d/%d)\n",f->cht,f->chs);
+			} else {
+				s = data->buf[1];
+				err = di_REUSEFLUSHMAP(data, t, s);
+				if (err != CBM_ERROR_OK) 
+					goto end;
+			}
+		}
+		data->buf[file->chp + 2] = buf[i];
+		++file->chp;
+	}
 	return CBM_ERROR_OK;
+end:
+	return -err;
 }
 
 // ------------------------------------------------------------------
@@ -3446,7 +3433,7 @@ static int di_readfile(file_t * fp, char *retbuf, int len, int *eof)
 		if (file->access_mode == FS_BLOCK) {
 			return di_read_block(diep, file, retbuf, len, eof);
 		} else {
-			rv = di_read_seq(diep, file, retbuf, len, eof);
+			rv = di_read_seq(file, retbuf, len, eof);
 		}
 	}
 	return rv;
@@ -3655,23 +3642,21 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 	// not EOF, i.e. cht is not zero
 
 	// flush data if necessary
-	di_FLUSH(f->data);
 	di_FLUSH(f->side);
 	di_FLUSH(f->super);
 
 	if (f->access_mode == FS_OPEN_WR ||
 	    f->access_mode == FS_OPEN_OW || f->access_mode == FS_OPEN_AP) {
 
-		t = 0;
-		s = f->chp + 1;
-		di_fseek_tsp(diep, f->cht, f->chs, 0);
-		di_fwrite(&t, 1, 1, diep->Ip);
-		di_fwrite(&s, 1, 1, diep->Ip);
-		log_debug("%p: Updated chain to (%d/%d)\n", diep, t, s);
+		f->data->buf[0] = 0;
+		f->data->buf[1] = f->chp + 1;
+		log_debug("%p: Updated chain to (%d/%d)\n", diep, 0, f->chp + 1);
+		di_WRBUF(f->data);	
+
 #ifdef BUG_FILE254
-		if (s == 255 && diep->DI.ID != 80 && diep->DI.ID != 82) {
-			uint8_t track = f->cht;
-			uint8_t sector = f->chs;
+		if (f->chp + 1 == 255 && diep->DI.ID != 80 && diep->DI.ID != 82) {
+			uint8_t track = f->data->track;
+			uint8_t sector = f->data->sector;
 			di_find_free_block_NXTTS(diep, &track, &sector);
 			log_debug("di_close: BUG_FILE254: allocate bogus block at the end of file: %d,%d\n",
 				track, sector);
@@ -3689,6 +3674,7 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 		}
 	} else if (f->access_mode == FS_OPEN_RW) {
 
+		di_FLUSH(f->data);
 
 		p = f->chp + 1;
 		di_fseek_tsp(diep, f->cht, f->chs, 0);
