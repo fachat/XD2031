@@ -58,6 +58,8 @@
 
 // when set, emulate the allocation of a bogus sector when a 254 byte long sector is written in a non-rel file
 #define	BUG_FILE254
+// when set, emulate wrong block size (=0) for newly allocated REL files
+#define	BUG_NEW_REL_SIZE
 
 #undef DEBUG_READ
 #define DEBUG_CMD
@@ -1964,6 +1966,9 @@ static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 	if (f->Slot.start_track == 0) {
 		f->Slot.start_track = track;
 		f->Slot.start_sector = sector;
+#ifdef BUG_NEW_REL_SIZE
+		f->Slot.size = 0;
+#endif
 		dirty = 1;
 	}
 
