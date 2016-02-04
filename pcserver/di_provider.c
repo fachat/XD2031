@@ -2938,6 +2938,7 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 				if (err != CBM_ERROR_OK) 
 					goto end;
 			}
+			di_DIRTY(data);
 		}
 		data->buf[file->chp + 2] = buf[i];
 		++file->chp;
