@@ -60,14 +60,12 @@
 #define	BUG_FILE254
 // when set, emulate wrong block size (=0) for newly allocated REL files
 #define	BUG_NEW_REL_SIZE
+// when set, emulate the allocation of a bogus block when a REL file ends in the first data block of a side sector
+#define	BUG_NEW_SIDE_SECTOR
 
 #undef DEBUG_READ
-#define DEBUG_CMD
+#undef DEBUG_CMD
 
-#define	ALLOC_LINEAR		0
-#define	ALLOC_INTERLEAVE	1
-#define	ALLOC_FIRST_BLOCK	2
-#define	ALLOC_SIDE_SECTOR	3
 
 // structure for directory slot handling
 
@@ -1501,6 +1499,9 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 
 	log_debug("di_navigate: expand numrecs=%d, targetrec=%d, data=%d/%d\n",
 		  numrecords, targetrec, data_track, data_sector);
+#ifdef BUG_NEW_SIDE_SECTOR
+	uint8_t bug_new_side_sector = 0;
+#endif
 
 	while (numrecords < targetrec) {
 
@@ -1619,16 +1620,27 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 				// current side sector is full, need another one
 
 				// DOS bug: allocates two blocks, but looses one - we at least don't loose it
+#ifdef BUG_NEW_SIDE_SECTOR
+				// but only happens when file ends here
+				if (((targetrec - numrecords) * recordlen) + data_pos <= 508) {
+					bug_new_side_sector = 1;
+				}
+#endif
 				data2_track = data_track;
 				data2_sector = data_sector;
 				log_debug
-				    ("di_navigate: allocate data2 block\n");
+			    	("di_navigate: allocate data2 block\n");
 				err =
-				    di_find_free_block_NXTTS(diep, &data2_track,
-							     &data2_sector);
+			    		di_find_free_block_NXTTS(diep, &data2_track,
+						     &data2_sector);
 				if (err != CBM_ERROR_OK)
 					goto end2;
-				(*blocks)++;
+#ifdef BUG_NEW_SIDE_SECTOR
+				if (!bug_new_side_sector) 
+#endif
+				{
+					(*blocks)++;
+				}
 
 				side_track = data_track;
 				side_sector = data_sector;
@@ -1779,18 +1791,23 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 			side_pos++;
 
 			if (data2_track != 0) {
-				// DOS bug: allocate another data block, link it, but do not write into side sector
-				// TODO: check when the DOS has created such a file, how do we handle it?
-				log_debug
-				    ("di_navigate: set data2 sector (side_pos=%d -> %d,%d)\n",
-				     side_pos, data2_track, data2_sector);
-				sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2)] =
-				    data2_track;
-				sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2) +
-					   1] = data2_sector;
-				sidep->buf[BLK_OFFSET_NEXT_SECTOR] =
-				    SSB_OFFSET_SECTOR + side_pos * 2 + 1;
-				side_pos++;
+#ifdef BUG_NEW_SIDE_SECTOR
+				if (!bug_new_side_sector) 
+#endif
+				{
+					// DOS bug: allocate another data block, link it, but do not write into side sector
+					// TODO: check when the DOS has created such a file, how do we handle it?
+					log_debug
+					    ("di_navigate: set data2 sector (side_pos=%d -> %d,%d)\n",
+					     side_pos, data2_track, data2_sector);
+					sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2)] =
+					    data2_track;
+					sidep->buf[SSB_OFFSET_SECTOR + (side_pos * 2) +
+						   1] = data2_sector;
+					sidep->buf[BLK_OFFSET_NEXT_SECTOR] =
+					    SSB_OFFSET_SECTOR + side_pos * 2 + 1;
+					side_pos++;
+				}
 			}
 			di_DIRTY(sidep);
 		}
@@ -1868,12 +1885,18 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 			data_sector = data2_sector;
 			data2_track = 0;
 
+#ifdef BUG_NEW_SIDE_SECTOR
+			if (bug_new_side_sector && data_track == 0) {
+				// forget to modify extra allocated block
+				next_track = 0;
+			}
+#endif
 			if (next_track != 0) {
 				di_REUSEFLUSHMAP(datap, next_track, next_sector);
 				memset(datap->buf, 0, 256);
 				datap->buf[BLK_OFFSET_NEXT_SECTOR] = 1;
+				di_DIRTY(datap);
 			}
-
 		} while (next_track != 0);
 
 		data_track = last_track;
