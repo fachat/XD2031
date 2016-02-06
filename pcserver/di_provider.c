@@ -56,12 +56,15 @@
 
 #include "log.h"
 
+
 // when set, emulate the allocation of a bogus sector when a 254 byte long sector is written in a non-rel file
-#define	BUG_FILE254
+#undef	BUG_FILE254
 // when set, emulate wrong block size (=0) for newly allocated REL files
-#define	BUG_NEW_REL_SIZE
+#undef	BUG_NEW_REL_SIZE
 // when set, emulate the allocation of a bogus block when a REL file ends in the first data block of a side sector
-#define	BUG_NEW_SIDE_SECTOR
+#undef	BUG_NEW_SIDE_SECTOR
+
+
 
 #undef DEBUG_READ
 #undef DEBUG_CMD
@@ -86,13 +89,15 @@ typedef struct {
 	uint8_t eod;		// end of directory
 } slot_t;
 
+struct but_t;
+
 typedef struct {		// derived from endpoint_t
 	endpoint_t base;	// payload
 	file_t *Ip;		// Image file pointer
 	//char         *curpath;             // malloc'd current path
 	Disk_Image_t DI;	// mounted disk image
-	uint8_t *BAM[4];	// Block Availability Maps
-	int BAMpos[4];		// File position of BAMs
+	struct buf_t *bam1;		// current BAM block
+	struct buf_t *bam2;		// second BAM block (1571 only)
 	uint8_t *buf[5];	// direct channel block buffer
 	uint8_t chan[5];	// channel #
 	uint8_t bp[5];		// buffer pointer
@@ -103,7 +108,7 @@ typedef struct {		// derived from endpoint_t
 } di_endpoint_t;
 
 // buffer handling
-typedef struct {
+typedef struct buf_t {
 	di_endpoint_t *diep;
 	uint8_t *buf;
 	uint8_t dirty;
@@ -119,7 +124,7 @@ typedef struct {
 	uint8_t CBM_file[20];	// filename with CBM charset
 	const char *dospattern;	// directory match pattern in PETSCII
 	buf_t *data;		// data block
-	buf_t *side;		// side sector block (REL file only)
+	buf_t *side;		// side sector block (REL file only), also double buffering on file read
 	buf_t *super;		// super side sector block (REL file only, 8250 and 1581 only)
 	uint8_t is_first;	// is first directory entry?
 	uint8_t next_track;
@@ -139,7 +144,6 @@ static registry_t di_endpoint_registry;
 handler_t di_file_handler;
 
 // prototypes
-static void di_read_BAM(di_endpoint_t * diep);
 static void di_write_slot(di_endpoint_t * diep, slot_t * slot);
 static void di_dump_file(file_t * fp, int recurse, int indent);
 
@@ -216,18 +220,11 @@ static cbm_errno_t di_load_image(di_endpoint_t * diep, file_t * file)
 	size_t filelen = file->handler->realsize(file);
 
 	if (diskimg_identify(&(diep->DI), filelen)) {
-		int numbamblocks = diep->DI.BAMBlocks;
-		for (int i = 0; i < numbamblocks; i++) {
-			diep->BAMpos[i] =
-			    256 * diep->DI.LBA(diep->DI.bamts[(i << 1)],
-					       diep->DI.bamts[(i << 1) + 1]);
-		}
 	} else {
 		log_error("Invalid/unsupported disk image\n");
 		return CBM_ERROR_FILE_TYPE_MISMATCH;	// not an image file
 	}
 
-	di_read_BAM(diep);
 	log_debug("di_load_image(%s) as d%d\n", file->filename, diep->DI.ID);
 	return CBM_ERROR_OK;	// success
 }
@@ -507,7 +504,8 @@ static cbm_errno_t di_FLUSH(buf_t * bufp)
  */
 static inline void di_DIRTY(buf_t * bufp)
 {
-	bufp->dirty = 1;
+	if (bufp != NULL)
+		bufp->dirty = 1;
 }
 
 /* 
@@ -609,37 +607,38 @@ static void di_fseek_pos(di_endpoint_t * diep, int pos)
 // ------------------------------------------------------------------
 // BAM handling
 
-// ***********
-// di_sync_BAM
-// ***********
+static cbm_errno_t di_GETBUF_bam(buf_t ** bufp, di_endpoint_t *diep) {
 
-static void di_sync_BAM(di_endpoint_t * diep)
-{
-	int i;
+	cbm_errno_t err = CBM_ERROR_OK;
 
-	for (i = 0; i < diep->DI.BAMBlocks; ++i) {
-		di_fseek_pos(diep, diep->BAMpos[i]);
-		di_fwrite(diep->BAM[i], 1, 256, diep->Ip);
+	if (diep->bam1 == NULL) {
+		err = di_GETBUF(&diep->bam1, diep);
 	}
+	*bufp = diep->bam1;
+	return err;
 }
 
-// ***********
-// di_read_BAM
-// ***********
+static cbm_errno_t di_GETBUF_bam2(buf_t ** bufp, di_endpoint_t *diep) {
 
-static void di_read_BAM(di_endpoint_t * diep)
-{
-	int i;
+	cbm_errno_t err = CBM_ERROR_OK;
 
-	for (i = 0; i < diep->DI.BAMBlocks; ++i) {
-		if (diep->BAM[i]) {
-			// free memory
-			free(diep->BAM[i]);
-		}
-		diep->BAM[i] = (uint8_t *) malloc(256);
-		di_fseek_pos(diep, diep->BAMpos[i]);
-		di_fread(diep->BAM[i], 1, 256, diep->Ip);
+	if (diep->bam2 == NULL) {
+		err = di_GETBUF(&diep->bam2, diep);
 	}
+	*bufp = diep->bam2;
+	return err;
+}
+
+static void di_DIRTY_bam(di_endpoint_t *diep) {
+
+	di_DIRTY(diep->bam1);
+	di_DIRTY(diep->bam2);
+}
+
+static void di_FLUSH_bam(di_endpoint_t *diep) {
+
+	di_FLUSH(diep->bam1);
+	di_FLUSH(diep->bam2);
 }
 
 // ***********
@@ -683,16 +682,27 @@ di_calculate_BAM(di_endpoint_t * diep, uint8_t Track, uint8_t ** outBAM,
 	Disk_Image_t *di = &diep->DI;
 	uint8_t *fbl;		// pointer to track free blocks
 	uint8_t *bam;		// pointer to BAM bit field
+	buf_t *bam1;
+	buf_t *bam2;
+
 
 	BAM_Number = (Track - 1) / di->TracksPerBAM;
 	BAM_Offset = di->BAMOffset;	// d64=4  d80=6  d81=16
 	BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
-	fbl = diep->BAM[BAM_Number] + BAM_Offset
+
+	// get BAM buffer block
+	di_GETBUF_bam(&bam1, diep);
+	di_REUSEFLUSHMAP(bam1, di->bamts[BAM_Number * 2], di->bamts[BAM_Number * 2 + 1]);
+
+	fbl = bam1->buf + BAM_Offset
 	    + ((Track - 1) % di->TracksPerBAM) * BAM_Increment;
 	bam = fbl + 1;		// except 1571 2nd. side
+
 	if (di->ID == 71 && Track > di->Tracks) {
-		fbl = diep->BAM[0] + 221 + (Track - 36);
-		bam = diep->BAM[1] + 3 * (Track - 36);
+		di_GETBUF_bam2(&bam2, diep);
+		di_REUSEFLUSHMAP(bam2, di->bamts[BAM_Number * 2], di->bamts[BAM_Number * 2 + 1]);
+		fbl = bam1->buf + 221 + (Track - 36);
+		bam = bam2->buf + 3 * (Track - 36);
 	}
 	*outFbl = fbl;
 	*outBAM = bam;
@@ -753,10 +763,10 @@ di_block_alloc(di_endpoint_t * diep, uint8_t * req_track, uint8_t * req_sector)
 			// found the requested one, allocate it
 			fbl[0]--;	// decrease free block counter
 			di_alloc_BAM(bam, sectorfound);
-			di_sync_BAM(diep);
+			di_DIRTY_bam(diep);
 			log_debug
-			    ("di_block_alloc: found %d/%d to alloc, BAM at pos %d\n",
-			     track, sectorfound, bam - diep->BAM[0]);
+			    ("di_block_alloc: found %d/%d to alloc, BAM at pos d\n",
+			     track, sectorfound /*, bam - diep->BAM[0]*/);
 			return CBM_ERROR_OK;
 		}
 		// we found another block
@@ -826,8 +836,8 @@ static int di_find_free_block_INTTS(di_endpoint_t * diep, uint8_t * out_track,
 		sector = di_scan_BAM_GETSEC(di, bam, track, 0);
 		fbl[0]--;	// decrease free block counter
 		di_alloc_BAM(bam, sector);
+		di_DIRTY_bam(diep);
 		diep->CurrentTrack = track;
-		di_sync_BAM(diep);
 		*out_track = track;
 		*out_sector = sector;
 
@@ -929,7 +939,7 @@ di_find_free_block_NXTTS(di_endpoint_t * diep, uint8_t * inout_track,
 
 		fbl[0]--;	// decrease free block counter
 		di_alloc_BAM(bam, sector);
-		di_sync_BAM(diep);
+		di_DIRTY_bam(diep);
 		diep->CurrentTrack = track;
 
 		log_debug
@@ -953,16 +963,21 @@ static int di_BAM_blocks_free(di_endpoint_t *diep) {
 	int i;
 	uint8_t *fbl;		// pointer to track free blocks
 	Disk_Image_t *di = &diep->DI;
+	buf_t *bam;
 
 	FreeBlocks = 0;
 	BAM_Number = 0;
 	BAM_Increment = 1 + ((di->Sectors + 7) >> 3);
 	Track = 1;
+	di_GETBUF_bam(&bam, diep);
 
-	while (BAM_Number < 4 && diep->BAM[BAM_Number]) {
-		fbl = diep->BAM[BAM_Number] + di->BAMOffset;
+	while (BAM_Number < 4 && di->bamts[BAM_Number * 2]) {
+
+		di_REUSEFLUSHMAP(bam, di->bamts[BAM_Number * 2], di->bamts[BAM_Number * 2 + 1]);
+
+		fbl = bam->buf + di->BAMOffset;
 		if (di->ID == 71 && Track > di->Tracks) {
-			fbl = diep->BAM[0] + 221;
+			fbl = bam->buf + 221;
 			BAM_Increment = 1;
 		}
 		for (i = 0;
@@ -1106,7 +1121,7 @@ static int di_block_free(di_endpoint_t * diep, uint8_t Track, uint8_t Sector)
 		++fbl[0];	// increase # of free blocks on track
 		bam[Sector >> 3] |= (1 << (Sector & 7));	// mark as free (1)
 
-		di_sync_BAM(diep);
+		di_DIRTY_bam(diep);
 
 		return CBM_ERROR_OK;
 	}
@@ -2309,8 +2324,8 @@ static void di_first_slot(di_endpoint_t * diep, slot_t * slot)
 		slot->dir_sector = 3;
 	} else {
 		slot->pos =
-		    256 * diep->DI.LBA(diep->BAM[0][0], diep->BAM[0][1]);
-		slot->dir_sector = diep->BAM[0][1];
+		    256 * diep->DI.LBA(diep->DI.DirTrack, diep->DI.DirSector);
+		slot->dir_sector = diep->DI.DirSector;
 	}
 	slot->number = 0;
 	slot->eod = 0;
@@ -2400,7 +2415,6 @@ static int di_allocate_new_dir_block(di_endpoint_t * diep, slot_t * slot)
 		return err;	// directory full;
 	}
 
-	di_sync_BAM(diep);
 	di_update_dir_chain(diep, slot, sector);
 	slot->pos = 256 * diep->DI.LBA(diep->DI.DirTrack, sector);
 	slot->eod = 0;
@@ -2992,9 +3006,9 @@ static int di_format(endpoint_t * ep, const char *name)
 
 	// the buffer we are going to use for format
 	buf_t *bp = NULL;
+	di_GETBUF_bam(&bp, diep);
 
 	// read original disk ID and save it
-	di_GETBUF(&bp, diep);
 	di_MAPBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
 
 	buf = bp->buf;
@@ -3244,11 +3258,6 @@ static int di_format(endpoint_t * ep, const char *name)
 	memset(buf, 0, 256);
 	buf[1] = 0xff;
 	di_WRBUF(bp);
-
-	di_FREBUF(&bp);
-
-	// re-read BAM
-	di_read_BAM(diep);
 
 	return CBM_ERROR_OK;
 }
@@ -3693,7 +3702,7 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 #endif
 		di_write_slot(diep, &f->Slot);	// Save new status of directory entry
 		log_debug("%p: Status of directory entry saved\n", diep);
-		di_sync_BAM(diep);	// Save BAM status
+		di_FLUSH_bam(diep);	// Save BAM status
 		log_debug("%p: BAM saved.\n", diep);
 		di_fsync(diep->Ip);
 
@@ -3714,12 +3723,12 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 			di_fseek_tsp(diep, f->cht, f->chs, 1);
 			di_fwrite(&p, 1, 1, diep->Ip);
 			log_debug("Updated chain to (%d/%d)\n", t, p);
-			di_write_slot(diep, &f->Slot);	// Save new status of directory entry
-			log_debug("Status of directory entry saved\n");
-			di_sync_BAM(diep);	// Save BAM status
-			log_debug("BAM saved.\n");
-			di_fsync(diep->Ip);
 		}
+		di_write_slot(diep, &f->Slot);	// Save new status of directory entry
+		log_debug("Status of directory entry saved\n");
+		di_FLUSH_bam(diep);	// Save BAM status
+		log_debug("BAM saved.\n");
+		di_fsync(diep->Ip);
 	} else {
 		log_debug("Closing read only file, no sync required.\n");
 	}
