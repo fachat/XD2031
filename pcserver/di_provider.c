@@ -126,11 +126,8 @@ typedef struct {
 	buf_t *data;		// data block
 	buf_t *side;		// side sector block (REL file only), also double buffering on file read
 	buf_t *super;		// super side sector block (REL file only, 8250 and 1581 only)
-	uint8_t is_first;	// is first directory entry?
 	uint8_t next_track;
 	uint8_t next_sector;
-	uint8_t cht;		// chain track
-	uint8_t chs;		// chain sector
 	uint8_t chp;		// chain pointer
 	uint8_t access_mode;
 	uint16_t lastpos;	// last P record number + 1, to expand to on write if > 0
@@ -176,9 +173,6 @@ static void di_init_fp(const type_t * t, void *obj)
 	File *fp = (File *) obj;
 
 	fp->buf = NULL;
-	fp->is_first = 0;
-	fp->cht = 0;
-	fp->chs = 0;
 	fp->chp = 0;
 	fp->file.handler = &di_file_handler;
 	fp->dospattern = NULL;
@@ -2156,8 +2150,6 @@ static int di_position(File * f, int recordno)
 		err = CBM_ERROR_RECORD_NOT_PRESENT;
 	}
 
-	f->cht = ss_track;
-	f->chs = ss_sector;
 	f->chp = rec_start;
 	f->next_track = bufp->buf[0];
 	f->next_sector = bufp->buf[1];
@@ -2209,8 +2201,6 @@ static int di_seek(file_t * file, long position, int flag)
 	// each block is 254 data bytes
 	do {
 		di_fseek_tsp(diep, next_t, next_s, 0);
-		f->cht = next_t;
-		f->chs = next_s;
 		di_fread(&next_t, 1, 1, diep->Ip);
 		di_fread(&next_s, 1, 1, diep->Ip);
 		if (next_t == 0 || position < 254) {
@@ -3355,8 +3345,6 @@ static size_t di_realsize(file_t * file)
 	// each block is 254 data bytes
 	do {
 		di_fseek_tsp(diep, next_t, next_s, 0);
-		f->cht = next_t;
-		f->chs = next_s;
 		di_fread(&next_t, 1, 1, diep->Ip);
 		di_fread(&next_s, 1, 1, diep->Ip);
 		if (next_t == 0) {
@@ -3581,8 +3569,6 @@ static void di_dump_file(file_t * fp, int recurse, int indent)
 
 	log_debug("%snext_track='%d';\n", prefix, file->next_track);
 	log_debug("%snext_sector='%d';\n", prefix, file->next_sector);
-	log_debug("%scht='%d';\n", prefix, file->cht);
-	log_debug("%schs='%d';\n", prefix, file->chs);
 	log_debug("%schp='%d';\n", prefix, file->chp);
 
 }
@@ -3661,7 +3647,7 @@ static void di_print_block(di_endpoint_t * diep, int pos)
 // di_close_fd
 // ***********
 
-static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
+static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f, uint8_t *tr, uint8_t *se)
 {
 	uint8_t t, s, p;
 	cbm_errno_t err = CBM_ERROR_OK;
@@ -3709,21 +3695,22 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f)
 		int free_blocks = di_BAM_blocks_free(diep);
 		if (free_blocks == 0) {
 			err = CBM_ERROR_DISK_FULL;
+			*tr = f->data->track;
+			*se = f->data->sector;
 		}
 	} else if (f->access_mode == FS_OPEN_RW) {
 
-		di_FLUSH(f->data);
 
 		p = f->chp + 1;
-		di_fseek_tsp(diep, f->cht, f->chs, 0);
-		di_fread(&t, 1, 1, diep->Ip);
-		di_fread(&s, 1, 1, diep->Ip);
+		t = f->data->buf[0];
+		s = f->data->buf[1];
 		if (t == 0 && p > s) {
 			// only update the file chain if we're not writing in the middle of it
-			di_fseek_tsp(diep, f->cht, f->chs, 1);
-			di_fwrite(&p, 1, 1, diep->Ip);
+			f->data->buf[1] = p;
 			log_debug("Updated chain to (%d/%d)\n", t, p);
+			di_DIRTY(f->data);
 		}
+		di_FLUSH(f->data);
 		di_write_slot(diep, &f->Slot);	// Save new status of directory entry
 		log_debug("Status of directory entry saved\n");
 		di_FLUSH_bam(diep);	// Save BAM status
@@ -3750,15 +3737,17 @@ static int di_close(file_t * fp, int recurse, char *outbuf, int *outlen)
 {
 	File *file = (File *) fp;
 	(void)recurse;		// unused, as we have no subdirs
+	uint8_t t;
+	uint8_t s;
 
 	di_endpoint_t *diep = (di_endpoint_t *) fp->endpoint;
 
-	cbm_errno_t err = di_close_fd(diep, file);
+	cbm_errno_t err = di_close_fd(diep, file, &t, &s);
 
 	if (outlen != NULL) {
 		if (err == CBM_ERROR_DISK_FULL && *outlen > 1) {
-			outbuf[0] = file->cht;
-			outbuf[1] = file->chs;
+			outbuf[0] = t;
+			outbuf[1] = s;
 			*outlen = 2;
 		} else {
 			*outlen = 0;
