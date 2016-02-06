@@ -1,0 +1,36 @@
+
+
+;reltest3.c.prg ==0401==
+  100 d=8
+  120 ex=0
+  130 open1,d,15
+  150 goto 505
+  500 geta$:ifa$=""then500
+  501 poke2,2:sys2:rem exit vice
+  505 print"test:"
+  830 gosub 2200
+  840 goto 500
+ 2200 print"create 2 recs of 126 byte, till end of 1st blk"
+ 2205 n=2
+ 2210 gosub9100
+ 2220 print#1,"p"chr$(2)chr$(2)chr$(0);
+ 2222 gosub9000
+ 2225 print#2,"foo"
+ 2227 gosub9000
+ 2230 print#1,"p"chr$(2)chr$(26)chr$(0);
+ 2240 ex=-1:gosub9000
+ 2250 print#2,"12345"
+ 2260 ex=-1:gosub9000
+ 2270 close2
+ 2399 return
+ 9000 input#1,a,b$,t,s
+ 9010 if a<>ex thenprinta","b$","t","s
+ 9015 ex=0
+ 9020 return
+ 9100 open2,d,2,"0:rel6."+chr$(48+n)+",l,"+chr$(126)
+ 9105 if st<>0 then print"st="st
+ 9110 gosub9000
+ 9130 return
+ 9200 if st<>0 then print"st="st
+ 9230 return
+

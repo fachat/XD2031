@@ -34,6 +34,9 @@ reltest6.*
 	then write to another record and write. The position of the
 	second record is strategically placed, like first block in 
 	new side sector / side sector group...
+reltest7.*
+	Similar to 6.*, but use record size 126 (two records make 
+	a full sector)
 
 The remaining errors are:
 
