@@ -1,0 +1,3 @@
+]]ERR:Detected mismatch at line 245
+]]Rxd   : 0000  97 02                                             |                |
+]]Expect: 0000  96 02                                             |                |

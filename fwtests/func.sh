@@ -312,15 +312,17 @@ done;
 
 CNT_TOTAL=0
 CNT_EXPECTED=0
+CNT_NOEXPECTED=0
 CNT_ERROR=0
 
 ########################
 # run scripts
 #
 
-R_OK='.'
-R_EXP='x'
-R_ERR='X'
+R_OK='.'	# no errors found, no errors expected
+R_NOEXP='o'	# no errors found, but errors were expected
+R_EXP='x'	# expected errors found
+R_ERR='X'	# unexpected errors found
 
 for script in $TESTSCRIPTS; do
 
@@ -390,7 +392,7 @@ for script in $TESTSCRIPTS; do
 			while [ ! -S $TMPDIR/$CSOCKET ]; do sleep 0.1; done
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tee $TMPDIR/$RUNNERLOG;
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
 			RESULT=${PIPESTATUS[0]}
 			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
 			#RESULT=$?
@@ -402,11 +404,17 @@ for script in $TESTSCRIPTS; do
 			if [ $ERRIGNORE -eq 0 ]; then
 				if [ -f $THISDIR/${script}_expected ]; then
 					# expected file exists
-					cmp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected
+					cmp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected 2>/dev/null
 					if [ $? -ne 0 ]; then
-						echo ">>> Expected errors differ!" >&5
-						CNT_ERROR=$(($CNT_ERROR+1))
-						R=${R_ERR}
+						if [ -s $TMPDIR/$RUNNERLOG ]; then
+							echo ">>> Expected errors differ!" >&5
+							CNT_ERROR=$(($CNT_ERROR+1))
+							R=${R_ERR}
+						else
+							echo ">>  No script errors found but was expected!" >&5
+							CNT_NOEXPECTED=$(($CNT_NOEXPECTED+1))
+							R=${R_NOEXP}
+						fi
 					else 
 						echo ">   Errors occured as expected!" >&5
 						CNT_EXPECTED=$(($CNT_EXPECTED+1))
@@ -480,13 +488,15 @@ for script in $TESTSCRIPTS; do
                         elif test $result -eq 2; then
                                 echo ">   File ${i} differs (as expected)!" >&5
 				CNT_EXPECTED=$(($CNT_EXPECTED+1))
-				if [ "$R" = "${R_OK}" ]; then
+				if [ "$R" = "${R_OK}" -o "$R" = "${R_NOEXP}" ]; then
 					R=${R_EXP}
 				fi
                         elif test $result -eq 3; then
-                                echo ">>> File ${i} does not differ, but diff was expected!" >&5
-				CNT_ERROR=$(($CNT_ERROR+1))
-				R=${R_ERR}
+                                echo ">>  File ${i} does not differ, but diff was expected!" >&5
+				CNT_NOEXPECTED=$(($CNT_NOEXPECTED+1))
+				if [ "$R" = "${R_OK}" ]; then
+					R=${R_NOEXP}
+				fi
 			else
                                 echo "    File ${i} compare ok!" >&5
 		 	fi
@@ -506,7 +516,7 @@ done;
 if [ $QUIET -eq 2 ]; then
 	echo >&6
 fi
-echo "$CNT_TOTAL scripts executed, $CNT_EXPECTED expected diffs, $CNT_ERROR errors!" >&6
+echo "$CNT_TOTAL scripts executed, $CNT_EXPECTED expected diffs, $CNT_NOEXPECTED diffs not found, $CNT_ERROR errors!" >&6
 
 if test $CLEAN -ge 2; then
 	echo "Cleaning up directory $TMPDIR"
