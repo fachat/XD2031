@@ -65,8 +65,7 @@ int lba_to_ts(int lba, int (*LBA)(int t, int s), int* track, int* sector) {
    s = 0;
    for (t = 1; t <=154; t++) {
       clba = LBA(t, s);
-      if (clba < 0) return -1;
-      if (clba > lba) break;
+      if (clba < 0 || clba > lba) break;
    }
    t--;
    for (s = 0; s <= 39; s++) {
@@ -131,6 +130,7 @@ int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity
 
       // Show summary and check files
       if (test_integrity) {
+         log_info("image type: D%d\n", imgs->di[i].di.ID);
          log_info("filename: %s\n", imgs->di[i].filename);
          log_info("filesize: %lu bytes\n", (long int) filesize);
          if (imgs->di[i].di.HasErrorTable)

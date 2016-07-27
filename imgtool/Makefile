@@ -43,7 +43,7 @@ AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 INCPATHS=. ../common ../pcserver $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
-CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
+CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER -O0
 
 SRC=imgtool.c diskimgs.c log.c terminal.c relfiles.c wildcard.c
 
