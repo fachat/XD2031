@@ -13,8 +13,8 @@ TARGET=imgtool
 # Please note doc/README-win32
 ifeq ($(WIN),y)
   ARCH    = win32
-  CROSS   = i686-pc-mingw32-
   LDFLAGS = 
+  CROSS   = i686-w64-mingw32.static-
   TARGET  = imgtool.exe
 else
   ARCH    = posix

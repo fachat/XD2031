@@ -15,7 +15,7 @@ TARGET=fsser
 # Please note doc/README-win32
 ifeq ($(WIN),y)
   ARCH    = win32
-  CROSS   = i686-pc-mingw32-
+  CROSS   = i686-w64-mingw32.static-
   CFLAGS  = -DCURL_STATICLIB 
   LDFLAGS = -static -Wl,-Bsymbolic-functions -lcurl -lssh2 -lidn -lgcrypt \
             -lgnutls -lcrypt32 -lwldap32 -lz -lnettle -lintl -liconv \
