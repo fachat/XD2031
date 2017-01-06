@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/time.h>		// select()
+#include <stdint.h>
 
 /* patch dir separator characters to '/'
  * fs_provider (Linux / OS X), http and ftp require the slash.
