@@ -717,6 +717,14 @@ bool dump(di_t *di, char *filemask) {
    return dirwalk(di, NULL, filemask, NULL, dump_file);
 }
 
+
+void show_version(void)
+{
+   printf("imgtool version 2017-01-06\n");
+   exit(EXIT_SUCCESS);
+}
+
+
 void usage(void) {
    printf("usage:\n"
           "\timgtool [options] diskimage ...\n"
@@ -734,6 +742,7 @@ void usage(void) {
           "\t\t\tas if they were all read\n"
           "\t-W\t\tMark weak blocks in error table with $FF\n"
           "\t-v\t\tMore verbose output\n"
+          "\t-V\t\tShow version\n"
           );
 }
 
@@ -822,6 +831,11 @@ int main (int argc, char* argv[]) {
             case 'v':
                set_verbose();
                break;
+
+            case 'V':
+               show_version();
+               break;
+
 
             case 'W':
                option_weak_block_entry = 0xff;
