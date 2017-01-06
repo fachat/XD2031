@@ -13,8 +13,8 @@ TARGET=imgtool
 # Please note doc/README-win32
 ifeq ($(WIN),y)
   ARCH    = win32
-  LDFLAGS = 
   CROSS   = i686-w64-mingw32.static-
+  LDFLAGS =
   TARGET  = imgtool.exe
 else
   ARCH    = posix
@@ -24,7 +24,7 @@ else
 endif
 
 
-all: $(TARGET) 
+all: $(TARGET)
 
 PREFIX=/usr/local
 BINDIR=bin
@@ -108,4 +108,4 @@ uninstall:
 
 -include $(ARCH)/$(ARCH).mk
 
-.PHONY: all install uninstall 
+.PHONY: all install uninstall
