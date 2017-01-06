@@ -109,12 +109,6 @@ static inline void color_textcolor_cyan (void) {
 #include "terminal.h"
 #include "log.h"
 
-// OSX comes with ncurses 5.4, but tiparm was a new function in 5.8
-#ifdef __APPLE__
-static char* tiparm(char *s, long v) {
-	return tparm(s, v, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-#endif
 
 static int colors_available = 0;
 static char *default_color, *red, *green, *yellow, *blue, *magenta, *white, *cyan;
@@ -145,32 +139,34 @@ int terminal_init (void) {
 
 	if (tigetstr("setaf")) {
 		log_debug("Using setaf color definitions\n");
-		red	= strdup(tiparm(tigetstr("setaf"), 1));
-		green	= strdup(tiparm(tigetstr("setaf"), 2));
-		yellow	= strdup(tiparm(tigetstr("setaf"), 3));
+		red	= strdup(tparm(tigetstr("setaf"), 1, 0, 0, 0, 0, 0, 0, 0, 0));
+		green	= strdup(tparm(tigetstr("setaf"), 2, 0, 0, 0, 0, 0, 0, 0, 0));
+		yellow	= strdup(tparm(tigetstr("setaf"), 3, 0, 0, 0, 0, 0, 0, 0, 0));
                 if(boldstr) {
-		   blue	= malloc(strlen(boldstr) + strlen(tiparm(tigetstr("setaf"), 4)) + 1);
+		   size_t blue_len = strlen(boldstr) +
+                      strlen(tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0)) + 1;
+		   blue	= malloc(blue_len);
                    if(!blue) {
                       log_error("malloc failed!\n");
                       exit(1);
                    }
-                   strcpy(blue, boldstr);
-                   strcat(blue, tiparm(tigetstr("setaf"), 4));
-                } else blue = strdup(tiparm(tigetstr("setaf"), 4));
-		magenta = strdup(tiparm(tigetstr("setaf"), 5));
-		cyan	= strdup(tiparm(tigetstr("setaf"), 6));
-		white	= strdup(tiparm(tigetstr("setaf"), 7));
+                   strlcpy(blue, boldstr, blue_len);
+                   strlcat(blue, tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0), blue_len);
+                } else blue = strdup(tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0));
+		magenta = strdup(tparm(tigetstr("setaf"), 5, 0, 0, 0, 0, 0, 0, 0, 0));
+		cyan	= strdup(tparm(tigetstr("setaf"), 6, 0, 0, 0, 0, 0, 0, 0, 0));
+		white	= strdup(tparm(tigetstr("setaf"), 7, 0, 0, 0, 0, 0, 0, 0, 0));
 		colors_available = 1;
 		atexit(terminal_reset);
 	} else if (tigetstr("setf")) {
 		log_debug("Using setf color definitions\n");
-		red	= strdup(tiparm(tigetstr("setf"), 4));
-		green	= strdup(tiparm(tigetstr("setf"), 2));
-		yellow	= strdup(tiparm(tigetstr("setf"), 6));
-		blue	= strdup(tiparm(tigetstr("setf"), 1));
-		magenta = strdup(tiparm(tigetstr("setf"), 5));
-		cyan	= strdup(tiparm(tigetstr("setf"), 3));
-		white	= strdup(tiparm(tigetstr("setf"), 7));
+		red	= strdup(tparm(tigetstr("setf"), 4, 0, 0, 0, 0, 0, 0, 0, 0));
+		green	= strdup(tparm(tigetstr("setf"), 2, 0, 0, 0, 0, 0, 0, 0, 0));
+		yellow	= strdup(tparm(tigetstr("setf"), 6, 0, 0, 0, 0, 0, 0, 0, 0));
+		blue	= strdup(tparm(tigetstr("setf"), 1, 0, 0, 0, 0, 0, 0, 0, 0));
+		magenta = strdup(tparm(tigetstr("setf"), 5, 0, 0, 0, 0, 0, 0, 0, 0));
+		cyan	= strdup(tparm(tigetstr("setf"), 3, 0, 0, 0, 0, 0, 0, 0, 0));
+		white	= strdup(tparm(tigetstr("setf"), 7, 0, 0, 0, 0, 0, 0, 0, 0));
 		colors_available = 1;
 		atexit(terminal_reset);
 	} else {
