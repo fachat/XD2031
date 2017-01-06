@@ -496,6 +496,12 @@ bool dirwalk(di_t *di, bool *weak, char *filemask, void *common,
 
    for(;;) {
       lba = di->di.LBA(t,s);
+      if (lba < 0)
+      {
+         log_error("Illegal track or sector (t=%d, s=%d), aborting dir walk\n", t, s);
+         faulty++;
+         break;
+      }
 
       if(is_bad_block(di->error_table[lba])) {
          faulty = true;
