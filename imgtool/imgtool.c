@@ -65,8 +65,7 @@ int lba_to_ts(int lba, int (*LBA)(int t, int s), int* track, int* sector) {
    s = 0;
    for (t = 1; t <=154; t++) {
       clba = LBA(t, s);
-      if (clba < 0) return -1;
-      if (clba > lba) break;
+      if (clba < 0 || clba > lba) break;
    }
    t--;
    for (s = 0; s <= 39; s++) {
@@ -131,6 +130,7 @@ int read_images(imgset_t *imgs, uint8_t error_table_default, bool test_integrity
 
       // Show summary and check files
       if (test_integrity) {
+         log_info("image type: D%d\n", imgs->di[i].di.ID);
          log_info("filename: %s\n", imgs->di[i].filename);
          log_info("filesize: %lu bytes\n", (long int) filesize);
          if (imgs->di[i].di.HasErrorTable)
@@ -496,6 +496,12 @@ bool dirwalk(di_t *di, bool *weak, char *filemask, void *common,
 
    for(;;) {
       lba = di->di.LBA(t,s);
+      if (lba < 0)
+      {
+         log_error("Illegal track or sector (t=%d, s=%d), aborting dir walk\n", t, s);
+         faulty++;
+         break;
+      }
 
       if(is_bad_block(di->error_table[lba])) {
          faulty = true;
@@ -711,6 +717,14 @@ bool dump(di_t *di, char *filemask) {
    return dirwalk(di, NULL, filemask, NULL, dump_file);
 }
 
+
+void show_version(void)
+{
+   printf("imgtool version 2017-01-06\n");
+   exit(EXIT_SUCCESS);
+}
+
+
 void usage(void) {
    printf("usage:\n"
           "\timgtool [options] diskimage ...\n"
@@ -728,6 +742,7 @@ void usage(void) {
           "\t\t\tas if they were all read\n"
           "\t-W\t\tMark weak blocks in error table with $FF\n"
           "\t-v\t\tMore verbose output\n"
+          "\t-V\t\tShow version\n"
           );
 }
 
@@ -816,6 +831,11 @@ int main (int argc, char* argv[]) {
             case 'v':
                set_verbose();
                break;
+
+            case 'V':
+               show_version();
+               break;
+
 
             case 'W':
                option_weak_block_entry = 0xff;

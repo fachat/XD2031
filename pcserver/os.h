@@ -70,12 +70,12 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <winsock2.h>
 #include <windows.h>
 #include <io.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <winsock2.h>
 #include <conio.h>		// _kbhit()
 #endif
 

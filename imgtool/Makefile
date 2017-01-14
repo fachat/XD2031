@@ -13,8 +13,8 @@ TARGET=imgtool
 # Please note doc/README-win32
 ifeq ($(WIN),y)
   ARCH    = win32
-  CROSS   = i686-pc-mingw32-
-  LDFLAGS = 
+  CROSS   = i686-w64-mingw32.static-
+  LDFLAGS =
   TARGET  = imgtool.exe
 else
   ARCH    = posix
@@ -24,7 +24,7 @@ else
 endif
 
 
-all: $(TARGET) 
+all: $(TARGET)
 
 PREFIX=/usr/local
 BINDIR=bin
@@ -43,7 +43,7 @@ AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 INCPATHS=. ../common ../pcserver $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
-CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
+CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER -O0
 
 SRC=imgtool.c diskimgs.c log.c terminal.c relfiles.c wildcard.c
 
@@ -108,4 +108,4 @@ uninstall:
 
 -include $(ARCH)/$(ARCH).mk
 
-.PHONY: all install uninstall 
+.PHONY: all install uninstall
