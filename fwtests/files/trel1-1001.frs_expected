@@ -1,5 +1,3 @@
-]]INF:main: device = /csocket_trel1-1001.frs
-]]INF:Connecting to socket /csocket_trel1-1001.frs
 ]]ERR:Detected mismatch at line 174
 ]]Rxd   : 0000  03 00                                             |                |
 ]]Expect: 0000  00 00                                             |                |

@@ -1,0 +1,390 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f0
+send "$0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 60
+expect 01
+atn 5f
+atn 48 60
+expect 04
+atn 5f
+atn 48 60
+expect 01
+atn 5f
+atn 48 60
+expect 01
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "V"
+atn 5f
+atn 48 60
+expect "I"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "0"
+atn 5f
+atn 48 60
+expect "1"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 48 60
+expect 01
+atn 5f
+atn 48 60
+expect 01
+atn 5f
+atn 48 60
+expect 04
+atn 5f
+atn 48 60
+expect 08
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 48 60
+recv 00
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e0 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 ef 3f
+atn 3f
+atn 28 f0
+send "$"
+atn 3f
+atn 48 60
+expect 01 04
+atn 48 60
+expect 01 01
+atn 48 60
+expect 00 00
+atn 5f
+atn 48 60
+expect 12
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect "V"
+atn 5f
+atn 48 60
+expect "I"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 22
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "0"
+atn 5f
+atn 48 60
+expect "1"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "2"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+expect 01 01
+atn 48 60
+expect 04 08
+atn 5f
+atn 48 60
+expect "B"
+atn 5f
+atn 48 60
+expect "L"
+atn 5f
+atn 48 60
+expect "O"
+atn 5f
+atn 48 60
+expect "C"
+atn 5f
+atn 48 60
+expect "K"
+atn 5f
+atn 48 60
+expect "S"
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect "F"
+atn 5f
+atn 48 60
+expect "R"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "E"
+atn 5f
+atn 48 60
+expect "."
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect " "
+atn 5f
+atn 48 60
+expect 00
+atn 5f
+atn 3f
+atn 48 60
+recv 00 00
+atn 5f
+atn 28 e0 3f

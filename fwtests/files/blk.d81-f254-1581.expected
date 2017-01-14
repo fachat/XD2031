@@ -1,0 +1,11 @@
+--- /shouldbe_blk.d81.hex
++++ /blk.d81.hex
+@@ -24,7 +24,7 @@
+ 000619c0  ff ff ff ff 28 ff ff ff  ff ff 28 ff ff ff ff ff  |....(.....(.....|
+ 000619d0  28 ff ff ff ff ff 28 ff  ff ff ff ff 28 ff ff ff  |(.....(.....(...|
+ 000619e0  ff ff 28 ff ff ff ff ff  28 ff ff ff ff ff 28 ff  |..(.....(.....(.|
+-000619f0  ff ff ff ff 26 fc ff ff  ff ff 24 f0 ff ff ff ff  |....&.....$.....|
++000619f0  ff ff ff ff 27 fe ff ff  ff ff 24 f0 ff ff ff ff  |....'.....$.....|
+ 00061a00  00 ff 44 bb 30 31 c0 00  00 00 00 00 00 00 00 00  |..D.01..........|
+ 00061a10  28 ff ff ff ff ff 28 ff  ff ff ff ff 28 ff ff ff  |(.....(.....(...|
+ 00061a20  ff ff 28 ff ff ff ff ff  28 ff ff ff ff ff 28 ff  |..(.....(.....(.|

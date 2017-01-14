@@ -1,0 +1,26 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create N files to see how DIR creation works
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1002 gosub 9000
+ 1005 open2,u,1,"foo"
+ 1006 close 2
+ 1010 gosub 9000
+ 1020 open2,u,0,"$0"
+ 1030 gosub 9000
+ 1040 get#2,a$:if a$="" then a$=chr$(0)
+ 1050 if st = 0 then 1040
+ 1060 gosub 9000
+ 1070 close 2
+ 1080 gosub 9000
+ 3210 close1
+ 3230 directory
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+
