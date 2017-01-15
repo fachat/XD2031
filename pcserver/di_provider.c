@@ -73,12 +73,10 @@
 // structure for directory slot handling
 
 typedef struct {
-	unsigned int number;	// current slot number
-	unsigned int pos;	// file position
-	unsigned int size;	// file size in (254 byte) blocks
+	unsigned int in_sector;	// current slot number in sector, start with 0
+	uint8_t dir_track;	// track in which the slot resides
 	uint8_t dir_sector;	// sector in which the slot resides
-	uint8_t next_track;	// next directory track
-	uint8_t next_sector;	// next directory sector
+	unsigned int size;	// file size in (254 byte) blocks
 	uint8_t filename[20];	// filename (C string zero terminated)
 	uint8_t type;		// file type
 	uint8_t start_track;	// first track
@@ -98,6 +96,7 @@ typedef struct {		// derived from endpoint_t
 	Disk_Image_t DI;	// mounted disk image
 	struct buf_t *bam1;		// current BAM block
 	struct buf_t *bam2;		// second BAM block (1571 only)
+	struct buf_t *dir;		// buffer for directory traversal
 	uint8_t *buf[5];	// direct channel block buffer
 	uint8_t chan[5];	// channel #
 	uint8_t bp[5];		// buffer pointer
@@ -413,6 +412,17 @@ static cbm_errno_t di_GETBUF_super(buf_t ** bufp, File *file) {
 	return err;
 }
 
+static cbm_errno_t di_GETBUF_dir(buf_t ** bufp, di_endpoint_t *ep) {
+
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	if (ep->dir == NULL) {
+		err = di_GETBUF(&ep->dir, ep);
+	}
+	*bufp = ep->dir;
+	return err;
+}
+
 // switch double buffering blocks (data <-> side)
 static void di_SWITCH_data_side(File *file) {
 	buf_t *p = file->data;
@@ -584,17 +594,6 @@ di_fseek_tsp(di_endpoint_t * diep, uint8_t track, uint8_t sector, uint8_t ptr)
 	    ("di_fseek_tsp: diep=%p, seeking to position %ld (0x%lx) for t/s/p=%d/%d/%d\n",
 	     diep, seekpos, seekpos, track, sector, ptr);
 	di_fseek(diep->Ip, seekpos, SEEKFLAG_ABS);
-}
-
-// ************
-// di_fseek_pos
-// ************
-
-static void di_fseek_pos(di_endpoint_t * diep, int pos)
-{
-	log_debug("di_fseek_pos: diep=%p, pos=%d (0x%x)\n", diep, pos, pos);
-
-	di_fseek(diep->Ip, pos, SEEKFLAG_ABS);
 }
 
 
@@ -2245,7 +2244,7 @@ static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 {
 	uint8_t p[32];
 
-	log_debug("di_write_slot %d\n", slot->number);
+	log_debug("di_write_slot %d\n", slot->in_sector);
 	// di_print_slot(slot);
 	memset(p, 0, 32);	// clear slot
 	memset(p + 5, 0xa0, 16);	// fill name with $A0
@@ -2259,9 +2258,11 @@ static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 	p[30] = slot->size & 0xff;
 	p[31] = slot->size >> 8;
 
-	log_debug("di_write_slot pos %x\n", slot->pos);
+	log_debug("di_write_slot pos %d/%d/%d\n", slot->dir_track, slot->dir_sector, slot->in_sector);
+/* TODO
 	di_fseek_pos(diep, slot->pos + 2);
 	di_fwrite(p + 2, 1, 30, diep->Ip);
+*/
 	// di_print_block(diep,slot->pos & 0xffffff00);
 }
 
@@ -2272,9 +2273,13 @@ static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
 {
 	int i = 0;
-	uint8_t p[32];
-	di_fseek_pos(diep, slot->pos);
-	di_fread(p, 1, 32, diep->Ip);
+	uint8_t *p;
+
+	buf_t *b;
+	di_GETBUF_dir(&b, diep);
+	cbm_errno_t err = di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
+
+	p = b->buf + (slot->in_sector * 32);
 	memset(slot->filename, 0, 20);
 	while (i < 16 && p[i + 5] != 0xa0) {
 		slot->filename[i] = p[i + 5];
@@ -2285,11 +2290,6 @@ static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
 	slot->start_track = p[3];
 	slot->start_sector = p[4];
 	slot->size = p[30] + 256 * p[31];
-	if ((slot->pos & 0xff) == 0)	// first slot of block
-	{
-		slot->next_track = p[0];
-		slot->next_sector = p[1];
-	}
 	slot->ss_track = p[21];
 	slot->ss_sector = p[22];
 	slot->recordlen = p[23];
@@ -2306,18 +2306,15 @@ static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
 static void di_first_slot(di_endpoint_t * diep, slot_t * slot)
 {
 	log_debug("di_first_slot\n");
-	if (diep->DI.ID == 80 || diep->DI.ID == 82) {
-		slot->pos = 256 * diep->DI.LBA(39, 1);
-		slot->dir_sector = 1;
-	} else if (diep->DI.ID == 81) {
-		slot->pos = 256 * diep->DI.LBA(40, 3);
-		slot->dir_sector = 3;
-	} else {
-		slot->pos =
-		    256 * diep->DI.LBA(diep->DI.DirTrack, diep->DI.DirSector);
-		slot->dir_sector = diep->DI.DirSector;
-	}
-	slot->number = 0;
+
+	buf_t *b = NULL;
+
+	cbm_errno_t err = di_GETBUF_dir(&b, diep);
+
+	slot->in_sector = 0;	
+	slot->dir_track = diep->DI.DirTrack;
+	slot->dir_sector = diep->DI.DirSector;
+
 	slot->eod = 0;
 }
 
@@ -2327,19 +2324,28 @@ static void di_first_slot(di_endpoint_t * diep, slot_t * slot)
 
 static int di_next_slot(di_endpoint_t * diep, slot_t * slot)
 {
-	if ((++slot->number & 7) == 0)	// read next dir block
+	if ((++slot->in_sector & 7) == 0)	// read next dir block
 	{
-		log_debug("Next Slot (%d/%d)\n", slot->next_track,
-			  slot->next_sector);
-		if (slot->next_track == 0) {
+		buf_t *b = NULL;
+		di_GETBUF_dir(&b, diep);
+		cbm_errno_t err = di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
+		if (err != CBM_ERROR_OK) {
+			// TODO: error handling
+			return 0;	// end of
+		}
+
+		// next block
+		uint8_t t = b->buf[0];
+		uint8_t s = b->buf[1];
+
+		log_debug("Next Slot (%d/%d)\n", t, s);
+		if (t == 0) {
 			slot->eod = 1;
 			return 0;	// end of directory
 		}
-		slot->pos =
-		    256 * diep->DI.LBA(slot->next_track, slot->next_sector);
-		slot->dir_sector = slot->next_sector;
-	} else
-		slot->pos += 32;
+		slot->dir_sector = s;
+		slot->dir_track = t;
+	}
 	return 1;
 }
 
@@ -2365,31 +2371,6 @@ di_match_slot(di_endpoint_t * diep, slot_t * slot, const uint8_t * name,
 	return 0;		// not found
 }
 
-// **************
-// di_clear_dir_block
-// **************
-
-static void di_clear_dir_block(di_endpoint_t * diep, int pos)
-{
-	uint8_t p[256];
-
-	memset(p, 0, 256);
-	p[1] = 0xff;
-	di_fseek_pos(diep, pos);
-	di_fwrite(p, 1, 256, diep->Ip);
-}
-
-// *******************
-// di_update_dir_chain
-// *******************
-
-static void
-di_update_dir_chain(di_endpoint_t * diep, slot_t * slot, uint8_t sector)
-{
-	di_fseek_pos(diep, slot->pos & 0xffff00);
-	di_fwrite(&diep->DI.DirTrack, 1, 1, diep->Ip);
-	di_fwrite(&sector, 1, 1, diep->Ip);
-}
 
 // *************************
 // di_allocate_new_dir_block
@@ -2397,7 +2378,9 @@ di_update_dir_chain(di_endpoint_t * diep, slot_t * slot, uint8_t sector)
 
 static int di_allocate_new_dir_block(di_endpoint_t * diep, slot_t * slot)
 {
-	uint8_t track = diep->DI.DirTrack;
+
+	
+	uint8_t track = slot->dir_track;
 	uint8_t sector = slot->dir_sector;
 
 	int err = di_find_free_block_NXTTS(diep, &track, &sector);
@@ -2405,14 +2388,25 @@ static int di_allocate_new_dir_block(di_endpoint_t * diep, slot_t * slot)
 		return err;	// directory full;
 	}
 
-	di_update_dir_chain(diep, slot, sector);
-	slot->pos = 256 * diep->DI.LBA(diep->DI.DirTrack, sector);
+	buf_t *b;
+	di_GETBUF_dir(&b, diep);
+	di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
+
+	b->buf[0] = track;
+	b->buf[1] = sector;
+	di_DIRTY(b);
+
+	di_REUSEFLUSHMAP(b, track, sector);
+	memset(b->buf, 0, 256);
+	di_WRBUF(b);
+
+	slot->dir_track = track;
+	slot->dir_sector = sector;
+	slot->in_sector = 0;
 	slot->eod = 0;
-	di_clear_dir_block(diep, slot->pos);
-	slot->next_track = 0;
-	slot->next_sector = 0;
+
 	log_debug("di_allocate_new_dir_block diep=%p, (%d/%d)\n", diep,
-		  diep->DI.DirTrack, sector);
+		  track, sector);
 	return CBM_ERROR_OK;	// OK
 }
 
@@ -2533,12 +2527,12 @@ static int di_directory_header(char *dest, di_endpoint_t * diep)
 	memset(dest + FS_DIR_YEAR, 0, 6);	// date+time
 	dest[FS_DIR_MODE] = FS_DIR_MOD_NAM;
 
-	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector,
-		     diep->DI.HdrOffset);
-	di_fread(dest + FS_DIR_NAME, 1, 16, diep->Ip);
-	di_fseek_tsp(diep, diep->DI.DirTrack, diep->DI.HdrSector,
-		     diep->DI.HdrOffset + 18);
-	di_fread(dest + FS_DIR_NAME + 16, 1, 5, diep->Ip);
+	buf_t *b;
+	di_GETBUF_dir(&b, diep);
+	di_REUSEFLUSHMAP(b, diep->DI.DirTrack, diep->DI.HdrSector);
+
+	memcpy(dest + FS_DIR_NAME, b->buf + diep->DI.HdrOffset, 16);
+	memcpy(dest + FS_DIR_NAME + 16, b->buf + diep->DI.HdrOffset + 18, 5);
 
 	// fix up $a0 into $20 characters
 	for (int i = FS_DIR_NAME; i < FS_DIR_NAME + 22; i++) {
@@ -2546,6 +2540,7 @@ static int di_directory_header(char *dest, di_endpoint_t * diep)
 			dest[i] = 0x20;
 		}
 	}
+
 	dest[FS_DIR_NAME + 22] = 0;
 	log_debug("di_directory_header (%s)\n", dest + FS_DIR_NAME);
 	return FS_DIR_NAME + 23;
@@ -3259,20 +3254,24 @@ static int di_format(endpoint_t * ep, const char *name)
 static void di_delete_file(di_endpoint_t * diep, slot_t * slot)
 {
 	uint8_t t, s;
-	log_debug("di_delete_file #%d <%s>\n", slot->number, slot->filename);
+	log_debug("di_delete_file #%d <%s>\n", slot->in_sector, slot->filename);
 
 	slot->type = 0;		// mark as deleted
 	di_write_slot(diep, slot);
+
+	buf_t *b =NULL;
+	di_GETBUF(&b, diep);
+	
 	t = slot->start_track;
 	s = slot->start_sector;
 	while (t)		// follow chain for freeing blocks
 	{
 		di_block_free(diep, t, s);
-		di_fseek_tsp(diep, t, s, 0);
-		di_fread(&t, 1, 1, diep->Ip);
-		di_fread(&s, 1, 1, diep->Ip);
+		di_MAPBUF(b, t, s);
+		t = b->buf[0];
+		s = b->buf[1];
 	}
-	// di_print_block(diep,slot->pos & 0xffff00);
+	di_FREBUF(&b);
 }
 
 // **********
@@ -3335,18 +3334,20 @@ static size_t di_realsize(file_t * file)
 {
 
 	File *f = (File *) file;
-	di_endpoint_t *diep = (di_endpoint_t *) file->endpoint;
 
 	size_t len = 0;
 
 	uint8_t next_t = f->Slot.start_track;
 	uint8_t next_s = f->Slot.start_sector;
 
+	buf_t *b;
+	di_GETBUF_data(&b, f);
+
 	// each block is 254 data bytes
 	do {
-		di_fseek_tsp(diep, next_t, next_s, 0);
-		di_fread(&next_t, 1, 1, diep->Ip);
-		di_fread(&next_s, 1, 1, diep->Ip);
+		di_REUSEFLUSHMAP(b, next_t, next_s);
+		next_t = b->buf[0];
+		next_s = b->buf[1];
 		if (next_t == 0) {
 			// no next block
 			break;
@@ -3603,13 +3604,14 @@ static void di_dump_block(uint8_t * b)
 
 static void di_print_slot(slot_t * slot)
 {
-	printf("SLOT  %d\n", slot->number);
+	printf("SLOT  %d\n", slot->in_sector);
+	printf("d.trk %d\n", slot->dir_track);
+	printf("d.sec %d\n", slot->dir_sector);
 	printf("name  %s\n", slot->filename);
 	printf("pos   %6.6x\n", slot->pos);
 	printf("size  %6d\n", slot->size);
 	printf("type  %6d\n", slot->type);
 	printf("eod   %6d\n", slot->eod);
-	printf("next  (%d/%d)\n", slot->next_track, slot->next_sector);
 	printf("start (%d/%d)\n", slot->start_track, slot->start_sector);
 }
 
@@ -3776,8 +3778,12 @@ static int di_equals(file_t * thisfile, file_t * otherfile)
 		return 1;
 	}
 
-	return ((File *) thisfile)->Slot.number -
-	    ((File *) otherfile)->Slot.number;
+	File *f1 = (File*) thisfile;
+	File *f2 = (File*) otherfile;
+
+	return (f1->Slot.in_sector - f2->Slot.in_sector) 
+		| (f1->Slot.dir_track - f2->Slot.dir_track)
+		| (f1->Slot.dir_sector - f2->Slot.dir_sector);
 }
 
 /**
