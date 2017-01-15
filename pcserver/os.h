@@ -40,10 +40,14 @@
 //      INCLUDES FOR LINUX, MAC  and possibly other POSIX compatible systems
 // =======================================================================
 
+// please note that (on some, at least ubuntu 16.04) the <features.h> included in
+// e.g. netdb.h undefines most __USE_* and uses e.g. the value of _XOPEN_SOURCE 
+// to determine the various internal switches.
+
 #if !defined(_WIN32)
 #define	__USE_POSIX
 #define __USE_XOPEN		/* SuSE Linux stdlib.h fsync() */
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE	600	/* XOPEN source version level - features.h included in netdb.h needs this */
 #define _XOPEN_SOURCE_EXTENDED
 #define __USE_XOPEN_EXTENDED
 #include <stdlib.h>
