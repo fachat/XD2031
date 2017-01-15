@@ -40,7 +40,6 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <sys/types.h>
 
 #include "fscmd.h"
 
@@ -646,7 +645,8 @@ provider_t tcp_provider = {
 	tnp_free,
 	tnp_root,			// root - basically only a handle to open files (ports)
 	NULL,				// wrap
-	NULL,				// direct
+	NULL,				// block
+	NULL,				// format
 	tnp_dump			// dump
 };
 
