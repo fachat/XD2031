@@ -26,8 +26,13 @@ function usage() {
 	echo "                               will not be rmdir'd on -C"
 	echo "       -q                      will suppress any output except whether test was successful"
 	echo "                               (implies -C)"
+        echo "       -qq                     only print a summary output over all the tests"
+        echo "       +e                      create an expected DIFF that is compared to later outcomes"
+        echo "       -e                      ignore an expected DIFF and show the real results"
+        echo "       +E                      create an expected ERR file that is compared to later outcomes"
+        echo "       -E                      ignore an expected ERR file and show the real results"
+        echo "       -h                      show this help"
 	echo "       -t                      Trace the output of a script, to possibly create a new one"
-	echo "       -h                      show this help"
 }
 
 function hexdiff() {
@@ -46,10 +51,10 @@ function hexdiff() {
                 echo "+++ $tmp2" | sed -e 's%/tmp/tmp\.[a-zA-Z0-9]\+%%g' >> $tmp4 # actual
                 diff -u $tmp1 $tmp2 | tail -n +3 >> $tmp4 # actual
                 diffres=1       # (as cmp above already told us we're different)
-                if [ $DIFFCREATE -eq 1 ]; then
+                if [ "$DIFFCREATE" -eq 1 ]; then
                         cp $tmp4 $tmp3
                 fi
-                if [ $DIFFIGNORE -eq 1 -o ! -f $tmp3 ]; then
+                if [ "$DIFFIGNORE" -eq 1 -o ! -f $tmp3 ]; then
                         cat $tmp4;      # actual
                 else
                         # compare actual with expected
@@ -79,6 +84,12 @@ RDEBUG=""
 CLEAN=1
 QUIET=0
 TRACE=""
+
+DIFFCREATE=0
+DIFFIGNORE=0
+
+ERRCREATE=0
+ERRIGNORE=0
 
 TMPDIR=`mktemp -d`
 OWNDIR=1	
@@ -130,6 +141,11 @@ while test $# -gt 0; do
 	CLEAN=2
 	shift;
 	;;
+  -qq)
+        QUIET=2
+        CLEAN=2
+        shift;
+        ;;
   -t)
 	TRACE="-t"
 	shift;
@@ -143,6 +159,22 @@ while test $# -gt 0; do
 	OWNDIR=0
 	shift 2;
 	;;
+  +e)
+        DIFFCREATE=1
+        shift;
+        ;;
+  -e)
+        DIFFIGNORE=1
+        shift;
+        ;;
+  +E)
+        ERRCREATE=1
+        shift;
+        ;;
+  -E)
+        ERRIGNORE=1
+        shift;
+        ;;
   -?)
 	echo "Unknown option $1"
 	usage
