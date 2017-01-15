@@ -150,8 +150,8 @@ int terminal_init (void) {
                       log_error("malloc failed!\n");
                       exit(1);
                    }
-                   strlcpy(blue, boldstr, blue_len);
-                   strlcat(blue, tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0), blue_len);
+                   strncpy(blue, boldstr, blue_len);
+                   strncat(blue, tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0), blue_len - strlen(blue));
                 } else blue = strdup(tparm(tigetstr("setaf"), 4, 0, 0, 0, 0, 0, 0, 0, 0));
 		magenta = strdup(tparm(tigetstr("setaf"), 5, 0, 0, 0, 0, 0, 0, 0, 0));
 		cyan	= strdup(tparm(tigetstr("setaf"), 6, 0, 0, 0, 0, 0, 0, 0, 0));
