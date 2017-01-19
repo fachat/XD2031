@@ -2374,6 +2374,7 @@ static int di_allocate_new_dir_block(di_endpoint_t * diep, slot_t * slot)
 
 	di_REUSEFLUSHMAP(b, track, sector);
 	memset(b->buf, 0, 256);
+	b->buf[1] = 255;
 	di_WRBUF(b);
 
 	slot->dir_track = track;
