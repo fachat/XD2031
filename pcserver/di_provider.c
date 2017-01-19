@@ -2194,14 +2194,17 @@ static int di_seek(file_t * file, long position, int flag)
 		log_debug("setting lastpos to %d\n", f->lastpos);
 	}
 
+	buf_t *b;
+	di_GETBUF_data(&b, file);
+
 	uint8_t next_t = f->Slot.start_track;
 	uint8_t next_s = f->Slot.start_sector;
 
 	// each block is 254 data bytes
 	do {
-		di_fseek_tsp(diep, next_t, next_s, 0);
-		di_fread(&next_t, 1, 1, diep->Ip);
-		di_fread(&next_s, 1, 1, diep->Ip);
+		di_MAPBUF(b, next_t, next_s);
+		next_t = b->buf[0];
+		next_s = b->buf[1];
 		if (next_t == 0 || position < 254) {
 			// no next block
 			break;
