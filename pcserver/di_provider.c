@@ -94,10 +94,10 @@ typedef struct {		// derived from endpoint_t
 	file_t *Ip;		// Image file pointer
 	//char         *curpath;             // malloc'd current path
 	Disk_Image_t DI;	// mounted disk image
-	struct buf_t *bam1;		// current BAM block
-	struct buf_t *bam2;		// second BAM block (1571 only)
-	struct buf_t *dir;		// buffer for directory traversal
-	uint8_t *buf[5];	// direct channel block buffer
+	struct buf_t *bam1;	// current BAM block
+	struct buf_t *bam2;	// second BAM block (1571 only)
+	struct buf_t *dir;	// buffer for directory traversal
+	struct buf_t *buf[5];	// direct channel block buffer
 	uint8_t chan[5];	// channel #
 	uint8_t bp[5];		// buffer pointer
 	uint8_t CurrentTrack;	// start track for scannning of BAM
@@ -289,29 +289,14 @@ static void di_ep_free(endpoint_t * ep)
 
 // OLD Style (deprectated)
 
-static inline cbm_errno_t di_fseek(file_t * file, long pos, int whence)
-{
-	return file->handler->seek(file, pos, whence);
-}
-
-static inline void di_fread(void *ptr, size_t size, size_t nmemb, file_t * file)
-{
-	int readfl;
-	file->handler->readfile(file, (char *)ptr, size * nmemb, &readfl);
-}
-
-static inline void
-di_fwrite(void *ptr, size_t size, size_t nmemb, file_t * file)
-{
-	file->handler->writefile(file, (char *)ptr, size * nmemb, 0);
-}
-
 static inline int di_fflush(file_t * file)
 {
+
 	di_endpoint_t *diep = (di_endpoint_t *) file->endpoint;
 
 	return diep->Ip->handler->flush(diep->Ip);
 }
+
 
 static inline void di_fsync(file_t * file)
 {
@@ -320,6 +305,7 @@ static inline void di_fsync(file_t * file)
 
 	file->handler->flush(file);
 }
+
 
 // NEW style
 
@@ -580,20 +566,6 @@ static int di_assert_ts(di_endpoint_t * diep, uint8_t track, uint8_t sector)
 	if (diep->DI.LBA(track, sector) < 0)
 		return CBM_ERROR_ILLEGAL_T_OR_S;
 	return CBM_ERROR_OK;
-}
-
-// ************
-// di_fseek_tsp
-// ************
-
-static void
-di_fseek_tsp(di_endpoint_t * diep, uint8_t track, uint8_t sector, uint8_t ptr)
-{
-	long seekpos = ptr + 256 * diep->DI.LBA(track, sector);
-	log_debug
-	    ("di_fseek_tsp: diep=%p, seeking to position %ld (0x%lx) for t/s/p=%d/%d/%d\n",
-	     diep, seekpos, seekpos, track, sector, ptr);
-	di_fseek(diep->Ip, seekpos, SEEKFLAG_ABS);
 }
 
 
@@ -999,8 +971,9 @@ static int di_BAM_blocks_free(di_endpoint_t *diep) {
 static int di_alloc_buffer(di_endpoint_t * diep)
 {
 	log_debug("di_alloc_buffer 0\n");
-	if (!diep->buf[0])
-		diep->buf[0] = (uint8_t *) calloc(256, 1);
+	if (!diep->buf[0]) {
+		di_GETBUF(&diep->buf[0], diep);
+	}
 	if (!diep->buf[0])
 		return 0;	// OOM
 	diep->bp[0] = 0;
@@ -1017,8 +990,7 @@ static int di_load_buffer(di_endpoint_t * diep, uint8_t track, uint8_t sector)
 		return 0;	// OOM
 	log_debug("di_load_buffer %p->%p U1(%d/%d)\n", diep, diep->buf[0],
 		  track, sector);
-	di_fseek_tsp(diep, track, sector, 0);
-	di_fread(diep->buf[0], 1, 256, diep->Ip);
+	di_MAPBUF(diep->buf[0], track, sector);
 	// di_dump_block(diep->buf[0]);
 	return 1;		// OK
 }
@@ -1031,8 +1003,8 @@ static int di_save_buffer(di_endpoint_t * diep)
 {
 	log_debug("di_save_buffer U2(%d/%d)\n", diep->U2_track,
 		  diep->U2_sector);
-	di_fseek_tsp(diep, diep->U2_track, diep->U2_sector, 0);
-	di_fwrite(diep->buf[0], 1, 256, diep->Ip);
+	di_SETBUF(diep->buf[0], diep->U2_track, diep->U2_sector);
+	di_WRBUF(diep->buf[0]);
 	di_fsync(diep->Ip);
 	diep->U2_track = 0;
 	// di_dump_block(diep->buf[0]);
@@ -1071,7 +1043,7 @@ di_read_block(di_endpoint_t * diep, File * file, char *retbuf, int len,
 	if (n > 0) {
 		log_debug("memcpy(%p,%p,%d)\n", retbuf,
 			  diep->buf[0] + diep->bp[0], n);
-		memcpy(retbuf, diep->buf[0] + diep->bp[0], n);
+		memcpy(retbuf, diep->buf[0]->buf + diep->bp[0], n);
 		diep->bp[0] += n;
 	}
 	return n;
@@ -1090,7 +1062,7 @@ static int di_write_block(di_endpoint_t * diep, const char *buf, int len)
 	if (len > avail)
 		n = avail;
 	if (n > 0) {
-		memcpy(diep->buf[0] + diep->bp[0], buf, n);
+		memcpy(diep->buf[0]->buf + diep->bp[0], buf, n);
 		diep->bp[0] += n;
 	}
 	return n;
@@ -2195,7 +2167,7 @@ static int di_seek(file_t * file, long position, int flag)
 	}
 
 	buf_t *b;
-	di_GETBUF_data(&b, file);
+	di_GETBUF_data(&b, f);
 
 	uint8_t next_t = f->Slot.start_track;
 	uint8_t next_s = f->Slot.start_sector;
@@ -2459,10 +2431,12 @@ di_create_entry(di_endpoint_t * diep, File * file, const char *name,
 		if (err != CBM_ERROR_OK) {
 			return err;
 		}
-		uint8_t z = 0;
-		di_fseek_tsp(diep, file->Slot.start_track, file->Slot.start_sector, 0);
-		di_fwrite(&z, 1, 1, diep->Ip);
-		di_fwrite(&z, 1, 1, diep->Ip);
+		buf_t *b;
+		di_GETBUF_data(&b, file);
+		di_REUSEFLUSHMAP(b, file->Slot.start_track, file->Slot.start_sector);
+		b->buf[0] = 0;
+		b->buf[1] = 0;
+		di_WRBUF(b);
 
 		file->Slot.size = 1;
 	} else {
