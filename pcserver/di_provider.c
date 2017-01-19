@@ -66,8 +66,8 @@
 
 
 
-#undef DEBUG_READ
-#undef DEBUG_CMD
+#define DEBUG_READ
+#define DEBUG_CMD
 
 
 // structure for directory slot handling
@@ -2242,11 +2242,15 @@ static int di_seek(file_t * file, long position, int flag)
 
 static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 {
-	uint8_t p[32];
+	buf_t *b;
+	di_GETBUF_dir(&b, diep);
+	di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
+
+	uint8_t *p = b->buf + (slot->in_sector * 32);
 
 	log_debug("di_write_slot %d\n", slot->in_sector);
 	// di_print_slot(slot);
-	memset(p, 0, 32);	// clear slot
+	memset(p + 2, 0, 30);	// clear slot
 	memset(p + 5, 0xa0, 16);	// fill name with $A0
 	memcpy(p + 5, slot->filename, strlen((char *)slot->filename));
 	p[2] = slot->type;
@@ -2259,11 +2263,8 @@ static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 	p[31] = slot->size >> 8;
 
 	log_debug("di_write_slot pos %d/%d/%d\n", slot->dir_track, slot->dir_sector, slot->in_sector);
-/* TODO
-	di_fseek_pos(diep, slot->pos + 2);
-	di_fwrite(p + 2, 1, 30, diep->Ip);
-*/
-	// di_print_block(diep,slot->pos & 0xffffff00);
+
+	di_WRBUF(b);
 }
 
 // ************
@@ -2611,6 +2612,8 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 
 	*readflag = READFLAG_DENTRY;
 	file_t *wrapfile = NULL;
+
+	//di_first_slot(diep, &diep->Slot);
 
 	do {
 
