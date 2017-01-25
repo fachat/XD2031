@@ -1159,9 +1159,11 @@ di_direct(endpoint_t * ep, const char *buf, char *retbuf, int *retlen)
 		break;
 	case FS_BLOCK_BA:
 		rv = di_block_alloc(diep, &track, &sector);
+		di_FLUSH_bam(diep);
 		break;
 	case FS_BLOCK_BF:
 		rv = di_block_free(diep, track, sector);
+		di_FLUSH_bam(diep);
 		break;
 	}
 
@@ -1891,6 +1893,10 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 		goto end2;
 
 	err = di_FLUSH(sidep);
+	if (err != CBM_ERROR_OK)
+		goto end2;
+
+	di_FLUSH_bam(diep);
 	if (err != CBM_ERROR_OK)
 		goto end2;
 
@@ -3252,6 +3258,7 @@ static void di_delete_file(di_endpoint_t * diep, slot_t * slot)
 		t = b->buf[0];
 		s = b->buf[1];
 	}
+	di_FLUSH_bam(diep);
 	di_FREBUF(&b);
 }
 
