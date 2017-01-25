@@ -28,8 +28,13 @@ f168488-1001.frs: Ok
 f168488-1001.frs: File blk.d82 differs!
 	==> DOS has residue of previous block written to last block
 
+f508-*.frs:
+	==> DOS allocates one bogus extra empty block 
+
 f509-1001.frs: Ok
 f509-1001.frs: File blk.d82 differs!
 	==> DOS has residue of previous block written to last block
 
+fgap508-4040:
+	==> DOS allocates two bogus empty extra blocks
 

@@ -1,0 +1,3 @@
+]]ERR:Detected mismatch at line 644
+]]Rxd   : 0000  92 02                                             |                |
+]]Expect: 0000  90 02                                             |                |
