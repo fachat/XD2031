@@ -1,7 +1,7 @@
 /****************************************************************************
 
     Commodore disk image Serial line server
-    Copyright (C) 2013 Edilbert Kirk, Andre Fachat
+    Copyright (C) 2013-2017 Edilbert Kirk, Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -3006,12 +3006,12 @@ static int di_format(endpoint_t * ep, const char *name)
 
 			while (track < di->Tracks) {
 
-				di_SETBUF(bp, track, sector);
 
 				uint8_t maxsect = di->LSEC(track);
 
 				while (sector < maxsect) {
 
+					di_SETBUF(bp, track, sector);
 					di_WRBUF(bp);
 					sector++;
 				}
