@@ -2276,7 +2276,7 @@ static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
 	slot->ss_sector = p[22];
 	slot->recordlen = p[23];
 
-	log_debug("di_read_slot <(%02x ...) %s>\n", slot->filename[0],
+	log_debug("di_read_slot #%d in %d/%d <(%02x ...) %s>\n", slot->in_sector, slot->dir_track, slot->dir_sector, slot->filename[0],
 		  slot->filename);
 }
 
@@ -2306,8 +2306,10 @@ static void di_first_slot(di_endpoint_t * diep, slot_t * slot)
 
 static int di_next_slot(di_endpoint_t * diep, slot_t * slot)
 {
-	if ((++slot->in_sector & 7) == 0)	// read next dir block
+	if ((++slot->in_sector) > 7)	// read next dir block
 	{
+		slot->in_sector = 0;
+
 		buf_t *b = NULL;
 		di_GETBUF_dir(&b, diep);
 		cbm_errno_t err = di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
