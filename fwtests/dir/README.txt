@@ -31,6 +31,10 @@ dir145 (4040), dir225 (1001)
 	When a new file is created in a directory that is already full, the CBM DOS
 	allocates a bogus block that is not freed again.
 
+dir9rel (1541)
+	A BAM save error on the real drive. The actual BAM entry is zeroed out instead of
+	containing the real values
+
 1581 tests
 	The first 8 file blocks contain bogus remainders from the directory header block
 
