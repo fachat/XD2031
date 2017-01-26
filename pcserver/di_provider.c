@@ -518,7 +518,11 @@ static cbm_errno_t di_REUSEFLUSHMAP(buf_t * bufp, uint8_t track, uint8_t sector)
 
 			err = di_RDBUF(bufp);
 		}
+	} else {
+		log_debug("REUSE(%d,%d (%p))\n", bufp == NULL ? 0 : bufp->track,
+			  bufp == NULL ? 0 : bufp->sector, bufp);
 	}
+		
 	return err;
 }
 
@@ -1948,8 +1952,8 @@ static unsigned int di_rel_record_max(di_endpoint_t * diep, File * f)
 static int di_expand_rel(di_endpoint_t * diep, File * f, int recordno)
 {
 
-	log_debug("di_expand_rel f=%p to recordno=%d (f->maxrecord=%d)\n", f,
-		  recordno, f->maxrecord);
+	log_debug("di_expand_rel f=%p to recordno=%d (f->maxrecord=%d, ss=%d/%d)\n", f,
+		  recordno, f->maxrecord, f->Slot.ss_track, f->Slot.ss_sector);
 
 	int err = CBM_ERROR_OK;
 
@@ -2774,6 +2778,14 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		di_first_slot(diep, &file->Slot);
 		np = di_match_slot(diep, &file->Slot, (const uint8_t *)filename,
 				   pars->filetype);
+		if (!np) {
+			// Slot contains the last one read from disk in di_match_slot
+			// need to clear out some important values just in case
+			file->Slot.ss_track = 0;
+			file->Slot.ss_sector = 0;
+			file->Slot.start_track = 0;
+			file->Slot.start_sector = 0;
+		}
 		file->next_track = file->Slot.start_track;
 		file->next_sector = file->Slot.start_sector;
 		if ((pars->filetype == FS_DIR_TYPE_REL)
