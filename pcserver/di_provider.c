@@ -2184,7 +2184,7 @@ static int di_seek(file_t * file, long position, int flag)
 
 	// each block is 254 data bytes
 	do {
-		di_MAPBUF(b, next_t, next_s);
+		di_REUSEFLUSHMAP(b, next_t, next_s);
 		next_t = b->buf[0];
 		next_s = b->buf[1];
 		if (next_t == 0 || position < 254) {
@@ -2893,7 +2893,7 @@ di_read_seq(File * file, char *retbuf, int len, int *eof)
 			*eof = READFLAG_EOF;
 		}
 		if (datap->buf[0] != 0 && file->chp + 1 >= 255) {
-			err = di_MAPBUF(datap, datap->buf[0], datap->buf[1]);
+			err = di_REUSEFLUSHMAP(datap, datap->buf[0], datap->buf[1]);
 		}
 		if (*eof)
 			return i + 1;
@@ -2936,6 +2936,7 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 
 	buf_t *data = NULL;
 	di_GETBUF_data(&data, file);
+
 	di_DIRTY(data);
 	for (i = 0; i < len; ++i) {
 		if (file->chp > 253) {
@@ -2971,6 +2972,9 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 		data->buf[file->chp + 2] = buf[i];
 		++file->chp;
 	}
+	// flush last data just in case
+	//di_FLUSH(data);
+
 	return CBM_ERROR_OK;
 end:
 	return -err;
