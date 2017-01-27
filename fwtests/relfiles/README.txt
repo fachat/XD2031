@@ -101,3 +101,9 @@ bug4)
 				 and also the data is written into the wrong record
 				 i.e. the one after the last write)
 
+
+Note:	The disk images used are not optimal - they contain residue from previous
+	tests, so analysis of disk images always should take the original image 
+	rel.d64 into account!
+
+
