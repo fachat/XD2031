@@ -1,0 +1,9 @@
+]]ERR:Detected mismatch at line 29
+]]ERR:Detected length mismatch: expected 17, received 13
+]]Rx Eof: 0000  30 30 2C 20 4F 4B 2C 30  30 2C 30 30 0D           |00, OK,00,00    |
+]]Expect: 0000  35 32 2C 20 46 49 4C 45  20 54 4F 4F 20 4C 41 52  |52, FILE TOO LAR|
+]]        0010  47                                                |G               |
+]]ERR:Detected mismatch at line 30
+]]ERR:Detected length mismatch: expected 8, received 13
+]]Rx Eof: 0000  30 30 2C 20 4F 4B 2C 30  30 2C 30 30 0D           |00, OK,00,00    |
+]]Expect: 0000  45 2C 30 30 2C 30 30 0D                           |E,00,00         |
