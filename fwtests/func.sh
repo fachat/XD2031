@@ -467,7 +467,7 @@ for script in $TESTSCRIPTS; do
 		testname=`basename $script .frs`
 		for i in $COMPAREFILES; do 
 			NAME="${THISDIR}/${i}-${testname}"
-			result=0;
+			result=-1;
 			if test -f ${NAME}; then
 				echo "Comparing file ${i} with ${NAME}"
 				hexdiff ${NAME} $TMPDIR/${i} ${NAME}
@@ -497,8 +497,10 @@ for script in $TESTSCRIPTS; do
 				if [ "$R" = "${R_OK}" ]; then
 					R=${R_NOEXP}
 				fi
+			elif test $result -eq -1; then
+                                echo "    No compare file found ($NAME)" >&5
 			else
-                                echo "    File ${i} compare ok!" >&5
+                                echo "    File ${i} compare ok! ($NAME)" >&5
 		 	fi
 		done;
 	fi
