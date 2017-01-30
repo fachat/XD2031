@@ -94,7 +94,13 @@ bug2)
 	reltest6.d-1581
 	reltest6.g-1001
 	reltest6.g-1581
-	
+
+	relbug2-1541-69		The last data block is initialized wrongly by the 
+				1541. The data crossing into this block is writting 
+				wrongly as well.
+	relbug2-1541-6b		When expanding the REL file, DOS manages to put the
+				initial $ff for each record at the wrong position
+
 bug4)
 	reltest6.1-1571		(the P command for the "1234" data is not correctly
 				 executed due to Illegal T&S, so no extra data block,

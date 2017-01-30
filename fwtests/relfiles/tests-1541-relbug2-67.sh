@@ -35,6 +35,7 @@ FWOPTS=-Xsock488:E=-
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
+#EXCLUDE="relbug2-1541-6b.frs relbug2-1541-69.frs"
 EXCLUDE=""
 shopt -s extglob
 FILTER='relbug2-1541-*'

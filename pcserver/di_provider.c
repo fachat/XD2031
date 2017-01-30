@@ -1431,8 +1431,15 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 			// that discards it and all data written to it
 			// in the meantime
 	
-			log_debug("di_navigate: discarding non-side-sector data block in chain (DOS bug) at %d,%d\n",
-					datap->buf[0], datap->buf[1]);
+			log_debug("di_navigate: discarding non-side-sector data block in chain (DOS bug) at %d/%d -> %d,%d\n",
+					datap->track, datap->sector, datap->buf[0], datap->buf[1]);
+#if 0
+			uint8_t *bam, *fbl;
+			di_calculate_BAM(diep, datap->buf[0], &bam, &fbl);
+			int next_free = di_scan_BAM_GETSEC(&diep->DI, bam, datap->buf[0], datap->buf[1]);
+			log_debug("di_navigate: BAM for discarded t/s: %d/%d -> next free is %d\n", 
+					datap->buf[0], datap->buf[1], next_free);
+#endif
 
 			data_pos = 254 - (data_blocks * 254) % recordlen;
 
