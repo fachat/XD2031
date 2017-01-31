@@ -65,7 +65,6 @@
 #undef	BUG_NEW_SIDE_SECTOR
 
 
-
 #define DEBUG_READ
 #define DEBUG_CMD
 #define	DEBUG_DATA
@@ -2171,33 +2170,6 @@ static int di_position(File * f, int recordno)
 	f->next_track = datap->buf[0];
 	f->next_sector = datap->buf[1];
 
-#if 0
-	// Can't do this as it creates RECORD NOT PRESENT errors in the wrong places
-	// bug2 situation
-	if (f->next_track != 0) {
-		// if we have a followup-sector in the side sector, we are fine
-		if ((offset < (SSB_INDEX_SECTOR_MAX-1)) 
-			&& (sidep->buf[SSB_OFFSET_SECTOR + (offset << 1) + 2] != 0)) {
-			// followup sector in current side sector -> ok
-		} else {
-			if ((side < (SSG_SIDE_SECTORS_MAX - 1))
-				&& (sidep->buf[SSB_OFFSET_SSG + (side << 1) + 2] != 0)) {
-				// followup in another side sector in same side sector group -> ok
-			} else {
-				if (diep->DI.HasSSB 
-					&& (super < (SSS_INDEX_SSB_MAX - 1))
-					&& (superp->buf[SSS_OFFSET_SSB_POINTER + (super << 1) + 2] != 0)) {
-					// followup in next side sector group -> ok
-				} else {
-					if (datap->buf[1] < (rec_start + reclen + 1)) {
-						err = CBM_ERROR_RECORD_NOT_PRESENT;
-						goto end;
-					}
-				}
-			}
-		}
-	}
-#endif
 	// clean up the "expand me" flag
 	f->lastpos = 0;
 
