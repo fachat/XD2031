@@ -68,7 +68,7 @@
 
 #define DEBUG_READ
 #define DEBUG_CMD
-
+#define	DEBUG_DATA
 
 // structure for directory slot handling
 
@@ -447,6 +447,14 @@ static cbm_errno_t di_RDBUF(buf_t * bufp)
 
 	log_debug("RDBUF(%d,%d (%p)) -> %d\n", bufp->track, bufp->sector, bufp,
 		  err);
+#ifdef DEBUG_DATA
+	uint8_t *b = bufp->buf;
+	for (int i = 0; i < 256; i+=16) {
+		log_debug("    < %02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x\n",
+			b[i],b[i+1],b[i+2],b[i+3],b[i+4],b[i+5],b[i+6],b[i+7],
+			b[i+8],b[i+9],b[i+10],b[i+11],b[i+12],b[i+13],b[i+14],b[i+15]);
+	}
+#endif
 
 	return err;
 }
@@ -461,13 +469,21 @@ static cbm_errno_t di_WRBUF(buf_t * p)
 	long seekpos = 256 * diep->DI.LBA(p->track, p->sector);
 	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
 	if (err == CBM_ERROR_OK) {
-		// TODO: error on read?
+		// TODO: error on write?
 		file->handler->writefile(file, (char *)(p->buf), 256, 0);
 	}
 
 	p->dirty = 0;
 
 	log_debug("WRBUF(%d,%d (%p)) -> %d\n", p->track, p->sector, p, err);
+#ifdef DEBUG_DATA
+	uint8_t *b = p->buf;
+	for (int i = 0; i < 256; i+=16) {
+		log_debug("    > %02x %02x %02x %02x %02x %02x %02x %02x  %02x %02x %02x %02x %02x %02x %02x %02x\n",
+			b[i],b[i+1],b[i+2],b[i+3],b[i+4],b[i+5],b[i+6],b[i+7],
+			b[i+8],b[i+9],b[i+10],b[i+11],b[i+12],b[i+13],b[i+14],b[i+15]);
+	}
+#endif
 
 	return err;
 }
@@ -1320,15 +1336,12 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 	buf_t *sidep = NULL;
 	buf_t *datap = NULL;
 
-	// get the buffers, flush if necessary so we can just use MAPBUF below
+	// get the buffers
 	if (diep->DI.HasSSB) {
 		di_GETBUF_super(&superp, f);
-		di_FLUSH(superp);
 	}
 	di_GETBUF_side(&sidep, f);
-	di_FLUSH(sidep);
 	di_GETBUF_data(&datap, f);
-	di_FLUSH(datap);
 
 	if (*ss_track == 0) {
 		// not a REL file or a new one
@@ -1341,7 +1354,7 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 		super_sector = *ss_sector;
 
 		// read the super sector
-		di_MAPBUF(superp, super_track, super_sector);
+		di_REUSEFLUSHMAP(superp, super_track, super_sector);
 
 		// sector is a super side sector
 		// count how many side sector groups are used -> groups
@@ -1363,14 +1376,14 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 		    superp->buf[SSS_OFFSET_SSB_POINTER +
 				((super_pos - 1) << 1) + 1];
 
-		di_MAPBUF(sidep, side_track, side_sector);
+		di_REUSEFLUSHMAP(sidep, side_track, side_sector);
 	} else {
 		super_pos = 1;
 
 		side_track = *ss_track;
 		side_sector = *ss_sector;
 
-		di_MAPBUF(sidep, side_track, side_sector);
+		di_REUSEFLUSHMAP(sidep, side_track, side_sector);
 	}
 
 	// now sidep contains the first block of the last side sector group
@@ -1385,7 +1398,7 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 		side_track = sidep->buf[SSB_OFFSET_SSG + ((side - 1) << 1)];
 		side_sector = sidep->buf[SSB_OFFSET_SSG + ((side - 1) << 1) + 1];
 
-		di_MAPBUF(sidep, side_track, side_sector);
+		di_REUSEFLUSHMAP(sidep, side_track, side_sector);
 	}
 	// here we have the last side sector of the last side sector chain in the buffer.
 	// obtain the last byte of the sector according to the index 
@@ -1399,7 +1412,7 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 	data_sector = sidep->buf[o + 1];
 
 	// read the last sector of the file
-	di_MAPBUF(datap, data_track, data_sector);
+	di_REUSEFLUSHMAP(datap, data_track, data_sector);
 
  end:
 	// calculate the total number of blocks - because we need it for bug2 situation below, to get data_pos
@@ -1434,6 +1447,7 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 			log_debug("di_navigate: discarding non-side-sector data block in chain (DOS bug) at %d/%d -> %d,%d\n",
 					datap->track, datap->sector, datap->buf[0], datap->buf[1]);
 #if 0
+			// debug output if discarded sector is allocated or not
 			uint8_t *bam, *fbl;
 			di_calculate_BAM(diep, datap->buf[0], &bam, &fbl);
 			int next_free = di_scan_BAM_GETSEC(&diep->DI, bam, datap->buf[0], datap->buf[1]);
@@ -2021,7 +2035,19 @@ static int di_position(File * f, int recordno)
 
 	cbm_errno_t err = CBM_ERROR_OK;
 
-	buf_t *bufp = NULL;
+        // buffer to use
+        buf_t *superp = NULL;
+        buf_t *sidep = NULL;
+        buf_t *datap = NULL;
+
+	di_endpoint_t *diep = f->file.endpoint;
+
+        // get the buffers
+        if (diep->DI.HasSSB) {
+                di_GETBUF_super(&superp, f);
+        }
+        di_GETBUF_side(&sidep, f);
+        di_GETBUF_data(&datap, f);
 
 	log_debug("di_position: set position to record no %d\n", recordno);
 
@@ -2032,33 +2058,30 @@ static int di_position(File * f, int recordno)
 	// find the block number in file from the record number
 	reclen = f->Slot.recordlen;
 
-	// total byte offset (record number starts with 1)
+	// total byte offset (record number starts with 0)
 	rec_long = (recordno * reclen);
 
 	// offset in block
 	rec_start = rec_long % 254;
 
-	// compute super side sector index (0-125)
+	// compute index in super side sector, i.e. the side sector group (0-125)
 	offset = (254 * SSB_INDEX_SECTOR_MAX * SSG_SIDE_SECTORS_MAX);
 	super = rec_long / offset;
 	rec_long = rec_long % offset;
 
-	// compute side sector index value (0-5)
+	// compute index in side sector group (0-5)
 	offset = (254 * SSB_INDEX_SECTOR_MAX);
 	side = rec_long / offset;
 	rec_long = rec_long % offset;
 
-	// block number in side sector
+	// block number in side sector (0 ... SSB_INDEX_SECTOR_MAX-1)
 	offset = rec_long / 254;
+	// byte in data sector
 	byt = rec_long % 254;
 
 	log_debug
 	    ("di_position: to super=%d, side=%d, offset=%d, byte=%d, lastpos=%d\n",
 	     super, side, offset, byt, f->lastpos);
-
-	err = di_GETBUF_data(&bufp, f);
-	if (err != CBM_ERROR_OK) 
-		goto end;
 
 	// -----------------------------------------
 	// find the position pointed to in the image
@@ -2072,17 +2095,16 @@ static int di_position(File * f, int recordno)
 		goto end;
 	}
 
-	// read the first side sector
-	err = di_REUSEFLUSHMAP(bufp, ss_track, ss_sector);
-	if (err != CBM_ERROR_OK) 
-		goto end;
+        if (diep->DI.HasSSB) {
+		err = di_REUSEFLUSHMAP(superp, ss_track, ss_sector);
+		if (err != CBM_ERROR_OK) 
+			goto end;
 
-	if (bufp->buf[SSB_OFFSET_SUPER_254] == 0xfe) {
 		// sector is a super side sector
 		// read the address of the first block of the correct side sector chain
-		ss_track = bufp->buf[SSS_OFFSET_SSB_POINTER + (super << 1)];
+		ss_track = superp->buf[SSS_OFFSET_SSB_POINTER + (super << 1)];
 		ss_sector =
-		    bufp->buf[SSS_OFFSET_SSB_POINTER + 1 + (super << 1)];
+		    superp->buf[SSS_OFFSET_SSB_POINTER + 1 + (super << 1)];
 
 		if (ss_track == 0) {
 			// disk image inconsistent
@@ -2090,10 +2112,15 @@ static int di_position(File * f, int recordno)
 			err = CBM_ERROR_RECORD_NOT_PRESENT;
 			goto end;
 		}
-		err = di_MAPBUF(bufp, ss_track, ss_sector);
+		err = di_REUSEFLUSHMAP(sidep, ss_track, ss_sector);
 		if (err != CBM_ERROR_OK) 
 			goto end;
 	} else {
+		// read the first side sector
+		err = di_REUSEFLUSHMAP(sidep, ss_track, ss_sector);
+		if (err != CBM_ERROR_OK) 
+			goto end;
+
 		// no super side sectors, but sector number too large for single side sector chain
 		if (super > 0) {
 			log_info("di_position: sector to large for side sector chain\n");
@@ -2101,25 +2128,26 @@ static int di_position(File * f, int recordno)
 			goto end;
 		}
 	}
+
 	// here we have the first side sector of the correct side sector chain in the buffer.
 	if (side > 0) {
 		// need to read the correct side sector first
 		// read side sector number
-		ss_track = bufp->buf[SSB_OFFSET_SSG + (side << 1)];
-		ss_sector = bufp->buf[SSB_OFFSET_SSG + 1 + (side << 1)];
+		ss_track = sidep->buf[SSB_OFFSET_SSG + (side << 1)];
+		ss_sector = sidep->buf[SSB_OFFSET_SSG + 1 + (side << 1)];
 		if (ss_track == 0) {
 			log_debug("di_position: side sector not yet allocated\n");
 			// sector in a part of the side sector group that isn't created yet
 			err = CBM_ERROR_RECORD_NOT_PRESENT;
 			goto end;
 		}
-		err = di_MAPBUF(bufp, ss_track, ss_sector);
+		err = di_REUSEFLUSHMAP(sidep, ss_track, ss_sector);
 		if (err != CBM_ERROR_OK) 
 			goto end;
 	}
 	// here we have the correct side sector in the buffer.
-	ss_track = bufp->buf[SSB_OFFSET_SECTOR + (offset << 1)];
-	ss_sector = bufp->buf[SSB_OFFSET_SECTOR + 1 + (offset << 1)];
+	ss_track = sidep->buf[SSB_OFFSET_SECTOR + (offset << 1)];
+	ss_sector = sidep->buf[SSB_OFFSET_SECTOR + 1 + (offset << 1)];
 	if (ss_track == 0) {
 		log_debug("di_position: sector not yet allocated\n");
 		// sector in a part of the side sector that is not yet created
@@ -2128,26 +2156,54 @@ static int di_position(File * f, int recordno)
 	}
 	// here we have, in ss_track, ss_sector, and rec_start the tsp position of the
 	// record as given in the parameter
-	err = di_MAPBUF(bufp, ss_track, ss_sector);
+	err = di_REUSEFLUSHMAP(datap, ss_track, ss_sector);
 	if (err != CBM_ERROR_OK) 
 		goto end;
 
 	// is there enough space on the last block?
-	if (bufp->buf[0] == 0 && bufp->buf[1] < (rec_start + reclen + 1)) {
+	if (datap->buf[0] == 0 && datap->buf[1] < (rec_start + reclen + 1)) {
 		log_debug("di_position: not enough space on the last block\n");
 		err = CBM_ERROR_RECORD_NOT_PRESENT;
+		goto end;
 	}
 
 	f->chp = rec_start;
-	f->next_track = bufp->buf[0];
-	f->next_sector = bufp->buf[1];
+	f->next_track = datap->buf[0];
+	f->next_sector = datap->buf[1];
 
+#if 0
+	// Can't do this as it creates RECORD NOT PRESENT errors in the wrong places
+	// bug2 situation
+	if (f->next_track != 0) {
+		// if we have a followup-sector in the side sector, we are fine
+		if ((offset < (SSB_INDEX_SECTOR_MAX-1)) 
+			&& (sidep->buf[SSB_OFFSET_SECTOR + (offset << 1) + 2] != 0)) {
+			// followup sector in current side sector -> ok
+		} else {
+			if ((side < (SSG_SIDE_SECTORS_MAX - 1))
+				&& (sidep->buf[SSB_OFFSET_SSG + (side << 1) + 2] != 0)) {
+				// followup in another side sector in same side sector group -> ok
+			} else {
+				if (diep->DI.HasSSB 
+					&& (super < (SSS_INDEX_SSB_MAX - 1))
+					&& (superp->buf[SSS_OFFSET_SSB_POINTER + (super << 1) + 2] != 0)) {
+					// followup in next side sector group -> ok
+				} else {
+					if (datap->buf[1] < (rec_start + reclen + 1)) {
+						err = CBM_ERROR_RECORD_NOT_PRESENT;
+						goto end;
+					}
+				}
+			}
+		}
+	}
+#endif
 	// clean up the "expand me" flag
 	f->lastpos = 0;
 
 end:
-	log_debug("di_position -> err=%d, sector %d/%d/%d\n", err, 
-		f->next_track, f->next_sector, rec_start);
+	log_debug("di_position -> err=%d, sector %d/%d/%d, next ts %d/%d, lastpos=%d\n", err, 
+		ss_track, ss_sector, rec_start, f->next_track, f->next_sector, f->lastpos);
 
 	return err;
 
@@ -2179,8 +2235,17 @@ static int di_seek(file_t * file, long position, int flag)
 		// store position value for di_position / di_expand_rel
 		// because DOS returns RECORD NOT PRESENT, but subsequent
 		// writes WILL use this value and expand the file and write there.
+		
+		int err = CBM_ERROR_OK;	
+		int recno = position / f->file.recordlen;
+		err =  di_position(f, recno);
 		f->lastpos = (position / f->file.recordlen) + 1;
 		log_debug("setting lastpos to %d\n", f->lastpos);
+		if (err != CBM_ERROR_OK) {
+			return err;
+		}
+		f->chp += (position - (f->file.recordlen * recno));
+		return CBM_ERROR_OK;
 	}
 
 	buf_t *b;
@@ -2210,6 +2275,7 @@ static int di_seek(file_t * file, long position, int flag)
 		// seek behind end of file - default for POSITION
 		return CBM_ERROR_RECORD_NOT_PRESENT;
 	}
+#if 0
 	if ((f->Slot.type & FS_DIR_ATTR_TYPEMASK) == FS_DIR_TYPE_REL) {
 		// when relative file, make sure the full record is within the
 		// block, or there is a following block
@@ -2219,6 +2285,7 @@ static int di_seek(file_t * file, long position, int flag)
 			}
 		}
 	}
+#endif
 
 	f->chp = position & 0xff;
 
@@ -2944,7 +3011,6 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 	buf_t *data = NULL;
 	di_GETBUF_data(&data, file);
 
-	di_DIRTY(data);
 	for (i = 0; i < len; ++i) {
 		if (file->chp > 253) {
 			uint8_t t = 0, s = 0;
@@ -2974,10 +3040,10 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 				if (err != CBM_ERROR_OK) 
 					goto end;
 			}
-			di_DIRTY(data);
 		}
 		data->buf[file->chp + 2] = buf[i];
 		++file->chp;
+		di_DIRTY(data);
 	}
 	// flush last data just in case
 	//di_FLUSH(data);
@@ -3006,7 +3072,7 @@ static int di_format(endpoint_t * ep, const char *name)
 	di_GETBUF_bam(&bp, diep);
 
 	// read original disk ID and save it
-	di_MAPBUF(bp, diep->DI.DirTrack, diep->DI.HdrSector);
+	di_REUSEFLUSHMAP(bp, diep->DI.DirTrack, diep->DI.HdrSector);
 
 	buf = bp->buf;
 
