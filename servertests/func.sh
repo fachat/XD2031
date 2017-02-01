@@ -259,9 +259,9 @@ DEBUGFILE="$TMPDIR"/gdb.ex
 # prepare files
 #
 
-for i in $TESTSCRIPTS; do
-	cp "$THISDIR/$i" "$TMPDIR"
-done;
+#for i in $TESTSCRIPTS; do
+#	cp "$THISDIR/$i" "$TMPDIR/_$i"
+#done;
 
 ########################
 # stdout
@@ -298,7 +298,7 @@ for script in $TESTSCRIPTS; do
 	echo "Start server as:" $SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR 
 
 	if test "x$DEBUG" = "x"; then
-		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
+		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/_$script.log 2>&1 &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -308,7 +308,7 @@ for script in $TESTSCRIPTS; do
 			for i in $RDEBUG; do
 				echo "break $i" >> $DEBUGFILE
 			done;
-			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $script " $RUNNER
+			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET _$script " $RUNNER
 		else
 			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
 			$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script;
@@ -375,7 +375,7 @@ for script in $TESTSCRIPTS; do
 
 	if test $CLEAN -ge 1; then
 		rm -f $TMPDIR/$SOCKET $DEBUGFILE;
-		rm -f $TMPDIR/$script;
+		rm -f $TMPDIR/_$script;
 	fi
 done;
 
@@ -383,7 +383,7 @@ if test $CLEAN -ge 2; then
 	echo "Cleaning up directory $TMPDIR"
 
 	for script in $TESTSCRIPTS; do
-		rm -f $TMPDIR/$script.log
+		rm -f $TMPDIR/_$script.log
 	done;
 
 	for i in $TESTFILES; do
