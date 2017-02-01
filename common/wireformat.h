@@ -140,14 +140,14 @@
     
 #define   FS_DIR_LEN     0    	/* file length in bytes, four bytes, low byte first */
 #define	  FS_DIR_ATTR	 4	/* file entry attribute bits, see below */
-#define   FS_DIR_YEAR    FS_DATE_YEAR + 5    	/* =4;    last modification date, year-1900 */
-#define   FS_DIR_MONTH   FS_DATE_MONTH + 5    	/* =5;    -"- month */
-#define   FS_DIR_DAY     FS_DATE_DAY + 5    	/* =6;    -"- day */
-#define   FS_DIR_HOUR    FS_DATE_HOUR + 5    	/* =7;    -"- hour */
-#define   FS_DIR_MIN     FS_DATE_MIN + 5    	/* =8;    -"- minute */
-#define   FS_DIR_SEC     FS_DATE_SEC + 5    	/* =9;    -"- second */
-#define   FS_DIR_MODE    FS_DATE_LEN + 5   	/* =10;   type of directory entry, see FS_DIR_MOD_* below */
-#define   FS_DIR_NAME    FS_DIR_MODE + 1   	/* =11;   zero-terminated file name */
+#define   FS_DIR_YEAR    FS_DATE_YEAR + 5    	/* =5;    last modification date, year-1900 */
+#define   FS_DIR_MONTH   FS_DATE_MONTH + 5    	/* =6;    -"- month */
+#define   FS_DIR_DAY     FS_DATE_DAY + 5    	/* =7;    -"- day */
+#define   FS_DIR_HOUR    FS_DATE_HOUR + 5    	/* =8;    -"- hour */
+#define   FS_DIR_MIN     FS_DATE_MIN + 5    	/* =9;    -"- minute */
+#define   FS_DIR_SEC     FS_DATE_SEC + 5    	/* =10;   -"- second */
+#define   FS_DIR_MODE    FS_DATE_LEN + 5   	/* =11;   type of directory entry, see FS_DIR_MOD_* below */
+#define   FS_DIR_NAME    FS_DIR_MODE + 1   	/* =12;   zero-terminated file name */
     
 /* type of directory entries */ 
     
