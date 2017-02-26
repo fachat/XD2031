@@ -211,6 +211,9 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 }
 
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, void (*callback)(int8_t errnum, uint8_t *rxdata));
+
+
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
 		errormsg_t *errormsg, rtconfig_t *rtconf,
 		void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t iscmd) {
@@ -308,22 +311,9 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	}
 
 	activeslot->endpoint = endpoint;
-
-	// TODO: move the following code into the serial provider
-	// from here on the code is (mostly?) only for packet transfer,
-	// local providers like SD card don't need it
-
-        uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
-#ifdef DEBUG_FILE
-	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
-#endif
-	packet_init(&activeslot->txbuf, len, cmd_buffer);
-
 	// store pointer to runtime config in packet
 	// used by providers running on the device
 	activeslot->txbuf.rtc = rtconf;
-
-	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
 
 	if (!iscmd) {
 		// only for file opens
@@ -368,6 +358,24 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			return -1;
 		}
 	}
+
+	// TODO: move the following code into the serial provider
+	// from here on the code is (mostly?) only for packet transfer,
+	// local providers like SD card don't need it
+
+	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, callback);
+}
+
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+
+        uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
+#ifdef DEBUG_FILE
+	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
+#endif
+	packet_init(&activeslot->txbuf, len, cmd_buffer);
+
+	packet_set_filled(&activeslot->txbuf, channel_no, type, len);
+
 
 	activeslot->callback = callback;
 
