@@ -66,7 +66,7 @@ static void dump_result(nameinfo_t *result) {
 #endif
 
 // shared global variable to be used in parse_filename, as long as it's threadsafe
-nameinfo_t nameinfo;
+//nameinfo_t nameinfo;
 
 /** @brief Extract drive from filename
  *

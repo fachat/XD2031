@@ -54,6 +54,8 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	uint8_t err_sec = 0;
 	uint8_t err_drv = 0;
 
+	nameinfo_t nameinfo;
+
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 
 	parse_filename(command, &nameinfo, PARSEHINT_COMMAND);
@@ -95,7 +97,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			// pass-through commands
 			// those are just being passed to the provider
 			// nameinfo cmd enum definition such that wireformat matches it
-			return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, errormsg, rtconf, callback, 1);
+			return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 1);
 		case CMD_ASSIGN:
 			if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
 				// no drive; TODO: last drive
@@ -104,7 +106,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			}
 
 			if (provider_assign( nameinfo.drive, (char*) nameinfo.name, (char*) nameinfo.file[0].name ) < 0) {
-				return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer, errormsg, rtconf, callback, 1);
+				return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 1);
 			}
 			break;
 		case CMD_UX:

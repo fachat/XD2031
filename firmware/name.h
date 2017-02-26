@@ -71,7 +71,7 @@ typedef struct {
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 
 // shared global variable to be used in parse_filename, as long as it's threadsafe
-extern nameinfo_t nameinfo;
+//extern nameinfo_t nameinfo;
 
 /*
  * parse a CBM file name or command argument (is_command != 0 for commands), and

@@ -88,6 +88,8 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		channel_no, (char*)&(command->command_buffer), openflag);
 #endif
 
+	nameinfo_t nameinfo;
+
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
@@ -207,37 +209,37 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	debug_flush();
 #endif
 
-	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, callback, 0);
+	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 0);
 
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, void (*callback)(int8_t errnum, uint8_t *rxdata));
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
-		errormsg_t *errormsg, rtconfig_t *rtconf,
+		errormsg_t *errormsg, rtconfig_t *rtconf, nameinfo_t *nameinfo,
 		void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t iscmd) {
 
 	assert_not_null(errormsg, "file_submit_call: errormsg is null");
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
 	// check for default drive (here is the place to set the last used one)
-	if (nameinfo.drive == NAMEINFO_LAST_DRIVE) {
-		nameinfo.drive = rtconf->last_used_drive;
+	if (nameinfo->drive == NAMEINFO_LAST_DRIVE) {
+		nameinfo->drive = rtconf->last_used_drive;
 	}
-	else if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+	else if (nameinfo->drive == NAMEINFO_UNUSED_DRIVE) {
 		// TODO: match CBM behavior
-		nameinfo.drive = rtconf->last_used_drive;
+		nameinfo->drive = rtconf->last_used_drive;
 	}
-	else if (nameinfo.drive < MAX_DRIVES) {
+	else if (nameinfo->drive < MAX_DRIVES) {
 		// only save real drive numbers as last used default
-		rtconf->last_used_drive = nameinfo.drive;
+		rtconf->last_used_drive = nameinfo->drive;
 	}
 
 	// if second name does not have a drive, use drive from first,
 	// but only if it is defined
-	if (nameinfo.file[0].drive == NAMEINFO_UNUSED_DRIVE && nameinfo.drive != NAMEINFO_UNDEF_DRIVE) {
-		nameinfo.file[0].drive = nameinfo.drive;
+	if (nameinfo->file[0].drive == NAMEINFO_UNUSED_DRIVE && nameinfo->drive != NAMEINFO_UNDEF_DRIVE) {
+		nameinfo->file[0].drive = nameinfo->drive;
 	}
 
 	// here is the place to plug in other file system providers,
@@ -250,7 +252,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
 		endpoint = direct_provider();
 	} else {
-		endpoint = provider_lookup(nameinfo.drive, (char*) nameinfo.drivename);
+		endpoint = provider_lookup(nameinfo->drive, (char*) nameinfo->drivename);
 	}
 
 	// convert from bus' PETSCII to provider
@@ -258,26 +260,26 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// are still ASCII only
 	// in the future the bus may have an own conversion option...
 	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-		((char*)nameinfo.name, strlen((char*)nameinfo.name), 
-		(char*)nameinfo.name, strlen((char*)nameinfo.name));
-	for (uint8_t i=0 ; i < nameinfo.num_files ; ++i) {
-		if (nameinfo.file[i].name != NULL) {
+		((char*)nameinfo->name, strlen((char*)nameinfo->name), 
+		(char*)nameinfo->name, strlen((char*)nameinfo->name));
+	for (uint8_t i=0 ; i < nameinfo->num_files ; ++i) {
+		if (nameinfo->file[i].name != NULL) {
 			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-				((char*)nameinfo.file[i].name, strlen((char*)nameinfo.file[i].name), 
-				(char*)nameinfo.file[i].name, strlen((char*)nameinfo.file[i].name));
+				((char*)nameinfo->file[i].name, strlen((char*)nameinfo->file[i].name), 
+				(char*)nameinfo->file[i].name, strlen((char*)nameinfo->file[i].name));
 		}
 	}
 
 	if (type == FS_MOVE 
-		&& nameinfo.file[0].drive != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
-		&& nameinfo.file[0].drive != nameinfo.drive) {		// no need to check if the same
+		&& nameinfo->file[0].drive != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
+		&& nameinfo->file[0].drive != nameinfo->drive) {		// no need to check if the same
 
 		// two-name command(s) with possibly different drive numbers
-		endpoint_t *endpoint2 = provider_lookup(nameinfo.file[0].drive, (char*) nameinfo.file[0].name);
+		endpoint_t *endpoint2 = provider_lookup(nameinfo->file[0].drive, (char*) nameinfo->file[0].name);
 
 		if (endpoint2 != endpoint) {
-			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo.drive+0x30, nameinfo.file[0].drive+0x30);
-			set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo.drive);
+			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo->drive+0x30, nameinfo->file[0].drive+0x30);
+			set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->drive);
 			return -1;
 		}
 	}
@@ -286,8 +288,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// returns a default provider - serial-over-USB to the PC, which then 
 	// may do further checks
 	if (endpoint == NULL) {
-		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo.drive); debug_putcrlf();
-		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo.drive);
+		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo->drive); debug_putcrlf();
+		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->drive);
 		return -1;
 	}
 	provider_t *provider = endpoint->provider;
@@ -306,7 +308,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	if (activeslot == NULL) {
 		debug_puts("NO OPEN SLOT FOR OPEN!");
 		debug_putcrlf();
-		set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
+		set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
 		return -1;
 	}
 
@@ -329,7 +331,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		if (type == FS_OPEN_RW) {
 			writetype = WTYPE_READWRITE;
 		}
-		if (nameinfo.options & NAMEOPT_NONBLOCKING) {
+		if (nameinfo->options & NAMEOPT_NONBLOCKING) {
 			writetype |= WTYPE_NONBLOCKING;
 		}
 
@@ -348,14 +350,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			if (type != FS_OPEN_DIRECT) {
 				debug_puts("FILE OPEN ERROR");
 				debug_putcrlf();
-				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
+				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
 				return -1;
 			}
 		}
-		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo.drive);
+		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo->drive);
 		if (e < 0) {
 			debug_puts("E="); debug_puthex(e); debug_putcrlf();
-			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo.drive);
+			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
 			return -1;
 		}
 	}
@@ -364,12 +366,12 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// from here on the code is (mostly?) only for packet transfer,
 	// local providers like SD card don't need it
 
-	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, rtconf, callback);
+	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, rtconf, nameinfo, callback);
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
-        uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
+        uint8_t len = assemble_filename_packet(cmd_buffer, nameinfo);
 #ifdef DEBUG_FILE
 	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
 #endif
