@@ -211,7 +211,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, void (*callback)(int8_t errnum, uint8_t *rxdata));
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
@@ -313,7 +313,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	activeslot->endpoint = endpoint;
 	// store pointer to runtime config in packet
 	// used by providers running on the device
-	activeslot->txbuf.rtc = rtconf;
+	
+//activeslot->txbuf.rtc = rtconf;
 
 	if (!iscmd) {
 		// only for file opens
@@ -363,10 +364,10 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// from here on the code is (mostly?) only for packet transfer,
 	// local providers like SD card don't need it
 
-	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, callback);
+	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, rtconf, callback);
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
         uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
 #ifdef DEBUG_FILE
@@ -390,8 +391,8 @@ uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_
 	// prepare response buffer
 	packet_init(&activeslot->rxbuf, OPEN_RX_DATA_LEN, activeslot->rxdata);
 	
-	provider->submit_call(endpoint->provdata, channel_no, &activeslot->txbuf, 
-			&activeslot->rxbuf, _file_open_callback);
+	provider->submit_call_cmd(endpoint->provdata, channel_no, &activeslot->txbuf, 
+			&activeslot->rxbuf, rtconf, _file_open_callback);
 
 	return 0;
 }

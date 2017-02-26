@@ -74,7 +74,10 @@ void serial_submit(void *epdata, packet_t *buf);
  * callback is called from delay context when the response has been
  * received
  */
-void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+void serial_submit_call_data(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
+                uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
+
+void serial_submit_call_cmd(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *rtc,
                 uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 // dummy
@@ -105,7 +108,8 @@ provider_t serial_provider  = {
 	charset,
 	set_charset,
         serial_submit,
-        serial_submit_call,
+        serial_submit_call_data,
+        serial_submit_call_cmd,
 	directory_converter,
 	NULL,
 	NULL
@@ -382,7 +386,16 @@ void serial_submit(void *epdata, packet_t *buf) {
  * callback is called from delay() context when the response has been
  * received
  */
-void serial_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
+
+void serial_submit_call_cmd(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *rtc,
+		uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet)) {
+	
+	// TODO assemble packet
+
+	serial_submit_call_data(epdata, channelno, txbuf, rxbuf, callback);
+}
+
+void serial_submit_call_data(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
 		uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet)) {
 
 	if (channelno < 0) {

@@ -46,7 +46,7 @@
 
 #define	MAX_RTCONFIG	3
 
-static void do_charset(void);
+static void do_charset();
 
 static endpoint_t *endpoint;
 
@@ -131,7 +131,7 @@ static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) 
         return 0;
 }
 
-static void do_charset(void) {
+static void do_charset() {
 
 	// set the communication charset to PETSCII
 	strcpy(outbuf, cconv_charsetname(current_charset));
@@ -140,7 +140,7 @@ static void do_charset(void) {
         packet_set_filled(&outpack, FSFD_CMD, FS_CHARSET, strlen(outbuf)+1);
 
 	// send the FS_CHARSET packet
-        endpoint->provider->submit_call(endpoint->provdata, FSFD_CMD, &outpack, &outpack, out_callback);
+        endpoint->provider->submit_call_data(endpoint->provdata, FSFD_CMD, &outpack, &outpack, out_callback);
 
 	// must not wait, as we may be in callback from FS_RESET (from server),
 	// so serial_lock is set
@@ -206,7 +206,7 @@ void rtconfig_pullconfig(int argc, const char *argv[]) {
         packet_set_filled(&buspack, FSFD_SETOPT, FS_RESET, 0);
 
         // send request, receive in same buffer we sent from
-        endpoint->provider->submit_call(endpoint->provdata, FSFD_SETOPT, &buspack, &buspack, setopt_callback);
+        endpoint->provider->submit_call_data(endpoint->provdata, FSFD_SETOPT, &buspack, &buspack, setopt_callback);
 
         debug_printf("sent reset packet on fd %d, charset=%d\n", FSFD_SETOPT, current_charset);
 

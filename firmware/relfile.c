@@ -123,7 +123,7 @@ static int8_t relfile_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 } 
 
 
-static void relfile_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+static void relfile_submit_call_data(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
                 uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 #ifdef DEBUG_BLOCK
@@ -370,7 +370,8 @@ static provider_t relfile_provider = {
 	charset,		// get current character set
 	NULL,			// set new charset
 	NULL,			// submit
-	relfile_submit_call,	// submit_call
+	relfile_submit_call_data,// submit_call_data
+	NULL,			// submit_call_cmd
 	NULL,			// directory_converter
 	relfile_get,		// channel_get
 	relfile_put		// channel_put

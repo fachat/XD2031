@@ -52,8 +52,13 @@ typedef struct {
 	// submit a request/response packet; call the callback function when the 
 	// response is received; If callback returns != 0 then the call is kept open,
 	// and further responses can be received
-	void (*submit_call) (void *pdata, int8_t channelno, packet_t * txbuf,
+	void (*submit_call_data) (void *pdata, int8_t channelno, packet_t * txbuf,
 			     packet_t * rxbuf,
+			     uint8_t(*callback) (int8_t channelno,
+						 int8_t errnum,
+						 packet_t * packet));
+	void (*submit_call_cmd) (void *pdata, int8_t channelno, packet_t * txbuf,
+			     packet_t * rxbuf, rtconfig_t *rtconfig,
 			     uint8_t(*callback) (int8_t channelno,
 						 int8_t errnum,
 						 packet_t * packet));

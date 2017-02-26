@@ -135,7 +135,7 @@ static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	// not irq-protected, as exlusive state conditions
 	if (c->pull_state == PULL_OPEN) {
 		c->pull_state = PULL_PRELOAD;
-		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
+		endpoint->provider->submit_call_data(endpoint->provdata, c->channel_no, p, p, _pull_callback);
 
 		if (options & GET_SYNC) {
 			while (c->pull_state == PULL_PRELOAD) {
@@ -146,7 +146,7 @@ static void channel_pull(channel_t *c, uint8_t slot, uint8_t options) {
 	if (c->pull_state == PULL_ONEREAD && c->writetype == WTYPE_READONLY) {
 		// only if we're read-only pull in second buffer
 		c->pull_state = PULL_PULL2ND;
-		endpoint->provider->submit_call(endpoint->provdata, c->channel_no, p, p, _pull_callback);
+		endpoint->provider->submit_call_data(endpoint->provdata, c->channel_no, p, p, _pull_callback);
 
 		if (options & GET_SYNC) {
 			while (c->pull_state == PULL_PULL2ND) {
@@ -422,7 +422,7 @@ cbm_errno_t channel_close(int8_t channel_no, void (*close_callback)(int8_t errno
 	        packet_set_filled(curpack, channel_no, FS_CLOSE, 0);
 
 		endpoint_t *endpoint = chan->endpoint;
-       	        endpoint->provider->submit_call(endpoint->provdata, 
+       	        endpoint->provider->submit_call_data(endpoint->provdata, 
 			channel_no, curpack, curpack, _close_callback);
 
        		// wait until the packet has been sent and been responded to
@@ -576,7 +576,7 @@ static void channel_write_flush(channel_t *chan, packet_t *curpack, uint8_t forc
 
 			// use same packet as rx/tx buffer
 			endpoint_t *endpoint = chan->endpoint;
-			endpoint->provider->submit_call(endpoint->provdata, 
+			endpoint->provider->submit_call_data(endpoint->provdata, 
 				channo, curpack, curpack, _push_callback);
 
 			// callback is already done?

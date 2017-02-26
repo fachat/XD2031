@@ -59,8 +59,11 @@ static uint8_t current_charset;
 static void *prov_assign(uint8_t drive, const char *petscii_parameter);
 static void prov_free(void *epdata);
 static void fat_submit(void *epdata, packet_t *buf);
-static void fat_submit_call(
+static void fat_submit_call_data(
    void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+   uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
+static void fat_submit_call_cmd(
+   void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *rtconfig,
    uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
 static charset_t charset(void *epdata) {
@@ -77,7 +80,8 @@ provider_t fat_provider  = {
    charset,
    set_charset,
    fat_submit,
-   fat_submit_call,
+   fat_submit_call_data,
+   fat_submit_call_cmd,
    directory_converter,
    NULL,                        // channel_get
    NULL                         // channel_put
@@ -123,7 +127,6 @@ static struct {
    char   headline[16 + 1];        // headline of directory listing
 } dir;
 
-static rtconfig_t *fatfs_rtc;      // stores wildcard behaviour for directory
 
 // ----- Prototypes --------------------------------------------------------
 
@@ -310,7 +313,14 @@ static void fat_submit(void *epdata, packet_t *buf) {
    // not applicable for storage ==> dummy
 }
 
-static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+static void fat_submit_call_data(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, 
+   uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet))
+{
+   // TODO: this breaks when reading the directory, as there rtconfig is needed for some reason
+   fat_submit_call_cmd(epdata, channelno, txbuf, rxbuf, NULL, callback);
+}
+
+static void fat_submit_call_cmd(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *fatfs_rtc,
    uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet))
 {
    // submit a request/response packet; call the callback function when the
@@ -448,7 +458,6 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
             no dirmask given                  --> show all directory entries
          */
          debug_printf("FS_OPEN_DIR for drive %d, ", txbuf->buffer[0]);
-	 fatfs_rtc = txbuf->rtc;
          char *b, *d;
          if (txbuf->len > 2) { // 2 bytes: drive number and zero terminator
             debug_printf("dirmask '%s'\n", txbuf->buffer + 1);
@@ -492,7 +501,7 @@ static void fat_submit_call(void *epdata, int8_t channelno, packet_t *txbuf, pac
 
       case FS_DELETE:
          reply_as_usual = false;
-         fs_delete(path, rxbuf, txbuf->rtc->advanced_wildcards); // replies via rxbuf
+         fs_delete(path, rxbuf, fatfs_rtc->advanced_wildcards); // replies via rxbuf
          break;
 
       case FS_READ:

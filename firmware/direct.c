@@ -352,7 +352,7 @@ int8_t cmd_block(bus_t *bus, char *cmdbuf, uint8_t *err_trk, uint8_t *err_sec, u
 // ----------------------------------------------------------------------------------
 // provider for direct files
 
-static void block_submit_call(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+static void block_submit_call_cmd(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *rtc,
                 uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
 
 #ifdef DEBUG_BLOCK
@@ -363,9 +363,7 @@ debug_flush();
 
 	int bufno;
 
-	int8_t err = CBM_ERROR_NO_CHANNEL;
-	uint8_t rtype = FS_REPLY;
-	uint8_t plen, p;
+	uint8_t plen;
 	uint8_t *ptr = NULL;
 	cmdbuf_t *buffer = NULL;
 
@@ -393,6 +391,26 @@ debug_flush();
 		}
 		packet_set_filled(rxbuf, channelno, FS_REPLY, 1);
 		break;
+	}
+	fncallback(channelno, 0, rxbuf);
+}
+
+static void block_submit_call_data(void *pdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf,
+                uint8_t (*fncallback)(int8_t channelno, int8_t errnum, packet_t *rxpacket)) {
+
+#ifdef DEBUG_BLOCK
+	debug_printf("submit call for direct file, chan=%d, cmd=%d, len=%d, name=%s\n", 
+		channelno, txbuf->type, txbuf->wp, ((txbuf->type == FS_OPEN_DIRECT || txbuf->type == FS_OPEN_RW) ? ((char*) txbuf->buffer+1) : ""));
+debug_flush();
+#endif
+
+	int8_t err = CBM_ERROR_NO_CHANNEL;
+	uint8_t rtype = FS_REPLY;
+	uint8_t plen, p;
+	uint8_t *ptr = NULL;
+	cmdbuf_t *buffer = NULL;
+
+	switch(txbuf->type) {
 	case FS_READ:
 		buffer = buf_find(channelno);
 		rtype = FS_DATA_EOF;		// just in case, for an error
@@ -483,7 +501,8 @@ static provider_t directprovider = {
 	charset,		// get current character set
 	NULL,			// set new charset
 	NULL,			// submit
-	block_submit_call,	// submit_call
+	block_submit_call_data,	// submit_call_data
+	block_submit_call_cmd,	// submit_call_cmd
 	NULL,			// directory_converter
 	NULL,			// channel_get
 	NULL			// channel_put

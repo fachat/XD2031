@@ -138,7 +138,7 @@ static uint8_t cmd_wait_cb() {
 uint8_t buf_call(endpoint_t *ep, void *provdata, uint8_t channel_no, packet_t *sendbuf, packet_t *rxbuf) {
 
 	cbstat = 0;
-	ep->provider->submit_call(provdata, channel_no, 
+	ep->provider->submit_call_data(provdata, channel_no, 
 			sendbuf, rxbuf, cmd_callback);
 
 	return cmd_wait_cb();
