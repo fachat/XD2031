@@ -309,6 +309,10 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 	activeslot->endpoint = endpoint;
 
+	// TODO: move the following code into the serial provider
+	// from here on the code is (mostly?) only for packet transfer,
+	// local providers like SD card don't need it
+
         uint8_t len = assemble_filename_packet(cmd_buffer, &nameinfo);
 #ifdef DEBUG_FILE
 	debug_printf("LEN AFTER ASSEMBLE=%d\n", len);
