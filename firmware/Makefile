@@ -78,7 +78,7 @@ SWNAME=xd2031
 AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
 # Sorting include paths and defines simplifies checking them
-INCPATHS=. ../common $(ARCH) $(DEVICE)
+INCPATHS=. ../common ./fatfs $(ARCH) $(DEVICE)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 SDEFS=$(sort $(DEFS))
 
@@ -180,6 +180,9 @@ sockserver:
 
 dumppar:
 	@printf "Target: $(DEVICE)   MCU: $(MCU)   Version: $(VERSION)\n"
+
+fat:
+	make --no-print-directory DEVICE=xs1541 VERSION=$(VERSION) MCU=m1284p USE_FAT=y
 
 # Build for all devices
 zoo:
