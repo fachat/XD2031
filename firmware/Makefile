@@ -83,8 +83,12 @@ INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 SDEFS=$(sort $(DEFS))
 
 # CFLAGS/ASFLAGS common to all devices/platforms
-CFLAGS+=-Wall -Wextra -Wno-unused-parameter
+#CFLAGS+=-Wall -Wextra -Wno-unused-parameter
+CFLAGS+=-Wall -Wextra 
 CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
+ifneq ($(V),1)
+CFLAGS+=-Wno-unused-parameter
+endif
 
 ASFLAGS=$(MCU_CC) $(sort -I$(ARCH) -I$(DEVICE))
 
