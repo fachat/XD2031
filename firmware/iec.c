@@ -40,7 +40,7 @@
 #include "led.h"
 #include "system.h"
 
-#undef DEBUG_BUS
+#define DEBUG_BUS
 #undef DEBUG_BUS_DATA
 
 // Prototypes
@@ -387,8 +387,8 @@ void iec_mainloop_iteration(void)
 	}
 
 #ifdef DEBUG_BUS
-	debug_printf("start of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d\n", 
-		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_printf("start of cycle: stat=%04x, atn=%d (%s), atna=%d (%s), data=%d, clk=%d\n", 
+		ser_status, satnishi(), (satnishi()?"INACTIVE":"ACTIVE"), satna(), (satna()?"INACTIVE":"ACTIVE"), dataishi(), clkishi()); 
 	//debug_putcrlf();
 #endif
 
@@ -412,6 +412,7 @@ void iec_mainloop_iteration(void)
 	do {
 		if (satnishi()) {
 			dataforcelo();
+			enable_interrupts();
 			goto cmd;
 		}
 	} while (is_port_clklo(read_debounced()));
@@ -430,13 +431,14 @@ void iec_mainloop_iteration(void)
 
 		if (cmd >= 0) {
 			ser_status = bus_attention(&bus, 0xff & cmd);
-
+/*
 			if (ser_status & STAT_RDTIMEOUT) {
 				datahi();
 				clkhi();
 				delayus(150);
 				goto cmd;
 			}  else
+
 			if (waitAtnHi(ser_status)) {
 				// e902
 				dataforcelo();
@@ -458,6 +460,7 @@ void iec_mainloop_iteration(void)
 				// and exit loop
 				goto cmd;
 			}
+*/
 		}
 
 		// cmd might be <0 if iecin ran into an ATN hi condition
@@ -465,7 +468,13 @@ void iec_mainloop_iteration(void)
 		// have a problem just staying in the loop?
 		// TODO: check if cmd<0 condition is needed
 	} while (satnislo());
-	
+
+	if (ser_status & STAT_RDTIMEOUT) {
+		datahi();
+		clkhi();
+		delayus(150);
+	}
+
         // ---------------------------------------------------------------
 	// ATN is high now
 	// bus_attention has set status what to do
@@ -473,8 +482,8 @@ void iec_mainloop_iteration(void)
 cmd:
 
 #ifdef DEBUG_BUS
-	debug_printf("stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
-		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+	debug_printf("cmd: stat=%04x, atn=%d (%s), atna=%d (%s), data=%d, clk=%d", 
+		ser_status, satnishi(), (satnishi()?"INACTIVE":"ACTIVE"), satna(), (satna()?"INACTIVE":"ACTIVE"), dataishi(), clkishi()); 
 	debug_putcrlf();
 #endif
 
@@ -513,15 +522,11 @@ cmd:
 		}
         }
 
-#if 0 //def DEBUG_BUS
-	debug_printf("end of cycle: stat=%04x, atn=%d, atna=%d, data=%d, clk=%d", 
-		ser_status, satnishi(), satna(), dataishi(), clkishi()); 
+#ifdef DEBUG_BUS
+	debug_printf("end of cycle: stat=%04x, atn=%d (%s), atna=%d (%s), data=%d, clk=%d", 
+		ser_status, satnishi(), (satnishi()?"INACTIVE":"ACTIVE"),satna(), (satna()?"INACTIVE":"ACTIVE"),dataishi(), clkishi()); 
 	debug_putcrlf();
 #endif
-
-#ifdef DEBUG_BUS
-	debug_putc('X'); debug_flush();
-#endif	
         return;
 }
 
