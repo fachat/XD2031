@@ -27,6 +27,7 @@
 #include "iec.h"
 #include "ieeehw.h"
 #include "ieee.h"
+#include "debug.h"
 
 static void disable_ints(void) {
 	/* IEEE-488 ATN interrupt using PCINT */
@@ -59,7 +60,7 @@ static void enable_ints(void) {
   	/* Enable pin change interrupt 3 (PCINT31..24) */
   	PCICR |= _BV(PCIE3);
 
-  	//debug_putps("Done init ieee ints"); debug_putcrlf();
+  	debug_puts("Done init ieee ints"); debug_putcrlf();
 }
 
 

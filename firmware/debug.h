@@ -29,13 +29,11 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#define	DEBUG 1
-//#define       DEBUG 0
+#define       DEBUG 0
 
 
 // do this always(?)
 
-#define	debug_flush()	term_flush()
 
 
 #if DEBUG 
@@ -43,6 +41,8 @@
 #include "term.h"
 #include "archcompat.h"
 
+
+#define	debug_flush()	term_flush()
 
 extern const char nullstring[7];
 
@@ -106,7 +106,7 @@ static inline void debug_putputps(char *s) { }
 static inline void debug_puthex(char c) { } 
 static inline void debug_printf(char *format, ...) { } 
 static inline void debug_hexdump(uint8_t * p, uint16_t len, uint8_t petscii) { } 
-static inline void debug_dump_packet(packet_t * p) { } 
+static inline void debug_flush() { } 
 
 #endif				// DEBUG
 #endif				// def DEBUG_H

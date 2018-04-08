@@ -26,10 +26,10 @@
 #include "bus.h"
 #include "errormsg.h"
 
-#include "term.h"
 #include "led.h"
 */
 
+#include "term.h"
 #include "channel.h"
 #include "config.h"
 #include "provider.h"

@@ -55,7 +55,7 @@
 
 #include "device.h"
 
-#undef	DEBUG_BUS
+#define	DEBUG_BUS
 #undef	DEBUG_BUS_DATA
 
 #define	DEVICE_MASK	0x1f
@@ -449,7 +449,7 @@ void bus_close(bus_t *bus) {
             	if (channel_close(bus_secaddr_adjust(bus, secaddr), _cmd_callback) == CBM_ERROR_OK) {
 
 #ifdef DEBUG_BUS
-			debug_puts("bus_close: Waiting for callback (%p) on channel %d\n", _cmd_callback,
+			debug_printf("bus_close: Waiting for callback (%p) on channel %d\n", _cmd_callback,
 				bus_secaddr_adjust(bus, secaddr)); debug_flush();
 #endif
 	    		while (bus_for_irq->cmd_done == 0) {
