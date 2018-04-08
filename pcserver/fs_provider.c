@@ -621,14 +621,14 @@ static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
 
 	// (bogus) check validity of parameters, otherwise fall through to error
 	// need to be validated for other commands besides U1/U2
-	if (sector > 0 && sector < 100 && track < 100) {
+	if (track > 0 && sector < 100 && track < 100) {
 		switch (cmd) {
 		case FS_BLOCK_U1:
 			// U1 basically opens a short-lived channel to read the contents of a
 			// buffer into the device
 			// channel is closed by device with separate FS_CLOSE
-
-			file = reserve_file((fs_endpoint_t*)ep/*, channel*/);
+#if 0
+			file = reserve_file((fs_endpoint_t*)ep);
 			open_block_channel(file);
 			// copy the file contents into the buffer
 			// test
@@ -640,12 +640,13 @@ static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
 			//handler_resolve_block(ep, channel, &fp);
 
 			channel_set(channel, fp);
-		
-			return CBM_ERROR_OK;
+#endif		
+			return CBM_ERROR_DRIVE_NOT_READY;
 		case FS_BLOCK_U2:
 			// U2 basically opens a short-lived channel to write the contents of a
 			// buffer from the device
 			// channel is closed by device with separate FS_CLOSE
+#if 0
 			file = reserve_file((fs_endpoint_t*)ep/*, channel*/);
 			open_block_channel(file);
 
@@ -655,6 +656,8 @@ static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
 			channel_set(channel, fp);
 		
 			return CBM_ERROR_OK;
+#endif
+			return CBM_ERROR_DRIVE_NOT_READY;
 		}
 	}
 
