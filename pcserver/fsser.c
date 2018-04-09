@@ -44,7 +44,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#include "fscmd.h"
+#include "in_device.h"
+#include "in_ui.h"
+#include "cmd.h"
 #include "privs.h"
 #include "log.h"
 #include "charconvert.h"
@@ -97,6 +99,27 @@ void assert_single_char(char *argv) {
 				strlen(argv) > 3 ? "s" : "", argv + 2, argv);
 		exit (EXIT_RESPAWN_NEVER);
 	}
+}
+
+static int do_loop(readfd, writefd) {
+	
+	int rv = 0;
+
+	in_device_t *fd = in_device_init(readfd, writefd);
+	
+	do {
+		// UI input
+		rv = in_ui_loop();
+		if (rv) {
+			return rv;
+		}
+
+		// device input (either socket or device)
+		rv = in_device_loop(fd);
+		if (rv == 2) {
+			return rv;
+		}
+	} while (true);
 }
 
 
@@ -274,7 +297,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int res = cmd_loop(readfd, writefd);
+	int res = do_loop(readfd, writefd);
 
 	if (device != NULL || socket != NULL) {
 		device_close(fdesc);

@@ -45,7 +45,6 @@
 #include <libgen.h>
 #include <stdbool.h>
 
-#include "fscmd.h"
 #include "provider.h"
 #include "dir.h"
 #include "handler.h"

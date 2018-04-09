@@ -41,8 +41,6 @@
 #include <string.h>
 
 
-#include "fscmd.h"
-
 #include "provider.h"
 #include "handler.h"
 #include "errors.h"
