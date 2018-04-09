@@ -50,12 +50,12 @@ PKG_CONFIG=$(CROSS)pkg-config
 AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
 # Sorting include paths and defines simplifies checking them
-INCPATHS=. ../common util $(ARCH)
+INCPATHS=. ../common util os $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
 CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
 
-SRC=$(wildcard *.c) $(wildcard util/*.c) $(wildcard ../common/*.c) $(wildcard $(ARCH)/*.c)
+SRC=$(wildcard *.c) $(wildcard util/*.c) $(wildcard os/*.c) $(wildcard ../common/*.c) $(wildcard $(ARCH)/*.c)
 
 
 # Create object names from .c and .S
@@ -65,7 +65,7 @@ OBJ=$(addprefix $(OBJDIR),$(_OBJ))
 DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
 
 # locations where make searches C source files
-vpath %.c . ../common util $(ARCH)
+vpath %.c . ../common util os $(ARCH)
 
 # Include automatic dependencies, continue if they don't exist yet
 -include $(DEP)
