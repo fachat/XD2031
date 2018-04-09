@@ -101,7 +101,7 @@ void assert_single_char(char *argv) {
 	}
 }
 
-static int do_loop(readfd, writefd) {
+static int do_loop(serial_port_t readfd, serial_port_t writefd) {
 	
 	int rv = 0;
 
