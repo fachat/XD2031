@@ -50,6 +50,6 @@ int cmd_chdir(const char *inname, int namelen);
 int cmd_move(const char *inname, int namelen);
 int cmd_copy(const char *inname, int namelen);
 int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen);
-int cmd_format(int tfd, const char *inname, int namelen, char *outbuf, int *outlen);
+int cmd_format(const char *inname, int namelen);
 
 #endif

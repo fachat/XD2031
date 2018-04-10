@@ -341,10 +341,8 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 		}
 		break;
 	case FS_FORMAT:
-		rv = cmd_format(tfd, buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen);
+		rv = cmd_format(buf+FSP_DATA, len-FSP_DATA);
 		retbuf[FSP_DATA] = rv;
-		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
-		log_warn("FORMAT: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);
       		break;
 	case FS_DUPLICATE:
 		log_warn("DUPLICATE: %s <--- NOT IMPLEMTED\n", buf+FSP_DATA);

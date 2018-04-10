@@ -589,14 +589,10 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 	return rv;
 }
 
-int cmd_format(int tfd, const char *inname, int namelen, char *outbuf, int *outlen) {
+int cmd_format(const char *inname, int namelen) {
 
-	(void) tfd;
-	(void) outbuf;
-	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
-	*outlen = 0;
 
 	endpoint_t *ep = provider_lookup(inname, namelen, &name, NAMEINFO_UNDEF_DRIVE);
 	if (ep != NULL) {
