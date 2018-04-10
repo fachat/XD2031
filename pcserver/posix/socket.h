@@ -23,3 +23,16 @@
  * open a named unix socket, listen on it and return the first connection
  */
 int socket_open(const char *socketname);
+
+/**
+ * open a named socket and listen on it; do not accept (yet)
+ */
+int socket_listen(const char *socketname);
+
+/**
+ * try to accept a connection on a socket
+ * return -1 on error or the socket fd
+ */
+int socket_accept(int sockfd);
+
+

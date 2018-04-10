@@ -30,7 +30,7 @@ typedef struct {
 	char buf[8192];
 } in_device_t;
 
-in_device_t *in_device_init(int readfd, int writefd);
+in_device_t *in_device_init(int readfd, int writefd, int do_reset);
 
 /**
  *

@@ -101,11 +101,16 @@ void assert_single_char(char *argv) {
 	}
 }
 
-static int do_loop(serial_port_t readfd, serial_port_t writefd) {
+static int do_loop(serial_port_t dev_fd, serial_port_t tools_fd) {
 	
 	int rv = 0;
+	serial_port_t tool = -1;
+	in_device_t *td = NULL;
+	in_device_t *fd = NULL;
 
-	in_device_t *fd = in_device_init(readfd, writefd);
+	if (dev_fd >= 0) {
+		fd = in_device_init(dev_fd, dev_fd, 1);
+	}
 	
 	do {
 		// UI input
@@ -114,10 +119,27 @@ static int do_loop(serial_port_t readfd, serial_port_t writefd) {
 			return rv;
 		}
 
+		if (tool < 0) {
+			tool = socket_accept(tools_fd);
+			if (tool >= 0) {
+				td = in_device_init(tools_fd, tools_fd, 0);
+			}
+		} 
+		if (td != NULL) {
+			rv = in_device_loop(td);
+			if (rv == 2) {
+				socket_close(tool);
+				tool = -1;
+				td = NULL;
+			}
+		} 
+		
 		// device input (either socket or device)
-		rv = in_device_loop(fd);
-		if (rv == 2) {
-			return rv;
+		if (fd != NULL) {
+			rv = in_device_loop(fd);
+			if (rv == 2) {
+				return rv;
+			}
 		}
 	} while (true);
 }
@@ -125,7 +147,7 @@ static int do_loop(serial_port_t readfd, serial_port_t writefd) {
 
 int main(int argc, char *argv[]) {
 
-	serial_port_t writefd=0, readfd=0;
+	serial_port_t dev_fd=0;
 	serial_port_t fdesc;
 	int i;
 	char *dir=NULL;
@@ -253,8 +275,7 @@ int main(int argc, char *argv[]) {
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
-		readfd = fdesc;
-		writefd = readfd;
+		dev_fd = fdesc;
 	}
 
 	// we have the serial device open, now we can drop privileges
@@ -270,8 +291,7 @@ int main(int argc, char *argv[]) {
                         socket, os_errno(), os_strerror(os_errno()));
                   exit(EXIT_RESPAWN_NEVER);
                 }
-                readfd = fdesc;
-                writefd = readfd;
+                dev_fd = fdesc;
         } else 
 	if (device == NULL && !use_stdio) {
 
@@ -297,7 +317,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int res = do_loop(readfd, writefd);
+	const char *home = os_get_home_dir();
+	const char *tools_sock = malloc_path(home, ".xdtools");
+	int tools_fd = socket_listen(tools_sock);
+
+	int res = do_loop(dev_fd, tools_fd);
 
 	if (device != NULL || socket != NULL) {
 		device_close(fdesc);

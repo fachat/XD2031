@@ -369,19 +369,20 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 //------------------------------------------------------------------------------------
 // init
 
-in_device_t *in_device_init(serial_port_t readfd, serial_port_t writefd) {
+in_device_t *in_device_init(serial_port_t readfd, serial_port_t writefd, int do_reset) {
 
 	in_device_t *tp = mem_alloc(&in_device_type);	
 	tp->readfd = readfd;
 	tp->writefd = writefd;
 
-	// sync device and server
-	dev_sync(readfd, writefd);
+	if (do_reset) {
+		// sync device and server
+		dev_sync(readfd, writefd);
 
-	// tell the device we've reset
-	// (it will answer with FS_RESET, which gives us the chance to send the X commands)
-	dev_sendreset(writefd);
-
+		// tell the device we've reset
+		// (it will answer with FS_RESET, which gives us the chance to send the X commands)
+		dev_sendreset(writefd);
+	}
 	return tp;
 }
 	
