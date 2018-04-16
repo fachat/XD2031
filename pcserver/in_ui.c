@@ -115,7 +115,7 @@ int in_ui_loop(void) {
 
 	if (buf[0] == 'A' || buf[0] == 'a') {
 		// assign from stdin control
-		err = cmd_assign(buf+1, 1);
+		err = cmd_assign(buf+1, CHARSET_ASCII, 1);
                 if (err != CBM_ERROR_OK) {
                         log_error("%d Error assigning %s\n", err, buf+1);
                 }

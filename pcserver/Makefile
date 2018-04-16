@@ -16,7 +16,7 @@ TARGET=fsser
 ifeq ($(WIN),y)
   ARCH    = win32
   CROSS   = i686-w64-mingw32.static-
-  CFLAGS  = -DCURL_STATICLIB 
+  CFLAGS  = -DCURL_STATICLIB -pedantic
   LDFLAGS = -static -Wl,-Bsymbolic-functions -lcurl -lssh2 -lidn -lgcrypt \
             -lgnutls -lcrypt32 -lwldap32 -lz -lnettle -lintl -liconv \
             -lhogweed -lgmp -lgnutls-openssl -lgpg-error -lws2_32

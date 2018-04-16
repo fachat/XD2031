@@ -197,7 +197,7 @@ static void curl_init() {
 }
 
 
-static curl_endpoint_t *new_endpoint(const char *path) {
+static curl_endpoint_t *new_endpoint(const char *path, charset_t cset) {
 
 	curl_endpoint_t *fsep = mem_alloc(&endpoint_type);
 
@@ -205,23 +205,23 @@ static curl_endpoint_t *new_endpoint(const char *path) {
 	// if hostend is NULL, then we only have the host
 	char *hostend=strchr(path, '/');
 
-	fsep->host_buffer = conv_to_alloc(path, &ftp_provider);
+	fsep->host_buffer = conv_name_alloc(path, cset, CHARSET_ASCII);
 	char *p = strchr(fsep->host_buffer, '/');
 	if (p != NULL) {
 		*p = 0;
 	}
 
 	if (hostend != NULL) {
-		fsep->path_buffer = conv_to_alloc(hostend+1, &ftp_provider);
+		fsep->path_buffer = conv_name_alloc(hostend+1, cset, CHARSET_ASCII);
 	}
 
 	return fsep;
 }
 
 
-static curl_endpoint_t *_new(const char *path) {
+static curl_endpoint_t *_new(const char *path, charset_t cset) {
 
-	curl_endpoint_t *fsep = new_endpoint(path);
+	curl_endpoint_t *fsep = new_endpoint(path, cset);
 
 	return fsep;
 }
@@ -229,7 +229,7 @@ static curl_endpoint_t *_new(const char *path) {
 //-----------------------------------------------------
 // protocol specific endpoint handling
 
-static endpoint_t *ftp_temp(char **name) {
+static endpoint_t *ftp_temp(char **name, charset_t cset) {
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -239,7 +239,7 @@ static endpoint_t *ftp_temp(char **name) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name);
+	curl_endpoint_t *fsep = _new(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
@@ -255,7 +255,7 @@ static endpoint_t *ftp_temp(char **name) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *http_temp(char **name) {
+static endpoint_t *http_temp(char **name, charset_t cset) {
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -265,7 +265,7 @@ static endpoint_t *http_temp(char **name) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name);
+	curl_endpoint_t *fsep = _new(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
@@ -281,12 +281,12 @@ static endpoint_t *http_temp(char **name) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *ftp_new(endpoint_t *parent, const char *path, int from_cmdline) {
+static endpoint_t *ftp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	(void) parent; // silence warning unused parameter
         (void) from_cmdline;    // silence unused parameter warning
 
-	curl_endpoint_t *fsep = _new(path);
+	curl_endpoint_t *fsep = _new(path, cset);
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_FTP;
@@ -296,12 +296,12 @@ static endpoint_t *ftp_new(endpoint_t *parent, const char *path, int from_cmdlin
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *http_new(endpoint_t *parent, const char *path, int from_cmdline) {
+static endpoint_t *http_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	(void) parent; // silence warning unused parameter
         (void) from_cmdline;    // silence unused parameter warning
 
-	curl_endpoint_t *fsep = _new(path);
+	curl_endpoint_t *fsep = _new(path, cset);
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_HTTP;
@@ -320,7 +320,7 @@ static char* add_parent_path(char *buffer, file_t *file) {
 
 		//strcat(buffer, file->filename);
 
-		char *p = conv_to_alloc(file->filename, &ftp_provider);
+		char *p = mem_alloc_str(file->filename);
 		char *newbuf = malloc_path(buffer, p);
 		mem_free(p);
 		mem_free(buffer);
@@ -562,7 +562,9 @@ static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len
 }
 
 // read file data
-static int read_file(file_t *file, char *retbuf, int len, int *readflag) {
+static int read_file(file_t *file, char *retbuf, int len, int *readflag, charset_t outcset) {
+
+	(void) outcset;
 
 	File *fp = (File*) file;
 
@@ -619,7 +621,7 @@ static file_t *curl_root(endpoint_t *ep) {
 }
 
 
-static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
+static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 	(void) readflag;	// silence warning
         *outentry = NULL;	// just in case
 
@@ -654,7 +656,7 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
         retfile->file.filename = name;
 	retfile->file.isdir = 1;	// just in case
 
-        if ( handler_next((file_t*)retfile, fp->pattern, outpattern, &wrapfile)
+        if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
                                 == CBM_ERROR_OK) {
 	        *outentry = wrapfile;
                 int rv = CBM_ERROR_OK;

@@ -33,6 +33,7 @@
 
 #include "os.h"
 
+#include "charconvert.h"
 #include "types.h"
 #include "mem.h"
 #include "in_device.h"
@@ -52,6 +53,8 @@ static void in_device_constructor(const type_t *t, void *o) {
 
 	d->wrp = 0;
 	d->rdp = 0;
+
+	d->charset = cconv_getcharset(CHARSET_ASCII_NAME);
 }
 	
 static type_t in_device_type = {
@@ -155,7 +158,7 @@ static void dev_sendreset(serial_port_t writefd) {
  *
  * The return packet is written into the file descriptor fd
  */
-static void dev_dispatch(char *buf, serial_port_t fd) {
+static void dev_dispatch(char *buf, in_device_t *dt) {
 	int tfd, cmd;
 	unsigned int len;
 	char retbuf[RET_BUFFER_SIZE];
@@ -227,18 +230,18 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, cmd);
+		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, retbuf+FSP_DATA+1, &outlen, cmd);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_OPEN_DR:
-		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_READ:
 		// note that on the server side, we do not need to handle FS_DATA*, as we only send those
-		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag);
+		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag, dt->charset);
 		if (rv != CBM_ERROR_OK) {
 			retbuf[FSP_DATA] = rv;
 			retbuf[FSP_LEN] = FSP_DATA + 1;
@@ -266,32 +269,32 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 
 		// command operations
 	case FS_DELETE:
-		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, 0);
+		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, dt->charset, retbuf+FSP_DATA+1, &outlen, 0);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_MOVE:
-		rv = cmd_move(buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_move(buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_CHDIR:
-		rv = cmd_chdir(buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_chdir(buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_MKDIR:
-		rv = cmd_mkdir(buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_mkdir(buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_RMDIR:
-		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, retbuf+FSP_DATA+1, &outlen, 1);
+		rv = cmd_delete(buf+FSP_DATA, len-FSP_DATA, dt->charset, retbuf+FSP_DATA+1, &outlen, 1);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_COPY:
-		rv = cmd_copy(buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_copy(buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
       		break;
@@ -320,7 +323,7 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 			name2 = NULL;
 		}
 		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
-		rv = provider_assign(drive, name, name2, 0);
+		rv = provider_assign(drive, name, name2, dt->charset, 0);
 		if (rv != 0) {
 			log_rv(rv);
 		}
@@ -329,19 +332,21 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 	case FS_RESET:
 		log_info("RESET\n");
 		// send the X command line options again
-		cmd_sendxcmd(fd, retbuf);
+		cmd_sendxcmd(dt->writefd, retbuf);
 		// we have already sent everything
 		sendreply = 0;
 		break;
 	case FS_CHARSET:
 		log_info("CHARSET: %s\n", buf+FSP_DATA);
 		if (tfd == FSFD_CMD) {
-			provider_set_ext_charset(buf+FSP_DATA);
+			charset_t c = cconv_getcharset(buf + FSP_DATA);
+			dt->charset = c;
+			//provider_set_ext_charset(buf+FSP_DATA);
 			retbuf[FSP_DATA] = CBM_ERROR_OK;
 		}
 		break;
 	case FS_FORMAT:
-		rv = cmd_format(buf+FSP_DATA, len-FSP_DATA);
+		rv = cmd_format(buf+FSP_DATA, len-FSP_DATA, dt->charset);
 		retbuf[FSP_DATA] = rv;
       		break;
 	case FS_DUPLICATE:
@@ -359,7 +364,7 @@ static void dev_dispatch(char *buf, serial_port_t fd) {
 	}
 
 	if (sendreply) {
-		dev_write_packet(fd, retbuf);
+		dev_write_packet(dt->writefd, retbuf);
 	}
 }
 
@@ -453,7 +458,7 @@ int in_device_loop(in_device_t *tp) {
 		  // did we already receive the full packet?
                   // yes, then execute
 		  //printf("dispatch @rdp=%d [%02x %02x ... ]\n", rdp, buf[rdp], buf[rdp+1]);
-                  dev_dispatch(tp->buf+tp->rdp, tp->writefd);
+                  dev_dispatch(tp->buf+tp->rdp, tp);
                   tp->rdp +=plen;
                 } else {
 		  // no, then break out of the while, to read more data

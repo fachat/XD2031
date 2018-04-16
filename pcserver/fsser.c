@@ -44,12 +44,12 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "charconvert.h"
 #include "in_device.h"
 #include "in_ui.h"
 #include "cmd.h"
 #include "privs.h"
 #include "log.h"
-#include "charconvert.h"
 #include "provider.h"
 #include "mem.h"
 #include "serial.h"
@@ -305,11 +305,11 @@ int main(int argc, char *argv[]) {
 	if(argc == 1) {
 		// Default assigns
 		log_info("Using built-in default assigns\n");
-		provider_assign(0, "fs",   os_get_home_dir(), 1);
-		provider_assign(1, "fs",   "/usr/local/xd2031/sample", 1);
-		provider_assign(2, "fs",   "/usr/local/xd2031/tools", 1);
-		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", 1);
-		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", 1);
+		provider_assign(0, "fs",   os_get_home_dir(), CHARSET_ASCII, 1);
+		provider_assign(1, "fs",   "/usr/local/xd2031/sample", CHARSET_ASCII, 1);
+		provider_assign(2, "fs",   "/usr/local/xd2031/tools", CHARSET_ASCII, 1);
+		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", CHARSET_ASCII, 1);
+		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", CHARSET_ASCII, 1);
 	} else {
 		if (cmd_assign_from_cmdline(argc, argv)) {
 			log_error("Error assigning drives! Aborting!\n");

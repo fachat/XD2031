@@ -71,7 +71,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
+static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
 
 	//log_debug("x00_resolve: infile=%s\n", infile->filename);
 
@@ -83,7 +83,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 		return CBM_ERROR_OK;
 	}
 
-	const char *name = conv_to_name_alloc(infile->filename, CHARSET_ASCII_NAME);
+	const char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
 
 	//log_debug("x00_resolve: infile converted to=%s\n", name);
 
@@ -146,7 +146,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 	// seek to start of file
 	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
-	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg);
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, cset);
 
 	if (strcmp("C64File", (char*)x00_buf) != 0) { 
 		mem_free((char*)name);

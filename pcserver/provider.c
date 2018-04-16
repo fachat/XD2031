@@ -53,8 +53,8 @@ extern provider_t tcp_provider;
 typedef struct {
         provider_t      *provider;
 	charset_t	native_cset_idx;
-	charconv_t	to_provider;
-	charconv_t	from_provider;
+//	charconv_t	to_provider;
+//	charconv_t	from_provider;
 } providers_t;
 
 static void providers_init(const type_t *type, void *obj) {
@@ -63,8 +63,8 @@ static void providers_init(const type_t *type, void *obj) {
 	providers_t *p = (providers_t*) obj;
 
 	p->provider = NULL;
-	p->to_provider = NULL;
-	p->from_provider = NULL;
+//	p->to_provider = NULL;
+//	p->from_provider = NULL;
 }
 
 static type_t providers_type = {
@@ -85,8 +85,8 @@ int provider_register(provider_t *provider) {
 	} else {
 		p->native_cset_idx = -1;
 	}
-	p->to_provider = cconv_identity;
-	p->from_provider = cconv_identity;
+//	p->to_provider = cconv_identity;
+//	p->from_provider = cconv_identity;
 
 	reg_append(&providers, p);
 
@@ -94,6 +94,7 @@ int provider_register(provider_t *provider) {
 }
 
 // return the index of the given provider in the providers[] table
+#if 0
 static int provider_index(provider_t *prov) {
 
 	for (int i = 0; ; i++) {
@@ -107,6 +108,7 @@ static int provider_index(provider_t *prov) {
 	}
 	return -1;
 }
+#endif
 
 // -----------------------------------------------------------------
 
@@ -169,6 +171,7 @@ const char *provider_get_ext_charset() {
 
 // set the character set for the external communication (i.e. the wireformat)
 // caches the to_provider and from_provider values in the providers[] table
+#if 0
 void provider_set_ext_charset(const char *charsetname) {
 
 	log_info("Setting filename communication charset to '%s'\n", charsetname);
@@ -214,6 +217,7 @@ charconv_t provider_convfrom(provider_t *prov) {
 	// fallback
 	return cconv_identity;
 }
+#endif
 
 //------------------------------------------------------------------------------------
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
@@ -245,7 +249,7 @@ file_t *provider_wrap(file_t *file) {
  * of the "A0:fs=foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
  * and "foo/bar" becomes the assign_to.
  */
-int provider_assign(int drive, const char *wirename, const char *assign_to, int from_cmdline) {
+int provider_assign(int drive, const char *wirename, const char *assign_to, charset_t cset, int from_cmdline) {
 
 	int err = CBM_ERROR_FAULT;
 
@@ -269,7 +273,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 			provider = parent->ptype;
 			log_debug("Got default provider %p ('%s')\n", provider, provider->name);
 
-			err = handler_resolve_assign(parent, &newep, assign_to);
+			err = handler_resolve_assign(parent, &newep, assign_to, cset);
 	                if (err != CBM_ERROR_OK || newep == NULL) {
         	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
                 	        return err;
@@ -294,12 +298,12 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 		char drvname[2];
 		drvname[0] = drv;
 		drvname[1] = 0;
-		parent = provider_lookup(drvname, len, NULL, NAMEINFO_UNDEF_DRIVE);
+		parent = provider_lookup(drvname, len, 0, NULL, NAMEINFO_UNDEF_DRIVE);
 		if (parent != NULL) {
 			provider = parent->ptype;
 			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
 
-			err = handler_resolve_assign(parent, &newep, assign_to);
+			err = handler_resolve_assign(parent, &newep, assign_to, cset);
 	                if (err != CBM_ERROR_OK || newep == NULL) {
         	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
                 	        return err;
@@ -310,9 +314,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 		}
 	} else {
 
-		char *ascname = mem_alloc_str(wirename);
-		cconv_converter(cconv_getcharset(provider_get_ext_charset()), CHARSET_ASCII)
-				(wirename, len, ascname, len);
+		char *ascname = conv_name_alloc(wirename, cset, CHARSET_ASCII);
 
 		log_debug("Provider=%p\n", provider);
 
@@ -350,7 +352,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, int 
 			}
 
 			// get new endpoint
-			newep = provider->newep(parent, assign_to, from_cmdline);
+			newep = provider->newep(parent, assign_to, cset, from_cmdline);
 			if (newep) {
 				newep->is_temporary = 0;
 			} else {
@@ -419,7 +421,7 @@ void provider_init() {
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
  */
-endpoint_t *provider_lookup(const char *inname, int namelen, const char **outname, int default_drive) {
+endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset, const char **outname, int default_drive) {
 
 	int drive = inname[0];
 	inname++;
@@ -445,7 +447,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 
 			log_debug("Trying to find provider for: %s\n", inname);
 
-			const char *provname = conv_to_name_alloc(inname, CHARSET_ASCII_NAME);
+			const char *provname = conv_name_alloc(inname, cset, CHARSET_ASCII);
 			unsigned int l = p-(inname);
 			p++; // first char after ':'
 			for (int i = 0; ; i++) {
@@ -462,7 +464,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
 						prov->name, p);
 	
 					if (prov->tempep != NULL) {
-						endpoint_t *ep = prov->tempep(&p);
+						endpoint_t *ep = prov->tempep(&p, cset);
 						if (ep != NULL) {
 							if (outname != NULL) {
 								*outname = mem_alloc_str(p);
@@ -522,7 +524,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, const char **outnam
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
  */
-int provider_chdir(const char *inname, int namelen) {
+int provider_chdir(const char *inname, int namelen, charset_t cset) {
 
 	int drive = inname[0];
 	inname++;
@@ -553,7 +555,7 @@ int provider_chdir(const char *inname, int namelen) {
 	const char *newpath = malloc_path(ept->cdpath, inname);
 	const char *path = NULL;
 
-	int rv = handler_resolve_path(ept->ep, newpath, &path);
+	int rv = handler_resolve_path(ept->ep, newpath, cset, &path);
 
 	if (rv == CBM_ERROR_OK) {
 		mem_free(ept->cdpath);

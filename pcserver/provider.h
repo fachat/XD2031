@@ -67,13 +67,14 @@ typedef struct {
 
 	// create a new endpoint instance
 	// this is used on ASSIGN calls
-	endpoint_t *(*newep) (endpoint_t * parent, const char *par,
+	endpoint_t *(*newep) (endpoint_t * parent, const char *par, 
+			      charset_t cset,
 			      int from_cmdline);
 
 	// create a new temporary endpoint instance;
 	// this happens when a file with direct provider
 	// name is opened, like "ftp:host/dir"
-	endpoint_t *(*tempep) (char **par);
+	endpoint_t *(*tempep) (char **par, charset_t cset);
 
 	// convert dir to endpoint for assign
 	int (*to_endpoint) (file_t * f, endpoint_t ** outep);
@@ -161,7 +162,7 @@ struct _handler {
 	const char *name;	// handler name, for debugging
 
 	int (*resolve) (file_t * infile, file_t ** outfile,
-			const char *name, const char **outname);
+			const char *name, charset_t cset, const char **outname);
 
 	// close the file; do so recursively by closing
 	// parents if recurse is set; rvbuf/rvlen are a return buffer to send
@@ -172,9 +173,6 @@ struct _handler {
 	int (*open) (file_t * fp, openpars_t * pars, int opentype);	// open a file
 
 	// -------------------------
-	// get the converter FROM the file
-//        charconv_t      (*convfrom)(file_t *prov, const char *tocharset);
-
 	// return the real parent dir; e.g. for x00_parent
 	// do not return the wrapped file, but its
 	// parent()
@@ -188,7 +186,7 @@ struct _handler {
 	// if return value >= 0 then is number of bytes read,
 	// <0 means -CBM_ERROR_*
 	// readflag returns READFLAG_* values
-	int (*readfile) (file_t * fp, char *retbuf, int len, int *readflag);
+	int (*readfile) (file_t * fp, char *retbuf, int len, int *readflag, charset_t outcset);
 
 	// write file data
 	int (*writefile) (file_t * fp, const char *buf, int len, int is_eof);
@@ -199,10 +197,10 @@ struct _handler {
 	// -------------------------
 
 	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
-			 int *readflag, const char **outpattern);
+			 int *readflag, const char **outpattern, charset_t outcset);
 	// create a new file in the directory
 	int (*create) (file_t * dirfp, file_t ** outentry, const char *name,
-		       openpars_t * pars, int opentype);
+			charset_t cset, openpars_t * pars, int opentype);
 
 	// -------------------------
 
@@ -218,11 +216,11 @@ struct _handler {
 
 	int (*scratch) (file_t * file);	// delete file
 
-	int (*mkdir) (file_t * dir, const char *name, openpars_t * pars);	// make directory
+	int (*mkdir) (file_t * dir, const char *name, charset_t cset, openpars_t * pars);	// make directory
 
 	int (*rmdir) (file_t * dir);	// remove directory
 
-	int (*move) (file_t * fromfile, file_t * todir, const char *toname);	// move file
+	int (*move) (file_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
 
 	// -------------------------
 
@@ -238,7 +236,7 @@ struct _handler {
 #define SEEKFLAG_ABS            0	/* count from the start */
 #define SEEKFLAG_END            1	/* count from the end of the file */
 
-int provider_assign(int drive, const char *name, const char *assign_to,
+int provider_assign(int drive, const char *name, const char *assign_to, charset_t cset,
 		    int from_cmdline);
 
 /**
@@ -263,13 +261,13 @@ int provider_assign(int drive, const char *name, const char *assign_to,
  * If a default drive is given, and no named provider could be found, the default drive
  * is used instead.
  */
-endpoint_t *provider_lookup(const char *inname, int namelen,
+endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset,
 			    const char **outname, int default_drive);
 
 /**
  * change directory for an endpoint
  */
-int provider_chdir(const char *inname, int namelen);
+int provider_chdir(const char *inname, int namelen, charset_t cset);
 
 /**
  * cleans up a temporary provider after it has been done with,
@@ -293,76 +291,31 @@ void provider_init(void);
  */
 void provider_dump();
 
-// set the character set for the external communication (i.e. the wireformat)
-// modifies the conversion routines for all the providers
-void provider_set_ext_charset(const char *charsetname);
-
-// get the character set for the external communication (i.e. the wireformat)
-const char *provider_get_ext_charset();
-
-// get the converter from external charset TO the provider charset
-charconv_t provider_convto(provider_t * prov);
-
-// get the converter FROM the provider charset to the external charset
-charconv_t provider_convfrom(provider_t * prov);
-
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
 // it can be identified by one of the providers - like a d64 file, or a ZIP file
 file_t *provider_wrap(file_t * file);
 
 // default endpoint if none given in assign. Assign path may be adapted in case
-// we are from comand line and have relative path, in which case the root path as
+// we are from comand line and have relative path, in which case the root path is
 // prepended. *new_assign_path is mem_alloc'd and always set.
 endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path,
 			     int from_cmdline);
 
-// convert string inline from provider to external charset
-static inline void conv_from(char *str, provider_t * prov)
+
+static inline char *conv_name_alloc(const char *str, charset_t from, charset_t to)
 {
 	int len = strlen(str);
 
-	provider_convfrom(prov) (str, len, str, len);
-}
-
-static inline char *conv_from_alloc(const char *str, provider_t * prov)
-{
-	int len = strlen(str);
-
-	char *trg = mem_alloc_c(len + 1, "converted_from_name");
-
-	provider_convfrom(prov) (str, len, trg, len);
-
-	trg[len] = 0;
-	return trg;
-}
-
-static inline char *conv_to_name_alloc(const char *str, const char *csetname)
-{
-	int len = strlen(str);
-
-	log_debug("convert %s from %s to %s\n", str, provider_get_ext_charset(),
-		  csetname);
+	log_debug("convert %s from %s to %s\n", str, cconv_charsetname(from),
+		  cconv_charsetname(to));
 
 	char *trg = mem_alloc_c(len + 1, "converted_to_name");
 
-	// this is horribly inefficient
-	cconv_converter(cconv_getcharset(provider_get_ext_charset()),
-			cconv_getcharset(csetname)) (str, len, trg, len);
+	cconv_converter(from, to) (str, len, trg, len);
 
 	trg[len] = 0;
 	return trg;
 }
 
-static inline char *conv_to_alloc(const char *str, provider_t * prov)
-{
-	int len = strlen(str);
-
-	char *trg = mem_alloc_c(len + 1, "converted_to_name");
-
-	provider_convto(prov) (str, len, trg, len);
-
-	trg[len] = 0;
-	return trg;
-}
 
 #endif

@@ -80,7 +80,7 @@ static type_t typed_file_type = {
  *
  * name is the current file name
  */
-static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
+static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
 
 	log_debug("typed_resolve: infile=%s\n", infile->filename);
 
@@ -92,7 +92,7 @@ static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, c
 		return CBM_ERROR_OK;
 	}
 
-	char *name = conv_to_name_alloc(infile->filename, CHARSET_ASCII_NAME);
+	char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
 
 	//log_debug("typed_resolve: infile converted to=%s\n", name);
 

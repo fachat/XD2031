@@ -120,7 +120,7 @@ typedef struct {
 	slot_t Slot;		// 
 	uint8_t *buf;		// direct channel block buffer
 	uint8_t CBM_file[20];	// filename with CBM charset
-	const char *dospattern;	// directory match pattern in PETSCII
+	const char *dospattern;	// directory match pattern in wireformat charset
 	buf_t *data;		// data block
 	buf_t *side;		// side sector block (REL file only), also double buffering on file read
 	buf_t *super;		// super side sector block (REL file only, 8250 and 1581 only)
@@ -438,8 +438,9 @@ static cbm_errno_t di_RDBUF(buf_t * bufp)
 	err = file->handler->seek(file, seekpos, SEEKFLAG_ABS);
 	if (err == CBM_ERROR_OK) {
 		// TODO: error on read?
+		// TODO: CHARSET_PETSCII should not be necessary (in readfile only used for directory reads)
 		file->handler->readfile(file, (char *)(bufp->buf), 256,
-					&readfl);
+					&readfl, CHARSET_PETSCII);
 	}
 
 	bufp->dirty = 0;
@@ -2039,7 +2040,7 @@ static int di_position(File * f, int recordno)
         buf_t *sidep = NULL;
         buf_t *datap = NULL;
 
-	di_endpoint_t *diep = f->file.endpoint;
+	di_endpoint_t *diep = (di_endpoint_t*) f->file.endpoint;
 
         // get the buffers
         if (diep->DI.HasSSB) {
@@ -2611,7 +2612,7 @@ static int di_blocks_free(char *dest, di_endpoint_t * diep)
  */
 static int
 di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
-	    const char **outpattern)
+	    const char **outpattern, charset_t outcset)
 {
 
 	(void)isresolve;	// silence warning unused parameter
@@ -2681,8 +2682,8 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 			    FS_DIR_ATTR_SPLAT;
 			// convert to external charset
 			entry->file.filename =
-			    conv_from_alloc((const char *)entry->Slot.filename,
-					    &di_provider);
+			    conv_name_alloc((const char *)entry->Slot.filename,
+					    CHARSET_PETSCII, outcset);
 
 			log_debug
 			    ("converted image filename %s to %s for next check\n",
@@ -2696,7 +2697,7 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 			}
 
 			if (handler_next
-			    ((file_t *) entry, file->dospattern,
+			    ((file_t *) entry, file->dospattern, outcset,
 			     outpattern, &wrapfile) == CBM_ERROR_OK) {
 				*outentry = wrapfile;
 				rv = CBM_ERROR_OK;
@@ -2721,7 +2722,7 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 // *****************
 
 static int
-di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len,
+di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, charset_t outcset,
 		  int *eof)
 {
 	int rv = 0;
@@ -2747,7 +2748,7 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len,
 		int readflg = 0;
 
 		rv = -di_direntry((file_t *) file, (file_t **) & direntry, 0,
-				  &readflg, &outpattern);
+				  &readflg, &outpattern, outcset);
 
 		if (rv == CBM_ERROR_OK && direntry != NULL) {
 			rv = dir_fill_entry_from_file(retbuf,
@@ -2774,7 +2775,8 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len,
 
 static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 {
-	int np, rv;
+	int np = 1;
+	int rv;
 
 	const char *filename = file->file.filename;
 
@@ -2813,13 +2815,14 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
 		return CBM_ERROR_FAULT;
 	}
+
 	if (*filename == '$' && di_cmd == FS_OPEN_RD) {
 		// reading the directory as normal file just returns the standard
 		// blocks 18/0 -> 18/1 -> and following the block chain
 		Disk_Image_t *di = &diep->DI;
 		file->next_track = di->DirTrack;
 		file->next_sector = 0;
-		np = 1;
+		//np = 1;
 	} else {
 		di_first_slot(diep, &file->Slot);
 		np = di_match_slot(diep, &file->Slot, (const uint8_t *)filename,
@@ -2893,7 +2896,6 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL)
 			return rv;
 	}
-
 	if (di_cmd == FS_OPEN_AP) {
 		di_pos_append(diep, file);
 	} else if (di_cmd == FS_OPEN_RD || di_cmd == FS_OPEN_RW) {
@@ -3343,7 +3345,7 @@ static int di_scratch(file_t * file)
 // di_move
 // *********
 
-static int di_move(file_t * fromfile, file_t * todir, const char *toname)
+static int di_move(file_t * fromfile, file_t * todir, const char *toname, charset_t cset)
 {
 
 	(void)todir;		// silence
@@ -3355,7 +3357,7 @@ static int di_move(file_t * fromfile, file_t * todir, const char *toname)
 
 	log_debug("di_rename (%s) to (%s)\n", fromfile->filename, toname);
 
-	const char *nameto = conv_to_alloc(toname, &di_provider);
+	const char *nameto = conv_name_alloc(toname, cset, CHARSET_PETSCII);
 
 	// check if target exists
 	di_first_slot(diep, &newslot);
@@ -3425,7 +3427,7 @@ static size_t di_realsize(file_t * file)
 static int di_open(file_t * fp, openpars_t * pars, int type);
 
 static int
-di_create(file_t * dirp, file_t ** newfile, const char *pattern,
+di_create(file_t * dirp, file_t ** newfile, const char *pattern, charset_t cset,
 	  openpars_t * pars, int type)
 {
 	di_endpoint_t *diep = (di_endpoint_t *) dirp->endpoint;
@@ -3497,7 +3499,7 @@ static int di_open(file_t * fp, openpars_t * pars, int type)
 // di_readfile
 // ***********
 
-static int di_readfile(file_t * fp, char *retbuf, int len, int *eof)
+static int di_readfile(file_t * fp, char *retbuf, int len, int *eof, charset_t outcset)
 {
 	int rv = 0;
 	di_endpoint_t *diep = (di_endpoint_t *) fp->endpoint;
@@ -3506,7 +3508,7 @@ static int di_readfile(file_t * fp, char *retbuf, int len, int *eof)
 
 	if (fp->dirstate != DIRSTATE_NONE) {
 		// directory
-		rv = di_read_dir_entry(diep, file, retbuf, len, eof);
+		rv = di_read_dir_entry(diep, file, retbuf, len, outcset, eof);
 	} else {
 		if (file->access_mode == FS_BLOCK) {
 			return di_read_block(diep, file, retbuf, len, eof);

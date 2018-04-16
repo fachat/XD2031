@@ -37,19 +37,19 @@ void cmd_init();
 
 int cmd_assign_from_cmdline(int argc, char *argv[]);
 
-int cmd_assign(const char *assign_str, int from_cmdline);
-int cmd_open_file(int tfd, const char *inname, int namelen, char *outbuf, int *outlen, int cmd);
-int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag);
+int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline);
+int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd);
+int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset);
 int cmd_write(int tfd, int cmd, const char *indata, int datalen);
 int cmd_position(int tfd, const char *indata, int datalen);
 int cmd_close(int tfd, char *outbuf, int *outlen);
-int cmd_open_dir(int tfd, const char *inname, int namelen);
-int cmd_delete(const char *inname, int namelen, char *outbuf, int *outlen, int isrmdir);
-int cmd_mkdir(const char *inname, int namelen);
-int cmd_chdir(const char *inname, int namelen);
-int cmd_move(const char *inname, int namelen);
-int cmd_copy(const char *inname, int namelen);
+int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset);
+int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int isrmdir);
+int cmd_mkdir(const char *inname, int namelen, charset_t cset);
+int cmd_chdir(const char *inname, int namelen, charset_t cset);
+int cmd_move(const char *inname, int namelen, charset_t cset);
+int cmd_copy(const char *inname, int namelen, charset_t cset);
 int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen);
-int cmd_format(const char *inname, int namelen);
+int cmd_format(const char *inname, int namelen, charset_t cset);
 
 #endif

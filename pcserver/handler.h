@@ -39,20 +39,20 @@ void handler_init(void);
 /*
  * find a file
  */
-file_t *handler_find(file_t * parent, uint8_t type, const char *name,
+file_t *handler_find(file_t * parent, uint8_t type, const char *name, charset_t cset,
 		     const char *opts, const char **outname);
 
 /*
  * recursively resolve a file from an endpoint using the given inname as path
  */
 int handler_resolve_file(endpoint_t * ep, file_t ** outfile,
-			 const char *inname, const char *opts, uint8_t type);
+			 const char *inname, charset_t cset, const char *opts, uint8_t type);
 
 /*
  * recursively resolve a dir from an endpoint using the given inname as path
  */
 int handler_resolve_dir(endpoint_t * ep, file_t ** outdir,
-			const char *inname, const char **outpattern,
+			const char *inname, charset_t cset, const char **outpattern,
 			const char *opts);
 
 /*
@@ -60,14 +60,14 @@ int handler_resolve_dir(endpoint_t * ep, file_t ** outdir,
  * and creating an endpoint for an assign from it
  */
 int handler_resolve_assign(endpoint_t * ep, endpoint_t ** outep,
-			   const char *resolve_path);
+			   const char *resolve_path, charset_t cset);
 
 /*
  * resolve a path, for CHDIR
  *
  * Uses handler_resolve() from above to do the bulk work
  */
-int handler_resolve_path(endpoint_t * ep, const char *inname,
+int handler_resolve_path(endpoint_t * ep, const char *inname, charset_t cset,
 			 const char **outpath);
 
 /*
@@ -87,7 +87,7 @@ int handler_resolve_block(endpoint_t * ep, int chan, file_t ** outfile);
  * subdirectories or file can be matched against this part.
  * 
  */
-int handler_next(file_t * infile, const char *pattern,
+int handler_next(file_t * infile, const char *pattern, charset_t cset,
 		 const char **outpattern, file_t ** outfile);
 
 /*
@@ -116,7 +116,7 @@ int default_seek(file_t *file, long pos, int flag);
 
 int default_truncate(file_t *file, long pos);
 
-int default_read(file_t *file, char *buf, int len, int *readflg);
+int default_read(file_t *file, char *buf, int len, int *readflg, charset_t outcset);
 
 int default_write(file_t *file, const char *buf, int len, int writeflg);
 
