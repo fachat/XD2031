@@ -283,6 +283,7 @@ for script in $TESTSCRIPTS; do
         echo "====================== Running script $script" >&5
 
 	SOCKET=socket_$script
+        RUNNERLOG=runnerlog_$script
 
 	# overwrite test files in each iteration, just in case
         for i in $TESTFILES; do
@@ -296,6 +297,8 @@ for script in $TESTSCRIPTS; do
 	# start server
 
 	echo "Start server as:" $SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR 
+
+        did_print_message=0;
 
 	if test "x$DEBUG" = "x"; then
 		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/_$script.log 2>&1 &
@@ -311,14 +314,44 @@ for script in $TESTSCRIPTS; do
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET _$script " $RUNNER
 		else
 			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
-			$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script;
+			#$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script;
+                        $RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
 		fi;
+                RESULT=${PIPESTATUS[0]}
 
-		RESULT=$?
-		if test $RESULT -eq 0; then
-			echo "    Script Ok" >&5
-		else
-			echo ">>> Script errors: $RESULT" >&5
+                if [ $ERRCREATE -eq 1 ]; then
+                        echo "creating expected errors file at $THISDIR/${script}_expected"
+                        cp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected
+                fi
+                if [ $ERRIGNORE -eq 0 ]; then
+                        if [ -f $THISDIR/${script}_expected ]; then
+                                # expected file exists
+                                cmp $TMPDIR/$RUNNERLOG $THISDIR/${script}_expected 2>/dev/null
+                                if [ $? -ne 0 ]; then
+                                        if [ -s $TMPDIR/$RUNNERLOG ]; then
+                                                echo ">>> Expected errors differ!" >&5
+                                                CNT_ERROR=$(($CNT_ERROR+1))
+                                                R=${R_ERR}
+                                        else
+                                                echo ">>  No script errors found but was expected!" >&5
+                                                CNT_NOEXPECTED=$(($CNT_NOEXPECTED+1))
+                                                R=${R_NOEXP}
+                                        fi
+                                else
+                                        echo ">   Errors occured as expected!" >&5
+                                        CNT_EXPECTED=$(($CNT_EXPECTED+1))
+                                        R=${R_EXP}
+                                fi
+                                did_print_message=1;
+                        fi
+                fi;
+
+                if test $did_print_message -eq 0; then
+			if test $RESULT -eq 0; then
+				echo "    Script Ok" >&5
+			else
+				echo ">>> Script errors: $RESULT" >&5
+			fi
 		fi
 
 		#if test $RESULT -ne 0; then
@@ -376,6 +409,7 @@ for script in $TESTSCRIPTS; do
 	if test $CLEAN -ge 1; then
 		rm -f $TMPDIR/$SOCKET $DEBUGFILE;
 		rm -f $TMPDIR/_$script;
+		rm -f $TMPDIR/$RUNNERLOG
 	fi
 done;
 

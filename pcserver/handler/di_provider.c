@@ -76,7 +76,7 @@ typedef struct {
 	uint8_t dir_track;	// track in which the slot resides
 	uint8_t dir_sector;	// sector in which the slot resides
 	unsigned int size;	// file size in (254 byte) blocks
-	uint8_t filename[20];	// filename (C string zero terminated)
+	uint8_t filename[20];	// filename (C string zero terminated, PETSCII)
 	uint8_t type;		// file type
 	uint8_t start_track;	// first track
 	uint8_t start_sector;	// first sector
@@ -115,6 +115,7 @@ typedef struct buf_t {
 	uint8_t ptr;
 } buf_t;
 
+// note that all names and pattern in file_t are in wireformat charset, 
 typedef struct {
 	file_t file;
 	slot_t Slot;		// 
@@ -2465,7 +2466,7 @@ static int di_find_free_slot(di_endpoint_t * diep, slot_t * slot)
 // ***************
 // di_create_entry 
 // ***************
-
+// name is in PETSCII
 static int
 di_create_entry(di_endpoint_t * diep, File * file, const char *name,
 		openpars_t * pars)
@@ -2773,9 +2774,9 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, char
 // di_open_file
 // ************
 
-static int di_open_file(File * file, openpars_t * pars, int di_cmd)
+static int di_open_file(File * file, openpars_t * pars, int di_cmd, int iscreate)
 {
-	int np = 1;
+	//int np = 1;
 	int rv;
 
 	const char *filename = file->file.filename;
@@ -2822,12 +2823,15 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		Disk_Image_t *di = &diep->DI;
 		file->next_track = di->DirTrack;
 		file->next_sector = 0;
+		iscreate = 0;
 		//np = 1;
 	} else {
+/*
 		di_first_slot(diep, &file->Slot);
 		np = di_match_slot(diep, &file->Slot, (const uint8_t *)filename,
 				   pars->filetype);
-		if (!np) {
+*/
+		if (iscreate) {
 			// Slot contains the last one read from disk in di_match_slot
 			// need to clear out some important values just in case
 			file->Slot.ss_track = 0;
@@ -2844,7 +2848,8 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 
 			pars->filetype = FS_DIR_TYPE_REL;
 			// check record length
-			if (!np) {
+			//if (!np) {
+			if (iscreate) {
 				// does not exist yet
 				if (pars->recordlen == 0) {
 					return CBM_ERROR_RECORD_NOT_PRESENT;
@@ -2880,22 +2885,26 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 	log_debug("File starts at (%d/%d)\n", file->next_track,
 		  file->next_sector);
 
-	if (file_required && np == 0) {
+	if (file_required && iscreate) {
 		log_error("Unable to open '%s': file not found\n", filename);
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
-	if (file_must_not_exist && np > 0) {
+	if (file_must_not_exist && (!iscreate)) {
 		log_error("Unable to open '%s': file exists\n", filename);
 		return CBM_ERROR_FILE_EXISTS;
 	}
-	if (!np) {
+#if 0
+	if (iscreate) {
 		if (pars->filetype == FS_DIR_TYPE_UNKNOWN) {
 			pars->filetype = FS_DIR_TYPE_PRG;
 		}
-		rv = di_create_entry(diep, file, filename, pars);
+		const char *dosname = conv_name_alloc(filename, cset, CHARSET_PETSCII);
+		rv = di_create_entry(diep, file, dosname, pars);
+		mem_free(dosname);
 		if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL)
 			return rv;
 	}
+#endif
 	if (di_cmd == FS_OPEN_AP) {
 		di_pos_append(diep, file);
 	} else if (di_cmd == FS_OPEN_RD || di_cmd == FS_OPEN_RW) {
@@ -3424,11 +3433,11 @@ static size_t di_realsize(file_t * file)
 // di_create 
 //***********
 
-static int di_open(file_t * fp, openpars_t * pars, int type);
+//static int di_open(file_t * fp, openpars_t * pars, int type);
 
 static int
 di_create(file_t * dirp, file_t ** newfile, const char *pattern, charset_t cset,
-	  openpars_t * pars, int type)
+	  openpars_t * pars, int di_cmd)
 {
 	di_endpoint_t *diep = (di_endpoint_t *) dirp->endpoint;
 
@@ -3448,19 +3457,73 @@ di_create(file_t * dirp, file_t ** newfile, const char *pattern, charset_t cset,
 		return CBM_ERROR_SYNTAX_PATTERN;
 	}
 
-	if (type != FS_OPEN_RD) {
+	if (di_cmd != FS_OPEN_RD) {
 		if (dirp->writable == 0 || diep->Ip->writable == 0) {
 			return CBM_ERROR_WRITE_PROTECT;
 		}
 	}
 
 	File *file = di_reserve_file(diep);
-	file->access_mode = type;
-	file->file.writable = (type == FS_OPEN_RD) ? 0 : 1;
+	file->access_mode = di_cmd;
+	file->file.writable = (di_cmd == FS_OPEN_RD) ? 0 : 1;
 	file->file.seekable = 1;
 	file->file.filename = mem_alloc_str(pattern);
 
-	int rv = di_open((file_t *) file, pars, type);
+	const char *dosname = conv_name_alloc(pattern, cset, CHARSET_PETSCII);
+
+	if (pars->recordlen > 254) {
+		return CBM_ERROR_OVERFLOW_IN_RECORD;
+	}
+
+	//file->access_mode = 0;
+
+	// need to clear out some important values just in case
+	file->Slot.ss_track = 0;
+	file->Slot.ss_sector = 0;
+	file->Slot.start_track = 0;
+	file->Slot.start_sector = 0;
+
+	file->next_track = file->Slot.start_track;
+	file->next_sector = file->Slot.start_sector;
+
+	if (pars->filetype == FS_DIR_TYPE_REL) {
+		// open a relative file
+
+		// check record length
+		// does not exist yet
+		if (pars->recordlen == 0) {
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+		file->file.recordlen = pars->recordlen;
+		// store number of actual records in file; will store 0 on new file
+		file->maxrecord = di_rel_record_max(diep, file);
+	}
+	file->chp = 255;
+	log_debug("File starts at (%d/%d)\n", file->next_track,
+		  file->next_sector);
+
+	if (pars->filetype == FS_DIR_TYPE_UNKNOWN) {
+		pars->filetype = FS_DIR_TYPE_PRG;
+	}
+
+	int rv = di_create_entry(diep, file, dosname, pars);
+
+	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
+			return rv;
+	}
+
+	if (di_cmd == FS_OPEN_AP) {
+		di_pos_append(diep, file);
+	} else if (di_cmd == FS_OPEN_RD || di_cmd == FS_OPEN_RW) {
+		di_pos_start(diep, file, 1);
+	} else {
+		di_pos_start(diep, file, 0);
+	}
+	// flag for successful open
+	file->access_mode = di_cmd;
+
+	//rv = (pars->filetype ==
+	//	FS_DIR_TYPE_REL) ? CBM_ERROR_OPEN_REL : CBM_ERROR_OK;
 
 	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
 
@@ -3490,7 +3553,7 @@ static int di_open(file_t * fp, openpars_t * pars, int type)
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
 	} else {
-		rv = di_open_file(file, pars, type);
+		rv = di_open_file(file, pars, type, 0);
 	}
 	return rv;
 }
