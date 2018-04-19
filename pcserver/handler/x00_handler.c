@@ -169,8 +169,11 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	}
 
+	const char *xname = conv_name_alloc((char*)&(x00_buf[8]), CHARSET_PETSCII, cset);
+
 	// now compare the original file name with the search pattern
-	if (!compare_dirpattern((char*)&(x00_buf[8]), inname, outname)) {
+	if (!compare_dirpattern(xname, inname, outname)) {
+		mem_free(xname);
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
@@ -184,7 +187,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
-	file->file.filename = mem_alloc_str((char*)(x00_buf+8));
+	file->file.filename = xname;
 
 	file->file.recordlen = x00_buf[0x19];
 	file->file.type = ftype;

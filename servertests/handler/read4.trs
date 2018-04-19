@@ -9,12 +9,12 @@ send :FS_OPEN_RD .len 00 00 'F4' 00 "T=L20" 00
 expect :FS_REPLY .len 00 40
 
 # open PRG file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 'F2' 00 "T=L" 00
+send :FS_OPEN_RD .len 00 00 'F5' 00 "T=L" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open REL file with correct record length
-send :FS_OPEN_RD .len 00 00 'REL2' 00 "T=L20" 00
+send :FS_OPEN_RD .len 00 00 'Rel2' 00 "T=L20" 00
 # note: returns the correct record length with error code 2=OPEN_REL
 expect :FS_REPLY .len 00 02 14 00
 
@@ -32,7 +32,7 @@ send :FS_CLOSE .len 00
 expect :FS_REPLY .len 00 00
 
 # open REL file without record length
-send :FS_OPEN_RD .len 00 00 'REL2' 00 "T=L" 00
+send :FS_OPEN_RD .len 00 00 'Rel2' 00 "T=L" 00
 expect :FS_REPLY .len 00 02 14 00
 
 # close file
@@ -48,7 +48,7 @@ send :FS_CLOSE .len 00
 expect :FS_REPLY .len 00 00
 
 # open REL file with wrong record length
-send :FS_OPEN_RD .len 00 00 'REL2' 00 "T=L21" 00
+send :FS_OPEN_RD .len 00 00 'Rel2' 00 "T=L21" 00
 # file type mismatch
 expect :FS_REPLY .len 00 32
 

@@ -16,7 +16,7 @@ send :FS_READ .len 00
 expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 65 6C 31 00
 
 send :FS_READ .len 00 
-expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 45 4C 32 00 
+expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 65 6C 32 00 
 
 
 send :FS_READ .len 00 

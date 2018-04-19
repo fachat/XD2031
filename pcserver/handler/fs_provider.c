@@ -1122,10 +1122,15 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
  		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
   		    retfile->file.parent = fp;
 
+#if 0
 		    // convert filename to external charset
 		    retfile->file.filename = conv_name_alloc(
 				(fp->pattern == NULL)?"(nil)":fp->pattern, 
 				CHARSET_ASCII, outcset);
+#endif
+		    // do not convert filename to external charset, as pattern is already ext cset
+		    retfile->file.filename = mem_alloc_str(
+				(fp->pattern == NULL)?"(nil)":fp->pattern); 
 
 		    path = get_path(file, retfile->file.filename);
 		    retfile->ospath = os_realpath(path);

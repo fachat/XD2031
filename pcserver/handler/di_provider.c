@@ -2774,9 +2774,8 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, char
 // di_open_file
 // ************
 
-static int di_open_file(File * file, openpars_t * pars, int di_cmd, int iscreate)
+static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 {
-	//int np = 1;
 	int rv;
 
 	const char *filename = file->file.filename;
@@ -2823,22 +2822,7 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd, int iscreate
 		Disk_Image_t *di = &diep->DI;
 		file->next_track = di->DirTrack;
 		file->next_sector = 0;
-		iscreate = 0;
-		//np = 1;
 	} else {
-/*
-		di_first_slot(diep, &file->Slot);
-		np = di_match_slot(diep, &file->Slot, (const uint8_t *)filename,
-				   pars->filetype);
-*/
-		if (iscreate) {
-			// Slot contains the last one read from disk in di_match_slot
-			// need to clear out some important values just in case
-			file->Slot.ss_track = 0;
-			file->Slot.ss_sector = 0;
-			file->Slot.start_track = 0;
-			file->Slot.start_sector = 0;
-		}
 		file->next_track = file->Slot.start_track;
 		file->next_sector = file->Slot.start_sector;
 		if ((pars->filetype == FS_DIR_TYPE_REL)
@@ -2848,24 +2832,16 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd, int iscreate
 
 			pars->filetype = FS_DIR_TYPE_REL;
 			// check record length
-			//if (!np) {
-			if (iscreate) {
-				// does not exist yet
-				if (pars->recordlen == 0) {
-					return CBM_ERROR_RECORD_NOT_PRESENT;
-				}
+			if (pars->recordlen == 0) {
+				// no reclen is given in the open
+				pars->recordlen = file->Slot.recordlen;
 			} else {
-				if (pars->recordlen == 0) {
-					// no reclen is given in the open
-					pars->recordlen = file->Slot.recordlen;
-				} else {
-					// there is a rec len in the open and in the file
-					// so they need to be the same
-					if (pars->recordlen !=
-					    file->Slot.recordlen) {
-						return
-						    CBM_ERROR_RECORD_NOT_PRESENT;
-					}
+				// there is a rec len in the open and in the file
+				// so they need to be the same
+				if (pars->recordlen !=
+				    file->Slot.recordlen) {
+					return
+					    CBM_ERROR_RECORD_NOT_PRESENT;
 				}
 			}
 			file->file.recordlen = pars->recordlen;
@@ -2885,26 +2861,6 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd, int iscreate
 	log_debug("File starts at (%d/%d)\n", file->next_track,
 		  file->next_sector);
 
-	if (file_required && iscreate) {
-		log_error("Unable to open '%s': file not found\n", filename);
-		return CBM_ERROR_FILE_NOT_FOUND;
-	}
-	if (file_must_not_exist && (!iscreate)) {
-		log_error("Unable to open '%s': file exists\n", filename);
-		return CBM_ERROR_FILE_EXISTS;
-	}
-#if 0
-	if (iscreate) {
-		if (pars->filetype == FS_DIR_TYPE_UNKNOWN) {
-			pars->filetype = FS_DIR_TYPE_PRG;
-		}
-		const char *dosname = conv_name_alloc(filename, cset, CHARSET_PETSCII);
-		rv = di_create_entry(diep, file, dosname, pars);
-		mem_free(dosname);
-		if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL)
-			return rv;
-	}
-#endif
 	if (di_cmd == FS_OPEN_AP) {
 		di_pos_append(diep, file);
 	} else if (di_cmd == FS_OPEN_RD || di_cmd == FS_OPEN_RW) {
@@ -3553,7 +3509,7 @@ static int di_open(file_t * fp, openpars_t * pars, int type)
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
 	} else {
-		rv = di_open_file(file, pars, type, 0);
+		rv = di_open_file(file, pars, type);
 	}
 	return rv;
 }

@@ -9,7 +9,7 @@ send :FS_OPEN_RD .len 00 00 'F4' 00 "T=U" 00
 expect :FS_REPLY .len 00 40
 
 # open PRG file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 'F2' 00 "T=U" 00
+send :FS_OPEN_RD .len 00 00 'F5' 00 "T=U" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
