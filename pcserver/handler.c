@@ -264,6 +264,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		wrapped_direntry = provider_wrap(current_dir);
 		if (wrapped_direntry != NULL) {
 			current_dir = wrapped_direntry;
+			namep = wrapped_direntry->pattern;
+			if (namep == NULL) {
+				namep = "*";
+			}
 		}
 	}
 
