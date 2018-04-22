@@ -25,6 +25,9 @@
  * Device dependend init
  */
 
+#include <inttypes.h>
+#include <stdio.h>
+
 #include "debug.h"
 #include "uarthw.h"
 #include "sock488.h"
