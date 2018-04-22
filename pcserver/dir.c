@@ -40,7 +40,6 @@
 #include "provider.h"
 #include "dir.h"
 #include "wildcard.h"
-#include "fscmd.h"
 #include "wireformat.h"
 #include "log.h"
 

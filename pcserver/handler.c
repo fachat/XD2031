@@ -86,7 +86,7 @@ void path_append(char **path, const char *filename) {
 //----------------------------------------------------------------------------
 
 
-int handler_next(file_t *infile, const char *pattern, const char **outpattern, file_t **outfile) {
+int handler_next(file_t *infile, const char *pattern, charset_t cset, const char **outpattern, file_t **outfile) {
 
 	log_debug("handler_next(infile=%s, pattern=%s)\n", infile->filename, pattern);
 
@@ -100,7 +100,7 @@ int handler_next(file_t *infile, const char *pattern, const char **outpattern, f
 			break;
 		}
 		// outpattern then points into the pattern string
-		if ( handler->resolve(infile, outfile, pattern, outpattern) == CBM_ERROR_OK) {
+		if ( handler->resolve(infile, outfile, pattern, cset, outpattern) == CBM_ERROR_OK) {
 			// worked ok.
 			if (*outfile != NULL) {
 				// found a handler
@@ -148,7 +148,7 @@ int handler_next(file_t *infile, const char *pattern, const char **outpattern, f
  */
 
 static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile, 
-		const char *inname, const char **outdirpath, const char **outpattern, openpars_t *pars) {
+		const char *inname, charset_t cset, const char **outdirpath, const char **outpattern, openpars_t *pars) {
 
 	log_entry("handler_resolve");
 
@@ -213,7 +213,7 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		// we have an empty directory
 		direntry = NULL;
 		if (current_dir->handler->direntry != NULL 
-			&& ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag, &outname)) 
+			&& ((err = current_dir->handler->direntry(current_dir, &direntry, 1, &readflag, &outname, cset)) 
 				== CBM_ERROR_OK)
 			) {
 
@@ -264,6 +264,10 @@ static int handler_resolve(endpoint_t *ep, file_t **outdir, file_t **outfile,
 		wrapped_direntry = provider_wrap(current_dir);
 		if (wrapped_direntry != NULL) {
 			current_dir = wrapped_direntry;
+			namep = wrapped_direntry->pattern;
+			if (namep == NULL) {
+				namep = "*";
+			}
 		}
 	}
 
@@ -340,7 +344,7 @@ static void loose_parent(file_t *file, file_t *parent) {
  * recursively resolve a dir from an endpoint using the given inname as path
  * and creating an endpoint for an assign from it
  */
-int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resolve_path) {
+int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resolve_path, charset_t cset) {
 
 	int err = CBM_ERROR_FAULT;
 	file_t *dir = NULL;
@@ -369,7 +373,7 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
 		name = mem_alloc_str(resolve_path);
 	}
 
-	err = handler_resolve(ep, &dir, &file, resolve_path, NULL, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, resolve_path, cset, NULL, &pattern, &pars);
 
 	log_debug("handler_resolve_assign: resolve gave err=%d, file=%p (%s), dir=%p (%s), "
 			"parent=%p, pattern=%s\n", 
@@ -432,7 +436,7 @@ int handler_resolve_assign(endpoint_t *ep, endpoint_t **outep, const char *resol
  *
  * Uses handler_resolve() from above to do the bulk work
  */
-int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpath) {
+int handler_resolve_path(endpoint_t *ep, const char *inname, charset_t cset, const char **outpath) {
 
 	int err = CBM_ERROR_FAULT;
 	file_t *dir = NULL;
@@ -446,7 +450,7 @@ int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpat
 
 	openpars_process_options(NULL, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, (const char**)&path, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, cset, (const char**)&path, &pattern, &pars);
 
 	if (err == CBM_ERROR_OK && file != NULL) {
 	
@@ -488,7 +492,7 @@ int handler_resolve_path(endpoint_t *ep, const char *inname, const char **outpat
  */
 
 int handler_resolve_file(endpoint_t *ep, file_t **outfile, 
-		const char *inname, const char *opts, uint8_t type) {
+		const char *inname, charset_t cset, const char *opts, uint8_t type) {
 
 	int err = CBM_ERROR_FAULT;
 	file_t *dir = NULL;
@@ -498,7 +502,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, NULL, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, cset, NULL, &pattern, &pars);
 
 	if (err == CBM_ERROR_OK) {
 	
@@ -528,7 +532,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 					err = CBM_ERROR_FILE_NOT_FOUND;
 					break;
 				}
-				err = dir->handler->create(dir, &file, pattern, &pars, type);
+				err = dir->handler->create(dir, &file, pattern, cset, &pars, type);
 				if (err != CBM_ERROR_OK) {
 					break;
 				}
@@ -550,7 +554,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
 				err = CBM_ERROR_FILE_EXISTS;
 			} else  {
 				if (dir->handler->mkdir != NULL) {
-					err = dir->handler->mkdir(dir, pattern, &pars);
+					err = dir->handler->mkdir(dir, pattern, cset, &pars);
 				} else {
 					err = CBM_ERROR_DIR_NOT_SUPPORTED;
 				}
@@ -616,7 +620,7 @@ int handler_resolve_file(endpoint_t *ep, file_t **outfile,
  */
 
 int handler_resolve_dir(endpoint_t *ep, file_t **outdir, 
-		const char *inname, const char **outpattern, const char *opts) {
+		const char *inname, charset_t cset, const char **outpattern, const char *opts) {
 
 	int err = CBM_ERROR_FAULT;
 	file_t *dir = NULL;
@@ -630,7 +634,7 @@ int handler_resolve_dir(endpoint_t *ep, file_t **outdir,
 
 	openpars_process_options((uint8_t*)opts, &pars);
 
-	err = handler_resolve(ep, &dir, &file, inname, NULL, &pattern, &pars);
+	err = handler_resolve(ep, &dir, &file, inname, cset, NULL, &pattern, &pars);
 
 	log_debug("handler_resolve_dir: resolve gave err=%d, dir=%p (%s), parent=%p, pattern=%s\n", 
 			err, dir, (dir==NULL)?"":dir->filename, (dir==NULL)?NULL:dir->parent,
@@ -710,9 +714,9 @@ int default_truncate(file_t *file, long pos) {
 	return file->parent->handler->truncate(file->parent, pos);
 }
 
-int default_read(file_t *file, char *buf, int len, int *readflg) {
+int default_read(file_t *file, char *buf, int len, int *readflg, charset_t outcset) {
 
-	return file->parent->handler->readfile(file->parent, buf, len, readflg );
+	return file->parent->handler->readfile(file->parent, buf, len, readflg, outcset );
 }
 
 int default_write(file_t *file, const char *buf, int len, int writeflg) {

@@ -1,0 +1,4 @@
+]]INF:> testing OPEN of existing file with L=63 (mismatch with file's L=127)
+]]ERR:Detected mismatch at line 11
+]]Rxd   : 0000  0A 06 02 3D 00 00                                 |   =            |
+]]Expect: 0000  0A 06 02 3D 00 20                                 |   =            |

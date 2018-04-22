@@ -9,14 +9,14 @@ expect :FS_REPLY .len 00 00
 
 # start reading; ignore date/time
 send :FS_READ .len 00 
-expect 0B 20 00 00 00 00 00 .ign  .ign .ign .ign .ign .ign .ign 01 d2 2a 20 20 20 20 20 20 20  20 20 20 20 20 20 20 00 
+expect 0B 20 00 00 00 00 00 .ign  .ign .ign .ign .ign .ign .ign 01 'R' 2a 20 20 20 20 20 20 20  20 20 20 20 20 20 20 00 
 #expect :FS_REPLY .len 02 02 7f 00
 
 send :FS_READ .len 00 
 expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 65 6C 31 00
 
 send :FS_READ .len 00 
-expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 45 4C 32 00 
+expect 0B 14 00 84 5D 00 00 04  46 00 01 01 00 00 00 52 65 6C 32 00 
 
 
 send :FS_READ .len 00 

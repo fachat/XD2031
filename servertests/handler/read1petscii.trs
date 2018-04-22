@@ -1,40 +1,44 @@
 init
 
 ###############################
-message testing OPEN of various handled files (x00 and typed) as PRG
+message testing OPEN of various handled files (x00 and typed) as SEQ
+message using PETSCII as wire charset
+
+# set PETSCII
+send :FS_CHARSET .len 7c 'PETSCII' 00
+expect :FS_REPLY .len 7c 00
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'f3' 00 "T=P" 00
+send :FS_OPEN_RD .len 00 00 c6 '1' 00 "T=S" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 'F4' 00 "T=P" 00
+send :FS_OPEN_RD .len 00 00 c6 '5' 00 "T=S" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F1' 00 "T=P" 00
-# OK
+send :FS_OPEN_RD .len 00 00 46 '3' 00 "T=S" 00
+# ok
 expect :FS_REPLY .len 00 00
 
 # start reading
 send :FS_READ .len 00 
-# don't specify returned value (ignored)
-expect 
+expect 0C 09 00 48 45 4C 4C 4F  0D
 
 # close file
 send :FS_CLOSE .len 00
 expect :FS_REPLY .len 00 00
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F5' 00 "T=P" 00
+send :FS_OPEN_RD .len 00 00 c6 '4' 00 "T=S" 00
 # OK
 expect :FS_REPLY .len 00 00
 
 # start reading
 send :FS_READ .len 00 
-expect 
+expect 0C 09 00 48 45 4C 4C 4F  0D
 
 # close file
 send :FS_CLOSE .len 00

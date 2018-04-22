@@ -1,0 +1,23 @@
+init
+
+message testing finding files with upper and/or lower case letters
+
+message find file with 'UPPER' case name
+# open  file
+send :FS_OPEN_RD .len 02 00 'UPPER'
+# OK
+expect :FS_REPLY .len 02 00
+# close file
+send :FS_CLOSE .len 02
+expect :FS_REPLY .len 02 00
+
+message find file with 'lower' case name
+# open  file
+send :FS_OPEN_RD .len 02 00 'lower'
+# OK
+expect :FS_REPLY .len 02 00
+# close file
+send :FS_CLOSE .len 02
+expect :FS_REPLY .len 02 00
+
+

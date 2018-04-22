@@ -1,0 +1,36 @@
+init
+
+###############################
+message testing DIR of various handled files (x00 and typed)
+message using PETSCII as wire charset
+
+# set PETSCII
+send :FS_CHARSET .len 7c 'PETSCII' 00
+expect :FS_REPLY .len 7c 00
+
+# open REL file
+send :FS_OPEN_DR .len 00 00 c6 2a 00
+expect :FS_REPLY .len 00 00
+
+# start reading; ignore date/time
+send :FS_READ .len 00 
+expect :FS_DATA .len 00 00 00 00 00 .ign .ign .ign .ign .ign .ign .ign 01 c6 2A 20 20 20 20 20 20 20  20 20 20 20 20 20 20 00 
+#expect :FS_REPLY .len 02 02 7f 00
+
+send :FS_READ .len 00 
+expect :FS_DATA 12 00 17 00 00 00 .ign  .ign .ign .ign .ign .ign .ign 00 c6 35 00 
+
+send :FS_READ .len 00 
+expect :FS_DATA .len 00 06 00 00 00 .ign  .ign .ign .ign .ign .ign .ign 00 c6 34 00  
+
+send :FS_READ .len 00 
+expect :FS_DATA .len 00 17 00 00 00 .ign  .ign .ign .ign .ign .ign .ign 00 c6 31 00
+
+send :FS_READ .len 00 
+expect :FS_DATA_EOF 10 00 .ign .ign .ign .ign 00  46 00 01 01 00 00 02 00
+
+# close file
+send :FS_CLOSE .len 00
+expect :FS_REPLY .len 00 00
+
+

@@ -80,7 +80,7 @@ static type_t typed_file_type = {
  *
  * name is the current file name
  */
-static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
+static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
 
 	log_debug("typed_resolve: infile=%s\n", infile->filename);
 
@@ -92,7 +92,8 @@ static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, c
 		return CBM_ERROR_OK;
 	}
 
-	char *name = conv_to_name_alloc(infile->filename, CHARSET_ASCII_NAME);
+	//char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
+	char *name = mem_alloc_str(infile->filename);
 
 	//log_debug("typed_resolve: infile converted to=%s\n", name);
 
@@ -114,20 +115,25 @@ static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, c
 
 	switch(typechar) {
 	case 'P':
+	case 'P'+128:
 	case 'p':
 		ftype = FS_DIR_TYPE_PRG;
 		break;
 	case 'S':
+	case 'S'+128:
 	case 's':
 		ftype = FS_DIR_TYPE_SEQ;
 		break;
 	case 'U':
+	case 'U'+128:
 	case 'u':
 		ftype = FS_DIR_TYPE_USR;
 		break;
 	case 'R':
+	case 'R'+128:
 	case 'r':
 	case 'L':
+	case 'L'+128:
 	case 'l':
 		ftype = FS_DIR_TYPE_REL;
 		break;

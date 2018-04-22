@@ -41,8 +41,6 @@
 #include <string.h>
 
 
-#include "fscmd.h"
-
 #include "provider.h"
 #include "handler.h"
 #include "errors.h"
@@ -213,14 +211,14 @@ static tn_endpoint_t *create_ep() {
 // hostname for the connections. Not much to do here, as the
 // port comes with the file name in the open, so we can get
 // the address on the open only.
-static endpoint_t *tnp_new(endpoint_t *parent, const char *path, int from_cmdline) {
+static endpoint_t *tnp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	(void) parent;	// silence unused parameter warning
 	(void) from_cmdline;	// silence unused parameter warning
 
 	tn_endpoint_t *tnep = create_ep();
 
-	char *hostname = conv_to_alloc(path, &tcp_provider);
+	char *hostname = conv_name_alloc(path, cset, CHARSET_ASCII);
 	tnep->hostname = hostname;
 	
 	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
@@ -235,7 +233,7 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path, int from_cmdlin
 // Syntax is:
 //	<hostname>:<portname>
 //
-static endpoint_t *tnp_temp(char **name) {
+static endpoint_t *tnp_temp(char **name, charset_t cset) {
 
 
 	char *end = strchr(*name, ':');
@@ -250,7 +248,7 @@ static endpoint_t *tnp_temp(char **name) {
 
 	// create new string and copy the first n bytes of *name into it
 	char *hostname = mem_alloc_strn(*name, n);
-	tnep->hostname = conv_to_alloc(hostname, &tcp_provider);
+	tnep->hostname = conv_name_alloc(hostname, cset, CHARSET_ASCII);
 	mem_free(hostname);
 
 	*name = end+1;	// char after the ':'
@@ -310,7 +308,7 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 	File *file=(File*)fp;
 	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
 
-	const char *filename = conv_to_alloc(fp->filename, &tcp_provider);
+	const char *filename = mem_alloc_str(fp->filename);
 
 	log_info("open file on host %s with service/port %s\n", tnep->hostname, filename);
 
@@ -388,7 +386,10 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 //
 // returns positive number of bytes read, or negative error number
 //
-static int read_file(file_t *fp, char *retbuf, int len, int *readflag) {
+static int read_file(file_t *fp, char *retbuf, int len, int *readflag, charset_t outcset) {
+
+	(void) outcset;
+
 	File *file = (File*)fp;
 
 	if (file != NULL) {
@@ -474,7 +475,7 @@ static int write_file(file_t *fp, const char *buf, int len, int is_eof) {
 // ----------------------------------------------------------------------------------
 // command channel
 
-static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
+static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 
 	(void)readflag; // silence warning unused parameter;
 
@@ -492,7 +493,7 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		return CBM_ERROR_OK;
 	}
 
-	char *name = mem_alloc_str((fp->pattern == NULL) ? TELNET_PORT : fp->pattern);
+	char *name = conv_name_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, CHARSET_ASCII, outcset);
 
 	File *retfile = reserve_file(tnep);
 

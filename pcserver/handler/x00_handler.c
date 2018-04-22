@@ -71,7 +71,7 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, const char **outname) {
+static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
 
 	//log_debug("x00_resolve: infile=%s\n", infile->filename);
 
@@ -83,7 +83,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 		return CBM_ERROR_OK;
 	}
 
-	const char *name = conv_to_name_alloc(infile->filename, CHARSET_ASCII_NAME);
+	const char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
 
 	//log_debug("x00_resolve: infile converted to=%s\n", name);
 
@@ -146,7 +146,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 	// seek to start of file
 	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
-	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg);
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, cset);
 
 	if (strcmp("C64File", (char*)x00_buf) != 0) { 
 		mem_free((char*)name);
@@ -169,8 +169,11 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	}
 
+	const char *xname = conv_name_alloc((char*)&(x00_buf[8]), CHARSET_PETSCII, cset);
+
 	// now compare the original file name with the search pattern
-	if (!compare_dirpattern((char*)&(x00_buf[8]), inname, outname)) {
+	if (!compare_dirpattern(xname, inname, outname)) {
+		mem_free(xname);
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
 
@@ -184,7 +187,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, con
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
 
-	file->file.filename = mem_alloc_str((char*)(x00_buf+8));
+	file->file.filename = xname;
 
 	file->file.recordlen = x00_buf[0x19];
 	file->file.type = ftype;

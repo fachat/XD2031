@@ -9,12 +9,12 @@ send :FS_OPEN_RD .len 00 00 'F1' 00 "T=S" 00
 expect :FS_REPLY .len 00 40
 
 # open SEQ file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 'F2' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 00 'F5' 00 "T=S" 00
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 'F3' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 00 'f3' 00 "T=S" 00
 # file type mismatch
 expect :FS_REPLY .len 00 00
 

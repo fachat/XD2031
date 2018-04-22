@@ -45,7 +45,6 @@
 #include <libgen.h>
 #include <stdbool.h>
 
-#include "fscmd.h"
 #include "provider.h"
 #include "dir.h"
 #include "handler.h"
@@ -333,7 +332,7 @@ static void fsp_ep_free(endpoint_t *ep) {
 	}
 }
 
-static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdline) {
+static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	char *new_assign_path = NULL;
 
@@ -360,7 +359,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 	if (new_assign_path != NULL) {
 		// use handler_resolve_file with resolve_path and wrap into endpoint
 		endpoint_t *assign_ep = NULL;
-		int err = handler_resolve_assign(parentep, &assign_ep, new_assign_path);
+		int err = handler_resolve_assign(parentep, &assign_ep, new_assign_path, cset);
 		mem_free(new_assign_path);
 		if (err != CBM_ERROR_OK || assign_ep == NULL) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
@@ -373,7 +372,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, int from_cmdlin
 	return parentep;
 }
 
-static endpoint_t *fsp_tempep(char **name) {
+static endpoint_t *fsp_tempep(char **name, charset_t cset) {
 
 	// make path relative
 	while (**name == dir_separator_char()) {
@@ -395,7 +394,7 @@ static endpoint_t *fsp_tempep(char **name) {
 	}
 
 	endpoint_t *assign_ep = NULL;
-	int err = handler_resolve_assign((endpoint_t*)home_endpoint, &assign_ep, path);
+	int err = handler_resolve_assign((endpoint_t*)home_endpoint, &assign_ep, path, cset);
 	if (err != CBM_ERROR_OK || assign_ep == NULL) {
 		log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
 		return NULL;
@@ -945,7 +944,7 @@ static int open_dir(File *file) {
 	}
 }
 
-static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
+static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File **outfile) {
 
 	char *tmpnamep = NULL;
        	char *fullname = str_concat(fsep->curpath, dir_separator_string(), name);
@@ -964,7 +963,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, File **outfile) {
 	file->file.pattern = NULL;
 	// convert filename to external charset
 	tmpnamep = mem_alloc_str(name);
-	conv_from(tmpnamep, &fs_provider);
+	conv_name_alloc(tmpnamep, cset, CHARSET_ASCII);
 	file->file.filename = tmpnamep;
 
 	file->ospath = os_realpath(fsep->curpath);
@@ -984,7 +983,7 @@ static file_t *fsp_root(endpoint_t *ep) {
 
 	File *file = NULL;
 
-	int err = open_dr(fsep, "/", &file);
+	int err = open_dr(fsep, "/", CHARSET_ASCII, &file);
 
 	if (err == CBM_ERROR_OK) {
 		log_exitr(CBM_ERROR_OK);
@@ -1018,7 +1017,7 @@ static size_t file_get_size(FILE *fp) {
 //
 // returns the number of bytes read (>= 0), or a negative error number
 //
-static int read_dir(File *f, char *retbuf, int len, int *readflag) {
+static int read_dir(File *f, char *retbuf, int len, charset_t outcset, int *readflag) {
 
 	int rv = CBM_ERROR_OK;
 	log_entry("fs_provider.read_dir");
@@ -1026,7 +1025,7 @@ static int read_dir(File *f, char *retbuf, int len, int *readflag) {
 	const char *outpattern;
 	file_t *entry = NULL;
 
-	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag, &outpattern);
+	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag, &outpattern, outcset);
 
 	log_debug("read_dir: process entry %p (parent=%p) for %s\n", entry, 
 		(entry == NULL)?NULL:entry->parent,
@@ -1080,7 +1079,7 @@ static char *get_path(File *parent, const char *child) {
  *
  * outpattern then points into fp->pattern
  */
-static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern) {
+static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 	  File *file = (File*) fp;
 	  File *retfile = NULL;
 	  int rv = CBM_ERROR_FAULT;
@@ -1126,9 +1125,15 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
  		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
   		    retfile->file.parent = fp;
 
+#if 0
 		    // convert filename to external charset
-		    retfile->file.filename = conv_from_alloc(
-				(fp->pattern == NULL)?"(nil)":fp->pattern, &fs_provider);
+		    retfile->file.filename = conv_name_alloc(
+				(fp->pattern == NULL)?"(nil)":fp->pattern, 
+				CHARSET_ASCII, outcset);
+#endif
+		    // do not convert filename to external charset, as pattern is already ext cset
+		    retfile->file.filename = mem_alloc_str(
+				(fp->pattern == NULL)?"(nil)":fp->pattern); 
 
 		    path = get_path(file, retfile->file.filename);
 		    retfile->ospath = os_realpath(path);
@@ -1177,8 +1182,9 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 		  			retfile->file.parent = fp;
 
 		    			// convert filename to external charset
-		    			retfile->file.filename = conv_from_alloc(
-								file->de->d_name, &fs_provider);
+		    			retfile->file.filename = conv_name_alloc(
+								file->de->d_name, 
+								CHARSET_ASCII, outcset);
 
 			    		retfile->ospath = ospath;
 			  	  	retfile->file.mode = FS_DIR_MOD_FIL;
@@ -1216,7 +1222,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 					}
 
 					// wrap and/or match name
-					if ( handler_next((file_t*)retfile, fp->pattern, outpattern, &wrapfile)
+					if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
 						== CBM_ERROR_OK) {
 	  	    				*outentry = wrapfile;
 						rv = CBM_ERROR_OK;
@@ -1489,7 +1495,7 @@ static int fs_delete(file_t *file) {
 }
 
 
-static int fs_move(file_t *fromfile, file_t *todir, const char *toname) {
+static int fs_move(file_t *fromfile, file_t *todir, const char *toname, charset_t cset) {
 #ifdef DEBUG_CMD
 	log_debug("fs_rename: '%s' -> '%s%s'\n", fromfile->filename, todir->filename, toname);
 #endif
@@ -1507,7 +1513,7 @@ static int fs_move(file_t *fromfile, file_t *todir, const char *toname) {
 	const char *frompath = fromfp->ospath;
 
         // convert filename to external charset
-        const char *tmpname = conv_to_alloc(toname, &fs_provider);
+        const char *tmpname = conv_name_alloc(toname, cset, CHARSET_ASCII);
 
 	File *tofp = (File*) todir;
 	const char *topath = malloc_path(tofp->ospath, tmpname);
@@ -1535,7 +1541,7 @@ static int fs_move(file_t *fromfile, file_t *todir, const char *toname) {
 }
 
 
-static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
+static int fs_mkdir(file_t *file, const char *name, charset_t cset, openpars_t *pars) {
 
 	int er = CBM_ERROR_FAULT;
 
@@ -1550,7 +1556,7 @@ static int fs_mkdir(file_t *file, const char *name, openpars_t *pars) {
 	}
 
         // convert filename to external charset
-        const char *tmpnamep = conv_to_alloc(name, &fs_provider);
+        const char *tmpnamep = conv_name_alloc(name, cset, CHARSET_ASCII);
 
 	char *newpath = malloc_path(fsep->curpath, tmpnamep);
 
@@ -1622,7 +1628,7 @@ static int fs_open_temp(File *file) {
 	return rv;
 }
 
-static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
+static int readfile(file_t *fp, char *retbuf, int len, int *readflag, charset_t outcset) {
 
 	File *f = (File*) fp;
 #ifdef DEBUG_READ
@@ -1636,7 +1642,7 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag) {
 
 	if (f->dp) {
 		// read a directory entry
-		rv = read_dir(f, retbuf, len, readflag);
+		rv = read_dir(f, retbuf, len, outcset, readflag);
 	} else
 	if (f->fp) {
 		// read a file
@@ -1778,14 +1784,14 @@ static int fs_open(file_t *fp, openpars_t *pars, int type) {
 }
 
 
-static int fs_create(file_t *dirfp, file_t **outentry, const char *name, openpars_t *pars,
+static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset_t cset, openpars_t *pars,
                                 int opentype) {
 
 	cbm_errno_t rv = CBM_ERROR_OK;
 	File *dir = (File*) dirfp;
 	File *retfile = NULL;
 
-        const char *tmpname = conv_to_alloc(name, &fs_provider);
+        const char *tmpname = conv_name_alloc(name, cset, CHARSET_ASCII);
 
 	if ((rv = os_filename_is_legal(tmpname)) == CBM_ERROR_OK) {
 

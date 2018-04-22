@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Socket filesystem server
-    Copyright (C) 2014 Andre Fachat
+    Serial line filesystem server
+    Copyright (C) 2018 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,20 +19,32 @@
 
 ****************************************************************************/
 
-/**
- * open a named unix socket, listen on it and return the first connection
- */
-int socket_open(const char *socketname);
+#ifndef IN_DEVICE_H
+#define IN_DEVICE_H
+
+typedef struct {
+	serial_port_t readfd;
+	serial_port_t writefd;
+	int wrp;
+	int rdp;
+	charset_t charset;
+	char buf[8192];
+} in_device_t;
+
+in_device_t *in_device_init(int readfd, int writefd, int do_reset);
 
 /**
- * open a named socket and listen on it; do not accept (yet)
+ *
+ * Here the data is read from the given readfd, put into a packet buffer,
+ * then given to cmd_dispatch() for the actual execution, and the reply is 
+ * again packeted and written to the writefd
+ *
+ * returns
+ *   2 if read fails (errno gives more information)
+ *   1 if no data has been read
+ *   0 if processing succeeded
  */
-int socket_listen(const char *socketname);
-
-/**
- * try to accept a connection on a socket
- * return -1 on error or the socket fd
- */
-int socket_accept(int sockfd);
+int in_device_loop(in_device_t *tp);
 
 
+#endif

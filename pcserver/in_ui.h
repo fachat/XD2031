@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Socket filesystem server
-    Copyright (C) 2014 Andre Fachat
+    Serial line filesystem server
+    Copyright (C) 2018 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,20 +19,12 @@
 
 ****************************************************************************/
 
-/**
- * open a named unix socket, listen on it and return the first connection
- */
-int socket_open(const char *socketname);
+#ifndef IN_UI_H
+#define IN_UI_H
 
-/**
- * open a named socket and listen on it; do not accept (yet)
- */
-int socket_listen(const char *socketname);
+// reads stdin and returns true, if the main loop should abort
+int in_ui_loop(void);
 
-/**
- * try to accept a connection on a socket
- * return -1 on error or the socket fd
- */
-int socket_accept(int sockfd);
+void disable_user_interface(void);
 
-
+#endif
