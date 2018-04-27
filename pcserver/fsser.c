@@ -154,6 +154,7 @@ int main(int argc, char *argv[]) {
 
 	char *device = NULL;	/* device name or NULL if not given */
 	char *socket = NULL;	/* socket name or NULL if not given */
+	char *tsocket = NULL;	/* tools socket name or NULL if not given */
 	char parameter_d_given = false;
 	char use_stdio = false;
 
@@ -212,6 +213,19 @@ int main(int argc, char *argv[]) {
 		  log_info("main: socket = %s\n", socket);
 		} else {
 		  log_error("-s requires <socket name> parameter\n");
+		  exit(EXIT_RESPAWN_NEVER);
+		}
+ 	     	break;
+	    case 'T':
+		// tools socket name
+		assert_single_char(argv[i]);
+		parameter_d_given = true;
+		if (i < argc-2) {
+		  i++;
+		  tsocket = argv[i];
+		  log_info("main: tools socket = %s\n", tsocket);
+		} else {
+		  log_error("-T requires <socket name> parameter\n");
 		  exit(EXIT_RESPAWN_NEVER);
 		}
  	     	break;
@@ -317,9 +331,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	const char *home = os_get_home_dir();
-	const char *tools_sock = malloc_path(home, ".xdtools");
-	int tools_fd = socket_listen(tools_sock);
+	if (tsocket == NULL) {
+		const char *home = os_get_home_dir();
+		tsocket = malloc_path(home, ".xdtools");
+	}
+	int tools_fd = socket_listen(tsocket);
 
 	int res = do_loop(dev_fd, tools_fd);
 

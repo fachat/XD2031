@@ -33,6 +33,7 @@ function usage() {
         echo "       -E                      ignore an expected ERR file and show the real results"
         echo "       -h                      show this help"
 	echo "       -t                      Trace the output of a script, to possibly create a new one"
+	echo "       -T                      Enable the tools channel"
 }
 
 function hexdiff() {
@@ -83,6 +84,7 @@ DEBUG=""
 RDEBUG=""
 CLEAN=1
 QUIET=0
+TOOLS=0
 TRACE=""
 
 DIFFCREATE=0
@@ -148,6 +150,10 @@ while test $# -gt 0; do
         ;;
   -t)
 	TRACE="-t"
+	shift;
+	;;
+  -T)
+	TOOLS=1
 	shift;
 	;;
   -R)	
@@ -285,6 +291,11 @@ for script in $TESTSCRIPTS; do
 	SOCKET=socket_$script
         RUNNERLOG=runnerlog_$script
 
+	TSOCKET=
+	if [ $TOOLS -ne 0 ]; then
+		TSOCKET="-T $TMPDIR/tools_$script"
+	fi;
+
 	# overwrite test files in each iteration, just in case
         for i in $TESTFILES; do
                 if [ -f ${THISDIR}/${i}.gz ]; then
@@ -296,12 +307,12 @@ for script in $TESTSCRIPTS; do
 
 	# start server
 
-	echo "Start server as:" $SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR 
+	echo "Start server as:" $SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR 
 
         did_print_message=0;
 
 	if test "x$DEBUG" = "x"; then
-		$SERVER -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/_$script.log 2>&1 &
+		$SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/_$script.log 2>&1 &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -313,9 +324,9 @@ for script in $TESTSCRIPTS; do
 			done;
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET _$script " $RUNNER
 		else
-			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
-			#$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script;
-                        $RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script"
+			#$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $TSOCKET $script;
+                        $RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $TSOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
 		fi;
                 RESULT=${PIPESTATUS[0]}
 
@@ -361,8 +372,8 @@ for script in $TESTSCRIPTS; do
 		#fi;
 	else
 		# start testrunner before server and in background, so gdb can take console
-		echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script"
-		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $script &
+		echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script"
+		$RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -370,7 +381,7 @@ for script in $TESTSCRIPTS; do
 		for i in $DEBUG; do
 			echo "break $i" >> $DEBUGFILE
 		done;
-		gdb -x $DEBUGFILE -ex "run -s $SOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
+		gdb -x $DEBUGFILE -ex "run -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
 	fi;
 
 	#echo "Killing server (pid $SERVERPID)"
@@ -407,7 +418,7 @@ for script in $TESTSCRIPTS; do
         fi
 
 	if test $CLEAN -ge 1; then
-		rm -f $TMPDIR/$SOCKET $DEBUGFILE;
+		rm -f $TMPDIR/$SOCKET $DEBUGFILE $TMPDIR/tools_$script;
 		rm -f $TMPDIR/_$script;
 		rm -f $TMPDIR/$RUNNERLOG
 	fi

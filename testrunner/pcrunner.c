@@ -52,12 +52,15 @@
 
 static int trace = 0;
 
+
 void usage(int rv) {
-        printf("Usage: fsser [options] run_directory\n"
+        printf("Usage: pcrunner [options] run_directory\n"
                 " options=\n"
                 "   -d <device> define serial device to use\n"
                 "   -v          verbose\n"
                 "   -t          trace send/received data\n"
+                "   -w          wait for socket or device to appear\n"
+                "   -T <sock>   connect to tools socket in parallel\n"
                 "   -?          gives you this help text\n"
         );
         exit(rv);
@@ -86,7 +89,6 @@ scriptlet_tab_t scriptlets[] = {
 
 
 
-
 static int parse_init(line_t *line, const char *in, char **outbuf, int *outlen) {
 	(void) in; // silence
 	(void) line; // silence
@@ -94,7 +96,7 @@ static int parse_init(line_t *line, const char *in, char **outbuf, int *outlen) 
 	*outbuf = mem_alloc_c(3, "init_reset_response_buffer");
 	(*outbuf)[0] = FS_RESET;
 	(*outbuf)[1] = 0x03;
-	(*outbuf)[2] = 0x7d;
+	(*outbuf)[2] = FSFD_SETOPT;
 
 	return 0;
 }
@@ -105,14 +107,17 @@ cmd_tab_t cmds[] = {
 	{ "message", 7, parse_msg },
 	{ "errmsg", 6, parse_msg },
 	{ "init", 4, parse_init },
+	{ "channel", 7, parse_msg },
 	{ NULL, 0, NULL }
 };
 
+// index of command in cmds[]
 #define CMD_EXPECT	0
 #define CMD_SEND	1
 #define CMD_MESSAGE	2
 #define CMD_ERRMSG	3
 #define CMD_INIT	4
+#define CMD_CHANNEL	5
 
 
  
@@ -256,7 +261,7 @@ int compare_packet(int fd, const char *inbuffer, const char *mask, const int inb
  *  0 = normal end
  *  1 = expect mismatch
  */
-int execute_script(int sockfd, registry_t *script) {
+int execute_script(int sockfd, int toolsfd, registry_t *script) {
 
 	// current "pc" pointer to script line
 	int curpos = 0;	
@@ -267,6 +272,9 @@ int execute_script(int sockfd, registry_t *script) {
 	ssize_t size = 0;
 	line_t *errmsg = NULL;
 	scriptlet_t *scr = NULL;
+
+	// guaranteed to be valid; toolsfd may be not set (<0)
+	int curfd = sockfd;
 
 	while ( (err == 0) && (line = reg_get(script, curpos)) != NULL) {
 
@@ -294,7 +302,7 @@ int execute_script(int sockfd, registry_t *script) {
 				log_hexdump2(line->buffer, line->length, 0, "Send  : ");
 			}
 
-			size = write(sockfd, line->buffer, line->length);
+			size = write(curfd, line->buffer, line->length);
 			if (size < 0) {
 				log_errno("Error writing to socket at line %d\n", lineno);
 				err = -1;
@@ -308,7 +316,7 @@ int execute_script(int sockfd, registry_t *script) {
 					scr->exec(line, scr);
 				}
 			}
-			err = compare_packet(sockfd, line->buffer, line->mask, line->length, lineno);
+			err = compare_packet(curfd, line->buffer, line->mask, line->length, lineno);
 			mem_free(line->mask);
 			line->mask = NULL;
 
@@ -320,13 +328,24 @@ int execute_script(int sockfd, registry_t *script) {
 			}
 			break;
 		case CMD_INIT:
-			send_sync(sockfd);
-			err = compare_packet(sockfd, line->buffer, NULL, line->length, lineno);
+			send_sync(curfd);
+			err = compare_packet(curfd, line->buffer, NULL, line->length, lineno);
 			if (err != 0) {
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);
 				}
 				return err;
+			}
+			break;
+		case CMD_CHANNEL:
+			if ((!strcmp("tools", line->buffer)) && toolsfd >= 0) {
+				curfd = toolsfd;
+			} else
+			if ((!strcmp("device", line->buffer)) && sockfd >= 0) {
+				curfd = sockfd;
+			} else {
+				log_error("> %d: -> unknown channel name %s\n", lineno, line->buffer);
+				return 1;
 			}
 			break;
 		}
@@ -343,6 +362,7 @@ int main(int argc, char *argv[]) {
 	int rv = -1;
 
 	const char *device = NULL;
+	const char *tsocket = NULL;
 	const char *scriptname = NULL;
 
 	// wait for socket if not there right away?
@@ -366,6 +386,17 @@ int main(int argc, char *argv[]) {
                   		log_info("main: device = %s\n", device);
                 	} else {
                   		log_error("-d requires <device> parameter\n");
+                  		exit(1);
+                	}
+                	break;
+            	case 'T':
+                	assert_single_char(argv[i]);
+                	if (i < argc-1) {
+                  		i++;
+                  		tsocket = argv[i];
+                  		log_info("main: tools socket = %s\n", tsocket);
+                	} else {
+                  		log_error("-T requires <socket> parameter\n");
                   		exit(1);
                 	}
                 	break;
@@ -400,10 +431,15 @@ int main(int argc, char *argv[]) {
 	if (script != NULL) {
 
 		int sockfd = socket_open(device, dowait);
+
+		int toolsfd = -1;
+		if (tsocket) {
+			toolsfd = socket_open(tsocket, 1);
+		}
 	
 		if (sockfd >= 0) {
 
-			rv = execute_script(sockfd, script);
+			rv = execute_script(sockfd, toolsfd, script);
 		}
 	}
 
