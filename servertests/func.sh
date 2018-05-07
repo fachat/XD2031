@@ -322,7 +322,7 @@ for script in $TESTSCRIPTS; do
 			for i in $RDEBUG; do
 				echo "break $i" >> $DEBUGFILE
 			done;
-			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET _$script " $RUNNER
+			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script " $RUNNER
 		else
 			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script"
 			#$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $TSOCKET $script;
