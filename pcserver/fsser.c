@@ -101,8 +101,9 @@ void assert_single_char(char *argv) {
 	}
 }
 
-static int do_loop(serial_port_t dev_fd, serial_port_t tools_fd) {
+static int do_loop(serial_port_t dev_fd, serial_port_t tools_listen_fd) {
 	
+printf("do_loop tools (dev=%d, tools=%d)\n", dev_fd, tools_listen_fd);
 	int rv = 0;
 	serial_port_t tool = -1;
 	in_device_t *td = NULL;
@@ -116,18 +117,22 @@ static int do_loop(serial_port_t dev_fd, serial_port_t tools_fd) {
 		// UI input
 		rv = in_ui_loop();
 		if (rv) {
-			return rv;
+			break;
 		}
 
 		if (tool < 0) {
-			tool = socket_accept(tools_fd);
+			tool = socket_accept(tools_listen_fd);
 			if (tool >= 0) {
-				td = in_device_init(tools_fd, tools_fd, 0);
+				td = in_device_init(tool, tool, 0);
 			}
 		} 
+
+		// TODO: select() or poll() to avoid CPU idle looping
 		if (td != NULL) {
 			rv = in_device_loop(td);
+printf("in_loop tools (%d) -> rv=%d\n", td->readfd, rv);
 			if (rv == 2) {
+				log_info("Lost connection to tools socket (%d)\n", tool);
 				socket_close(tool);
 				tool = -1;
 				td = NULL;
@@ -138,10 +143,15 @@ static int do_loop(serial_port_t dev_fd, serial_port_t tools_fd) {
 		if (fd != NULL) {
 			rv = in_device_loop(fd);
 			if (rv == 2) {
-				return rv;
+				break;
 			}
 		}
 	} while (true);
+
+	if (tool >= 0) {
+		socket_close(tool);
+	}
+	return rv;
 }
 
 
@@ -295,6 +305,13 @@ int main(int argc, char *argv[]) {
 	// we have the serial device open, now we can drop privileges
 	drop_privileges();
 
+	if (tsocket == NULL) {
+		const char *home = os_get_home_dir();
+		tsocket = malloc_path(home, ".xdtools");
+	}
+	int tools_listen_fd = socket_listen(tsocket);
+
+
 #ifndef _WIN32
 	if (socket != NULL) {
 		// socket should be opened without privileges
@@ -331,16 +348,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if (tsocket == NULL) {
-		const char *home = os_get_home_dir();
-		tsocket = malloc_path(home, ".xdtools");
-	}
-	int tools_fd = socket_listen(tsocket);
-
-	int res = do_loop(dev_fd, tools_fd);
+	int res = do_loop(dev_fd, tools_listen_fd);
 
 	if (device != NULL || socket != NULL) {
 		device_close(fdesc);
+	}
+
+	if (tools_listen_fd >= 0) {
+		close(tools_listen_fd);
 	}
 
 	// If the device is lost, the daemon should always restart the server

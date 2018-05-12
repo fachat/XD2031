@@ -323,12 +323,13 @@ for script in $TESTSCRIPTS; do
 				echo "break $i" >> $DEBUGFILE
 			done;
 			gdb -x $DEBUGFILE -ex "run $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script " $RUNNER
+			RESULT=1
 		else
 			echo "Start test runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$SOCKET $TSOCKET $script"
 			#$RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $TSOCKET $script;
                         $RUNNER $RVERBOSE $TRACE -w -d $TMPDIR/$SOCKET $TSOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+                	RESULT=${PIPESTATUS[0]}
 		fi;
-                RESULT=${PIPESTATUS[0]}
 
                 if [ $ERRCREATE -eq 1 ]; then
                         echo "creating expected errors file at $THISDIR/${script}_expected"

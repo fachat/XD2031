@@ -428,8 +428,12 @@ int in_device_loop(in_device_t *tp) {
 	      }
 
               if(n < 0) {
-                log_error("fsser: read error %d (%s)\nDid you power off your device?\n",
-			os_errno(),strerror(os_errno()));
+
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			return 1;
+		}
+                log_error("fsser: read error %d (%s) on fd %d\nDid you power off your device?\n",
+			os_errno(),strerror(os_errno()), tp->readfd);
                 return 2;
               }
               tp->wrp+=n;

@@ -64,16 +64,16 @@ static int socket_open_int(const char *socketname) {
 	return sockfd;
 }
   
-static int socket_accept_int(int sockfd) {
+static int socket_accept_int(int sockfd, int nonblock) {
  
 	int clientfd;
 	socklen_t clientlen;
 	struct sockaddr_un client_addr;
 
 	clientlen = sizeof(client_addr);
-   	clientfd = accept(sockfd,(struct sockaddr *)&client_addr,&clientlen);
+   	clientfd = accept4(sockfd,(struct sockaddr *)&client_addr,&clientlen, nonblock ? SOCK_NONBLOCK : 0);
    	if (clientfd < 0) {
-       		log_errno("Error accepting socket"); 
+       		//log_errno("Error accepting socket"); 
 		return -1;
 	}
 
@@ -92,7 +92,7 @@ int socket_open(const char *socketname) {
 		return -1;
 	}
 
-	int clientfd = socket_accept_int(sockfd);
+	int clientfd = socket_accept_int(sockfd, 1);
 	
 	if (clientfd < 0) {
 		close(sockfd);
@@ -135,7 +135,7 @@ int socket_listen(const char *socketname) {
  */
 int socket_accept(int sockfd) {
 
-	int clientfd = socket_accept_int(sockfd);
+	int clientfd = socket_accept_int(sockfd, 1);
 
 	if (clientfd < 0) {
 		return -1;

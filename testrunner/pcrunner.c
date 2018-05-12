@@ -49,7 +49,6 @@
 #include "script.h"
 #include "connect.h"
 
-
 static int trace = 0;
 
 
@@ -324,7 +323,7 @@ int execute_script(int sockfd, int toolsfd, registry_t *script) {
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);
 				}
-				return err;
+				return 1;
 			}
 			break;
 		case CMD_INIT:
@@ -334,7 +333,7 @@ int execute_script(int sockfd, int toolsfd, registry_t *script) {
 				if (errmsg != NULL) {
 					log_error("> %d: %s -> %d\n", lineno, errmsg->buffer, err);
 				}
-				return err;
+				return 1;
 			}
 			break;
 		case CMD_CHANNEL:
@@ -435,15 +434,21 @@ int main(int argc, char *argv[]) {
 		int toolsfd = -1;
 		if (tsocket) {
 			toolsfd = socket_open(tsocket, 1);
+
+			send_sync(toolsfd);
 		}
 	
 		if (sockfd >= 0) {
 
 			rv = execute_script(sockfd, toolsfd, script);
+
+			close(sockfd);
+		}
+		if (toolsfd >= 0) {
+			close(toolsfd);
 		}
 	}
 
-	
 	return rv;
 }
 
