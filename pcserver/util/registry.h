@@ -54,6 +54,9 @@ void *reg_get(registry_t * reg, int position);
 // Note: linear with registry size
 void reg_remove(registry_t * reg, void *ptr);
 
+// remove an entry from the registry
+void reg_remove_pos(registry_t * reg, int position);
+
 // return the number of entries in the registry
 int reg_size(registry_t * reg);
 

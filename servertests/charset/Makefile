@@ -1,4 +1,4 @@
 
 tests:
-	./tests.sh -C -q
+	./tests.sh -T -C -q
 

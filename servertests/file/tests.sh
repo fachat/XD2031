@@ -22,7 +22,7 @@ TESTFILES="empty.d64"
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.trs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
-COMPAREFILES=""
+COMPAREFILES="empty.d64"
 
 # server options
 SERVEROPTS="-v -A0:fs=empty.d64"

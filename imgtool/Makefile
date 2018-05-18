@@ -40,7 +40,7 @@ PKG_CONFIG=$(CROSS)pkg-config
 AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
 # Sorting include paths and defines simplifies checking them
-INCPATHS=. ../common ../pcserver $(ARCH)
+INCPATHS=. ../common ../pcserver/os ../pcserver/util ../pcserver/handler ../pcserver $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
 CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER -O0
@@ -55,7 +55,7 @@ OBJ=$(addprefix $(OBJDIR),$(_OBJ))
 DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
 
 # locations where make searches C source files
-vpath %.c . ../pcserver ../common $(ARCH)
+vpath %.c . ../pcserver/handler ../pcserver/os ../pcserver/util ../pcserver ../common $(ARCH)
 
 # Include automatic dependencies, continue if they don't exist yet
 -include $(DEP)
