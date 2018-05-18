@@ -90,6 +90,15 @@ void *reg_get(registry_t *reg, int position) {
 	return reg->entries[position];
 }
 
+static void reg_remove_int(registry_t *reg, int i) {
+	reg->numentries--;
+	int size = (reg->numentries - i) * sizeof(void*);
+	if (size > 0) {
+		memmove(reg->entries+i, reg->entries+i+1, size);
+	}
+	return;
+}
+
 // remove an entry from the registry
 // Note: linear with registry size
 void reg_remove(registry_t *reg, void *ptr) {
@@ -98,15 +107,23 @@ void reg_remove(registry_t *reg, void *ptr) {
 
 	for (int i = reg->numentries-1; i >= 0; i--) {
 		if (reg->entries[i] == ptr) {
-			reg->numentries--;
-			int size = (reg->numentries - i) * sizeof(void*);
-			if (size > 0) {
-				memmove(reg->entries+i, reg->entries+i+1, size);
-			}
+			reg_remove_int(reg, i);
 			return;
 		}
 	}
 	log_error("Unable to remove entry %p from registry %p (%s)\n", ptr, reg, reg->name);
+}
+
+// remove an entry from the registry
+void reg_remove_pos(registry_t *reg, int pos) {
+
+	log_debug("Removing entry at pos %d from registry %p (%s, size=%d)\n", pos, reg, reg->name, reg->numentries);
+
+	if (pos >= 0 && pos < reg->numentries) {
+		reg_remove_int(reg, pos);
+		return;
+	}
+	log_error("Unable to remove entry at pos %d from registry %p (%s)\n", pos, reg, reg->name);
 }
 
 

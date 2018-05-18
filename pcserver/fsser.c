@@ -58,6 +58,9 @@
 #endif
 #include "terminal.h"
 #include "dir.h"
+#include "loop.h"
+
+// --------------------------------------------------------------------------------------
 
 void usage(int rv) {
 	printf("Usage: fsser [options] run_directory\n"
@@ -101,64 +104,76 @@ void assert_single_char(char *argv) {
 	}
 }
 
-static int do_loop(serial_port_t dev_fd, serial_port_t tools_listen_fd) {
-	
-printf("do_loop tools (dev=%d, tools=%d)\n", dev_fd, tools_listen_fd);
-	int rv = 0;
-	serial_port_t tool = -1;
-	in_device_t *td = NULL;
-	in_device_t *fd = NULL;
+// --------------------------------------------------------------------------------------
+// poll loop callback functions
+//
 
-	if (dev_fd >= 0) {
-		fd = in_device_init(dev_fd, dev_fd, 1);
+typedef struct {
+	int do_reset;
+} accept_data_t;
+
+static type_t accept_data_type = {
+	"accept_data_t",
+	sizeof(accept_data_t),
+	NULL
+};
+
+static void fd_hup(int fd, void *data) {
+
+	log_debug("fd_hup for fd=%d (%p)\n", fd, data);
+
+	if (fd >= 0) {
+		close(fd);
 	}
-	
-	do {
-		// UI input
-		rv = in_ui_loop();
-		if (rv) {
-			break;
-		}
 
-		if (tool < 0) {
-			tool = socket_accept(tools_listen_fd);
-			if (tool >= 0) {
-				td = in_device_init(tool, tool, 0);
-			}
-		} 
-
-		// TODO: select() or poll() to avoid CPU idle looping
-		if (td != NULL) {
-			rv = in_device_loop(td);
-printf("in_loop tools (%d) -> rv=%d\n", td->readfd, rv);
-			if (rv == 2) {
-				log_info("Lost connection to tools socket (%d)\n", tool);
-				socket_close(tool);
-				tool = -1;
-				td = NULL;
-			}
-		} 
-		
-		// device input (either socket or device)
-		if (fd != NULL) {
-			rv = in_device_loop(fd);
-			if (rv == 2) {
-				break;
-			}
-		}
-	} while (true);
-
-	if (tool >= 0) {
-		socket_close(tool);
+	if (data) {
+		mem_free(data);
 	}
-	return rv;
 }
 
+static void fd_read(int fd, void *data) {
+
+	log_debug("fd_read for fd=%d (%p)\n", fd, data);
+
+	in_device_t *fddata = (in_device_t*) data;
+
+	int rv = in_device_loop(fddata);
+
+	if (rv == 2) {
+		poll_unregister(fd);
+	}
+}
+
+static void fd_accept(int fd, void *data) {
+
+	log_debug("fd_accept for fd=%d (%p)\n", fd, data);
+
+	accept_data_t *adata = (accept_data_t*) data;
+
+	int data_fd = socket_accept(fd);
+
+	in_device_t *td = in_device_init(data_fd, data_fd, adata->do_reset);
+
+	poll_register_readwrite(data_fd, td, fd_read, NULL, fd_hup);
+}
+
+static void fd_listen(const char *socketname, int do_reset) {
+
+	log_debug("fd_listen for socket=%s\n", socketname);
+
+	int listen_fd = socket_listen(socketname);
+
+	accept_data_t *data = mem_alloc(&accept_data_type);
+
+	data->do_reset = do_reset;
+
+	poll_register_accept(listen_fd, data, fd_accept, fd_hup);
+}
+
+// --------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
 
-	serial_port_t dev_fd=0;
-	serial_port_t fdesc;
 	int i;
 	char *dir=NULL;
 
@@ -169,6 +184,8 @@ int main(int argc, char *argv[]) {
 	char use_stdio = false;
 
 	mem_init();
+
+	poll_init();
 
 	// Check -v (verbose) first to enable log_debug()
 	// when processing other options
@@ -287,6 +304,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (device != NULL) {
+		serial_port_t fdesc;
 		fdesc = device_open(device);
 		if (os_open_failed(fdesc)) {
 		  /* error */
@@ -299,30 +317,25 @@ int main(int argc, char *argv[]) {
 			device, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
-		dev_fd = fdesc;
+
+		in_device_t *fdp = in_device_init(fdesc, fdesc, 1);
+		poll_register_readwrite(fdesc, fdp, fd_read, NULL, fd_hup);
 	}
 
 	// we have the serial device open, now we can drop privileges
 	drop_privileges();
 
+#ifndef _WIN32
 	if (tsocket == NULL) {
 		const char *home = os_get_home_dir();
 		tsocket = malloc_path(home, ".xdtools");
 	}
-	int tools_listen_fd = socket_listen(tsocket);
+	fd_listen(tsocket, 0);
 
 
-#ifndef _WIN32
 	if (socket != NULL) {
-		// socket should be opened without privileges
-		fdesc = socket_open(socket);
-                if (os_open_failed(fdesc)) {
-                  /* error */
-                  log_error("Could not open socket %s, errno=%d (%s)\n",
-                        socket, os_errno(), os_strerror(os_errno()));
-                  exit(EXIT_RESPAWN_NEVER);
-                }
-                dev_fd = fdesc;
+	
+		fd_listen(socket, 1);
         } else 
 	if (device == NULL && !use_stdio) {
 
@@ -348,22 +361,24 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int res = do_loop(dev_fd, tools_listen_fd);
 
-	if (device != NULL || socket != NULL) {
-		device_close(fdesc);
+	while (poll_loop(1000) == 0) { 
+		// TODO: move UI input into poll_loop()
+		// UI input
+		int rv = in_ui_loop();
+		if (rv) {
+			break;
+		}
 	}
 
-	if (tools_listen_fd >= 0) {
-		close(tools_listen_fd);
-	}
-
+	poll_shutdown();
+ 
 	// If the device is lost, the daemon should always restart the server
 	// when it is available again
-	if(res) {
-		exit(EXIT_RESPAWN_ALWAYS);
-	} else {
+	//if(res) {
+	//	exit(EXIT_RESPAWN_ALWAYS);
+	//} else {
 		exit(EXIT_SUCCESS);
-	}
+	//}
 }
 
