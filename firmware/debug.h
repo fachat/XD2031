@@ -95,6 +95,7 @@ void debug_dump_packet(packet_t * p);
 
 #else				// no DEBUG
 
+#include "packet.h"
 
 // those should be optimized away
 static inline void debug_puts(char *c) { } 
@@ -107,6 +108,7 @@ static inline void debug_puthex(char c) { }
 static inline void debug_printf(char *format, ...) { } 
 static inline void debug_hexdump(uint8_t * p, uint16_t len, uint8_t petscii) { } 
 static inline void debug_flush() { } 
+static inline void debug_dump_packet(packet_t * p) { }
 
 #endif				// DEBUG
 #endif				// def DEBUG_H
