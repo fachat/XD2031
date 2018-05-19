@@ -34,7 +34,7 @@
 #include <sys/un.h>
 
 
-static int socket_open_int(const char *socketname) {
+static int socket_listen_int(const char *socketname) {
 
 	log_info("Opening socket %s for requests\n", socketname);
 
@@ -63,7 +63,7 @@ static int socket_open_int(const char *socketname) {
 
 	return sockfd;
 }
-  
+
 static int socket_accept_int(int sockfd, int nonblock) {
  
 	int clientfd;
@@ -71,10 +71,18 @@ static int socket_accept_int(int sockfd, int nonblock) {
 	struct sockaddr_un client_addr;
 
 	clientlen = sizeof(client_addr);
-   	clientfd = accept4(sockfd,(struct sockaddr *)&client_addr,&clientlen, nonblock ? SOCK_NONBLOCK : 0);
+   	clientfd = accept(sockfd,(struct sockaddr *)&client_addr,&clientlen);
    	if (clientfd < 0) {
        		//log_errno("Error accepting socket"); 
 		return -1;
+	}
+
+	if (nonblock) {
+		if (fcntl(clientfd, F_SETFL, O_NONBLOCK) < 0) {
+       			log_errno("Error setting socket to non-blocking"); 
+			close(clientfd);
+			return -1;
+		}
 	}
 
 	return clientfd;
@@ -86,7 +94,7 @@ static int socket_accept_int(int sockfd, int nonblock) {
  */
 int socket_open(const char *socketname) {
 
-	int sockfd = socket_open_int(socketname);
+	int sockfd = socket_listen_int(socketname);
 
 	if (sockfd < 0) {
 		return -1;
@@ -115,7 +123,7 @@ int socket_listen(const char *socketname) {
 		}
 	}
 
-	int sockfd = socket_open_int(socketname);
+	int sockfd = socket_listen_int(socketname);
 
 	if (sockfd < 0) {
 		return sockfd;
