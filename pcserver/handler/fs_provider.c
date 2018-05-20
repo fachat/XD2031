@@ -962,8 +962,8 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File *
 
 	file->file.pattern = NULL;
 	// convert filename to external charset
-	tmpnamep = mem_alloc_str(name);
-	conv_name_alloc(tmpnamep, cset, CHARSET_ASCII);
+	//tmpnamep = mem_alloc_str(name);
+	tmpnamep = conv_name_alloc(name, cset, CHARSET_ASCII);
 	file->file.filename = tmpnamep;
 
 	file->ospath = os_realpath(fsep->curpath);
