@@ -94,6 +94,8 @@
 #define   FS_COPY        30     /* copy a file or merge files */
 #define   FS_DUPLICATE   31     /* duplicate a disk image or copy a directory */
 #define   FS_INITIALIZE  32     /* initialize (e.g. free buffers and remove file locks) */
+
+#define   FS_INFO  	 33     /* server sends info about the server to drive (or command) */
     
 /*
  * BLOCK and DIRECT commands

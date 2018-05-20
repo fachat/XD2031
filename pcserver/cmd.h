@@ -40,6 +40,7 @@ int cmd_assign_from_cmdline(int argc, char *argv[]);
 int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd);
 int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset);
+int cmd_info(char *outbuf, int *outlen, charset_t outcset);
 int cmd_write(int tfd, int cmd, const char *indata, int datalen);
 int cmd_position(int tfd, const char *indata, int datalen);
 int cmd_close(int tfd, char *outbuf, int *outlen);

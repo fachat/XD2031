@@ -244,6 +244,17 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 }
 
 
+int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
+	
+	int rv = CBM_ERROR_OK;
+
+	const char *info = "XDrive2031 filesystem server (C) A. Fachat et. al.";
+	
+	*outlen = cconv_converter(CHARSET_ASCII, outcset) (info, strlen(info), outbuf, strlen(info));
+	
+	return rv;
+}
+
 int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset) {
 	
 	int rv = CBM_ERROR_FILE_NOT_OPEN;

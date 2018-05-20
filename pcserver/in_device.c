@@ -250,6 +250,11 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 			retbuf[FSP_LEN] = FSP_DATA + outlen;
 		}
 		break;
+	case FS_INFO:
+		cmd_info(retbuf+FSP_DATA, &outlen, dt->charset);
+		retbuf[FSP_CMD] = FS_DATA_EOF;
+		retbuf[FSP_LEN] = FSP_DATA + outlen;
+		break;
 	case FS_WRITE:
 	case FS_WRITE_EOF:
 		rv = cmd_write(tfd, cmd, buf+FSP_DATA, len-FSP_DATA);
