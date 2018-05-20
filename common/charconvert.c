@@ -33,6 +33,8 @@
 
 #define	NUM_OF_CHARSETS		2
 
+#define min(a,b)	(((a)<(b))?(a):(b))
+
 static char *charsets[] = { 
 	CHARSET_ASCII_NAME, CHARSET_PETSCII_NAME
 };
@@ -57,32 +59,34 @@ charset_t cconv_getcharset(const char *charsetname) {
 
 
 // conversion functions
-void cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
+int cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_identity(%s)\n", in);
-	(void) inlen; // silence warning unused parameter
 	if (in != out) {
 		// not an in-place conversion
-		// assumption: callers behave in terms of buffer lengths
-		memcpy(out, in, outlen);
+		memcpy(out, in, min(inlen, outlen));
+		return min(inlen, outlen);
 	}
+	return 0;
 }
 
-static void cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
+static int cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_ascii2petscii(%s)\n", in);
 	uint8_t i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = ascii_to_petscii(*(in++));
 		i++;
 	}
+	return i;
 }
 
-static void cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
+static int cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_petscii2ascii(%s)\n", in);
 	uint8_t i = 0;
 	while (i < inlen && i < outlen) {
 		*(out++) = petscii_to_ascii(*(in++));
 		i++;
 	}
+	return i;
 }
 
 // this table is ordered such that the outer index defines where to convert FROM,
