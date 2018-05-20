@@ -124,11 +124,13 @@ static void fd_hup(int fd, void *data) {
 
 	if (fd >= 0) {
 		close(fd);
+		poll_unregister(fd);
 	}
 
 	if (data) {
 		mem_free(data);
 	}
+
 }
 
 static void fd_read(int fd, void *data) {
