@@ -47,12 +47,12 @@ static const struct cmd_struct IN_ROM cmd_tab[] = {
 	{"COPY"      , CMD_COPY       },
 	{"CD"        , CMD_CD         },
 	{"CHDIR"     , CMD_CD         },
-   {"DUPLICATE" , CMD_DUPLICATE  },
+   	{"DUPLICATE" , CMD_DUPLICATE  },
 	{"INITIALIZE", CMD_INITIALIZE },
 	{"M-"        , CMD_SYNTAX     }, // not yet supported but not to confuse with 'MD'
 	{"MKDIR"     , CMD_MKDIR      },
 	{"MD"        , CMD_MKDIR      },
-   {"NEW"       , CMD_NEW        },
+   	{"NEW"       , CMD_NEW        },
 	{"P"         , CMD_POSITION   },
 	{"RENAME"    , CMD_RENAME     },
 	{"RMDIR"     , CMD_RMDIR      },
@@ -60,7 +60,7 @@ static const struct cmd_struct IN_ROM cmd_tab[] = {
 	{"SCRATCH"   , CMD_SCRATCH    },
 	{"TIME"      , CMD_TIME       },
 	{"U"         , CMD_UX         },
-   {"VALIDATE"  , CMD_VALIDATE   },
+   	{"VALIDATE"  , CMD_VALIDATE   },
 	{"X"         , CMD_EXT        },
 };
 

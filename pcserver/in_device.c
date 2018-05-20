@@ -109,7 +109,7 @@ static void dev_write_packet(serial_port_t fd, char *retbuf) {
 	}
 #if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
 	log_debug("write %02x %02x %02x (%s):\n", 255&retbuf[0], 255&retbuf[1],
-			255&retbuf[2], nameofcmd(255&retbuf[FSP_CMD]) );
+			255&retbuf[2], command_to_name(255&retbuf[FSP_CMD]) );
 	log_hexdump(retbuf + 3, retbuf[FSP_LEN] - 3, 0);
 #endif
 }
@@ -190,7 +190,7 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 #ifdef DEBUG_CMD
 	{
 		int n = buf[FSP_LEN];
-		log_info("cmd %s :%d bytes @%p : \n", nameofcmd(255&buf[FSP_CMD]), n, buf);
+		log_info("cmd %s :%d bytes @%p : \n", command_to_name(255&buf[FSP_CMD]), n, buf);
 		log_hexdump(buf, n, 0);
 	}
 #endif

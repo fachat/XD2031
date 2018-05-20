@@ -32,11 +32,63 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "archcompat.h"
 #include "mem.h"
 #include "log.h"
 #include "registry.h"
 #include "script.h"
-#include "cmdnames.h"
+
+
+// -----------------------------------------------------------------------
+
+
+
+/*
+ * translate the command numbers into names, and vice versa;
+ * Note: NOT speed optimized!
+ */
+
+#include "wireformat.h"
+
+int numofcmd(const char *name) {
+
+	if (!strcmp("TERM", name)) 	return FS_TERM;
+	if (!strcmp("OPEN_RD", name)) 	return FS_OPEN_RD;
+	if (!strcmp("OPEN_WR", name)) 	return FS_OPEN_WR;
+	if (!strcmp("OPEN_RW", name)) 	return FS_OPEN_RW;
+	if (!strcmp("OPEN_AP", name)) 	return FS_OPEN_AP;
+	if (!strcmp("OPEN_OW", name)) 	return FS_OPEN_OW;
+	if (!strcmp("OPEN_DR", name)) 	return FS_OPEN_DR;
+	if (!strcmp("READ", name)) 	return FS_READ;
+	if (!strcmp("WRITE", name)) 	return FS_WRITE;
+	if (!strcmp("WRITE_EOF", name)) return FS_WRITE_EOF;
+	if (!strcmp("REPLY", name)) 	return FS_REPLY;
+	if (!strcmp("DATA", name)) 	return FS_DATA;
+	if (!strcmp("DATA_EOF", name)) 	return FS_DATA_EOF;
+	if (!strcmp("SEEK", name)) 	return FS_SEEK;
+	if (!strcmp("CLOSE", name)) 	return FS_CLOSE;
+	if (!strcmp("MOVE", name)) 	return FS_MOVE;
+	if (!strcmp("DELETE", name)) 	return FS_DELETE;
+	if (!strcmp("FORMAT", name)) 	return FS_FORMAT;
+	if (!strcmp("CHKDSK", name)) 	return FS_CHKDSK;
+	if (!strcmp("RMDIR", name)) 	return FS_RMDIR;
+	if (!strcmp("MKDIR", name)) 	return FS_MKDIR;
+	if (!strcmp("CHDIR", name)) 	return FS_CHDIR;
+	if (!strcmp("ASSIGN", name)) 	return FS_ASSIGN;
+	if (!strcmp("SETOPT", name)) 	return FS_SETOPT;
+	if (!strcmp("RESET", name)) 	return FS_RESET;
+	if (!strcmp("BLOCK", name)) 	return FS_BLOCK;
+	if (!strcmp("POSITION", name)) 	return FS_POSITION;
+	if (!strcmp("GETDATIM", name)) 	return FS_GETDATIM;
+	if (!strcmp("CHARSET", name)) 	return FS_CHARSET;
+	if (!strcmp("COPY", name)) 	return FS_COPY;
+	if (!strcmp("DUPLICATE", name)) return FS_DUPLICATE;
+	if (!strcmp("INITIALIZE", name)) return FS_INITIALIZE;
+
+	return -1;
+}
+
+
 
 
 // -----------------------------------------------------------------------

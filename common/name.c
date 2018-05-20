@@ -80,7 +80,7 @@ static void dump_result(nameinfo_t *result) {
 static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, uint8_t **drivename) {
 	uint8_t *p = (uint8_t *)strchr((char*) in, ':');
 	uint8_t *c = (uint8_t *)strchr((char*) in, ',');
-	int8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
+	uint8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
 	*drivename = NULL;
 	*filename  = in;
 	uint8_t len;
@@ -92,7 +92,7 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
 		if (p == in) r = NAMEINFO_LAST_DRIVE;          // return filename without ':'
 		else {
 			r = strtol((char *)in,(char **)&p,10);
-			if (*p || r < 0 || r > 9) {            // named drive
+			if (*p || r > 9) {            // named drive
 				*drivename = in;
 				r = NAMEINFO_UNDEF_DRIVE;
 			}
@@ -227,9 +227,11 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
  * To distinguish numeric drive numbers from unassigned (undefined) drives like "ftp:",
  * the provider name must not end with a digit.
  *
- * len includes the zero-byte
  */
-void parse_filename(uint8_t *in, uint8_t len, nameinfo_t *result, uint8_t parsehint) {
+void parse_filename(uint8_t *in, uint8_t inlen, nameinfo_t *result, uint8_t parsehint) {
+
+	// includes trailing zero-byte
+	uint8_t len = strlen((const char*)in) + 1;
 
 	result->access = 0;
 	result->type = 0;
@@ -239,7 +241,7 @@ void parse_filename(uint8_t *in, uint8_t len, nameinfo_t *result, uint8_t parseh
 	// (because we may need to insert bytes at some places, which would
 	// be difficult)
 	// Note that assembling takes place in assemble_filename_packet below.
-	uint8_t diff = CONFIG_COMMAND_BUFFER_SIZE - len;
+	uint8_t diff = inlen - len;
 	memmove(in + diff, in, len);
 
 	// adjust so we exclude final null byte
