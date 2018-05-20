@@ -26,11 +26,12 @@
 #include "terminal.h"
 #include "connect.h"
 #include "wireformat.h"
+#include "name.h"
 
 // --------------------------------------------------------------------------
 // send/receive packets
 
-int send_packet(int sockfd, const char *buf, int len) {
+int send_packet(int sockfd, const uint8_t *buf, int len) {
 
 	int p = 0;
 	
@@ -57,7 +58,9 @@ char buf[8192];
 int wrp = 0;
 int rdp = 0;
 
-int recv_packet(int fd, char *outbuf, int buflen) {
+int recv_packet(int fd, uint8_t *outbuf, int buflen) {
+
+	(void) buflen; // TODO
 
         int plen, cmd;
         int n;
@@ -125,13 +128,138 @@ int recv_packet(int fd, char *outbuf, int buflen) {
 // --------------------------------------------------------------------------
 // command code
 
+// TODO: date/time
+typedef struct {
+	const char 	*name;
+	int		len;
+	int		attr;
+	int		estimate;
+	int		etype;		// FS_DIR_MOD_*
+	int		splat;
+	int		ftype;		// DIR/PRG/SEQ/...
+} dirinfo_t;
+
+const char *ftypes[8] = {
+	"DEL", "SEQ", "PRG", "USR", "REL", "??5", "??6", "??7"
+};
+
+static int parse_dir_packet(const uint8_t *buf, int len, dirinfo_t *dir) {
+	
+	memset(dir, 0, sizeof(dirinfo_t));
+
+	if (len < FS_DIR_NAME + 1) {
+		log_error("received short directory data packet at length %d\n", len);
+		return -1;
+	}
+
+	dir->len = buf[FS_DIR_LEN]
+			+ (buf[FS_DIR_LEN+1]<<8)
+			+ (buf[FS_DIR_LEN+2]<<8)
+			+ (buf[FS_DIR_LEN+3]<<8);
+
+	dir->attr = buf[FS_DIR_ATTR];
+	dir->ftype = buf[FS_DIR_ATTR] & FS_DIR_ATTR_TYPEMASK;
+
+	// TODO: date/time
+	
+	dir->etype = buf[FS_DIR_MODE];
+
+	dir->name = (const char*) buf+FS_DIR_NAME;
+
+	return 0;
+}
+
+static int cmd_dir(int sockfd, int argc, const char *argv[]) {
+
+	uint8_t *name = mem_alloc_c(256, "parse buffer");
+
+	nameinfo_t ninfo;
+	dirinfo_t dir;
+
+	if (argc > 2) {
+		log_error("Too many parameters!\n");
+		mem_free(buf);
+		return -1;
+	}
+
+	if (argc == 1) {
+		// note that parse_filename parses in-place, nameinfo then points to name buffer
+		strncpy((char*)name, argv[0], 255);
+		name[255] = 0;
+		parse_filename(name, 255, &ninfo, PARSEHINT_LOAD);
+
+		// TODO
+	} 
+
+	uint8_t *buf = mem_alloc_c(256, "msg buffer");
+	buf[FSP_CMD] = FS_OPEN_DR;
+	buf[FSP_FD]  = 0;
+	buf[FSP_LEN] = 3;
+
+	int rv = send_packet(sockfd, buf, 3);
+
+	if (rv >= 0) {
+		rv = recv_packet(sockfd, buf, 256);
+
+		if (buf[FSP_CMD] == FS_REPLY && buf[FSP_DATA] == CBM_ERROR_OK) {
+
+		    // receive data packets until EOF
+		    do {
+			buf[FSP_CMD] = FS_READ;
+			buf[FSP_LEN] = 3;
+			buf[FSP_FD]  = 0;
+			rv = send_packet(sockfd, buf, 3);
+			if (rv < 0) {
+				log_errno("Unable to send read request!\n");
+				break;
+			}
+
+			rv = recv_packet(sockfd, buf, 256);
+
+			if (rv < 0) {
+				log_errno("Could not receive packet!\n");
+				break;
+			}
+			if (buf[FSP_CMD] != FS_DATA && buf[FSP_CMD] != FS_DATA_EOF) {
+				log_error("Received unexpected packet of type %d!\n", buf[FSP_CMD]);
+				break;
+			}
+
+			rv = parse_dir_packet(buf + FSP_DATA, buf[FSP_LEN] - FSP_DATA, &dir);
+
+			if (rv < 0) {
+				break;
+			}
+	
+			snprintf((char*)name, 255, "%c% 12d %16s %c%s%c\n", 
+				(dir.attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ',
+				dir.len, 
+				dir.name,
+				(dir.attr & FS_DIR_ATTR_SPLAT) ? '*':' ',
+				ftypes[dir.ftype],
+				(dir.attr & FS_DIR_ATTR_LOCKED) ? '<':' '
+				);
+				
+			printf("%s", (char*)name);
+
+			if (buf[FSP_CMD] == FS_DATA_EOF) {
+				break;
+			}
+		    } while(rv == 0); 
+		}
+	}
+	return rv;
+
+}
+
+
 static int cmd_info(int sockfd, int argc, const char *argv[]) {
 
 	log_debug("cmd_info(sockfd=%d, argc=%d, argv[]=%s\n",
 		sockfd, argc, argc>0 ? argv[0] : "-");
 
 	// send command
-	char *buf = mem_alloc_c(256, "info buffer");
+	uint8_t *buf = mem_alloc_c(256, "info buffer");
 	buf[FSP_CMD] = FS_INFO;
 	buf[FSP_LEN] = 3;
 	buf[FSP_FD] = FSFD_CMD;
@@ -154,7 +282,7 @@ static int cmd_info(int sockfd, int argc, const char *argv[]) {
 
 static int cmd_assign(int sockfd, int argc, const char *argv[]) {
 
-	log_debug("cmd_assign(sockfd=%d, argc=%d, argv[]=%s\n",
+	log_error("cmd_assign(sockfd=%d, argc=%d, argv[]=%s) - not yet implemented!\n",
 		sockfd, argc, argc>0 ? argv[0] : "-");
 
 	char *buf = mem_alloc_c(4, "assign buffer");
@@ -179,10 +307,14 @@ static const cmdtab_t cmdtab[] = {
 			"Get info from the server",
 			{ NULL } },
 	{	"assign",	cmd_assign,
-			"Assign a drive to a new drivespec.",
+			"Assign a drive to a new drivespec with parameters:",
 			{ 	"<drivespec>    '<drive>:[<prov>]=<path>'", 
 			  	"               E.g. '0:fs=/home/user/.xdsamples'",
 				"               For more details see the server documentation.",
+			NULL }},
+	{	"dir",	cmd_dir,
+			"Show the directory of the given drive, optionally filtered by a pattern:",
+			{	"<drive:><pattern>",
 			NULL }},
 };
 
@@ -200,7 +332,7 @@ void usage(int rv) {
 		" commands:\n"
         );
 	for (int i = 0; i < numcmds; i++) {
-		printf(" % 8s   %s\n", cmdtab[i].name, cmdtab[i].usage);
+		printf(" %-8s   %s\n", cmdtab[i].name, cmdtab[i].usage);
 		for (int j = 0; cmdtab[i].usageopts[j]; j++) {
 			printf("            %s\n", cmdtab[i].usageopts[j]);
 		}
@@ -226,6 +358,8 @@ void assert_single_char(const char *argv) {
 int main(int argc, const char *argv[]) {
 
 	const char *socket = NULL;
+
+	mem_init();
 
 	// --------------------------------------------
 	// parse the parameters
