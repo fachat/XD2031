@@ -24,21 +24,51 @@
  * This file implements the disk drive commands
  */
 
-#ifndef CMD_H
-#define CMD_H
+#ifndef COMMAND_H
+#define COMMAND_H
 
-#include <stdint.h>
-
-#include "errormsg.h"
 #include "wireformat.h"
 #include "config.h"
 
-
-typedef struct {
-	uint8_t command_length;
-	// command buffer
-	uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE + 2];
-//      errormsg_t      *errormsg;
-} cmd_t;
+// Note the value definitions are such that no mapping is necessary between internal
+// command codes and wireformat values
+typedef enum {
+	// Default
+	//
+	CMD_NONE,
+	CMD_SYNTAX,
+	CMD_OVERWRITE = FS_OPEN_OW,
+	CMD_DIR = FS_OPEN_DR,
+	//
+	// CBM DOS commands
+	//
+	CMD_INITIALIZE = FS_INITIALIZE,
+	CMD_RENAME = FS_MOVE,
+	CMD_SCRATCH = FS_DELETE,
+	CMD_POSITION = FS_POSITION,
+	CMD_VALIDATE = FS_CHKDSK,
+	CMD_COPY = FS_COPY,
+	CMD_DUPLICATE = FS_DUPLICATE,
+	CMD_NEW = FS_FORMAT,
+	CMD_BLOCK = FS_BLOCK,
+	CMD_UX = FS_SYNC,	// makes no sense but doesn't conflict
+	//
+	// unsupported
+	//
+	// CMD_MEM_READ,
+	// CMD_MEM_WRITE,
+	// CMD_MEM_EXEC,
+	//
+	// new commands
+	//
+	CMD_CD = FS_CHDIR,
+	CMD_MKDIR = FS_MKDIR,
+	CMD_RMDIR = FS_RMDIR,
+	CMD_ASSIGN = FS_ASSIGN,
+	// configuration extension
+	CMD_EXT,
+	// date/time commands
+	CMD_TIME = FS_GETDATIM
+} command_t;
 
 #endif
