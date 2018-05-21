@@ -60,3 +60,8 @@ int poll_loop(int timeoutMs);
  */
 void poll_shutdown();
 
+/**
+ * return the number of open sockets
+ */
+int poll_num_sockets();
+

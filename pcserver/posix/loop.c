@@ -76,6 +76,14 @@ void poll_init(void) {
 	update_needed = 1;
 }
 
+/**
+ * return the number of open sockets
+ */
+int poll_num_sockets() {
+
+	return reg_size(&poll_list);
+}
+
 static void update_poll_list() {
 
 	if (!update_needed) {
@@ -286,3 +294,4 @@ void poll_shutdown() {
 	update_poll_list();
 }
 
+ 

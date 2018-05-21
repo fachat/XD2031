@@ -176,6 +176,9 @@ static void fd_listen(const char *socketname, int do_reset) {
 
 int main(int argc, char *argv[]) {
 
+	// stop server when number of registered sockets falls below this
+	int min_num_socks = 0;
+
 	int i;
 	char *dir=NULL;
 
@@ -322,6 +325,7 @@ int main(int argc, char *argv[]) {
 
 		in_device_t *fdp = in_device_init(fdesc, fdesc, 1);
 		poll_register_readwrite(fdesc, fdp, fd_read, NULL, fd_hup);
+		min_num_socks ++;
 	}
 
 	// we have the serial device open, now we can drop privileges
@@ -333,11 +337,20 @@ int main(int argc, char *argv[]) {
 		tsocket = malloc_path(home, ".xdtools");
 	}
 	fd_listen(tsocket, 0);
+	min_num_socks ++;
 
 
 	if (socket != NULL) {
 	
-		fd_listen(socket, 1);
+		//fd_listen(socket, 1);
+		int data_fd = socket_open(socket);
+		if (data_fd < 0) {
+			log_errno("Could not open listen socket at %s\n", socket);
+			exit(EXIT_RESPAWN_NEVER);
+		}
+		in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
+		poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
+		min_num_socks ++;
         } else 
 	if (device == NULL && !use_stdio) {
 
@@ -369,6 +382,10 @@ int main(int argc, char *argv[]) {
 		// UI input
 		int rv = in_ui_loop();
 		if (rv) {
+			break;
+		}
+
+		if (poll_num_sockets() < min_num_socks) {
 			break;
 		}
 	}
