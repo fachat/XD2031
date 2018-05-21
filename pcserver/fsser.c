@@ -124,7 +124,6 @@ static void fd_hup(int fd, void *data) {
 
 	if (fd >= 0) {
 		close(fd);
-		poll_unregister(fd);
 	}
 
 	if (data) {
@@ -341,16 +340,18 @@ int main(int argc, char *argv[]) {
 
 
 	if (socket != NULL) {
+		if (strcmp(socket, "-")) {
 	
-		//fd_listen(socket, 1);
-		int data_fd = socket_open(socket);
-		if (data_fd < 0) {
-			log_errno("Could not open listen socket at %s\n", socket);
-			exit(EXIT_RESPAWN_NEVER);
+			//fd_listen(socket, 1);
+			int data_fd = socket_open(socket);
+			if (data_fd < 0) {
+				log_errno("Could not open listen socket at %s\n", socket);
+				exit(EXIT_RESPAWN_NEVER);
+			}
+			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
+			poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
+			min_num_socks ++;
 		}
-		in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
-		poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
-		min_num_socks ++;
         } else 
 	if (device == NULL && !use_stdio) {
 
