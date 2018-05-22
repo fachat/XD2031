@@ -190,7 +190,7 @@ static int cmd_dir(int sockfd, int argc, const char *argv[]) {
 
 	if (argc > 2) {
 		log_error("Too many parameters!\n");
-		mem_free(buf);
+		mem_free(name);
 		return -1;
 	}
 
@@ -255,6 +255,8 @@ static int cmd_dir(int sockfd, int argc, const char *argv[]) {
 		    } while(rv == 0); 
 		}
 	}
+	mem_free(buf);
+	mem_free(name);
 	return rv;
 
 }
@@ -421,8 +423,10 @@ endpars:
 	int sockfd = socket_open(socket, 0);
 	if (sockfd < 0) {
 		log_errno("Could not open socket %s\n", socket);
+		mem_free(socket);
 		exit(1);
 	}
+	mem_free(socket);
 
 	// --------------------------------------------
 	// find our command either as ending part of the name of the binary ...
