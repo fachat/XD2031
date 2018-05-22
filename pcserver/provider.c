@@ -53,8 +53,6 @@ extern provider_t tcp_provider;
 typedef struct {
         provider_t      *provider;
 	charset_t	native_cset_idx;
-//	charconv_t	to_provider;
-//	charconv_t	from_provider;
 } providers_t;
 
 static void providers_init(const type_t *type, void *obj) {
@@ -63,8 +61,6 @@ static void providers_init(const type_t *type, void *obj) {
 	providers_t *p = (providers_t*) obj;
 
 	p->provider = NULL;
-//	p->to_provider = NULL;
-//	p->from_provider = NULL;
 }
 
 static type_t providers_type = {
@@ -85,8 +81,6 @@ int provider_register(provider_t *provider) {
 	} else {
 		p->native_cset_idx = -1;
 	}
-//	p->to_provider = cconv_identity;
-//	p->from_provider = cconv_identity;
 
 	reg_append(&providers, p);
 
@@ -159,65 +153,6 @@ static int unassign(int drive) {
 	return rv;
 }
 
-// -----------------------------------------------------------------
-// character set handling
-
-static char *ext_charset_name = NULL;
-
-// get the character set for the external communication (i.e. the wireformat)
-const char *provider_get_ext_charset() {
-	return ext_charset_name;
-}
-
-// set the character set for the external communication (i.e. the wireformat)
-// caches the to_provider and from_provider values in the providers[] table
-#if 0
-void provider_set_ext_charset(const char *charsetname) {
-
-	log_info("Setting filename communication charset to '%s'\n", charsetname);
-
-	if (ext_charset_name != NULL) {
-		mem_free(ext_charset_name );
-	}
-	ext_charset_name = mem_alloc_str(charsetname);
-
-	charset_t ext_cset_idx = cconv_getcharset(charsetname);
-
-	int i;
-	for (i = 0; ; i++) {
-		providers_t *p = reg_get(&providers, i);
-		if (p == NULL) {
-			break;
-		}
-		if (p->provider != NULL) {
-			p->to_provider = cconv_converter(ext_cset_idx, p->native_cset_idx);
-			p->from_provider = cconv_converter(p->native_cset_idx, ext_cset_idx);
-		}
-	}
-}
-
-charconv_t provider_convto(provider_t *prov) {
-	int idx = provider_index(prov);
-	if (idx >= 0) {
-		return ((providers_t*)reg_get(&providers, idx))->to_provider;
-	} else {
-		log_error("Could not find provider %p\n", prov);
-	}
-	// fallback
-	return cconv_identity;
-}
-
-charconv_t provider_convfrom(provider_t *prov) {
-	int idx = provider_index(prov);
-	if (idx >= 0) {
-		return ((providers_t*)reg_get(&providers, idx))->from_provider;
-	} else {
-		log_error("Could not find provider %p\n", prov);
-	}
-	// fallback
-	return cconv_identity;
-}
-#endif
 
 //------------------------------------------------------------------------------------
 // wrap a given (raw) file into a container file_t (i.e. a directory), when
