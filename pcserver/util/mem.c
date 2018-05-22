@@ -47,11 +47,30 @@
 #define	MEM_OFFSET	0
 #endif
 
+// --------------------------------------------------------------------------------
+// memory allocation checker
 
-void mem_init (void) {
-}
+static const int mem_records_initial = 1000;
+
+typedef struct {
+	void *ptr;
+	char *file;
+	int line;
+} mem_record_t;
+
+// array to record all allocations
+static mem_record_t *mem_records = NULL;
+// size of record array in number of records
+static int mem_cap = 0;
+// behind last written record
+static int mem_last = 0;
+// first unused entry lies here or behind this rec#
+static int mem_tag1 = 0;
+// last used entry lies here or before this rec#
+static int mem_tag2 = 0;
 
 #define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
+#define check_free(ptr) check_free_(ptr)
 
 static void check_alloc_(void *ptr, char *file, int line) {
 	if(!ptr) {
@@ -59,7 +78,82 @@ static void check_alloc_(void *ptr, char *file, int line) {
 		"file: %s line: %d\n", file, line);
 		exit(EXIT_FAILURE);
 	}
+
+	if (mem_records == NULL) {
+		size_t s = sizeof(mem_record_t) * mem_records_initial;
+		mem_records = malloc(s);
+		if(!mem_records) {
+			fprintf(stderr, "Could not allocate memory of size %ld for alloc table!\n", s);
+			exit(EXIT_FAILURE);
+		}
+		mem_cap = mem_records_initial;
+		mem_last = 0;
+		mem_tag1 = 0;
+		mem_tag2 = 0;
+		memset(mem_records, 0, s); 
+	}
+	while (mem_tag1 < mem_last && mem_records[mem_tag1].ptr != NULL) {
+		mem_tag1++;
+	}
+	// either mem_tag == mem_last, which means we just append,
+	// or we found an entry
+	if (mem_tag1 == mem_last) {
+		if (mem_last >= mem_cap) {
+			// we are at the limit!
+			size_t newsize = sizeof(mem_record_t) * mem_cap * 2;
+			mem_records = realloc(mem_records, newsize);
+			if(!mem_records) {
+				fprintf(stderr, "Could not re-allocate memory of size %ld for alloc table!\n", newsize);
+				exit(EXIT_FAILURE);
+			}
+			// implicit factor two
+			memset(mem_records + (sizeof(mem_record_t) * mem_cap), 0, (sizeof(mem_record_t) * mem_cap));
+			mem_cap = mem_cap * 2;
+		}
+		mem_last ++;
+	}
+	mem_records[mem_tag1].ptr = ptr;
+	mem_records[mem_tag1].file = file;
+	mem_records[mem_tag1].line = line;
+
+	if (mem_tag1 >= mem_tag2) {
+		mem_tag2 = mem_tag1 + 1;
+	}
 }
+
+static void check_free_(const void *ptr) {
+
+	for (int i = 0; i < mem_tag2; i++) {
+		if (mem_records[i].ptr == ptr) {
+			// unalloc
+			mem_records[i].ptr = NULL;
+			mem_tag1 = i;
+			if (i + 1 == mem_tag2) {
+				// was last used entry
+				mem_tag2 --;
+			}
+			return;
+		}
+	}
+	log_error("check_free: Trying to free memory at %p that is not allocated\n", ptr);
+}
+
+// --------------------------------------------------------------------------------
+
+void mem_init (void) {
+}
+
+void mem_exit (void) {
+
+	for (int i = 0; i < mem_last; i++) {
+
+		if (mem_records[i].ptr != NULL) {
+			fprintf(stderr, "Did no free memory at %p, allocated in %s:%d\n", mem_records[i].ptr, mem_records[i].file, mem_records[i].line);
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------
 
 // allocate memory and copy given string up to n chars
 //#define mem_alloc_strn(s,n) mem_alloc_str_(s, n, __FILE__, __LINE__)
@@ -168,10 +262,12 @@ void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, int line) {
 
 #ifdef DEBUG_MEM
+	check_free(((char*)ptr) - MEM_OFFSET);
 	ptr = realloc(((char*)ptr) - MEM_OFFSET, (n + 1) * type->sizeoftype);
 	check_alloc(ptr, file, line);
 	ptr = ((char*)ptr) + MEM_OFFSET;
 #else
+	check_free(ptr);
 	ptr = realloc(ptr, n * type->sizeoftype);
 	check_alloc(ptr, file, line);
 #endif
@@ -188,7 +284,10 @@ void mem_free(const void* ptr) {
 			log_error("Trying to free memory at %p that is not allocated\n", ptr);
 			return;
 		}
+		check_free(ptr);
 	}
+#else
+	check_free(ptr);
 #endif
 	free((void*)ptr);
 
@@ -198,7 +297,7 @@ void mem_free(const void* ptr) {
  * malloc a new path and copy the given base path and name, concatenating
  * them with the path separator. Ignore base for absolute paths in name.
  */
-char *malloc_path(const char *base, const char *name) {
+char *malloc_path_(const char *base, const char *name, char *file, int line) {
 
         log_debug("malloc_path: base=%s, name=%s\n", base, name);
 
@@ -207,7 +306,7 @@ char *malloc_path(const char *base, const char *name) {
         l += (name == NULL) ? 0 : strlen(name);
         l += 3; // dir separator, terminating zero, optional "."
 
-        char *dirpath = mem_alloc_c(l, "malloc_path");
+        char *dirpath = mem_alloc_c_(l, "malloc_path", file, line);
         dirpath[0] = 0;
         if (base != NULL) {
                 strcat(dirpath, base);
@@ -262,6 +361,7 @@ void mem_append_str2(char **baseptr, const char *s1, const char *s2) {
 
 	mem_append_str5(baseptr, s1, s2, NULL, NULL, NULL);
 }
+
 
 
 

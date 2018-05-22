@@ -188,6 +188,7 @@ int main(int argc, char *argv[]) {
 	char use_stdio = false;
 
 	mem_init();
+	atexit(mem_exit);
 
 	poll_init();
 

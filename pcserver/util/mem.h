@@ -64,7 +64,8 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line);
  * malloc a new path, and copy the given base path and name to it,
  * with a separating char
  */
-char *malloc_path(const char *base, const char *name);
+char *malloc_path_(const char *base, const char *name, char *file, int line);
+#define malloc_path(s,n) malloc_path_(s, n, __FILE__, __LINE__)
 
 /**
  * take all the variable arg chars and append them to the string
@@ -74,5 +75,12 @@ char *malloc_path(const char *base, const char *name);
 void mem_append_str2(char **baseptr, const char *s1, const char *s2);
 void mem_append_str5(char **baseptr, const char *s1, const char *s2,
 		     const char *s3, const char *s4, const char *s5);
+
+
+/**
+ * called on exit of program. Prints debug info resp. errors 
+ * if data structs are still allocated 
+ */
+void mem_exit();
 
 #endif
