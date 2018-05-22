@@ -50,6 +50,18 @@ int send_packet(int sockfd, const uint8_t *buf, int len) {
 	return p;
 }
 
+// convenience
+int send_cmd(int sockfd, uint8_t cmd, uint8_t fd) {
+
+	uint8_t buf[FSP_DATA];
+
+	buf[FSP_CMD] = cmd;
+	buf[FSP_FD] = fd;
+	buf[FSP_LEN] = FSP_DATA; 
+
+	return send_packet(sockfd, buf, FSP_DATA);
+}
+
 // TODO: copy from pcrunner.c, need to put in common code
 // Note: also similarly in the server (with async reads)
 // besides: I think this actually fails for partial reads as wrp=rdp=0 at the start
@@ -192,11 +204,9 @@ static int cmd_dir(int sockfd, int argc, const char *argv[]) {
 	} 
 
 	uint8_t *buf = mem_alloc_c(256, "msg buffer");
-	buf[FSP_CMD] = FS_OPEN_DR;
-	buf[FSP_FD]  = 0;
-	buf[FSP_LEN] = 3;
+	uint8_t pkgfd = 0;
 
-	int rv = send_packet(sockfd, buf, 3);
+	int rv = send_cmd(sockfd, FS_OPEN_DR, pkgfd);
 
 	if (rv >= 0) {
 		rv = recv_packet(sockfd, buf, 256);
@@ -205,10 +215,7 @@ static int cmd_dir(int sockfd, int argc, const char *argv[]) {
 
 		    // receive data packets until EOF
 		    do {
-			buf[FSP_CMD] = FS_READ;
-			buf[FSP_LEN] = 3;
-			buf[FSP_FD]  = 0;
-			rv = send_packet(sockfd, buf, 3);
+			rv = send_cmd(sockfd, FS_READ, pkgfd);
 			if (rv < 0) {
 				log_errno("Unable to send read request!\n");
 				break;
@@ -260,11 +267,8 @@ static int cmd_info(int sockfd, int argc, const char *argv[]) {
 
 	// send command
 	uint8_t *buf = mem_alloc_c(256, "info buffer");
-	buf[FSP_CMD] = FS_INFO;
-	buf[FSP_LEN] = 3;
-	buf[FSP_FD] = FSFD_CMD;
 
-	int rv = send_packet(sockfd, buf, 3);
+	int rv = send_cmd(sockfd, FS_INFO, FSFD_CMD);
 	if (rv >= 0) {
 		rv = recv_packet(sockfd, buf, 256);
 
@@ -360,6 +364,8 @@ int main(int argc, const char *argv[]) {
 	const char *socket = NULL;
 
 	mem_init();
+
+	atexit(mem_exit);
 
 	// --------------------------------------------
 	// parse the parameters
