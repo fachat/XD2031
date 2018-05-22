@@ -125,6 +125,7 @@ static void check_free_(const void *ptr) {
 
 	for (int i = 0; i < mem_tag2; i++) {
 		if (mem_records[i].ptr == ptr) {
+			log_debug("Free memory at %p (from %s:%d)\n", ptr, mem_records[i].file, mem_records[i].line);
 			// unalloc
 			mem_records[i].ptr = NULL;
 			mem_tag1 = i;
@@ -148,7 +149,7 @@ void mem_exit (void) {
 	for (int i = 0; i < mem_last; i++) {
 
 		if (mem_records[i].ptr != NULL) {
-			fprintf(stderr, "Did no free memory at %p, allocated in %s:%d\n", mem_records[i].ptr, mem_records[i].file, mem_records[i].line);
+			fprintf(stderr, "Did not free memory at %p, allocated in %s:%d\n", mem_records[i].ptr, mem_records[i].file, mem_records[i].line);
 		}
 	}
 }
@@ -275,7 +276,7 @@ void *mem_realloc_n_(const size_t n, const type_t *type, void *ptr, char *file, 
 	return ptr;
 }
 
-void mem_free(const void* ptr) {
+void mem_free_(const void* ptr) {
 
 #ifdef DEBUG_MEM
 	if (ptr != NULL) {
