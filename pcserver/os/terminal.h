@@ -27,8 +27,11 @@ int terminal_init(void);
 
 // Logical colors
 void color_default(void);
+void color_reverse(void);
+
 void color_log_term(void);
 void color_log_error(void);
 void color_log_warn(void);
 void color_log_info(void);
 void color_log_debug(void);
+

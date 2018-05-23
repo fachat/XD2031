@@ -112,6 +112,7 @@ static inline void color_textcolor_cyan (void) {
 
 static int colors_available = 0;
 static char *default_color, *red, *green, *yellow, *blue, *magenta, *white, *cyan;
+static char *reverse;
 
 // Reset terminal
 void terminal_reset (void) {
@@ -120,6 +121,8 @@ void terminal_reset (void) {
 
 static void color_set_monochrome (void) {
 	default_color =  red = green = yellow = blue = magenta = white = cyan = "";
+	reverse = "";
+
 	colors_available = 0;
 }
 
@@ -133,6 +136,9 @@ int terminal_init (void) {
 		log_error("Unable to configure terminal\n");
 		return 1;
 	}
+
+	reverse = NULL;
+	if (tigetstr("rev")) reverse = strdup(tigetstr("rev"));
 
         char *boldstr = NULL;
         if(tigetstr("bold")) boldstr = strdup(tigetstr("bold"));
@@ -201,6 +207,8 @@ static inline void color_textcolor_magenta (void) { color_textcolor(magenta); }
 static inline void color_textcolor_cyan    (void) { color_textcolor(cyan   ); }
 //static inline void color_textcolor_green (void) { color_textcolor(green  ); }
 //static inline void color_textcolor_white (void) { color_textcolor(white  ); }
+static inline void color_textcolor_reverse (void) { color_textcolor(reverse); }
+static inline void color_textcolor_normal  (void) { color_textcolor(default_color ); }
 
 #endif // _WIN32
 
@@ -212,3 +220,6 @@ void color_log_error(void)		{ color_textcolor_red();	}
 void color_log_warn(void)		{ color_textcolor_yellow();	}
 void color_log_info(void)		{ color_textcolor_blue();	}
 void color_log_debug(void)		{ color_textcolor_magenta();	}
+
+void color_reverse(void)		{ color_textcolor_reverse();	}
+
