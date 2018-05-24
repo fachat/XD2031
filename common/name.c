@@ -168,7 +168,9 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 	uint8_t *p;
 
 	if (load && *filename == '$') { // load directory e.g. '$' '$:' '$d' '$d:' ...
-        if (isdigit(filename[1]) && !filename[2]) strcat((char *)filename,":*");
+        	if (isdigit(filename[1]) && !filename[2]) {
+			strcat((char *)filename,":*");
+		}
 		result->cmd  = CMD_DIR;
 		result->drive = parse_drive (filename+1, &result->name, &result->namelen, &result->drivename);
 		return;

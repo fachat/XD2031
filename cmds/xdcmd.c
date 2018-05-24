@@ -64,18 +64,21 @@ int send_cmd(int sockfd, uint8_t cmd, uint8_t fd) {
 }
 
 // convenience
-int send_longcmd(int sockfd, uint8_t cmd, uint8_t fd, int drive, const char *pattern) {
+int send_longcmd(int sockfd, uint8_t cmd, uint8_t fd, nameinfo_t *ninfo) {
 
-	int len = FSP_DATA + 1 + strlen(pattern);
+	uint8_t *buf = mem_alloc_c(256, "longcmd buffer");
 
-	uint8_t *buf = mem_alloc_c(len + 1, "longcmd buffer");
+	if (ninfo->drive == NAMEINFO_UNUSED_DRIVE) {
+		// default drive
+		ninfo->drive = 0;
+	}
+
+	uint8_t len = assemble_filename_packet(buf+FSP_DATA, ninfo);
+	len += FSP_DATA;
 
 	buf[FSP_CMD] = cmd;
 	buf[FSP_FD] = fd;
 	buf[FSP_LEN] = len; 
-	
-	buf[FSP_DATA] = drive;
-	strcpy((char*)buf + FSP_DATA + 1, pattern);
 
 	int rv = send_packet(sockfd, buf, len);
 
@@ -284,6 +287,8 @@ static void print_dir_packet(dirinfo_t *dir) {
 static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 
 	uint8_t *name = mem_alloc_c(256, "parse buffer");
+	uint8_t *buf = mem_alloc_c(256, "msg buffer");
+	uint8_t pkgfd = 0;
 
 	nameinfo_t ninfo;
 	dirinfo_t dir;
@@ -298,15 +303,12 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 		// note that parse_filename parses in-place, nameinfo then points to name buffer
 		strncpy((char*)name, argv[0], 255);
 		name[255] = 0;
-		parse_filename(name, 255, &ninfo, PARSEHINT_LOAD);
+	} else {
+		name[0] = 0;
+	}
+	parse_filename(name, 255, &ninfo, PARSEHINT_LOAD);
 
-		// TODO
-	} 
-
-	uint8_t *buf = mem_alloc_c(256, "msg buffer");
-	uint8_t pkgfd = 0;
-
-	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, 0, (argc > 0) ? argv[0] : "");
+	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 
 	if (rv >= 0) {
 		rv = recv_packet(sockfd, buf, 256);
