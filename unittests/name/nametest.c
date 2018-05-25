@@ -4,11 +4,13 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "myunit.h"
 
 #include "name.h"
 
+#define	BUFLEN		255
 
 static void fuzz_nameinfo(nameinfo_t *nameinfo) {
 	// fuzz with garbage
@@ -18,64 +20,59 @@ static void fuzz_nameinfo(nameinfo_t *nameinfo) {
 	nameinfo->name = NULL;	//(char*)7697;
 }
 
+static uint8_t buf[BUFLEN];
+
+static void parse(char *filename, nameinfo_t *nameinfo, int flag) {
+
+	// setting up the test data
+	strncpy((char*)buf, filename, BUFLEN);
+
+	parse_filename(buf, BUFLEN, nameinfo, flag);
+}
+
 void name_without_anything_to_open()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="testname";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, 0);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, filename);
-	mu_assert_info("nameinfo access", nameinfo.access == 'R');
+	mu_assert_info("nameinfo access", nameinfo.access == 0);
 	mu_assert_info("nameinfo options", nameinfo.options == 0);
 	mu_assert_info("nameinfo cmd", nameinfo.cmd == CMD_NONE);
 }
 
 void name_with_drive_to_open() 
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="3:testname";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, 0);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == 3);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, filename+2);
-	mu_assert_info("nameinfo access", nameinfo.access == 'R');
+	mu_assert_info("nameinfo access", nameinfo.access == 0);
 	mu_assert_info("nameinfo options", nameinfo.options == 0);
 	mu_assert_info("nameinfo cmd", nameinfo.cmd == CMD_NONE);
 }
 
 void name_without_anything_to_load()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
-	char *filename="testname";
+	char *filename="testname,r";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_LOAD);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, filename);
@@ -86,40 +83,30 @@ void name_without_anything_to_load()
 
 void name_with_drive_to_load()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="4:testname";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_LOAD);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == 3);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, filename);
-	mu_assert_info("nameinfo access", nameinfo.access == 'R');
+	mu_assert_info("nameinfo access", nameinfo.access == 0);
 	mu_assert_info("nameinfo options", nameinfo.options == 0);
 	mu_assert_info("nameinfo cmd", nameinfo.cmd == CMD_NONE);
 }
 
 void cmd_without_anything_short()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="I";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_COMMAND);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, "");
@@ -130,18 +117,13 @@ void cmd_without_anything_short()
 
 void cmd_without_anything_med()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="INITIA";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_COMMAND);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, "");
@@ -152,18 +134,13 @@ void cmd_without_anything_med()
 
 void cmd_without_anything_exact()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="INITIALIZE";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_COMMAND);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, "");
@@ -174,18 +151,13 @@ void cmd_without_anything_exact()
 
 void cmd_without_anything_too_long()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="INITIALIZEXYZ";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_COMMAND);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == NAMEINFO_UNUSED_DRIVE);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, "");
@@ -196,18 +168,13 @@ void cmd_without_anything_too_long()
 
 void cmd_with_drive_short()
 {
-	cmd_t cmd;
 	nameinfo_t nameinfo;
 
 	fuzz_nameinfo(&nameinfo);
 
 	char *filename="I0";
 
-	// setting up the test data
-	strcpy((char*)cmd.command_buffer, filename);
-	cmd.command_length = strlen(filename)+1;
-
-	parse_filename(&cmd, &nameinfo, PARSEHINT_COMMAND);
+	parse(filename, &nameinfo, 0);
 
 	mu_assert_info("nameinfo drive", nameinfo.drive == 0);
 	mu_assert_info_str_eq("nameinfo filename", (char*)nameinfo.name, "");
