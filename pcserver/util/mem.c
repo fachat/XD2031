@@ -65,9 +65,7 @@ static int mem_cap = 0;
 // behind last written record
 static int mem_last = 0;
 // first unused entry lies here or behind this rec#
-static int mem_tag1 = 0;
-// last used entry lies here or before this rec#
-static int mem_tag2 = 0;
+static int mem_tag = 0;
 
 #define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
 #define check_free(ptr) check_free_(ptr)
@@ -88,19 +86,22 @@ static void check_alloc_(void *ptr, char *file, int line) {
 		}
 		mem_cap = mem_records_initial;
 		mem_last = 0;
-		mem_tag1 = 0;
-		mem_tag2 = 0;
+		mem_tag = 0;
 		memset(mem_records, 0, s); 
 	}
-	while (mem_tag1 < mem_last && mem_records[mem_tag1].ptr != NULL) {
-		mem_tag1++;
+	// search for first empty slot (from mem_tag)
+	while (mem_tag < mem_last && mem_records[mem_tag].ptr != NULL) {
+		mem_tag++;
 	}
+
 	// either mem_tag == mem_last, which means we just append,
 	// or we found an entry
-	if (mem_tag1 == mem_last) {
+	if (mem_tag == mem_last) {
+		// if we are at the last place, check against cap
 		if (mem_last >= mem_cap) {
 			// we are at the limit!
 			size_t oldsize = sizeof(mem_record_t) * mem_cap;
+			// double the limit
 			mem_cap = mem_cap * 2;
 			size_t newsize = sizeof(mem_record_t) * mem_cap;
 			mem_records = realloc(mem_records, newsize);
@@ -108,31 +109,29 @@ static void check_alloc_(void *ptr, char *file, int line) {
 				fprintf(stderr, "Could not re-allocate memory of size %ld for alloc table!\n", newsize);
 				exit(EXIT_FAILURE);
 			}
-			// implicit factor two
+			// clear out newly allocated memory
 			memset(((char*)mem_records) + oldsize, 0, newsize - oldsize);
 		}
 		mem_last ++;
 	}
-	mem_records[mem_tag1].ptr = ptr;
-	mem_records[mem_tag1].file = file;
-	mem_records[mem_tag1].line = line;
-
-	if (mem_tag1 >= mem_tag2) {
-		mem_tag2 = mem_tag1 + 1;
-	}
+	mem_records[mem_tag].ptr = ptr;
+	mem_records[mem_tag].file = file;
+	mem_records[mem_tag].line = line;
 }
 
 static void check_free_(const void *ptr) {
 
-	for (int i = 0; i < mem_tag2; i++) {
+	for (int i = 0; i < mem_last; i++) {
 		if (mem_records[i].ptr == ptr) {
 			log_debug("Free memory at %p (from %s:%d)\n", ptr, mem_records[i].file, mem_records[i].line);
 			// unalloc
 			mem_records[i].ptr = NULL;
-			mem_tag1 = i;
-			if (i + 1 == mem_tag2) {
+			if (i < mem_tag) {
+				mem_tag = i;
+			}
+			if (i + 1 == mem_last) {
 				// was last used entry
-				mem_tag2 --;
+				mem_last --;
 			}
 			return;
 		}
