@@ -100,15 +100,16 @@ static void check_alloc_(void *ptr, char *file, int line) {
 	if (mem_tag1 == mem_last) {
 		if (mem_last >= mem_cap) {
 			// we are at the limit!
-			size_t newsize = sizeof(mem_record_t) * mem_cap * 2;
+			size_t oldsize = sizeof(mem_record_t) * mem_cap;
+			mem_cap = mem_cap * 2;
+			size_t newsize = sizeof(mem_record_t) * mem_cap;
 			mem_records = realloc(mem_records, newsize);
 			if(!mem_records) {
 				fprintf(stderr, "Could not re-allocate memory of size %ld for alloc table!\n", newsize);
 				exit(EXIT_FAILURE);
 			}
 			// implicit factor two
-			memset(mem_records + (sizeof(mem_record_t) * mem_cap), 0, (sizeof(mem_record_t) * mem_cap));
-			mem_cap = mem_cap * 2;
+			memset(((char*)mem_records) + oldsize, 0, newsize - oldsize);
 		}
 		mem_last ++;
 	}
