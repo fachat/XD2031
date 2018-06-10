@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
 				log_errno("Could not open listen socket at %s\n", socket);
 				exit(EXIT_RESPAWN_NEVER);
 			}
-			in_device_t *fdp = in_device_init(data_fd, data_fd, 0);
+			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
 			poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
 			min_num_socks ++;
 		}
