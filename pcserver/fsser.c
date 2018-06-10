@@ -130,6 +130,7 @@ static void fd_hup(int fd, void *data) {
 		mem_free(data);
 	}
 
+	poll_unregister(fd);
 }
 
 static void fd_read(int fd, void *data) {
@@ -349,7 +350,7 @@ int main(int argc, char *argv[]) {
 				log_errno("Could not open listen socket at %s\n", socket);
 				exit(EXIT_RESPAWN_NEVER);
 			}
-			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
+			in_device_t *fdp = in_device_init(data_fd, data_fd, 0);
 			poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
 			min_num_socks ++;
 		}

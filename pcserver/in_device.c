@@ -95,7 +95,14 @@ static void dev_sync(serial_port_t readfd, serial_port_t writefd) {
 		log_hexdump(syncbuf, n, 0);
 #endif
 		if (n < 0) {
-			log_errno("Error on sync read", errno);
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+				log_errno("Error on sync read", errno);
+				break;
+			}
+		} else
+		if (n == 0) {
+			// EOF
+			break;
 		}
 	} while (n != 1 || (0xff & syncbuf[0]) != FS_SYNC);
 }

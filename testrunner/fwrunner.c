@@ -175,17 +175,15 @@ int rdp = 0;
 
 int read_byte(int fd, char *data) {
 	int n;
-	while ((n = read(fd, data, 1)) <= 0) {
-		if (n < 0) {
-			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-			   	log_error("testrunner: read error %d (%s)\n",
-                       			errno,strerror(errno));
-                            		return -1;
-			}
+	while ((n = read(fd, data, 1)) < 0) {
+		if (errno != EAGAIN && errno != EWOULDBLOCK) {
+		   	log_error("testrunner: read error %d (%s)\n",
+               			errno,strerror(errno));
+              		return -1;
 		}
 	}
 	//printf("%02x ", *data);
-	return 0;
+	return n;
 }
 
 /*
@@ -204,6 +202,10 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 		n = write(fd, &outcmd, 1);
 		
 		n = read_byte(fd, &incmd);
+		if (n == 0) {
+			// EOF
+			break;
+		}
 		eof = incmd & S488_EOF;
 		tout = incmd & S488_TIMEOUT;
 		incmd &= ~(S488_EOF | S488_TIMEOUT);
@@ -217,7 +219,7 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 			outcmd = S488_REQ;
 		}
 
-	} while((n == 0) && (wrp < buflen) && (!eof));
+	} while((n > 0) && (wrp < buflen) && (!eof));
 
 	if (n == 0) {
 		outcmd = S488_ACK;
