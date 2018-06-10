@@ -172,7 +172,10 @@ char buf[8192];
 int wrp = 0;
 int rdp = 0;
 
-
+/*
+ * return 0 on EOF, and 1 on successful read, the data is stored 
+ * in the address pointed to by *data. A return of -1 is another error.
+ */
 int read_byte(int fd, char *data) {
 	int n;
 	while ((n = read(fd, data, 1)) < 0) {
@@ -182,7 +185,6 @@ int read_byte(int fd, char *data) {
               		return -1;
 		}
 	}
-	//printf("%02x ", *data);
 	return n;
 }
 
@@ -202,8 +204,8 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 		n = write(fd, &outcmd, 1);
 		
 		n = read_byte(fd, &incmd);
-		if (n == 0) {
-			// EOF
+		if (n <= 0) {
+			// EOF or error
 			break;
 		}
 		eof = incmd & S488_EOF;
@@ -212,6 +214,10 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 		if (tout == 0) {
 			if (incmd == S488_OFFER) {
 				n = read_byte(fd, outbuf + wrp);
+				if (n <= 0) {
+					// EOF or error
+					break;
+				}
 				wrp++;
 			}
 			outcmd = S488_REQ | S488_ACK;
@@ -219,9 +225,9 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 			outcmd = S488_REQ;
 		}
 
-	} while((n > 0) && (wrp < buflen) && (!eof));
+	} while((wrp < buflen) && (!eof));
 
-	if (n == 0) {
+	if (n > 0) {
 		outcmd = S488_ACK;
 		n = write(fd, &outcmd, 1);
 	}
