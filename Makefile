@@ -3,6 +3,8 @@ code:	pcserver/fsser firmware imgtool testrunner
 
 all:	pcserver/fsser testrunner firmware doc samples imgtool
 
+local:	pcserver/fsser testrunner sockserv samples imgtool
+
 samples: sample/telnet sample/u1test sample/webcat
 
 pcserver/fsser:
@@ -20,7 +22,7 @@ doc:
 clean:
 	make -C pcserver clean
 	make -C imgtool clean
-	make -C firmware clean veryclean
+	make -C firmware veryclean
 	make -C testrunner clean
 
 install:

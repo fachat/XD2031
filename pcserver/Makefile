@@ -99,7 +99,7 @@ else
 	@echo 'fsser opens the serial device with user rights.'
 endif
 
-veryclean:
+veryclean: clean
 	rm -rf $(TARGET) obj
 
 # Clean directories
@@ -113,7 +113,7 @@ objclean:
 depclean:
 	$(V2) Cleaning dependencies
 	$(V1) rm -f $(DEP)
-	$(V1) if [ -d $(DEPDIR) ]; then rmdir $(DEPDIR); fi
+	$(V1) if [ -d $(DEPDIR) ]; then rmdir --ignore-fail-on-non-empty $(DEPDIR); fi
 
 
 run:
