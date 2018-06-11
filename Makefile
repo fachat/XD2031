@@ -20,7 +20,7 @@ doc:
 	make -C pcserver doc
 	make -C firmware doc
 clean:
-	make -C pcserver clean
+	make -C pcserver veryclean
 	make -C imgtool clean
 	make -C firmware veryclean
 	make -C testrunner clean
