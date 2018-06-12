@@ -118,7 +118,7 @@ int8_t uarthw_can_send() {
  */
 void uarthw_send(int8_t data) {
         ssize_t wsize = write(socket_fd, &data, 1);
-        while (wsize < 0 && errno == EAGAIN) {
+        while (wsize < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
                 // wait 10ms
                 struct timespec sleeptime = { 0, 10000000l };
                 nanosleep(&sleeptime, NULL);
