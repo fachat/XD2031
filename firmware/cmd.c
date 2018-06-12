@@ -58,7 +58,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	debug_printf("COMMAND: %s\n", (char*)&(command->command_buffer));
 
-	parse_filename(command->command_buffer, CONFIG_COMMAND_BUFFER_SIZE, &nameinfo, PARSEHINT_COMMAND);
+	parse_filename(command->command_buffer, command->command_length, CONFIG_COMMAND_BUFFER_SIZE, &nameinfo, PARSEHINT_COMMAND);
 
 	err_drv = (nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive);
 

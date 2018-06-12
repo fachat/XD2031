@@ -80,7 +80,7 @@ typedef struct {
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.
  */
-void parse_filename(uint8_t * in, uint8_t inlen, nameinfo_t * result, uint8_t parsehint);
+void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result, uint8_t parsehint);
 
 #define	PARSEHINT_COMMAND	1	// when called from command handler
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0

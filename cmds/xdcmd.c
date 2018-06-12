@@ -306,7 +306,7 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 	} else {
 		name[0] = 0;
 	}
-	parse_filename(name, 255, &ninfo, PARSEHINT_LOAD);
+	parse_filename(name, strlen((const char*)name), 255, &ninfo, PARSEHINT_LOAD);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 

@@ -93,7 +93,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	// note: in a preemtive env, the following would have to be protected
 	// to be atomic as we modify static variables
 
-	parse_filename(command->command_buffer, CONFIG_COMMAND_BUFFER_SIZE, 
+	parse_filename(command->command_buffer, command->command_length, CONFIG_COMMAND_BUFFER_SIZE, 
 				&nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
 
 #ifdef DEBUG_FILE

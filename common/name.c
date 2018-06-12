@@ -230,10 +230,10 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
  * the provider name must not end with a digit.
  *
  */
-void parse_filename(uint8_t *in, uint8_t inlen, nameinfo_t *result, uint8_t parsehint) {
+void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result, uint8_t parsehint) {
 
-	// includes trailing zero-byte
-	uint8_t len = strlen((const char*)in) + 1;
+	// does not include a trailing zero-byte
+	uint8_t len = dlen;
 
 	result->access = 0;
 	result->type = 0;
@@ -245,9 +245,6 @@ void parse_filename(uint8_t *in, uint8_t inlen, nameinfo_t *result, uint8_t pars
 	// Note that assembling takes place in assemble_filename_packet below.
 	uint8_t diff = inlen - len;
 	memmove(in + diff, in, len);
-
-	// adjust so we exclude final null byte
-	len--;
 
 	// runtime vars (uint e.g. to avoid sign extension on REL file record len)
 	uint8_t *p = in + diff;

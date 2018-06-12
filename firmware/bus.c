@@ -185,9 +185,6 @@ static int16_t cmd_handler (bus_t *bus)
 		return 0;
 	}
 
-	// zero termination
-	bus->command.command_buffer[bus->command.command_length++] = 0;
-
 	if (secaddr == CMD_SECADDR) {
       		/* Handle commands */
 		// zero termination
