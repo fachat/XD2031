@@ -27,7 +27,7 @@ static void parse(char *filename, nameinfo_t *nameinfo, int flag) {
 	// setting up the test data
 	strncpy((char*)buf, filename, BUFLEN);
 
-	parse_filename(buf, BUFLEN, nameinfo, flag);
+	parse_filename(buf, strlen(filename), BUFLEN, nameinfo, flag);
 }
 
 void name_without_anything_to_open()
