@@ -7,6 +7,8 @@ CFLAGS=-g -std=gnu99 -Wall -pedantic
 NAMESRC=../../common/name.c  ../../common/cmdnames.c
 TESTSRC=../myunit.c
 
+all: nametest
+
 tests: nametest
 	./nametest -q
 

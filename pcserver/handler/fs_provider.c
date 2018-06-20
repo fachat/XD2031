@@ -289,6 +289,7 @@ static int close_fd(File *file, int recurse) {
 	// remove file from endpoint registry
 	reg_remove(&(ep->files), file);
 
+	// CHECK: only do this if endpoint is temporary?
 	if (reg_size(&(ep->files)) == 0) {
 		fsp_free(ep);
 	}
