@@ -47,7 +47,7 @@
 #define min(a,b)        (((a)<(b))?(a):(b))
 #endif
 
-bool advanced_wildcards = false;
+int advanced_wildcards = false;
 
 
 /**

@@ -1,7 +1,8 @@
+
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2018 Andre Fachat
+    string util
+    Copyright (C) 2015 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,13 +20,43 @@
 
 ****************************************************************************/
 
-#ifndef IN_UI_H
-#define IN_UI_H
 
-// reads stdin and returns true, if the main loop should abort
-int in_ui_loop(void);
+#ifndef STRING_H
+#define STRING_H
 
-void disable_user_interface(void);
-void enable_user_interface(void);
+#include <ctype.h>
+
+
+// simple hash algorithm. As we use string, we only use the lower 7 bits;
+// we also use max the first 8 characters
+static inline int string_hash(const char *str) {
+	int h = 0;
+
+	int p = 0;
+	char c = 0;
+	while ( (c = str[p]) ) {
+		h = 13 * h + (c & 0x7f);
+		p++;
+	}
+	return h;
+}
+
+// simple hash algorithm. As we use string, we only use the lower 7 bits;
+// we also use max the first 8 characters
+// ignore case by converting tolower() 
+static inline int string_hash_nocase(const char *str) {
+	int h = 0;
+
+	int p = 0;
+	char c = 0;
+	while ( (c = str[p]) ) {
+		h = 13 * h + (tolower(c) & 0x7f);
+		p++;
+	}
+	return h;
+}
+
+
 
 #endif
+

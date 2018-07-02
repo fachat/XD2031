@@ -59,10 +59,58 @@
 #include "terminal.h"
 #include "dir.h"
 #include "loop.h"
+#include "cmdline.h"
+#include "list.h"
+#include "array_list.h"
 
 // --------------------------------------------------------------------------------------
 
-void usage(int rv) {
+//static list_t *assign_list = array_list_init(10);
+//static list_t *xcmd_list = array_list_init(10);
+
+static char *device_name = NULL;	/* device name or NULL if not given */
+static char *socket_name = NULL;	/* socket name or NULL if not given */
+static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
+
+static err_t main_set_daemon(int flag, void *param) {
+	(void) param;
+	if (flag) {
+		disable_user_interface();
+	} else {
+		enable_user_interface();
+	}
+	return CBM_ERROR_OK;
+}
+
+static err_t main_set_verbose(int flag, void *param) {
+        (void) param;
+	set_verbose(flag);
+        return E_OK;
+}
+
+static cmdline_t main_options[] = {
+        { "verbose",    "v",	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+                "Set verbose mode", NULL },
+	{ "device",	"d",	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
+#ifndef _WIN32
+	{ "socket",	"s",	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+		"Set name of socket to use instead of device", NULL },
+	{ "tools",	"T",	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+		"Set name of tools socket to use instead of ~/.xdtools", NULL },
+#endif
+        { "wildcards", 	"w",	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+		"Use advanced wildcards", NULL },
+        { "daemon", 	"D",	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+		"Run as daemon, disable cli user interface.", NULL },
+	
+};
+
+// --------------------------------------------------------------------------------------
+
+err_t usage(int rv, void* extra) {
+	(void) extra;
+
 	printf("Usage: fsser [options] run_directory\n"
 		" options=\n"
                 "   -A<drv>:<provider-string>\n"
@@ -74,20 +122,15 @@ void usage(int rv) {
 		"               send an 'X'-command to the specified bus, e.g. to set\n"
 		"               the IEC bus to device number 9 use:\n"
 		"               -Xiec:U=9\n"
-		"   -d <device>	define serial device to use\n"
-#ifndef _WIN32
-		"   -s <socket>	define socket device to use (instead of device)\n"
-#endif
-		"   -d auto     auto-detect serial device\n"
-		"   -w          Use advanced wildcards (anything following '*' must also match)\n"
-		"   -D          run as daemon, disable user interface\n"
 		"   -v          enable debug log output\n"
-		"   -?          gives you this help text\n"
 		"\n"
 		"Typical examples are:\n"
 		"   fsser -A0:fs=/home/user/8bitdir .\n"
 		"   fsser -d /dev/ttyUSB0 -A0:=/home/user/8bitdir/somegame.d64 /tmp\n"
 	);
+
+	cmdline_usage();
+
 	exit(rv);
 }
 
@@ -182,112 +225,51 @@ int main(int argc, char *argv[]) {
 	int i;
 	char *dir=NULL;
 
-	char *device = NULL;	/* device name or NULL if not given */
-	char *socket = NULL;	/* socket name or NULL if not given */
-	char *tsocket = NULL;	/* tools socket name or NULL if not given */
-	char parameter_d_given = false;
 	char use_stdio = false;
 
 	mem_init();
 	atexit(mem_exit);
 
+	cmdline_module_init();
+	cmdline_register_mult(main_options, sizeof(main_options)/sizeof(cmdline_t));
+
 	poll_init();
 
 	// Check -v (verbose) first to enable log_debug()
 	// when processing other options
-	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
+	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose(1);
 
 	terminal_init();
 
 	i=1;
 	while(i<argc && argv[i][0]=='-') {
 	  switch(argv[i][1]) {
-	    case '?':
-		assert_single_char(argv[i]);
-		usage(EXIT_SUCCESS);	/* usage() exits already */
-		break;
-	    case 'd':
-		if (socket != NULL) {
-		  log_error("both -s and -d given!\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
-		// device name
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  device = argv[i];
-		  if(!strcmp(device,"auto")) {
-		    guess_device(&device);
-		    /* exits on more or less than a single possibility */
-		  }
-		  if(!strcmp(device,"-")) {
-			device = NULL; 	// use stdin/out
-			use_stdio = true;
-		  }
-		  log_info("main: device = %s\n", use_stdio ? "<stdio>" : device);
-		} else {
-		  log_error("-d requires <device> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-#ifndef _WIN32
-	    case 's':
-		// socket name
-		if (device != NULL || use_stdio) {
-		  log_error("both -s and -d given!\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  socket = argv[i];
-		  log_info("main: socket = %s\n", socket);
-		} else {
-		  log_error("-s requires <socket name> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-	    case 'T':
-		// tools socket name
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  tsocket = argv[i];
-		  log_info("main: tools socket = %s\n", tsocket);
-		} else {
-		  log_error("-T requires <socket name> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-#endif
 	    case 'A':
 	    case 'X':
 		// ignore these, as those will be evaluated later by cmd_...
 		break;
-	    case 'v':
-		assert_single_char(argv[i]);
-		break;
-	    case 'D':
-		assert_single_char(argv[i]);
-		disable_user_interface();
-		break;
-            case 'w':
-		assert_single_char(argv[i]);
-                advanced_wildcards = true;
-                break;
 	    default:
 		log_error("Unknown command line option %s\n", argv[i]);
-		usage(EXIT_RESPAWN_NEVER);
+		usage(EXIT_RESPAWN_NEVER, NULL);
 		break;
 	  }
 	  i++;
 	}
-	if(!parameter_d_given) {
-		guess_device(&device);
+
+	if (socket_name != NULL && device_name != NULL) {
+		log_error("both -s and -d given!\n");
+		exit(EXIT_RESPAWN_NEVER);
 	}
+
+	if(device_name == NULL || !strcmp("auto", device_name)) {
+		guess_device(&device_name);
+	}
+	if(!strcmp(device_name,"-")) {
+		device_name = NULL; 	// use stdin/out
+		use_stdio = true;
+	}
+	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
+
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
@@ -295,10 +277,10 @@ int main(int argc, char *argv[]) {
 		dir = ".";
 	} else if (i == argc) {
 		log_error("Missing run_directory\n");
-		usage(EXIT_RESPAWN_NEVER);
+		usage(EXIT_RESPAWN_NEVER, NULL);
 	} else if (argc > i+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage(EXIT_RESPAWN_NEVER);
+		usage(EXIT_RESPAWN_NEVER, NULL);
 	} else dir = argv[i];
 
 	log_info("dir=%s\n", dir);
@@ -306,21 +288,21 @@ int main(int argc, char *argv[]) {
 	if(chdir(dir)<0) { 
 		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
-	  exit(EXIT_RESPAWN_NEVER);
+	  	exit(EXIT_RESPAWN_NEVER);
 	}
 
-	if (device != NULL) {
+	if (device_name != NULL) {
 		serial_port_t fdesc;
-		fdesc = device_open(device);
+		fdesc = device_open(device_name);
 		if (os_open_failed(fdesc)) {
 		  /* error */
 		  log_error("Could not open device %s, errno=%d (%s)\n",
-			device, os_errno(), os_strerror(os_errno()));
+			device_name, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
 		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
-			device, os_errno(), os_strerror(os_errno()));
+			device_name, os_errno(), os_strerror(os_errno()));
 		  exit(EXIT_RESPAWN_NEVER);
 		}
 
@@ -333,21 +315,21 @@ int main(int argc, char *argv[]) {
 	drop_privileges();
 
 #ifndef _WIN32
-	if (tsocket == NULL) {
+	if (tsocket_name == NULL) {
 		const char *home = os_get_home_dir();
-		tsocket = malloc_path(home, ".xdtools");
+		tsocket_name = malloc_path(home, ".xdtools");
 	}
-	fd_listen(tsocket, 0);
+	fd_listen(tsocket_name, 0);
 	min_num_socks ++;
 
 
-	if (socket != NULL) {
-		if (strcmp(socket, "-")) {
+	if (socket_name != NULL) {
+		if (strcmp(socket_name, "-")) {
 	
-			//fd_listen(socket, 1);
-			int data_fd = socket_open(socket);
+			//fd_listen(socket_name, 1);
+			int data_fd = socket_open(socket_name);
 			if (data_fd < 0) {
-				log_errno("Could not open listen socket at %s\n", socket);
+				log_errno("Could not open listen socket at %s\n", socket_name);
 				exit(EXIT_RESPAWN_NEVER);
 			}
 			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
@@ -355,7 +337,7 @@ int main(int argc, char *argv[]) {
 			min_num_socks ++;
 		}
         } else 
-	if (device == NULL && !use_stdio) {
+	if (device_name == NULL && !use_stdio) {
 
                 log_error("No socket or device name given!\n");
                 exit(EXIT_RESPAWN_NEVER);
@@ -375,7 +357,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		if (cmd_assign_from_cmdline(argc, argv)) {
 			log_error("Error assigning drives! Aborting!\n");
-			usage(EXIT_RESPAWN_NEVER);
+			usage(EXIT_RESPAWN_NEVER, NULL);
 		}
 	}
 

@@ -47,6 +47,9 @@ static int user_interface_enabled = true;
 //------------------------------------------------------------------------------------
 // helpers
 
+void enable_user_interface(void) {
+	user_interface_enabled = true;
+}
 
 void disable_user_interface(void) {
 	user_interface_enabled = false;
