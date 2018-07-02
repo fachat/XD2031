@@ -65,12 +65,22 @@
 
 // --------------------------------------------------------------------------------------
 
-//static list_t *assign_list = array_list_init(10);
-//static list_t *xcmd_list = array_list_init(10);
+static list_t *assign_list = NULL;
+static list_t *xcmd_list = NULL;
 
 static char *device_name = NULL;	/* device name or NULL if not given */
 static char *socket_name = NULL;	/* socket name or NULL if not given */
 static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
+
+static err_t main_add_list(const char *param, void *extra, int ival) {
+	(void) ival;
+
+	list_t *list = (list_t*) extra;
+
+	list_add(list, (char*)param);
+
+	return CBM_ERROR_OK;
+}
 
 static err_t main_set_daemon(int flag, void *param) {
 	(void) param;
@@ -103,26 +113,39 @@ static cmdline_t main_options[] = {
 		"Use advanced wildcards", NULL },
         { "daemon", 	"D",	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
-	
+        { "assign", 	"A",	PARTYPE_PARAM,  main_add_list, NULL, &assign_list,
+		"Assign a provider to a drive\n"
+                "               e.g. use '-A0:fs=.' to assign the current directory\n"
+                "               to drive 0. Dirs are relative to the run_directory param\n"
+                "               Note: do not use a trailing '/' on a path.\n"
+		, NULL },
+        { "xcmd", 	"X",	PARTYPE_PARAM,  main_add_list, NULL, &xcmd_list,
+                "Send an 'X'-command to the specified bus\n"
+		"               e.g. to set the IEC bus to device number 9 use:\n"
+                "               -Xiec:U=9\n"
+		, NULL },
 };
 
 // --------------------------------------------------------------------------------------
+
+void end(int rv) {
+
+	poll_free();
+
+	cmdline_module_free();
+
+	list_free(assign_list, NULL);
+	list_free(xcmd_list, NULL);
+
+
+	exit(rv);
+}
+
 
 err_t usage(int rv, void* extra) {
 	(void) extra;
 
 	printf("Usage: fsser [options] run_directory\n"
-		" options=\n"
-                "   -A<drv>:<provider-string>\n"
-                "               assign a provider to a drive\n"
-                "               e.g. use '-A0:fs=.' to assign the current directory\n"
-                "               to drive 0. Dirs are relative to the run_directory param\n"
-		"               Note: do not use a trailing '/' on a path.\n"
-		"   -X<bus>:<cmd>\n"
-		"               send an 'X'-command to the specified bus, e.g. to set\n"
-		"               the IEC bus to device number 9 use:\n"
-		"               -Xiec:U=9\n"
-		"   -v          enable debug log output\n"
 		"\n"
 		"Typical examples are:\n"
 		"   fsser -A0:fs=/home/user/8bitdir .\n"
@@ -131,7 +154,8 @@ err_t usage(int rv, void* extra) {
 
 	cmdline_usage();
 
-	exit(rv);
+	end(rv);
+	return rv;
 }
 
 
@@ -143,7 +167,7 @@ void assert_single_char(char *argv) {
 	if (strlen(argv) != 2) {
 		log_error("Unexpected trailing garbage character%s '%s' (%s)\n",
 				strlen(argv) > 3 ? "s" : "", argv + 2, argv);
-		exit (EXIT_RESPAWN_NEVER);
+		end (EXIT_RESPAWN_NEVER);
 	}
 }
 
@@ -219,6 +243,12 @@ static void fd_listen(const char *socketname, int do_reset) {
 
 int main(int argc, char *argv[]) {
 
+	mem_init();
+	atexit(mem_exit);
+
+	// -----------------------------
+	// config init
+
 	// stop server when number of registered sockets falls below this
 	int min_num_socks = 0;
 
@@ -226,39 +256,26 @@ int main(int argc, char *argv[]) {
 	char *dir=NULL;
 
 	char use_stdio = false;
+	assign_list = array_list_init(10);
+	xcmd_list = array_list_init(10);
 
-	mem_init();
-	atexit(mem_exit);
+	// -----------------------------
+	// command line
 
 	cmdline_module_init();
 	cmdline_register_mult(main_options, sizeof(main_options)/sizeof(cmdline_t));
 
 	poll_init();
 
-	// Check -v (verbose) first to enable log_debug()
-	// when processing other options
-	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose(1);
-
 	terminal_init();
 
-	i=1;
-	while(i<argc && argv[i][0]=='-') {
-	  switch(argv[i][1]) {
-	    case 'A':
-	    case 'X':
-		// ignore these, as those will be evaluated later by cmd_...
-		break;
-	    default:
-		log_error("Unknown command line option %s\n", argv[i]);
+	if (cmdline_parse(argc, argv)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
-		break;
-	  }
-	  i++;
 	}
 
 	if (socket_name != NULL && device_name != NULL) {
 		log_error("both -s and -d given!\n");
-		exit(EXIT_RESPAWN_NEVER);
+		end(EXIT_RESPAWN_NEVER);
 	}
 
 	if(device_name == NULL || !strcmp("auto", device_name)) {
@@ -270,6 +287,7 @@ int main(int argc, char *argv[]) {
 	}
 	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
 
+	i = 0;
 
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
@@ -288,7 +306,7 @@ int main(int argc, char *argv[]) {
 	if(chdir(dir)<0) { 
 		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
-	  	exit(EXIT_RESPAWN_NEVER);
+	  	end(EXIT_RESPAWN_NEVER);
 	}
 
 	if (device_name != NULL) {
@@ -298,12 +316,12 @@ int main(int argc, char *argv[]) {
 		  /* error */
 		  log_error("Could not open device %s, errno=%d (%s)\n",
 			device_name, os_errno(), os_strerror(os_errno()));
-		  exit(EXIT_RESPAWN_NEVER);
+		  end(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
 		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
 			device_name, os_errno(), os_strerror(os_errno()));
-		  exit(EXIT_RESPAWN_NEVER);
+		  end(EXIT_RESPAWN_NEVER);
 		}
 
 		in_device_t *fdp = in_device_init(fdesc, fdesc, 1);
@@ -330,7 +348,7 @@ int main(int argc, char *argv[]) {
 			int data_fd = socket_open(socket_name);
 			if (data_fd < 0) {
 				log_errno("Could not open listen socket at %s\n", socket_name);
-				exit(EXIT_RESPAWN_NEVER);
+				end(EXIT_RESPAWN_NEVER);
 			}
 			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
 			poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
@@ -340,7 +358,7 @@ int main(int argc, char *argv[]) {
 	if (device_name == NULL && !use_stdio) {
 
                 log_error("No socket or device name given!\n");
-                exit(EXIT_RESPAWN_NEVER);
+                end(EXIT_RESPAWN_NEVER);
 	}
 #endif
 
@@ -382,7 +400,7 @@ int main(int argc, char *argv[]) {
 	//if(res) {
 	//	exit(EXIT_RESPAWN_ALWAYS);
 	//} else {
-		exit(EXIT_SUCCESS);
+		end(EXIT_SUCCESS);
 	//}
 }
 

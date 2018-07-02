@@ -33,6 +33,8 @@ typedef cbm_errno_t err_t;
 
 // init the cmdline parser 
 void cmdline_module_init();
+// end
+void cmdline_module_free();
 
 // parse the options
 err_t cmdline_parse(int argc, char *argv[]);

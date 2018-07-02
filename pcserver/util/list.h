@@ -48,6 +48,8 @@ typedef struct {
 	void		(*iter_free)(list_iterator_t *iter);
 	void		*(*pop)(list_t *list);
 	void		*(*get_last)(list_t *list);
+	int		*(*size)(list_t *list);
+	void		*(*free)(list_t *list);
 } list_type_t;
 
 // internal list initialization
@@ -74,9 +76,23 @@ static inline void list_add(list_t *list, void *data) {
 	((list_type_t*)list->type)->add(list, data);
 }
 
+static inline int *list_size(list_t *list) {
+	return ((list_type_t*)list->type)->size(list);
+}
+
 static inline void *list_pop(list_t *list) {
 	list->mod_cnt++;
 	return ((list_type_t*)list->type)->pop(list);
+}
+
+static inline void *list_free(list_t *list, void (callback)(list_t*,void*)) {
+	void *p = NULL;
+	while ((p = list_pop(list)) != NULL) {
+		if (callback) {
+			callback(list, p);
+		}
+	}
+	return ((list_type_t*)list->type)->free(list);
 }
 
 static inline void *list_get_last(list_t *list) {

@@ -76,6 +76,7 @@ void cmdline_usage() {
 			break;
 		}
 	}
+	list_iterator_free(iter);
 }
 
 static const cmdline_t help[] = {
@@ -105,6 +106,13 @@ void cmdline_module_init() {
 	paramlist = array_list_init(20);
 
 	cmdline_register_mult(help, sizeof(help)/sizeof(cmdline_t));
+}
+
+void cmdline_module_free() {
+	
+	list_free(paramlist, NULL);
+	hash_free(params, NULL);
+	hash_free(shorts, NULL);
 }
 
 // allocate an array of param_enum_t structs for use as param option
@@ -186,12 +194,12 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 	do {
 		char *name = mem_alloc_strn(pname, 1);
 		*opt = hash_get(shorts, name);
+		mem_free(name);
 		if (*opt != NULL) {
 			if ((*opt)->type == PARTYPE_FLAG) {
 				rv = (*opt)->setflag(flag, (*opt)->extra_param);
 				*opt = NULL; // done with this one
 			} else {
-				mem_free(name);
 				*val = pname+1;
 				return E_OK;
 			}

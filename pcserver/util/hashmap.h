@@ -48,6 +48,9 @@ hash_t *hash_init(int approx_size, int nbuckets,
 		const void* (*key_from_entry)(const void *entry),
 		bool_t (*equals_key)(const void *fromhash, const void *tobeadded));
 
+// free the hashmap
+void hash_free(hash_t *hash, void (callback)(const void* key, void* value));
+
 // convenience - key is a string (char *), so we can use our internal functions for 
 // hash_from_key and equals_key
 hash_t *hash_init_stringkey(int approx_size, int nbuckets, 

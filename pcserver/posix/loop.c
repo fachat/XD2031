@@ -77,6 +77,16 @@ void poll_init(void) {
 }
 
 /**
+ * init data structures
+ */
+void poll_free_pinfo(registry_t *reg, void *pinfo) {
+	mem_free(pinfo);
+}
+void poll_free(void) {
+	reg_free(&poll_list, poll_free_pinfo);
+}
+
+/**
  * return the number of open sockets
  */
 int poll_num_sockets() {

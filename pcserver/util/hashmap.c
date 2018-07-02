@@ -253,6 +253,28 @@ long hash_size(hash_t *hash) {
 	return hash->total_cnt;
 }
 
+// free the hashmap
+void hash_free(hash_t *hash, void (callback)(const void* key, void* value)) {
+
+	for (int i = 0; i < hash->n_buckets; i++) {
+
+		hash_bucket_t *bucket = &hash->buckets[i];
+
+		for (int j = 0; j < bucket->num_allocated; j++) {
+		
+			entry_t *en = &bucket->array[j];
+
+			if (callback) {
+				callback(en->key, en->data);
+			}
+		}
+		mem_free(bucket->array);
+	}
+	mem_free(hash->buckets);
+	mem_free(hash);
+}
+
+
 
 hash_iterator_t *hash_iterator(hash_t *hash) {
 	
