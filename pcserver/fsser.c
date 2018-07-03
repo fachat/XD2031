@@ -72,6 +72,8 @@ static char *device_name = NULL;	/* device name or NULL if not given */
 static char *socket_name = NULL;	/* socket name or NULL if not given */
 static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
 
+static char *cfg_name = NULL;		/* name of the config file if non-standard */
+
 static err_t main_add_list(const char *param, void *extra, int ival) {
 	(void) ival;
 
@@ -101,27 +103,29 @@ static err_t main_set_verbose(int flag, void *param) {
 }
 
 static cmdline_t main_options[] = {
-        { "verbose",    "v",	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+        { "verbose",    "v",	0,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
                 "Set verbose mode", NULL },
-	{ "device",	"d",	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+	{ "config",	"c",	0,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
+		"Set name of config file instead of default ~/.xdconfig", NULL },
+	{ "device",	"d",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+	{ "socket",	"s",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
-        { "wildcards", 	"w",	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+        { "wildcards", 	"w",	1,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
 		"Use advanced wildcards", NULL },
-        { "daemon", 	"D",	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+        { "daemon", 	"D",	1,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
-        { "assign", 	"A",	PARTYPE_PARAM,  main_add_list, NULL, &assign_list,
+        { "assign", 	"A",	2,	PARTYPE_PARAM,  main_add_list, NULL, &assign_list,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
 		, NULL },
-        { "xcmd", 	"X",	PARTYPE_PARAM,  main_add_list, NULL, &xcmd_list,
+        { "xcmd", 	"X",	2,	PARTYPE_PARAM,  main_add_list, NULL, &xcmd_list,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
@@ -274,8 +278,18 @@ int main(int argc, char *argv[]) {
 
 	terminal_init();
 
+	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
-	if (cmdline_parse(&p, argv)) {
+	if (cmdline_parse(&p, argv, 0)) {
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	}
+
+	// load config file
+	// TODO
+
+	// parse command line, phase 1, (other options overriding the config file)
+	p = argc;
+	if (cmdline_parse(&p, argv, 1)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 
@@ -382,6 +396,10 @@ int main(int argc, char *argv[]) {
 		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", CHARSET_ASCII, 1);
 		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", CHARSET_ASCII, 1);
 	} else {
+		// parse cmdline, phase 2 (assign and xcmd options)
+		p = argc;
+		cmdline_parse(&p, argv, 2);
+
 		if (cmd_assign_from_cmdline(assign_list)) {
 			log_error("Error assigning drives! Aborting!\n");
 			usage(EXIT_RESPAWN_NEVER, NULL);

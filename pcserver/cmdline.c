@@ -80,7 +80,7 @@ void cmdline_usage() {
 }
 
 static const cmdline_t help[] = {
-	{ "help", "?", PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
+	{ "help", "?", 0, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
 };
 
 static type_t param_memtype = {
@@ -187,7 +187,7 @@ static err_t cmdline_parse_long(char *name, cmdline_t **opt, char **val, int *fl
  * parse short cmdline params; call flags in case multiple flag options
  * return param option in case of last one is option
  */
-static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int flag) {
+static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int flag, int phase) {
 	err_t rv = E_OK;
 	*val = NULL;
 
@@ -197,7 +197,9 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 		mem_free(name);
 		if (*opt != NULL) {
 			if ((*opt)->type == PARTYPE_FLAG) {
-				rv = (*opt)->setflag(flag, (*opt)->extra_param);
+				if ((*opt)->phase == phase) {
+					rv = (*opt)->setflag(flag, (*opt)->extra_param);
+				}
 				*opt = NULL; // done with this one
 			} else {
 				*val = pname+1;
@@ -212,7 +214,7 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 	return rv;
 }
 
-err_t cmdline_parse(int *argc, char *argv[]) {
+err_t cmdline_parse(int *argc, char *argv[], int phase) {
 
 	err_t rv = E_OK;
 
@@ -227,7 +229,7 @@ err_t cmdline_parse(int *argc, char *argv[]) {
 			if (argv[i][1] == '-') {
 				rv = cmdline_parse_long(argv[i]+2, &opt, &val, &flag);
 			} else {
-				rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag);
+				rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase);
 			}
 			if ((opt != NULL) && ((val == NULL) || (val != NULL && *val == 0))) {
 				// option needed, but value not set
@@ -241,14 +243,14 @@ err_t cmdline_parse(int *argc, char *argv[]) {
 			}
 		} else if (argv[i][0] == '+') {
 			flag = 0;
-			rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag);
+			rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase);
                 } else {
 			// not starting with '-' or '+'
 			break;
 		}
 
 		param_enum_t *values = NULL;
-		if (opt != NULL) {
+		if (opt != NULL && opt->phase == phase) {
 			switch (opt->type) {
 			case PARTYPE_FLAG:
 				rv = opt->setflag(flag, opt->extra_param);
@@ -266,15 +268,15 @@ err_t cmdline_parse(int *argc, char *argv[]) {
 				break;
 			case PARTYPE_ENUM:
 				values = opt->values();
-				int i = 0;
-				while (values[i].value) {
-					if (!strcmp(values[i].value, val)) {
-						opt->setfunc(val, opt->extra_param, i);
+				int j = 0;
+				while (values[j].value) {
+					if (!strcmp(values[j].value, val)) {
+						opt->setfunc(val, opt->extra_param, j);
 						break;
 					}
-					i++;
+					j++;
 				}
-				if (!values[i].value) {
+				if (!values[j].value) {
 					log_error("Unknown or missing parameter for option %s", 
 								opt->name ? opt->name : opt->shortname);
 					rv = E_ABORT;
