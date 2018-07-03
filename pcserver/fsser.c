@@ -47,6 +47,7 @@
 #include "charconvert.h"
 #include "in_device.h"
 #include "in_ui.h"
+#include "list.h"
 #include "cmd.h"
 #include "privs.h"
 #include "log.h"
@@ -60,7 +61,6 @@
 #include "dir.h"
 #include "loop.h"
 #include "cmdline.h"
-#include "list.h"
 #include "array_list.h"
 
 // --------------------------------------------------------------------------------------
@@ -76,6 +76,8 @@ static err_t main_add_list(const char *param, void *extra, int ival) {
 	(void) ival;
 
 	list_t **list = (list_t**) extra;
+
+	log_debug("Add parameter '%s' to '%s' list", param, (extra == &assign_list)?"assign":"xcmd");
 
 	list_add(*list, (char*)param);
 
@@ -133,6 +135,10 @@ void end(int rv) {
 	poll_free();
 
 	cmdline_module_free();
+
+	mem_free(tsocket_name);
+	mem_free(socket_name);
+	mem_free(device_name);
 
 	list_free(assign_list, NULL);
 	list_free(xcmd_list, NULL);
@@ -252,7 +258,6 @@ int main(int argc, char *argv[]) {
 	// stop server when number of registered sockets falls below this
 	int min_num_socks = 0;
 
-	int i;
 	char *dir=NULL;
 
 	char use_stdio = false;
@@ -269,7 +274,8 @@ int main(int argc, char *argv[]) {
 
 	terminal_init();
 
-	if (cmdline_parse(argc, argv)) {
+	int p = argc;
+	if (cmdline_parse(&p, argv)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 
@@ -290,19 +296,19 @@ int main(int argc, char *argv[]) {
 	}
 	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
 
-	i = 0;
-
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
 		// Default assigns are made later
 		dir = ".";
-	} else if (i == argc) {
+	} else if (p == argc) {
 		log_error("Missing run_directory\n");
 		usage(EXIT_RESPAWN_NEVER, NULL);
-	} else if (argc > i+1) {
+	} else if (argc > p+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
 		usage(EXIT_RESPAWN_NEVER, NULL);
-	} else dir = argv[i];
+	} else {
+		dir = argv[p];
+	}
 
 	log_info("dir=%s\n", dir);
 
@@ -376,7 +382,7 @@ int main(int argc, char *argv[]) {
 		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", CHARSET_ASCII, 1);
 		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", CHARSET_ASCII, 1);
 	} else {
-		if (cmd_assign_from_cmdline(argc, argv)) {
+		if (cmd_assign_from_cmdline(assign_list)) {
 			log_error("Error assigning drives! Aborting!\n");
 			usage(EXIT_RESPAWN_NEVER, NULL);
 		}

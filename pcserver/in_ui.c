@@ -38,6 +38,7 @@
 
 #include "provider.h"
 #include "dir.h"
+#include "list.h"
 #include "cmd.h"
 #include "errors.h"
 

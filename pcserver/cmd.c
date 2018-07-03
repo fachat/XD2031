@@ -44,6 +44,7 @@
 
 #include "charconvert.h"
 #include "wireformat.h"
+#include "list.h"
 #include "cmd.h"
 #include "charconvert.h"
 #include "petscii.h"
@@ -157,9 +158,22 @@ int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
  * take the command line, search for "-A<driv>=<name>" parameters and assign
  * the value; returns error code
  */
-int cmd_assign_from_cmdline(int argc, char *argv[]) {
+int cmd_assign_from_cmdline(list_t *assign_list) {
 
 	int err = CBM_ERROR_OK;
+
+	list_iterator_t *iter = list_iterator(assign_list);
+	while (list_iterator_has_next(iter)) {
+		const char *name = list_iterator_next(iter);
+		err = cmd_assign(name, CHARSET_ASCII, 1);
+
+		if (err != CBM_ERROR_OK) {
+			log_error("%d Error assigning %s\n", err, name);
+			break;
+		}
+	}
+
+#if 0
 
 	for (int i = 0; i < argc; i++) {
 
@@ -181,15 +195,9 @@ int cmd_assign_from_cmdline(int argc, char *argv[]) {
 		if ((strlen(argv[i]) >4) 
 			&& argv[i][1] == 'A') {
 
-			err = cmd_assign(argv[i]+2, CHARSET_ASCII, 1);
-
-			if (err != CBM_ERROR_OK) {
-				log_error("%d Error assigning %s\n", err, argv[i]+2);
-				break;
-			}
-			continue;
 		}
 	}
+#endif
 	return err;
 }
 

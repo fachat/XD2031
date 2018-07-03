@@ -177,7 +177,7 @@ static err_t cmdline_parse_long(char *name, cmdline_t **opt, char **val, int *fl
 		}
 	}
 	if (*opt == NULL) {
-		log_error("unknown long cmdline parameter: %s", name);
+		log_error("unknown long cmdline parameter: '%s'", name);
 		rv = E_ABORT;
 	}
 	return rv;
@@ -212,14 +212,14 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 	return rv;
 }
 
-err_t cmdline_parse(int argc, char *argv[]) {
+err_t cmdline_parse(int *argc, char *argv[]) {
 
 	err_t rv = E_OK;
 
 	prg_name = argv[0];
 
         int i = 1;
-        while (i < argc && !rv) {
+        while (i < *argc && !rv) {
        		char *val = NULL;
 		cmdline_t *opt = NULL;
 		int flag = 1;
@@ -228,21 +228,24 @@ err_t cmdline_parse(int argc, char *argv[]) {
 				rv = cmdline_parse_long(argv[i]+2, &opt, &val, &flag);
 			} else {
 				rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag);
-				if (val != NULL && *val == 0) {
-					// option needed, but value not set
-					if (i+1 < argc && argv[i+1][0] != '-') {
-						val = argv[i+1];
-						i++;
-					} else {
-						log_error("Missing parameter for option %s", opt->name ? opt->name : opt->shortname);
-						rv = E_ABORT;
-					}
+			}
+			if ((opt != NULL) && ((val == NULL) || (val != NULL && *val == 0))) {
+				// option needed, but value not set
+				if (i+1 < *argc && argv[i+1][0] != '-') {
+					val = argv[i+1];
+					i++;
+				} else {
+					log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
+					rv = E_ABORT;
 				}
 			}
 		} else if (argv[i][0] == '+') {
 			flag = 0;
 			rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag);
-                }   
+                } else {
+			// not starting with '-' or '+'
+			break;
+		}
 
 		param_enum_t *values = NULL;
 		if (opt != NULL) {
@@ -252,13 +255,13 @@ err_t cmdline_parse(int argc, char *argv[]) {
 				break;
 			case PARTYPE_PARAM:
 				if (val == NULL) {
-					log_error("Missing parameter for option %s", opt->name ? opt->name : opt->shortname);
+					log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
 					rv = E_ABORT;
 					break;
 				}
 				rv = opt->setfunc(val, opt->extra_param, -1);
 				if (rv) {
-					log_error("Missing parameter for option %s", opt->name ? opt->name : opt->shortname);
+					log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
 				}
 				break;
 			case PARTYPE_ENUM:
@@ -281,6 +284,8 @@ err_t cmdline_parse(int argc, char *argv[]) {
 		}
 		i++;
         }   
+	*argc = i;
+
 	return rv;
 }
 

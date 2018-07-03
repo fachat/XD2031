@@ -40,6 +40,7 @@
 #include "provider.h"
 #include "wireformat.h"
 #include "xcmd.h"
+#include "list.h"
 #include "cmd.h"
 #include "serial.h"
 
