@@ -96,10 +96,10 @@ static bool_t          	alist_iter_has_next(list_iterator_t *iter);
 static void          	alist_iter_free(list_iterator_t *iter);
 static void            	*alist_pop(list_t *list);
 static void            	*alist_get_last(list_t *list);
-static int            	*alist_size(list_t *list);
-static void            	*alist_free(list_t *list);
+static int            	alist_size(list_t *list);
+static void            	alist_free(list_t *list);
 
-static list_type_t list_type = {
+static list_type_t alist_type = {
 	alist_add,
 	alist_iterator,
 	alist_iter_next,
@@ -117,7 +117,7 @@ list_t *array_list_init(int bucket_size) {
 
 	array_list_t *list = mem_alloc(&list_memtype);
 
-	list_init((list_t*)list, &list_type);
+	list_init((list_t*)list, &alist_type);
 
 	// buckets
 	list->first = NULL;
@@ -142,7 +142,7 @@ static void list_bucket_free(array_list_bucket_t *bucket) {
 	mem_free(bucket);
 }
 
-static int *alist_size(list_t *_list) {
+static int alist_size(list_t *_list) {
 	return ((array_list_t*)_list)->size;
 }
 
@@ -155,7 +155,7 @@ static void *alist_get_last(list_t *_list) {
         return lastbucket == NULL ? NULL : lastbucket->data[lastbucket->bucket_size-1];
 }
 
-static void *alist_free(list_t *_list) {
+static void alist_free(list_t *_list) {
 	while (alist_pop(_list));
 	mem_free(_list);
 }

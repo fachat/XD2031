@@ -251,6 +251,11 @@ err_t cmdline_parse(int argc, char *argv[]) {
 				rv = opt->setflag(flag, opt->extra_param);
 				break;
 			case PARTYPE_PARAM:
+				if (val == NULL) {
+					log_error("Missing parameter for option %s", opt->name ? opt->name : opt->shortname);
+					rv = E_ABORT;
+					break;
+				}
 				rv = opt->setfunc(val, opt->extra_param, -1);
 				if (rv) {
 					log_error("Missing parameter for option %s", opt->name ? opt->name : opt->shortname);

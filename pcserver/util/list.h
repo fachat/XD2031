@@ -28,9 +28,10 @@
 #include "log.h"
 #include "types.h"
 
+typedef struct _list_type list_type_t;
 
 typedef struct {
-	void	 	*type;
+	list_type_t 	*type;
 	int		mod_cnt;
 } list_t;
 
@@ -39,7 +40,7 @@ typedef struct {
 	int		mod_cnt;	// list mod count when iterator was generated (fail fast check)
 } list_iterator_t;
 
-typedef struct {
+struct _list_type {
 	void		(*add)(list_t *list, void *data);
 	list_iterator_t	*(*iterator)(list_t *list);
 	void		*(*iter_next)(list_iterator_t *iter);
@@ -48,9 +49,9 @@ typedef struct {
 	void		(*iter_free)(list_iterator_t *iter);
 	void		*(*pop)(list_t *list);
 	void		*(*get_last)(list_t *list);
-	int		*(*size)(list_t *list);
-	void		*(*free)(list_t *list);
-} list_type_t;
+	int		(*size)(list_t *list);
+	void		(*free)(list_t *list);
+};
 
 // internal list initialization
 static inline void list_init(list_t *list, list_type_t *type) {
@@ -73,55 +74,55 @@ static inline void list_check_mod(list_iterator_t *iter) {
 // public methods
 static inline void list_add(list_t *list, void *data) {
 	list->mod_cnt++;
-	((list_type_t*)list->type)->add(list, data);
+	list->type->add(list, data);
 }
 
-static inline int *list_size(list_t *list) {
-	return ((list_type_t*)list->type)->size(list);
+static inline int list_size(list_t *list) {
+	return list->type->size(list);
 }
 
 static inline void *list_pop(list_t *list) {
 	list->mod_cnt++;
-	return ((list_type_t*)list->type)->pop(list);
+	return list->type->pop(list);
 }
 
-static inline void *list_free(list_t *list, void (callback)(list_t*,void*)) {
+static inline void list_free(list_t *list, void (callback)(list_t*,void*)) {
 	void *p = NULL;
 	while ((p = list_pop(list)) != NULL) {
 		if (callback) {
 			callback(list, p);
 		}
 	}
-	return ((list_type_t*)list->type)->free(list);
+	list->type->free(list);
 }
 
 static inline void *list_get_last(list_t *list) {
-	return ((list_type_t*)list->type)->get_last(list);
+	return list->type->get_last(list);
 }
 
 static inline list_iterator_t *list_iterator(list_t *list) {
 	// the called method calls back into list_iterator_init()
-	return ((list_type_t*)list->type)->iterator(list);
+	return list->type->iterator(list);
 }
 
 static inline bool_t list_iterator_has_next(list_iterator_t *iter) {
 	list_check_mod(iter);
-	return ((list_type_t*)iter->list->type)->iter_has_next(iter);
+	return iter->list->type->iter_has_next(iter);
 }
 
 static inline void *list_iterator_next(list_iterator_t *iter) {
 	list_check_mod(iter);
-	return ((list_type_t*)iter->list->type)->iter_next(iter);
+	return iter->list->type->iter_next(iter);
 }
 
 // remove the object that has been last returned by list_iterator_next()
 static inline void *list_iterator_remove(list_iterator_t *iter) {
 	list_check_mod(iter);
-	return ((list_type_t*)iter->list->type)->iter_remove(iter);
+	return iter->list->type->iter_remove(iter);
 }
 
 static inline void list_iterator_free(list_iterator_t *iter) {
-	((list_type_t*)iter->list->type)->iter_free(iter);
+	iter->list->type->iter_free(iter);
 }
 
 #endif

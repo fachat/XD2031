@@ -141,7 +141,7 @@ int config_ser(int fd) {
 	return 0;
 }
 
-void guess_device(char** device) {
+int guess_device(char** device) {
 /* search /dev for a (virtual) serial port 
 	Return pointer to device name, if exactly one found.
 	If none found or more than one, exit() with error msg.
@@ -172,8 +172,9 @@ void guess_device(char** device) {
 	closedir(dirptr); // free ressources claimed by opendir
 	if(*device == NULL) {
 		fprintf(stderr, "Could not auto-detect device: none found\n");
-		exit(EXIT_FAILURE);
+		return(EXIT_FAILURE);
 	}
+	return EXIT_SUCCESS;
 }
 
 
@@ -259,11 +260,13 @@ int config_ser(serial_port_t h) {
 	return 0;
 }
 
-void guess_device(char** device) {
+int guess_device(char** device) {
 	// just a very vague guess
 	static char devicename[] = "COM5";
 	log_info("Using default serial device %s\n", devicename);
 	*device = devicename;
+	
+	return EXIT_SUCCESS;
 }
 
 /* just a dummy since Windows read() returns an error, if the device is lost */

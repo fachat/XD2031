@@ -39,7 +39,7 @@ int config_ser(serial_port_t serport);
 /* search /dev for a virtual serial port 
    Change "device" to it, if exactly one found
    If none found or more than one, exit(1) with error msg */
-void guess_device(char **device);
+int guess_device(char **device);
 
 /* open a device (as returned by guess_device or given on the cmdline */
 serial_port_t device_open(char *name);

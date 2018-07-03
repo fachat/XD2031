@@ -75,9 +75,9 @@ static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
 static err_t main_add_list(const char *param, void *extra, int ival) {
 	(void) ival;
 
-	list_t *list = (list_t*) extra;
+	list_t **list = (list_t**) extra;
 
-	list_add(list, (char*)param);
+	list_add(*list, (char*)param);
 
 	return CBM_ERROR_OK;
 }
@@ -279,7 +279,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(device_name == NULL || !strcmp("auto", device_name)) {
-		guess_device(&device_name);
+		int rv = guess_device(&device_name);
+		if (rv) {
+			end(rv);
+		}
 	}
 	if(!strcmp(device_name,"-")) {
 		device_name = NULL; 	// use stdin/out
