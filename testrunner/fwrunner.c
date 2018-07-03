@@ -432,7 +432,7 @@ int main(int argc, char *argv[]) {
                 	}
                 	break;
 		case 'v':
-			set_verbose();
+			set_verbose(1);
 			break;
 		case 't':
 			trace = 1;

@@ -108,7 +108,7 @@ static cmdline_t main_options[] = {
 #ifndef _WIN32
 	{ "socket",	"s",	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+	{ "tools",	"T",	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
         { "wildcards", 	"w",	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
@@ -284,13 +284,13 @@ int main(int argc, char *argv[]) {
 		end(EXIT_RESPAWN_NEVER);
 	}
 
-	if(device_name == NULL || !strcmp("auto", device_name)) {
+	if(socket_name == NULL && (device_name == NULL || !strcmp("auto", device_name))) {
 		int rv = guess_device(&device_name);
 		if (rv) {
 			end(rv);
 		}
 	}
-	if(!strcmp(device_name,"-")) {
+	if(device_name != NULL && !strcmp("-", device_name)) {
 		device_name = NULL; 	// use stdin/out
 		use_stdio = true;
 	}
