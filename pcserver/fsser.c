@@ -49,6 +49,7 @@
 #include "in_ui.h"
 #include "list.h"
 #include "cmd.h"
+#include "xcmd.h"
 #include "privs.h"
 #include "log.h"
 #include "provider.h"
@@ -65,7 +66,6 @@
 
 // --------------------------------------------------------------------------------------
 
-static list_t *assign_list = NULL;
 static list_t *xcmd_list = NULL;
 
 static char *device_name = NULL;	/* device name or NULL if not given */
@@ -79,9 +79,29 @@ static err_t main_add_list(const char *param, void *extra, int ival) {
 
 	list_t **list = (list_t**) extra;
 
-	log_debug("Add parameter '%s' to '%s' list", param, (extra == &assign_list)?"assign":"xcmd");
+	log_debug("Add parameter '%s' to '%s' list", param, "xcmd");
 
 	list_add(*list, (char*)param);
+
+	return CBM_ERROR_OK;
+}
+
+static err_t main_assign(const char *param, void *extra, int ival) {
+	(void) extra;
+	(void) ival;
+	
+	int err = cmd_assign(param, CHARSET_ASCII, 1);
+        if (err != CBM_ERROR_OK) {
+                log_error("%d Error assigning %s\n", err, param);
+        }
+	return err;
+}
+
+static err_t main_xcmd(const char *param, void *extra, int ival) {
+	(void) extra;
+	(void) ival;
+	
+	xcmd_register(param);
 
 	return CBM_ERROR_OK;
 }
@@ -119,13 +139,13 @@ static cmdline_t main_options[] = {
 		"Use advanced wildcards", NULL },
         { "daemon", 	"D",	1,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
-        { "assign", 	"A",	2,	PARTYPE_PARAM,  main_add_list, NULL, &assign_list,
+        { "assign", 	"A",	2,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
 		, NULL },
-        { "xcmd", 	"X",	2,	PARTYPE_PARAM,  main_add_list, NULL, &xcmd_list,
+        { "xcmd", 	"X",	2,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
@@ -144,7 +164,6 @@ void end(int rv) {
 	mem_free(socket_name);
 	mem_free(device_name);
 
-	list_free(assign_list, NULL);
 	list_free(xcmd_list, NULL);
 
 
@@ -265,7 +284,6 @@ int main(int argc, char *argv[]) {
 	char *dir=NULL;
 
 	char use_stdio = false;
-	assign_list = array_list_init(10);
 	xcmd_list = array_list_init(10);
 
 	// -----------------------------
@@ -399,11 +417,6 @@ int main(int argc, char *argv[]) {
 		// parse cmdline, phase 2 (assign and xcmd options)
 		p = argc;
 		cmdline_parse(&p, argv, 2);
-
-		if (cmd_assign_from_cmdline(assign_list)) {
-			log_error("Error assigning drives! Aborting!\n");
-			usage(EXIT_RESPAWN_NEVER, NULL);
-		}
 	}
 
 

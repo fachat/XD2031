@@ -154,53 +154,6 @@ int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
 	return rv;
 }
 
-/**
- * take the command line, search for "-A<driv>=<name>" parameters and assign
- * the value; returns error code
- */
-int cmd_assign_from_cmdline(list_t *assign_list) {
-
-	int err = CBM_ERROR_OK;
-
-	list_iterator_t *iter = list_iterator(assign_list);
-	while (list_iterator_has_next(iter)) {
-		const char *name = list_iterator_next(iter);
-		err = cmd_assign(name, CHARSET_ASCII, 1);
-
-		if (err != CBM_ERROR_OK) {
-			log_error("%d Error assigning %s\n", err, name);
-			break;
-		}
-	}
-
-#if 0
-
-	for (int i = 0; i < argc; i++) {
-
-		if (argv[i][0] != '-') {
-			continue;
-		}
-
-		if ((strlen(argv[i]) >2) 
-			&& argv[i][1] == 'X') {
-
-			if (strchr(argv[i]+2, ':') == NULL) {
-				// we need a ':' as separator between bus name and actual command
-				log_error("Could not find bus name separator ':' in '%s'\n", argv[i]+2);
-				continue;
-			}
-
-			xcmd_register(argv[i]+2);
-		}
-		if ((strlen(argv[i]) >4) 
-			&& argv[i][1] == 'A') {
-
-		}
-	}
-#endif
-	return err;
-}
-
 
 const char *get_options(const char *name, int len) {
 	int l = strlen(name);

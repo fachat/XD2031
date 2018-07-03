@@ -35,8 +35,6 @@
 
 void cmd_init();
 
-int cmd_assign_from_cmdline(list_t *assign_list);
-
 int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd);
 int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset);
