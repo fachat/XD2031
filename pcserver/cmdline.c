@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "hashmap.h"
 #include "array_list.h"
@@ -80,7 +81,7 @@ void cmdline_usage() {
 }
 
 static const cmdline_t help[] = {
-	{ "help", "?", 0, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
+	{ "help", "?", 1, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
 };
 
 static type_t param_memtype = {
@@ -197,7 +198,7 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 		mem_free(name);
 		if (*opt != NULL) {
 			if ((*opt)->type == PARTYPE_FLAG) {
-				if ((*opt)->phase == phase) {
+				if ((*opt)->phase & phase) {
 					rv = (*opt)->setflag(flag, (*opt)->extra_param);
 				}
 				*opt = NULL; // done with this one
@@ -211,6 +212,45 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 		}
 	} while ((++pname)[0] != 0);
 
+	return rv;
+}
+
+static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase) {
+
+	err_t rv = CBM_ERROR_OK;
+
+	param_enum_t *values = NULL;
+	if (opt != NULL && opt->phase & phase) {
+		switch (opt->type) {
+		case PARTYPE_FLAG:
+			rv = opt->setflag(flag, opt->extra_param);
+			break;
+		case PARTYPE_PARAM:
+			if (val == NULL) {
+				log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
+				rv = E_ABORT;
+				break;
+			}
+			rv = opt->setfunc(val, opt->extra_param, -1);
+			break;
+		case PARTYPE_ENUM:
+			values = opt->values();
+			int j = 0;
+			while (values[j].value) {
+				if (!strcmp(values[j].value, val)) {
+					opt->setfunc(val, opt->extra_param, j);
+					break;
+				}
+				j++;
+			}
+			if (!values[j].value) {
+				log_error("Unknown or missing parameter for option %s", 
+							opt->name ? opt->name : opt->shortname);
+				rv = E_ABORT;
+			}
+			break;
+		}
+	}
 	return rv;
 }
 
@@ -249,41 +289,8 @@ err_t cmdline_parse(int *argc, char *argv[], int phase) {
 			break;
 		}
 
-		param_enum_t *values = NULL;
-		if (opt != NULL && opt->phase == phase) {
-			switch (opt->type) {
-			case PARTYPE_FLAG:
-				rv = opt->setflag(flag, opt->extra_param);
-				break;
-			case PARTYPE_PARAM:
-				if (val == NULL) {
-					log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
-					rv = E_ABORT;
-					break;
-				}
-				rv = opt->setfunc(val, opt->extra_param, -1);
-				if (rv) {
-					log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
-				}
-				break;
-			case PARTYPE_ENUM:
-				values = opt->values();
-				int j = 0;
-				while (values[j].value) {
-					if (!strcmp(values[j].value, val)) {
-						opt->setfunc(val, opt->extra_param, j);
-						break;
-					}
-					j++;
-				}
-				if (!values[j].value) {
-					log_error("Unknown or missing parameter for option %s", 
-								opt->name ? opt->name : opt->shortname);
-					rv = E_ABORT;
-				}
-				break;
-			}
-		}
+		rv = eval_opt(opt, val, flag, phase);
+
 		i++;
         }   
 	*argc = i;
@@ -292,5 +299,64 @@ err_t cmdline_parse(int *argc, char *argv[], int phase) {
 }
 
 
+err_t cmdline_parse_cfg(char *line, int phase) {
+
+	err_t rv = E_OK;
+	char *p = NULL;
+	char *cmd = NULL;
+	char *val = NULL;
+	cmdline_t *opt = NULL;
+	int flag = 1;
+
+	int l = strlen(line);
+	while (l > 0 && (line[l] == 0 || isspace(line[l]))) {
+		line[l] = 0;
+		l--;
+	}
+	
+	p = line;
+	while (isspace(*p)) {
+		p++;
+	}
+
+	if (*p == '#') {
+		return CBM_ERROR_OK;
+	}
+
+	// command
+	cmd = p;
+	while ((*p != 0) && (isalnum(*p) || (*p == '_') || (*p == '-'))) {
+		p++;
+	}
+
+	if (*cmd == 0) {
+		// len zero
+		return E_OK;
+	}
+
+	if (isspace(*p)) {
+		// there follows an argument
+		*p = 0;
+		do {
+			p++;
+		} while (isspace(*p));
+
+		rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+
+		if (val != NULL) {
+			log_warn("extra parameter\n");
+		}
+		val = p;
+
+	} else {
+		
+		rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+	}
+
+	if (rv) {
+		return rv;
+	}
+	return eval_opt(opt, val, flag, phase);
+}
 
 

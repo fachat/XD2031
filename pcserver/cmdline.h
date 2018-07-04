@@ -38,6 +38,7 @@ void cmdline_module_free();
 
 // parse the options
 err_t cmdline_parse(int *argc, char *argv[], int phase);
+err_t cmdline_parse_cfg(char *arg, int phase);
 
 typedef enum {
 	// no parameter, sets a bool when present with/without "no-" prefix

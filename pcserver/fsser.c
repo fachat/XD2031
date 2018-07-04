@@ -66,25 +66,12 @@
 
 // --------------------------------------------------------------------------------------
 
-static list_t *xcmd_list = NULL;
 
 static char *device_name = NULL;	/* device name or NULL if not given */
 static char *socket_name = NULL;	/* socket name or NULL if not given */
 static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
 
 static char *cfg_name = NULL;		/* name of the config file if non-standard */
-
-static err_t main_add_list(const char *param, void *extra, int ival) {
-	(void) ival;
-
-	list_t **list = (list_t**) extra;
-
-	log_debug("Add parameter '%s' to '%s' list", param, "xcmd");
-
-	list_add(*list, (char*)param);
-
-	return CBM_ERROR_OK;
-}
 
 static err_t main_assign(const char *param, void *extra, int ival) {
 	(void) extra;
@@ -123,34 +110,74 @@ static err_t main_set_verbose(int flag, void *param) {
 }
 
 static cmdline_t main_options[] = {
-        { "verbose",    "v",	0,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+        { "verbose",    "v",	1,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
                 "Set verbose mode", NULL },
-	{ "config",	"c",	0,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
+	{ "config",	"c",	2,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
 		"Set name of config file instead of default ~/.xdconfig", NULL },
-	{ "device",	"d",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+	{ "device",	"d",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+	{ "socket",	"s",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	1,	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
-        { "wildcards", 	"w",	1,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+        { "wildcards", 	"w",	4,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
 		"Use advanced wildcards", NULL },
-        { "daemon", 	"D",	1,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+        { "daemon", 	"D",	4,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
-        { "assign", 	"A",	2,	PARTYPE_PARAM,  main_assign, NULL, NULL,
+        { "assign", 	"A",	8,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
 		, NULL },
-        { "xcmd", 	"X",	2,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
+        { "xcmd", 	"X",	8,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
 		, NULL },
 };
+
+#define	BUFFER_SIZE	8192
+#define	ARGP_SIZE	10
+
+static void cfg_load(void) {
+
+	const char *filename = NULL;
+
+	if (cfg_name == NULL) {
+		const char *home = os_get_home_dir();
+		filename = malloc_path(home, ".xdconfig");
+	} else {
+		filename = mem_alloc_str(cfg_name);
+	}
+
+	FILE *fd = fopen(filename, "r");
+	if (fd == NULL) {
+		log_errno("Could not open file '%s'", filename);
+	} else {
+
+		char *line = mem_alloc_c(BUFFER_SIZE, "cfg-file-buffer");
+		int lineno = 0;
+
+		while ((line = fgets(line, BUFFER_SIZE, fd)) != NULL) {
+
+			log_debug("Parsing line % 3d: %s", lineno, line);
+
+			err_t rv = cmdline_parse_cfg(line, 1+4+8);
+
+			if (rv) {
+				break;
+			}
+			lineno++;
+		}
+
+		mem_free(line);	
+		fclose(fd);
+	}
+	mem_free(filename);
+}
 
 // --------------------------------------------------------------------------------------
 
@@ -163,9 +190,6 @@ void end(int rv) {
 	mem_free(tsocket_name);
 	mem_free(socket_name);
 	mem_free(device_name);
-
-	list_free(xcmd_list, NULL);
-
 
 	exit(rv);
 }
@@ -188,17 +212,6 @@ err_t usage(int rv, void* extra) {
 }
 
 
-// Assert switch is a single character
-// If somebody tries to combine options (e.g. -vD) or
-// encloses the parameter in quotes (e.g. fsser "-d COM5")
-// this function will throw an error
-void assert_single_char(char *argv) {
-	if (strlen(argv) != 2) {
-		log_error("Unexpected trailing garbage character%s '%s' (%s)\n",
-				strlen(argv) > 3 ? "s" : "", argv + 2, argv);
-		end (EXIT_RESPAWN_NEVER);
-	}
-}
 
 // --------------------------------------------------------------------------------------
 // poll loop callback functions
@@ -284,7 +297,6 @@ int main(int argc, char *argv[]) {
 	char *dir=NULL;
 
 	char use_stdio = false;
-	xcmd_list = array_list_init(10);
 
 	// -----------------------------
 	// command line
@@ -296,18 +308,20 @@ int main(int argc, char *argv[]) {
 
 	terminal_init();
 
+	cmd_init();
+
 	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
-	if (cmdline_parse(&p, argv, 0)) {
+	if (cmdline_parse(&p, argv, 1+2)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 
 	// load config file
-	// TODO
+	cfg_load();
 
 	// parse command line, phase 1, (other options overriding the config file)
 	p = argc;
-	if (cmdline_parse(&p, argv, 1)) {
+	if (cmdline_parse(&p, argv, 4)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 
@@ -403,7 +417,6 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	cmd_init();
 
 	if(argc == 1) {
 		// Default assigns
@@ -416,7 +429,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		// parse cmdline, phase 2 (assign and xcmd options)
 		p = argc;
-		cmdline_parse(&p, argv, 2);
+		cmdline_parse(&p, argv, 8);
 	}
 
 
