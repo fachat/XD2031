@@ -285,6 +285,7 @@ void mem_free_(const void* ptr) {
 			log_error("Trying to free memory at %p that is not allocated\n", ptr);
 			return;
 		}
+		((int*)ptr)[0] = 0;
 		check_free(ptr);
 	}
 #else

@@ -497,7 +497,7 @@ int main(int argc, const char *argv[]) {
 
         // Check -v (verbose) first to enable log_debug()
         // when processing other options
-        for (int i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
+        for (int i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose(1);
 
 	int p = 1;
 	while (p < argc && argv[p][0]=='-') {
@@ -510,7 +510,7 @@ int main(int argc, const char *argv[]) {
 		case 'v':
                 	assert_single_char(argv[p]);
 			// verbose is already checked above
-			set_verbose();
+			set_verbose(1);
 			break;
             	case '?':
                 	assert_single_char(argv[p]);

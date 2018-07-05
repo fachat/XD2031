@@ -84,6 +84,14 @@ static err_t main_assign(const char *param, void *extra, int ival) {
 	return err;
 }
 
+static err_t main_set_param(const char *param, void *extra, int ival) {
+	(void) ival;
+	char **x = (char**)extra;
+	*x = mem_alloc_str(param);
+
+	return E_OK;
+}
+
 static err_t main_xcmd(const char *param, void *extra, int ival) {
 	(void) extra;
 	(void) ival;
@@ -92,6 +100,7 @@ static err_t main_xcmd(const char *param, void *extra, int ival) {
 
 	return CBM_ERROR_OK;
 }
+
 
 static err_t main_set_daemon(int flag, void *param) {
 	(void) param;
@@ -117,9 +126,9 @@ static cmdline_t main_options[] = {
 	{ "device",	"d",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &socket_name,
+	{ "socket",	"s",	4,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	4,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
         { "wildcards", 	"w",	4,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
@@ -310,13 +319,38 @@ int main(int argc, char *argv[]) {
 
 	terminal_init();
 
-	cmd_init();
 
 	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
 	if (cmdline_parse(&p, argv, 1+2)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
+	
+	// set working directory before we actually parse any relevant option for it (like assign)
+	if(argc == 1) {
+		// Use default configuration if no parameters were given
+		// Default assigns are made later
+		dir = ".";
+	} else if (p == argc) {
+		log_error("Missing run_directory\n");
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	} else if (argc > p+1) {
+		log_error("Multiple run_directories or missing option sign '-'\n");
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	} else {
+		dir = argv[p];
+	}
+
+	log_info("dir=%s\n", dir);
+
+	if(chdir(dir)<0) { 
+		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
+			dir, os_errno(), os_strerror(os_errno()));
+	  	end(EXIT_RESPAWN_NEVER);
+	}
+
+	// only now can we init the cmds, as this reads the cwd()
+	cmd_init();
 
 	// load config file
 	cfg_load();
@@ -344,27 +378,6 @@ int main(int argc, char *argv[]) {
 	}
 	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
 
-	if(argc == 1) {
-		// Use default configuration if no parameters were given
-		// Default assigns are made later
-		dir = ".";
-	} else if (p == argc) {
-		log_error("Missing run_directory\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
-	} else if (argc > p+1) {
-		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
-	} else {
-		dir = argv[p];
-	}
-
-	log_info("dir=%s\n", dir);
-
-	if(chdir(dir)<0) { 
-		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
-			dir, os_errno(), os_strerror(os_errno()));
-	  	end(EXIT_RESPAWN_NEVER);
-	}
 
 	if (device_name != NULL) {
 		serial_port_t fdesc;

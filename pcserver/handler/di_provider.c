@@ -3552,7 +3552,7 @@ static void di_free_ep(registry_t *reg, void *en) {
 	di_endpoint_t *diep = (di_endpoint_t*)en;
         reg_free(&(diep->base.files), di_free_file);
 
-	mem_free(en);
+	mem_free(diep);
 }
 
 static void di_free(void)

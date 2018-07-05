@@ -41,7 +41,7 @@ void dir_test(provider_t *prov, const char *rootpath, const char *name);
 
 int main(int argc, char *argv[]) {
 
-	set_verbose();
+	set_verbose(1);
 
 	provider_init();
 	handler_init();
