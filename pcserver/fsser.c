@@ -420,12 +420,7 @@ int main(int argc, char *argv[]) {
 
 	if(argc == 1) {
 		// Default assigns
-		log_info("Using built-in default assigns\n");
-		provider_assign(0, "fs",   os_get_home_dir(), CHARSET_ASCII, 1);
-		provider_assign(1, "fs",   "/usr/local/xd2031/sample", CHARSET_ASCII, 1);
-		provider_assign(2, "fs",   "/usr/local/xd2031/tools", CHARSET_ASCII, 1);
-		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", CHARSET_ASCII, 1);
-		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", CHARSET_ASCII, 1);
+		log_info("Using only information from configuration file\n");
 	} else {
 		// parse cmdline, phase 2 (assign and xcmd options)
 		p = argc;
