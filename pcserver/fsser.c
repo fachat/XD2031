@@ -191,6 +191,8 @@ void end(int rv) {
 	mem_free(socket_name);
 	mem_free(device_name);
 
+	cmd_free();
+
 	exit(rv);
 }
 

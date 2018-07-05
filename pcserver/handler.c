@@ -63,6 +63,14 @@ void handler_init(void) {
 	reg_init(&handlers, "handlers", 10);
 }
 
+/*
+ * clean up
+ */
+void handler_free(void) {
+
+	reg_free(&handlers, NULL);
+}
+
 
 void path_append(char **path, const char *filename) {
 	// construct path

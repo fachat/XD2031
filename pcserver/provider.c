@@ -326,6 +326,23 @@ void provider_cleanup(endpoint_t *ep) {
 	}
 }
 
+static void provider_free_ep(registry_t *reg, void *entry) {
+	(void) reg;
+	mem_free(entry);
+}
+
+static void provider_free_entry(registry_t *reg, void *entry) {
+	((providers_t*)entry)->provider->free();
+	mem_free(entry);
+}
+
+void provider_free() {
+
+	reg_free(&endpoints, provider_free_ep);
+
+	reg_free(&providers, provider_free_entry);
+}
+
 void provider_init() {
 
 	reg_init(&providers, "providers", 10);

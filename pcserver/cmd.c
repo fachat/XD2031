@@ -86,6 +86,13 @@ void cmd_init() {
 	//provider_set_ext_charset("PETSCII");
 }
 
+void cmd_free() {
+
+	xcmd_free();
+	handler_free();
+	provider_free();
+}
+
 int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
 
 	log_debug("Assigning from server: '%s'\n", assign_str);

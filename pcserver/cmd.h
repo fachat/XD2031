@@ -34,6 +34,7 @@
 #define MAXFILES        16
 
 void cmd_init();
+void cmd_free();
 
 int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd);

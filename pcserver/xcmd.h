@@ -29,6 +29,9 @@
 // init the command line option registry
 void xcmd_init();
 
+// clean up
+void xcmd_free();
+
 // register a new -X cmdline option; 
 // pointer points to the char _after_ the "X"
 void xcmd_register(const char *option);
