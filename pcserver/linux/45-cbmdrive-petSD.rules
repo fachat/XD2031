@@ -1,0 +1,6 @@
+SUBSYSTEM!="usb_device", ACTION!="add", GOTO="cbmdrive_rules_end"
+
+# petSD
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0664", GROUP="cbmdrive"
+
+LABEL="cbmdrive_rules_end"
