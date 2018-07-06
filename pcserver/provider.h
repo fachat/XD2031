@@ -64,6 +64,7 @@ typedef struct {
 	const char *name;	// provider name, used in ASSIGN as ID
 	const char *native_charset;	// name of the native charset for that provider
 	void (*init) (void);	// initialization routine
+	void (*free) (void);	// free routine
 
 	// create a new endpoint instance
 	// this is used on ASSIGN calls
@@ -160,7 +161,7 @@ struct _file {
 
 struct _handler {
 	const char *name;	// handler name, for debugging
-
+	
 	int (*resolve) (file_t * infile, file_t ** outfile,
 			const char *name, charset_t cset, const char **outname);
 

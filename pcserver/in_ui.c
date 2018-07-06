@@ -38,6 +38,7 @@
 
 #include "provider.h"
 #include "dir.h"
+#include "list.h"
 #include "cmd.h"
 #include "errors.h"
 
@@ -47,6 +48,9 @@ static int user_interface_enabled = true;
 //------------------------------------------------------------------------------------
 // helpers
 
+void enable_user_interface(void) {
+	user_interface_enabled = true;
+}
 
 void disable_user_interface(void) {
 	user_interface_enabled = false;

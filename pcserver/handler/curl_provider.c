@@ -178,6 +178,22 @@ static type_t endpoint_type = {
         endpoint_init
 };
 
+static void curl_free_file(registry_t *reg, void *en) {
+	(void)reg;
+        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+}
+
+static void curl_free_ep(registry_t *reg, void *en) {
+        (void) reg;
+        curl_endpoint_t *diep = (curl_endpoint_t*)en;
+        reg_free(&(diep->base.files), curl_free_file);
+
+        mem_free(en);
+}
+
+static void curl_end() {
+	reg_free(&endpoints, curl_free_ep);
+}
 
 // note: curl_init is being called twice, for HTTP as well as FTP
 static void curl_init() {
@@ -1090,6 +1106,7 @@ provider_t ftp_provider = {
 	"ftp",
 	CHARSET_ASCII_NAME,
 	curl_init,
+	curl_end,
 	ftp_new,
 	ftp_temp,
 	curl_to_endpoint,
@@ -1105,6 +1122,7 @@ provider_t http_provider = {
 	"http",
 	CHARSET_ASCII_NAME,
 	curl_init,
+	curl_end,
 	http_new,
 	http_temp,
 	curl_to_endpoint,

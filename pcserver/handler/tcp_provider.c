@@ -145,6 +145,25 @@ static File *reserve_file(tn_endpoint_t *fsep) {
         return file;
 }
 
+static void tnp_free_file(registry_t *reg, void *en) {
+	(void)reg;
+        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+}
+
+static void tnp_free_ep(registry_t *reg, void *en) {
+        (void) reg;
+        tn_endpoint_t *tnpep = (tn_endpoint_t*)en;
+        reg_free(&(tnpep->base.files), tnp_free_file);
+	if (tnpep->hostname) {
+		mem_free(tnpep->hostname);
+	}
+        mem_free(en);
+}
+
+static void tnp_end(void) {
+	reg_free(&endpoints, tnp_free_ep);
+}
+
 static void tnp_init(void) {
 
 	reg_init(&endpoints, "tcp_endpoints", 5);
@@ -645,6 +664,7 @@ provider_t tcp_provider = {
 	"tcp",
 	CHARSET_ASCII_NAME,		// not used as we don't do directories, but still
 	tnp_init,
+	tnp_end,
 	tnp_new,
 	tnp_temp,
 	NULL,				// to_endpoint

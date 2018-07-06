@@ -3539,6 +3539,28 @@ static int di_readfile(file_t * fp, char *retbuf, int len, int *eof, charset_t o
 }
 
 // *******
+// di_free
+// *******
+
+static void di_free_file(registry_t *reg, void *en) {
+	(void) reg;
+        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+}
+
+static void di_free_ep(registry_t *reg, void *en) {
+	(void) reg;
+	di_endpoint_t *diep = (di_endpoint_t*)en;
+        reg_free(&(diep->base.files), di_free_file);
+
+	mem_free(diep);
+}
+
+static void di_free(void)
+{
+	reg_free(&di_endpoint_registry, di_free_ep);
+}
+
+// *******
 // di_init
 // *******
 
@@ -4036,6 +4058,7 @@ provider_t di_provider = {
 	"di",
 	"PETSCII",
 	di_init,
+	di_free,
 	NULL,			// newep - not needed as only via wrap
 	NULL,			// tempep - not needed as only via wrap
 	di_to_endpoint,		// to_endpoint

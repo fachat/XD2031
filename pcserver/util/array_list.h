@@ -1,12 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
+    list handling
     Copyright (C) 2012 Andre Fachat
-
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,27 +19,18 @@
 
 ****************************************************************************/
 
-void set_verbose(int flag);
 
-void log_errno(const char *msg, ...);
+#ifndef ARRAY_LIST_H
+#define ARRAY_LIST_H
 
-void log_warn(const char *msg, ...);
+#include <stdio.h>
 
-void log_error(const char *msg, ...);
+#include "types.h"
+#include "list.h"
 
-void log_info(const char *msg, ...);
 
-void log_debug(const char *msg, ...);
+list_t *array_list_init(int bucket_size);
 
-void log_term(const char *msg);
 
-void log_hexdump(const char *p, int len, int petscii);
+#endif
 
-void log_hexdump2(const char *p, int len, int petscii, const char *prefix);
-
-#define	log_entry(func)	log_debug("ENTER: %s\n", (func))
-#define	log_exit()	log_debug("EXIT")
-#define	log_exitr(rv)	log_debug("EXIT: rv=%d\n", (rv))
-#define	log_rv(rv)	log_error("ERROR RETURN: %d\n", (rv))
-
-const char *dump_indent(int n);

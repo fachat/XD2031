@@ -47,7 +47,9 @@
 #include "charconvert.h"
 #include "in_device.h"
 #include "in_ui.h"
+#include "list.h"
 #include "cmd.h"
+#include "xcmd.h"
 #include "privs.h"
 #include "log.h"
 #include "provider.h"
@@ -59,50 +61,168 @@
 #include "terminal.h"
 #include "dir.h"
 #include "loop.h"
+#include "cmdline.h"
+#include "array_list.h"
 
 // --------------------------------------------------------------------------------------
 
-void usage(int rv) {
-	printf("Usage: fsser [options] run_directory\n"
-		" options=\n"
-                "   -A<drv>:<provider-string>\n"
-                "               assign a provider to a drive\n"
+
+static char *device_name = NULL;	/* device name or NULL if not given */
+static char *socket_name = NULL;	/* socket name or NULL if not given */
+static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
+
+static char *cfg_name = NULL;		/* name of the config file if non-standard */
+
+static err_t main_assign(const char *param, void *extra, int ival) {
+	(void) extra;
+	(void) ival;
+	
+	int err = cmd_assign(param, CHARSET_ASCII, 1);
+        if (err != CBM_ERROR_OK) {
+                log_error("%d Error assigning %s\n", err, param);
+        }
+	return err;
+}
+
+static err_t main_set_param(const char *param, void *extra, int ival) {
+	(void) ival;
+	char **x = (char**)extra;
+	*x = mem_alloc_str(param);
+
+	return E_OK;
+}
+
+static err_t main_xcmd(const char *param, void *extra, int ival) {
+	(void) extra;
+	(void) ival;
+	
+	xcmd_register(param);
+
+	return CBM_ERROR_OK;
+}
+
+
+static err_t main_set_daemon(int flag, void *param) {
+	(void) param;
+	if (flag) {
+		disable_user_interface();
+	} else {
+		enable_user_interface();
+	}
+	return CBM_ERROR_OK;
+}
+
+static err_t main_set_verbose(int flag, void *param) {
+        (void) param;
+	set_verbose(flag);
+        return E_OK;
+}
+
+static cmdline_t main_options[] = {
+        { "verbose",    "v",	1,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+                "Set verbose mode", NULL },
+	{ "config",	"c",	2,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
+		"Set name of config file instead of default ~/.xdconfig", NULL },
+	{ "device",	"d",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
+#ifndef _WIN32
+	{ "socket",	"s",	4,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
+		"Set name of socket to use instead of device", NULL },
+	{ "tools",	"T",	4,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
+		"Set name of tools socket to use instead of ~/.xdtools", NULL },
+#endif
+        { "wildcards", 	"w",	4,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+		"Use advanced wildcards", NULL },
+        { "daemon", 	"D",	4,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+		"Run as daemon, disable cli user interface.", NULL },
+        { "assign", 	"A",	8,	PARTYPE_PARAM,  main_assign, NULL, NULL,
+		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
-		"               Note: do not use a trailing '/' on a path.\n"
-		"   -X<bus>:<cmd>\n"
-		"               send an 'X'-command to the specified bus, e.g. to set\n"
-		"               the IEC bus to device number 9 use:\n"
-		"               -Xiec:U=9\n"
-		"   -d <device>	define serial device to use\n"
-#ifndef _WIN32
-		"   -s <socket>	define socket device to use (instead of device)\n"
-#endif
-		"   -d auto     auto-detect serial device\n"
-		"   -w          Use advanced wildcards (anything following '*' must also match)\n"
-		"   -D          run as daemon, disable user interface\n"
-		"   -v          enable debug log output\n"
-		"   -?          gives you this help text\n"
+                "               Note: do not use a trailing '/' on a path.\n"
+		, NULL },
+        { "xcmd", 	"X",	8,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
+                "Send an 'X'-command to the specified bus\n"
+		"               e.g. to set the IEC bus to device number 9 use:\n"
+                "               -Xiec:U=9\n"
+		, NULL },
+};
+
+#define	BUFFER_SIZE	8192
+#define	ARGP_SIZE	10
+
+static void cfg_load(void) {
+
+	const char *filename = NULL;
+
+	if (cfg_name == NULL) {
+		const char *home = os_get_home_dir();
+		filename = malloc_path(home, ".xdconfig");
+	} else {
+		filename = mem_alloc_str(cfg_name);
+	}
+
+	FILE *fd = fopen(filename, "r");
+	if (fd == NULL) {
+		log_errno("Could not open file '%s'", filename);
+	} else {
+
+		char *line = mem_alloc_c(BUFFER_SIZE, "cfg-file-buffer");
+		int lineno = 0;
+
+		while ((line = fgets(line, BUFFER_SIZE, fd)) != NULL) {
+
+			log_debug("Parsing line % 3d: %s", lineno, line);
+
+			err_t rv = cmdline_parse_cfg(line, 1+4+8);
+
+			if (rv) {
+				break;
+			}
+			lineno++;
+		}
+
+		mem_free(line);	
+		fclose(fd);
+	}
+	mem_free(filename);
+}
+
+// --------------------------------------------------------------------------------------
+
+void end(int rv) {
+
+	poll_free();
+
+	cmdline_module_free();
+
+	mem_free(tsocket_name);
+	mem_free(socket_name);
+	mem_free(device_name);
+
+	cmd_free();
+
+	exit(rv);
+}
+
+
+err_t usage(int rv, void* extra) {
+	(void) extra;
+
+	printf("Usage: fsser [options] run_directory\n"
 		"\n"
 		"Typical examples are:\n"
 		"   fsser -A0:fs=/home/user/8bitdir .\n"
 		"   fsser -d /dev/ttyUSB0 -A0:=/home/user/8bitdir/somegame.d64 /tmp\n"
 	);
-	exit(rv);
+
+	cmdline_usage();
+
+	end(rv);
+	return rv;
 }
 
 
-// Assert switch is a single character
-// If somebody tries to combine options (e.g. -vD) or
-// encloses the parameter in quotes (e.g. fsser "-d COM5")
-// this function will throw an error
-void assert_single_char(char *argv) {
-	if (strlen(argv) != 2) {
-		log_error("Unexpected trailing garbage character%s '%s' (%s)\n",
-				strlen(argv) > 3 ? "s" : "", argv + 2, argv);
-		exit (EXIT_RESPAWN_NEVER);
-	}
-}
 
 // --------------------------------------------------------------------------------------
 // poll loop callback functions
@@ -176,152 +296,102 @@ static void fd_listen(const char *socketname, int do_reset) {
 
 int main(int argc, char *argv[]) {
 
-	// stop server when number of registered sockets falls below this
-	int min_num_socks = 0;
-
-	int i;
-	char *dir=NULL;
-
-	char *device = NULL;	/* device name or NULL if not given */
-	char *socket = NULL;	/* socket name or NULL if not given */
-	char *tsocket = NULL;	/* tools socket name or NULL if not given */
-	char parameter_d_given = false;
-	char use_stdio = false;
-
 	mem_init();
 	atexit(mem_exit);
 
-	poll_init();
+	// -----------------------------
+	// config init
 
-	// Check -v (verbose) first to enable log_debug()
-	// when processing other options
-	for (i=1; i < argc; i++) if (!strcmp("-v", argv[i])) set_verbose();
+	// stop server when number of registered sockets falls below this
+	int min_num_socks = 0;
+
+	char *dir=NULL;
+
+	char use_stdio = false;
+
+	// -----------------------------
+	// command line
+
+	cmdline_module_init();
+	cmdline_register_mult(main_options, sizeof(main_options)/sizeof(cmdline_t));
+
+	poll_init();
 
 	terminal_init();
 
-	i=1;
-	while(i<argc && argv[i][0]=='-') {
-	  switch(argv[i][1]) {
-	    case '?':
-		assert_single_char(argv[i]);
-		usage(EXIT_SUCCESS);	/* usage() exits already */
-		break;
-	    case 'd':
-		if (socket != NULL) {
-		  log_error("both -s and -d given!\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
-		// device name
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  device = argv[i];
-		  if(!strcmp(device,"auto")) {
-		    guess_device(&device);
-		    /* exits on more or less than a single possibility */
-		  }
-		  if(!strcmp(device,"-")) {
-			device = NULL; 	// use stdin/out
-			use_stdio = true;
-		  }
-		  log_info("main: device = %s\n", use_stdio ? "<stdio>" : device);
-		} else {
-		  log_error("-d requires <device> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-#ifndef _WIN32
-	    case 's':
-		// socket name
-		if (device != NULL || use_stdio) {
-		  log_error("both -s and -d given!\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  socket = argv[i];
-		  log_info("main: socket = %s\n", socket);
-		} else {
-		  log_error("-s requires <socket name> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-	    case 'T':
-		// tools socket name
-		assert_single_char(argv[i]);
-		parameter_d_given = true;
-		if (i < argc-2) {
-		  i++;
-		  tsocket = argv[i];
-		  log_info("main: tools socket = %s\n", tsocket);
-		} else {
-		  log_error("-T requires <socket name> parameter\n");
-		  exit(EXIT_RESPAWN_NEVER);
-		}
- 	     	break;
-#endif
-	    case 'A':
-	    case 'X':
-		// ignore these, as those will be evaluated later by cmd_...
-		break;
-	    case 'v':
-		assert_single_char(argv[i]);
-		break;
-	    case 'D':
-		assert_single_char(argv[i]);
-		disable_user_interface();
-		break;
-            case 'w':
-		assert_single_char(argv[i]);
-                advanced_wildcards = true;
-                break;
-	    default:
-		log_error("Unknown command line option %s\n", argv[i]);
-		usage(EXIT_RESPAWN_NEVER);
-		break;
-	  }
-	  i++;
-	}
-	if(!parameter_d_given) {
-		guess_device(&device);
-	}
 
+	// parse command line, phase 0 (verbose, cfg file)
+	int p = argc;
+	if (cmdline_parse(&p, argv, 1+2)) {
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	}
+	
+	// set working directory before we actually parse any relevant option for it (like assign)
 	if(argc == 1) {
 		// Use default configuration if no parameters were given
 		// Default assigns are made later
 		dir = ".";
-	} else if (i == argc) {
+	} else if (p == argc) {
 		log_error("Missing run_directory\n");
-		usage(EXIT_RESPAWN_NEVER);
-	} else if (argc > i+1) {
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	} else if (argc > p+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage(EXIT_RESPAWN_NEVER);
-	} else dir = argv[i];
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	} else {
+		dir = argv[p];
+	}
 
 	log_info("dir=%s\n", dir);
 
 	if(chdir(dir)<0) { 
 		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
 			dir, os_errno(), os_strerror(os_errno()));
-	  exit(EXIT_RESPAWN_NEVER);
+	  	end(EXIT_RESPAWN_NEVER);
 	}
 
-	if (device != NULL) {
+	// only now can we init the cmds, as this reads the cwd()
+	cmd_init();
+
+	// load config file
+	cfg_load();
+
+	// parse command line, phase 1, (other options overriding the config file)
+	p = argc;
+	if (cmdline_parse(&p, argv, 4)) {
+		usage(EXIT_RESPAWN_NEVER, NULL);
+	}
+
+	if (socket_name != NULL && device_name != NULL) {
+		log_error("both -s and -d given!\n");
+		end(EXIT_RESPAWN_NEVER);
+	}
+
+	if(socket_name == NULL && (device_name == NULL || !strcmp("auto", device_name))) {
+		int rv = guess_device(&device_name);
+		if (rv) {
+			end(rv);
+		}
+	}
+	if(device_name != NULL && !strcmp("-", device_name)) {
+		device_name = NULL; 	// use stdin/out
+		use_stdio = true;
+	}
+	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
+
+
+	if (device_name != NULL) {
 		serial_port_t fdesc;
-		fdesc = device_open(device);
+		fdesc = device_open(device_name);
 		if (os_open_failed(fdesc)) {
 		  /* error */
 		  log_error("Could not open device %s, errno=%d (%s)\n",
-			device, os_errno(), os_strerror(os_errno()));
-		  exit(EXIT_RESPAWN_NEVER);
+			device_name, os_errno(), os_strerror(os_errno()));
+		  end(EXIT_RESPAWN_NEVER);
 		}
 		if(config_ser(fdesc)) {
 		  log_error("Unable to configure serial port %s, errno=%d (%s)\n",
-			device, os_errno(), os_strerror(os_errno()));
-		  exit(EXIT_RESPAWN_NEVER);
+			device_name, os_errno(), os_strerror(os_errno()));
+		  end(EXIT_RESPAWN_NEVER);
 		}
 
 		in_device_t *fdp = in_device_init(fdesc, fdesc, 1);
@@ -333,50 +403,43 @@ int main(int argc, char *argv[]) {
 	drop_privileges();
 
 #ifndef _WIN32
-	if (tsocket == NULL) {
+	if (tsocket_name == NULL) {
 		const char *home = os_get_home_dir();
-		tsocket = malloc_path(home, ".xdtools");
+		tsocket_name = malloc_path(home, ".xdtools");
 	}
-	fd_listen(tsocket, 0);
+	fd_listen(tsocket_name, 0);
 	min_num_socks ++;
 
 
-	if (socket != NULL) {
-		if (strcmp(socket, "-")) {
+	if (socket_name != NULL) {
+		if (strcmp(socket_name, "-")) {
 	
-			//fd_listen(socket, 1);
-			int data_fd = socket_open(socket);
+			//fd_listen(socket_name, 1);
+			int data_fd = socket_open(socket_name);
 			if (data_fd < 0) {
-				log_errno("Could not open listen socket at %s\n", socket);
-				exit(EXIT_RESPAWN_NEVER);
+				log_errno("Could not open listen socket at %s\n", socket_name);
+				end(EXIT_RESPAWN_NEVER);
 			}
 			in_device_t *fdp = in_device_init(data_fd, data_fd, 1);
 			poll_register_readwrite(data_fd, fdp, fd_read, NULL, fd_hup);
 			min_num_socks ++;
 		}
         } else 
-	if (device == NULL && !use_stdio) {
+	if (device_name == NULL && !use_stdio) {
 
                 log_error("No socket or device name given!\n");
-                exit(EXIT_RESPAWN_NEVER);
+                end(EXIT_RESPAWN_NEVER);
 	}
 #endif
 
-	cmd_init();
 
 	if(argc == 1) {
 		// Default assigns
-		log_info("Using built-in default assigns\n");
-		provider_assign(0, "fs",   os_get_home_dir(), CHARSET_ASCII, 1);
-		provider_assign(1, "fs",   "/usr/local/xd2031/sample", CHARSET_ASCII, 1);
-		provider_assign(2, "fs",   "/usr/local/xd2031/tools", CHARSET_ASCII, 1);
-		provider_assign(3, "ftp",  "ftp.zimmers.net/pub/cbm", CHARSET_ASCII, 1);
-		provider_assign(7, "http", "www.zimmers.net/anonftp/pub/cbm/", CHARSET_ASCII, 1);
+		log_info("Using only information from configuration file\n");
 	} else {
-		if (cmd_assign_from_cmdline(argc, argv)) {
-			log_error("Error assigning drives! Aborting!\n");
-			usage(EXIT_RESPAWN_NEVER);
-		}
+		// parse cmdline, phase 2 (assign and xcmd options)
+		p = argc;
+		cmdline_parse(&p, argv, 8);
 	}
 
 
@@ -400,7 +463,7 @@ int main(int argc, char *argv[]) {
 	//if(res) {
 	//	exit(EXIT_RESPAWN_ALWAYS);
 	//} else {
-		exit(EXIT_SUCCESS);
+		end(EXIT_SUCCESS);
 	//}
 }
 

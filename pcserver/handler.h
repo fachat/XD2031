@@ -35,6 +35,10 @@ void handler_register(handler_t * handler);
  * initialize the provider registry
  */
 void handler_init(void);
+/**
+ * clean up
+ */
+void handler_free(void);
 
 /*
  * find a file

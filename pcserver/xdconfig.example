@@ -1,0 +1,12 @@
+
+# comment
+
+assign 0:=/home
+assign 1:fs=/usr/local/xd2031/sample
+assign 2:fs=/usr/local/xd2031/tools
+assign=3:ftp=ftp.zimmers.net/pub/cbm
+assign 7:http=www.zimmers.net/anonftp/pub/cbm
+
+xcmd ieee:U=9
+#xcmd iec:U=9
+

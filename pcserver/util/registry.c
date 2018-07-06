@@ -49,7 +49,6 @@ void reg_init(registry_t *reg, const char *name, int initial_capacity) {
 	reg->entries = mem_alloc_n(initial_capacity, &entries_t);
 }
 
-
 int reg_size(registry_t *reg) {
 	return reg->numentries;
 }

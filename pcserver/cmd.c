@@ -44,6 +44,7 @@
 
 #include "charconvert.h"
 #include "wireformat.h"
+#include "list.h"
 #include "cmd.h"
 #include "charconvert.h"
 #include "petscii.h"
@@ -83,6 +84,13 @@ void cmd_init() {
 
 	// default
 	//provider_set_ext_charset("PETSCII");
+}
+
+void cmd_free() {
+
+	xcmd_free();
+	handler_free();
+	provider_free();
 }
 
 int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
@@ -151,46 +159,6 @@ int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
 				log_error("Could not assign, error number is %d\n", rv);
 			}
 	return rv;
-}
-
-/**
- * take the command line, search for "-A<driv>=<name>" parameters and assign
- * the value; returns error code
- */
-int cmd_assign_from_cmdline(int argc, char *argv[]) {
-
-	int err = CBM_ERROR_OK;
-
-	for (int i = 0; i < argc; i++) {
-
-		if (argv[i][0] != '-') {
-			continue;
-		}
-
-		if ((strlen(argv[i]) >2) 
-			&& argv[i][1] == 'X') {
-
-			if (strchr(argv[i]+2, ':') == NULL) {
-				// we need a ':' as separator between bus name and actual command
-				log_error("Could not find bus name separator ':' in '%s'\n", argv[i]+2);
-				continue;
-			}
-
-			xcmd_register(argv[i]+2);
-		}
-		if ((strlen(argv[i]) >4) 
-			&& argv[i][1] == 'A') {
-
-			err = cmd_assign(argv[i]+2, CHARSET_ASCII, 1);
-
-			if (err != CBM_ERROR_OK) {
-				log_error("%d Error assigning %s\n", err, argv[i]+2);
-				break;
-			}
-			continue;
-		}
-	}
-	return err;
 }
 
 

@@ -1,12 +1,8 @@
+
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
-
-    Derived from:
-    OS/A65 Version 1.3.12
-    Multitasking Operating System for 6502 Computers
-    Copyright (C) 1989-1997 Andre Fachat
+    string util
+    Copyright (C) 2015 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,26 +20,43 @@
 
 ****************************************************************************/
 
-/*
- * rs232 interface handling
- */
 
-#ifndef SERIAL_H
-#define	SERIAL_H
+#ifndef STRING_H
+#define STRING_H
 
-/**
- * See http://en.wikibooks.org/wiki/Serial_Programming:Unix/termios
- */
-int config_ser(serial_port_t serport);
+#include <ctype.h>
 
-/* search /dev for a virtual serial port 
-   Change "device" to it, if exactly one found
-   If none found or more than one, exit(1) with error msg */
-int guess_device(char **device);
 
-/* open a device (as returned by guess_device or given on the cmdline */
-serial_port_t device_open(char *name);
+// simple hash algorithm. As we use string, we only use the lower 7 bits;
+// we also use max the first 8 characters
+static inline int string_hash(const char *str) {
+	int h = 0;
 
-int device_still_present(void);
+	int p = 0;
+	char c = 0;
+	while ( (c = str[p]) ) {
+		h = 13 * h + (c & 0x7f);
+		p++;
+	}
+	return h;
+}
+
+// simple hash algorithm. As we use string, we only use the lower 7 bits;
+// we also use max the first 8 characters
+// ignore case by converting tolower() 
+static inline int string_hash_nocase(const char *str) {
+	int h = 0;
+
+	int p = 0;
+	char c = 0;
+	while ( (c = str[p]) ) {
+		h = 13 * h + (tolower(c) & 0x7f);
+		p++;
+	}
+	return h;
+}
+
+
 
 #endif
+

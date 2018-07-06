@@ -25,6 +25,11 @@
 void poll_init(void);
 
 /**
+ * free all structures
+ */
+void poll_free(void);
+
+/**
  * register a listen socket, and an action to call on accept
  * data is a void pointer to a data struct given to the function
  */

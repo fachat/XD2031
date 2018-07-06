@@ -43,8 +43,8 @@ static enum lastlog {
 	lastlog_anything, lastlog_warn, lastlog_error, lastlog_info, lastlog_debug
 } newline = lastlog_anything;
 
-void set_verbose() {
-	verbose = 1;
+void set_verbose(int flag) {
+	verbose = flag;
 }
 
 void log_term(const char *msg) {

@@ -26,5 +26,6 @@
 int in_ui_loop(void);
 
 void disable_user_interface(void);
+void enable_user_interface(void);
 
 #endif

@@ -200,6 +200,30 @@ static fs_endpoint_t *create_root_ep() {
 	return fsep;
 }
 
+static void fsp_free_file(registry_t *reg, void *en) {
+
+	((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+}
+
+static void fsp_free_ep(registry_t *reg, void *en) {
+	(void) reg;
+	fs_endpoint_t *fep = (fs_endpoint_t*) en;
+
+	reg_free(&(fep->base.files), fsp_free_file);
+
+	if (fep->basepath) {
+		free(fep->basepath);
+	}
+	if (fep->curpath) {
+		mem_free(fep->curpath);
+	}
+	mem_free(fep);
+}
+
+static void fsp_end() {
+	reg_free(&endpoints, fsp_free_ep);
+}
+
 static void fsp_init() {
 
 	// ---------------------
@@ -1971,6 +1995,7 @@ provider_t fs_provider = {
 	"fs",
 	CHARSET_ASCII_NAME,
 	fsp_init,
+	fsp_end,
 	fsp_new,
 	fsp_tempep,
 	fsp_to_endpoint,	// to_endpoint

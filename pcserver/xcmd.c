@@ -48,12 +48,21 @@ static int capacity;
 static int length;
 
 // init the command line option registry
+// TODO: move to registry_t / array_list_t
 void xcmd_init() {
 
 	length = 0;
 	capacity = INITIAL_CAPACITY;
 
 	optsarray = mem_alloc_n(capacity, &mem_type);
+}
+
+void xcmd_free() {
+
+	for (int i = 0; i < length; i++) {
+		mem_free(optsarray[i]);
+	}
+	mem_free(optsarray);
 }
 
 
