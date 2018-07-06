@@ -71,7 +71,7 @@ vpath %.c . ../common util os handler $(ARCH)
 -include $(DEP)
 
 # Open the serial device with root or user rights
-PRIVILEGED=y
+PRIVILEGED=n
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Darwin)
 	PRIVILEGED=n
