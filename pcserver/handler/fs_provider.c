@@ -84,6 +84,7 @@ typedef struct {
 	uint8_t		temp_open;	// set when fp is temporary (for wrapper)
 	const char	*ospath;	// full path to the file (incl. filename)
 	struct dirent	*de;
+	direntry_t	direntry;
 	char		*block;		// direct channel block buffer, 256 byte when allocated
 	unsigned char	block_ptr;
 } File;
@@ -1104,6 +1105,184 @@ static char *get_path(File *parent, const char *child) {
  *
  * outpattern then points into fp->pattern
  */
+static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve) {
+	  File *file = (File*) fp;
+
+	  int rv = CBM_ERROR_FAULT;
+	  struct stat sbuf;
+	  fs_endpoint_t *fsep = (fs_endpoint_t*) fp->endpoint;
+	  char *ospath = NULL;
+	  char *path = NULL;
+
+	  file_t *wrapfile = NULL;
+
+	  direntry_t *dirent = &(file->direntry);
+	  *outentry = dirent;
+	
+	  log_debug("ENTER: fs_provider.direntry2 fp=%p, dirstate=%d\n", fp, fp->dirstate);
+
+	  if (fp->handler != &fs_file_handler) {
+		return CBM_ERROR_FAULT;
+	  }
+
+          if (strstr(file->ospath, fsep->basepath) != file->ospath) {
+          	// the parent base path is not at the start of the new base path
+          	// so we throw an error
+          	log_error("DIR broke out of container (%s), was trying %s\n",
+                                fsep->basepath, file->ospath);
+          	return CBM_ERROR_FAULT;
+          }
+
+	  if (file->dp == NULL) {
+		rv = open_dir(file);
+		if (rv != CBM_ERROR_OK) {
+			return rv;
+		}
+	  }
+#if 0
+	  // do we have to send the disk header?
+	  if ((!isresolve) && (fp->dirstate == DIRSTATE_FIRST)) {
+		    // not first anymore
+		    fp->dirstate = DIRSTATE_ENTRIES;
+
+  		    // alloc directory entry struct
+ 		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
+  		    retfile->file.parent = fp;
+
+#if 0
+		    // convert filename to external charset
+		    retfile->file.filename = conv_name_alloc(
+				(fp->pattern == NULL)?"(nil)":fp->pattern, 
+				CHARSET_ASCII, outcset);
+#endif
+		    // do not convert filename to external charset, as pattern is already ext cset
+		    retfile->file.filename = mem_alloc_str(
+				(fp->pattern == NULL)?"(nil)":fp->pattern); 
+
+		    path = get_path(file, retfile->file.filename);
+		    retfile->ospath = os_realpath(path);
+		    mem_free(path);
+		    retfile->file.mode = FS_DIR_MOD_NAM;
+
+		    rv = CBM_ERROR_OK;
+		    *outentry = (file_t*) retfile;
+		    return rv;
+	  } 
+#endif
+	  // check if we have to send a file entry
+	  if(isresolve || (fp->dirstate == DIRSTATE_ENTRIES)) {
+
+	            // read entry from underlying dir
+		    do {
+	            	file->de = readdir(file->dp);
+
+	    	        if (file->de == NULL) {
+				log_debug("Got NULL next dir entry\n");
+				if (isresolve) {
+					rv = CBM_ERROR_OK;
+				} else {
+					fp->dirstate = DIRSTATE_END;
+				}
+				// done with search
+				break;
+			} else {
+				log_debug("Got next dir entry for: %s\n", file->de->d_name);
+
+			    	path = get_path(file, file->de->d_name);
+				ospath = os_realpath(path);
+				mem_free(path);
+				path = NULL;
+					
+		            	int rvx = stat(ospath, &sbuf);
+        		    	if (rvx < 0) {
+                			log_errno("Problem stat'ing dir entry (%s)", file->de->d_name);
+					if (errno != EOVERFLOW) {
+						rv = errno_to_error(errno);
+						break;
+					}
+        		    	} else {
+		    			// convert filename to external charset
+		    			dirent->name = file->de->d_name;
+
+			  	  	dirent->mode = FS_DIR_MOD_FIL;
+					// we don't know the type yet for sure
+			    		dirent->type = FS_DIR_TYPE_UNKNOWN;
+			    		dirent->attr = 0;
+
+			    		bool seekable = 0;
+
+					if (S_ISREG(sbuf.st_mode)) {
+				    		dirent->attr |= FS_DIR_ATTR_SEEK;
+					}
+
+					// write check
+			        	// TODO: error handling
+                			int writecheck = access(ospath, W_OK);
+                			if ((writecheck < 0) && (errno != EACCES)) {
+                            			writecheck = -errno;
+	                            		log_error("Could not get write access to %s\n", file->de->d_name);
+        	                    		log_errno("Reason");
+                			}
+					log_debug("WRITE Check: %s -> %d\n", ospath, writecheck);
+					if (writecheck < 0) {
+				    		dirent->attr |= FS_DIR_ATTR_LOCKED;
+					}
+
+					dirent->moddate = sbuf.st_mtime;
+					dirent->size = sbuf.st_size;
+					if (S_ISDIR(sbuf.st_mode)) {
+						dirent->mode = FS_DIR_MOD_DIR;
+					}
+#if 0
+					// wrap and/or match name
+					if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
+						== CBM_ERROR_OK) {
+	  	    				*outentry = wrapfile;
+						rv = CBM_ERROR_OK;
+						break;
+					}
+					// cleanup, to read next dir entry
+					retfile->file.handler->close((file_t*)retfile, 0, NULL, NULL);
+					retfile = NULL;
+#endif
+					break;
+				}
+			}
+			// read next entry
+		    } while (1);
+	  }
+#if 0	
+	  // end of dir entry - blocks free
+	  if ((!isresolve) && (fp->dirstate == DIRSTATE_END)) {
+  		    // alloc directory entry struct
+ 		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
+  		    retfile->file.parent = fp;
+
+		    retfile->file.filename = NULL;
+		    // ospath is malloc'd
+		    retfile->ospath = os_realpath(file->ospath);
+		    retfile->file.mode = FS_DIR_MOD_FRE;
+		    unsigned long long total = os_free_disk_space(file->ospath);
+		    if (total > SSIZE_MAX) {
+			total = SSIZE_MAX;
+		    }
+		    retfile->file.filesize = total;
+		    *readflag = READFLAG_EOF;
+		    rv = CBM_ERROR_OK;
+	  	    *outentry = (file_t*) retfile;
+	  	    return rv;
+	  }
+#endif
+	  return rv;
+}
+
+
+/**
+ * get the next directory entry in the directory given as fp.
+ * If isresolve is set, then the disk header and blocks free entries are skipped
+ *
+ * outpattern then points into fp->pattern
+ */
 static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 	  File *file = (File*) fp;
 	  File *retfile = NULL;
@@ -1979,6 +2158,7 @@ handler_t fs_file_handler = {
 	readfile,		// readfile
 	writefile,		// writefile
 	NULL,			// truncate
+	fs_direntry2,		// direntry2
 	fs_direntry,		// direntry
 	fs_create,		// create
 	fs_flush,		// flush data out to disk

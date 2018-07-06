@@ -3765,6 +3765,10 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f, uint8_t *tr, uint
 	di_FLUSH(f->side);
 	di_FLUSH(f->super);
 
+	if (f->data == NULL) {
+		// file was opened but no buffer could be allocated
+		log_info("Closing file after allocation failure (disk full?).\n");
+	} else
 	if (f->access_mode == FS_OPEN_WR ||
 	    f->access_mode == FS_OPEN_OW || f->access_mode == FS_OPEN_AP) {
 
@@ -3825,6 +3829,7 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f, uint8_t *tr, uint
 		// discard const
 		mem_free((char *)f->dospattern);
 	}
+
 	//di_init_fp(f);
 	return err;
 }
@@ -4042,6 +4047,7 @@ handler_t di_file_handler = {
 	di_readfile,		// readfile
 	di_writefile,		// writefile
 	NULL,			// truncate
+	NULL,			// direntry2
 	di_direntry,		// direntry
 	di_create,		// create
 	di_fflush,		// flush data to disk

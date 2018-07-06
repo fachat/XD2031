@@ -647,6 +647,7 @@ static handler_t tcp_file_handler = {
         read_file,               // readfile
         write_file,              // writefile
         NULL,                   // truncate
+        NULL,                   // direntry2
         tn_direntry,            // direntry
         NULL,			// fs_create,              // create
 	NULL,			// fs_flush,               // flush data out to disk

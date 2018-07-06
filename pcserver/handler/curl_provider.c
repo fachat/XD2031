@@ -1144,6 +1144,7 @@ static handler_t curl_file_handler = {
         read_file,              // readfile
         NULL,			// writefile unsupported for now
         NULL,                   // truncate
+        NULL,                   // direntry2
         curl_direntry,          // direntry
         NULL,                   // fs_create,              // create
         NULL,                   // fs_flush,               // flush data out to disk

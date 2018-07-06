@@ -58,6 +58,7 @@
 
 typedef struct _endpoint endpoint_t;
 typedef struct _file file_t;
+typedef struct _direntry direntry_t;
 typedef struct _handler handler_t;
 
 typedef struct {
@@ -150,6 +151,18 @@ struct _file {
 #define	DIRSTATE_ENTRIES	2
 #define	DIRSTATE_END		3
 
+// information about a directory entry
+// basically a typed version of the wireformat dir entry
+struct _direntry {
+	uint32_t	size;
+	time_t		moddate;
+	uint8_t		mode;	// mode of dir entry - FS_DIR_MOD_*, file/disk name/free bytes/subdir
+	uint8_t		attr;	// file attributes - FS_DIR_ATTR_*, splat, write prot, transient, estimate
+	uint8_t		type;	// file type - FS_DIR_TYPE_*, DEL / SEQ / PRG / USR / REL
+	uint8_t		*name;	// pointer to file name
+	charset_t	cset;	// charset of name
+};
+
 // file operations
 // This file defines the file type handler interface. This is used
 // to "wrap" files so that for example x00 (like P00, R00, ...) files 
@@ -158,6 +171,7 @@ struct _file {
 // In the long run the di_provider will become a handler as well - so
 // you can CD into a D64 file stored in a D81 image read from an FTP 
 // server...
+
 
 struct _handler {
 	const char *name;	// handler name, for debugging
@@ -196,6 +210,11 @@ struct _handler {
 	int (*truncate) (file_t * fp, long size);
 
 	// -------------------------
+	// directory handling
+
+	// scan a directory one by one entry
+	// when isresolve is set, do not read headers or blocks free
+	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isresolve);
 
 	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
 			 int *readflag, const char **outpattern, charset_t outcset);

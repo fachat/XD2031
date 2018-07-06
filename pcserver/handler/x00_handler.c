@@ -284,6 +284,8 @@ static handler_t x00_handler = {
 
 	// -------------------------
 
+	NULL,		// int direntry2(file_t *fp, file_t **outentry);
+
 	NULL,		// int direntry(file_t *fp, file_t **outentry);
 
 	NULL,		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
