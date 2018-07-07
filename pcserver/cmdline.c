@@ -31,6 +31,7 @@
 #include "err.h"
 #include "mem.h"
 
+
 // hash from param name to cmdline_t sruct for quick find
 static hash_t *params = NULL;
 static hash_t *shorts = NULL;
@@ -81,7 +82,7 @@ void cmdline_usage() {
 }
 
 static const cmdline_t help[] = {
-	{ "help", "?", 1, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
+	{ "help", "?", CMDL_INIT, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
 };
 
 static type_t param_memtype = {
@@ -145,10 +146,12 @@ void cmdline_register(const cmdline_t *param) {
 	
 	if (param->name && hash_put(params, (void*)param) != NULL) {
 		// must not happen
+		log_error("Duplicate parameter name %s\n", param->name);
 		exit(1);
 	}
 	if (param->shortname && hash_put(shorts, (void*)param) != NULL) {
 		// must not happen
+		log_error("Duplicate parameter name %s\n", param->shortname);
 		exit(1);
 	}
 	list_add(paramlist, (void*)param);
@@ -178,7 +181,7 @@ static err_t cmdline_parse_long(char *name, cmdline_t **opt, char **val, int *fl
 		}
 	}
 	if (*opt == NULL) {
-		log_error("unknown long cmdline parameter: '%s'", name);
+		log_error("Unknown long cmdline parameter: '%s'\n", name);
 		rv = E_ABORT;
 	}
 	return rv;
@@ -207,7 +210,7 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 				return E_OK;
 			}
 		} else {
-			log_error("unknown short cmdline parameter: %s", pname);
+			log_error("unknown short cmdline parameter: %s\n", pname);
 			rv = E_ABORT;
 		}
 	} while ((++pname)[0] != 0);
@@ -244,7 +247,7 @@ static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase) {
 				j++;
 			}
 			if (!values[j].value) {
-				log_error("Unknown or missing parameter for option %s", 
+				log_error("Unknown or missing parameter for option %s\n", 
 							opt->name ? opt->name : opt->shortname);
 				rv = E_ABORT;
 			}
@@ -341,7 +344,11 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 			p++;
 		} while (isspace(*p));
 
-		rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+		if (strlen(cmd) == 1) {
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase);
+		} else {
+			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+		}
 
 		if (val != NULL) {
 			log_warn("extra parameter\n");
@@ -350,7 +357,11 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 
 	} else {
 		
-		rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+		if (strlen(cmd) == 1) {
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase);
+		} else {
+			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
+		}
 	}
 
 	if (rv) {

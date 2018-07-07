@@ -26,6 +26,13 @@
 
 #include "errors.h"
 
+// the different types of cmdline entries for the phases bitmap
+#define CMDL_INIT       1       /* help, verbose */
+#define CMDL_CFG        2       /* config file */
+#define CMDL_PARAM      4       /* normal parameters */
+#define CMDL_CMD        8       /* commands to be executed after params */
+#define CMDL_UI         16      /* UI commands */
+
 typedef cbm_errno_t err_t;
 
 #define	E_OK	0

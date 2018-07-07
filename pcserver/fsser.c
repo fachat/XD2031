@@ -119,29 +119,29 @@ static err_t main_set_verbose(int flag, void *param) {
 }
 
 static cmdline_t main_options[] = {
-        { "verbose",    "v",	1,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+        { "verbose",    "v",	CMDL_INIT,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
                 "Set verbose mode", NULL },
-	{ "config",	"c",	2,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
+	{ "config",	"c",	CMDL_CFG,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
 		"Set name of config file instead of default ~/.xdconfig", NULL },
-	{ "device",	"d",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+	{ "device",	"d",	CMDL_PARAM,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	4,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
+	{ "socket",	"s",	CMDL_PARAM,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	4,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	CMDL_PARAM,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
-        { "wildcards", 	"w",	4,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+        { "wildcards", 	"w",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
 		"Use advanced wildcards", NULL },
-        { "daemon", 	"D",	4,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+        { "daemon", 	"D",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
-        { "assign", 	"A",	8,	PARTYPE_PARAM,  main_assign, NULL, NULL,
+        { "assign", 	"A",	CMDL_CMD,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
 		, NULL },
-        { "xcmd", 	"X",	8,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
+        { "xcmd", 	"X",	CMDL_CMD,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
@@ -174,7 +174,7 @@ static void cfg_load(void) {
 
 			log_debug("Parsing line % 3d: %s", lineno, line);
 
-			err_t rv = cmdline_parse_cfg(line, 1+4+8);
+			err_t rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_PARAM+CMDL_CMD);
 
 			if (rv) {
 				break;
@@ -315,6 +315,8 @@ int main(int argc, char *argv[]) {
 	cmdline_module_init();
 	cmdline_register_mult(main_options, sizeof(main_options)/sizeof(cmdline_t));
 
+	in_ui_init();
+
 	poll_init();
 
 	terminal_init();
@@ -322,7 +324,7 @@ int main(int argc, char *argv[]) {
 
 	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
-	if (cmdline_parse(&p, argv, 1+2)) {
+	if (cmdline_parse(&p, argv, CMDL_INIT+CMDL_CFG)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 	
@@ -357,7 +359,7 @@ int main(int argc, char *argv[]) {
 
 	// parse command line, phase 1, (other options overriding the config file)
 	p = argc;
-	if (cmdline_parse(&p, argv, 4)) {
+	if (cmdline_parse(&p, argv, CMDL_PARAM)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 
@@ -439,7 +441,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		// parse cmdline, phase 2 (assign and xcmd options)
 		p = argc;
-		cmdline_parse(&p, argv, 8);
+		cmdline_parse(&p, argv, CMDL_CMD);
 	}
 
 

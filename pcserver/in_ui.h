@@ -22,6 +22,9 @@
 #ifndef IN_UI_H
 #define IN_UI_H
 
+
+void in_ui_init(void);
+
 // reads stdin and returns true, if the main loop should abort
 int in_ui_loop(void);
 
