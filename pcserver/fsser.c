@@ -123,18 +123,18 @@ static cmdline_t main_options[] = {
                 "Set verbose mode", NULL },
 	{ "config",	"c",	CMDL_CFG,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
 		"Set name of config file instead of default ~/.xdconfig", NULL },
-	{ "device",	"d",	CMDL_PARAM,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+        { "daemon", 	"D",	CMDL_RUN,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+		"Run as daemon, disable cli user interface.", NULL },
+	{ "device",	"d",	CMDL_RUN,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	CMDL_PARAM,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
+	{ "socket",	"s",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	CMDL_PARAM,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
         { "wildcards", 	"w",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
 		"Use advanced wildcards", NULL },
-        { "daemon", 	"D",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
-		"Run as daemon, disable cli user interface.", NULL },
         { "assign", 	"A",	CMDL_CMD,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
@@ -174,7 +174,7 @@ static void cfg_load(void) {
 
 			log_debug("Parsing line % 3d: %s", lineno, line);
 
-			err_t rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_PARAM+CMDL_CMD);
+			err_t rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_RUN+CMDL_PARAM+CMDL_CMD);
 
 			if (rv) {
 				break;
@@ -207,18 +207,23 @@ void end(int rv) {
 
 
 err_t usage(int rv, void* extra) {
-	(void) extra;
+
+	int phase = *(int*)extra;
 
 	printf("Usage: fsser [options] run_directory\n"
 		"\n"
-		"Typical examples are:\n"
+		"Typical option examples are:\n"
 		"   fsser -A0:fs=/home/user/8bitdir .\n"
 		"   fsser -d /dev/ttyUSB0 -A0:=/home/user/8bitdir/somegame.d64 /tmp\n"
+		"Ui entry commands are same options, examples:\n"
+		"   assign 0:fs=/home/user/8bitdir\n"
 	);
 
-	cmdline_usage();
+	cmdline_usage(phase > 0);
 
-	end(rv);
+	if (phase > 0) {
+		end(rv);
+	}
 	return rv;
 }
 
@@ -359,7 +364,7 @@ int main(int argc, char *argv[]) {
 
 	// parse command line, phase 1, (other options overriding the config file)
 	p = argc;
-	if (cmdline_parse(&p, argv, CMDL_PARAM)) {
+	if (cmdline_parse(&p, argv, CMDL_RUN+CMDL_PARAM)) {
 		usage(EXIT_RESPAWN_NEVER, NULL);
 	}
 

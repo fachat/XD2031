@@ -43,28 +43,35 @@ static const char *prg_name = NULL;
 
 extern err_t usage(int flag, void* extra);
 
-void cmdline_usage() {
-	
+void cmdline_usage(int iscmdline) {
+
+	const char *d = iscmdline ? "-" : "";
+	int xphase = iscmdline ? CMDL_INIT + CMDL_CFG + CMDL_RUN + CMDL_PARAM + CMDL_CMD 
+				: CMDL_INIT + CMDL_PARAM + CMDL_CMD + CMDL_UI;
+
 	list_iterator_t *iter = list_iterator(paramlist);
 	cmdline_t *param = NULL;
 	while ( (param = list_iterator_next(iter)) ) {
+		if (!(param->phase & xphase)) {
+			continue;
+		}
 		switch(param->type) {
 		case PARTYPE_FLAG:
 			if (param->name) {
-				printf("  --%s\n", param->name);
+				printf("  %s%s%s\n", d,d,param->name);
 			} 
 			if (param->shortname) {
-				printf("  -%s\n", param->shortname);
+				printf("  %s%s\n", d,param->shortname);
 			}
 			printf("\t%s\n", param->description);
 			break;
 		case PARTYPE_PARAM:
 		case PARTYPE_ENUM:
 			if (param->name) {
-				printf("  --%s=<value>\n", param->name);
+				printf("  %s%s%s=<value>\n", d,d,param->name);
 			} 
 			if (param->shortname) {
-				printf("  -%s<value>\n", param->shortname);
+				printf("  %s%s<value>\n", d,param->shortname);
 			}
 			printf("\t%s\n", param->description);
 			if (param->type == PARTYPE_ENUM) {
@@ -195,14 +202,17 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 	err_t rv = E_OK;
 	*val = NULL;
 
-	do {
+	int xphase = (phase < 0) ? -phase : phase;
+
+ 	do {
 		char *name = mem_alloc_strn(pname, 1);
 		*opt = hash_get(shorts, name);
 		mem_free(name);
 		if (*opt != NULL) {
 			if ((*opt)->type == PARTYPE_FLAG) {
-				if ((*opt)->phase & phase) {
-					rv = (*opt)->setflag(flag, (*opt)->extra_param);
+				if ((*opt)->phase & xphase) {
+					rv = (*opt)->setflag(flag, 
+						(*opt)->extra_param ? (*opt)->extra_param : &phase);
 				}
 				*opt = NULL; // done with this one
 			} else {
@@ -221,27 +231,31 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase) {
 
 	err_t rv = CBM_ERROR_OK;
-
+	
+	void *extra = (opt && opt->extra_param) ? opt->extra_param : &phase;
+	int xphase = (phase < 0) ? -phase : phase;
+ 
 	param_enum_t *values = NULL;
-	if (opt != NULL && opt->phase & phase) {
+	if (opt != NULL && opt->phase & xphase) {
 		switch (opt->type) {
 		case PARTYPE_FLAG:
-			rv = opt->setflag(flag, opt->extra_param);
+			rv = opt->setflag(flag, extra);
 			break;
 		case PARTYPE_PARAM:
 			if (val == NULL) {
-				log_error("Missing parameter for option '%s'\n", opt->name ? opt->name : opt->shortname);
+				log_error("Missing parameter for option '%s'\n", 
+							opt->name ? opt->name : opt->shortname);
 				rv = E_ABORT;
 				break;
 			}
-			rv = opt->setfunc(val, opt->extra_param, -1);
+			rv = opt->setfunc(val, extra, -1);
 			break;
 		case PARTYPE_ENUM:
 			values = opt->values();
 			int j = 0;
 			while (values[j].value) {
 				if (!strcmp(values[j].value, val)) {
-					opt->setfunc(val, opt->extra_param, j);
+					opt->setfunc(val, extra, j);
 					break;
 				}
 				j++;
@@ -345,7 +359,7 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 		} while (isspace(*p));
 
 		if (strlen(cmd) == 1) {
-			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase);
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, -phase);
 		} else {
 			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
 		}
@@ -358,7 +372,7 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 	} else {
 		
 		if (strlen(cmd) == 1) {
-			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase);
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, -phase);
 		} else {
 			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
 		}
@@ -367,7 +381,7 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 	if (rv) {
 		return rv;
 	}
-	return eval_opt(opt, val, flag, phase);
+	return eval_opt(opt, val, flag, -phase);
 }
 
 
