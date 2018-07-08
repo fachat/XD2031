@@ -41,9 +41,41 @@
 #include "list.h"
 #include "cmd.h"
 #include "errors.h"
+#include "cmdline.h"
 
 static int user_interface_enabled = true;
+static int user_interface_aborted = false;
 
+static err_t ui_cmd_quit(int flag, void *param) {
+	(void)flag;
+	(void)param;
+	log_info("Aborted by user request.\n");
+	user_interface_aborted = true;
+        return E_OK;
+}
+
+static err_t ui_cmd_dump(int flag, void *param) {
+       	(void)flag;
+	(void)param;
+ 	// dump memory structures for analysis
+
+        // dump open endpoints, files etc
+        // maybe later compare with dump from mem to find memory leaks
+        provider_dump();
+
+        return E_OK;
+}
+
+static cmdline_t ui_options[] = {
+        { "quit",    "Q",    CMDL_UI,      PARTYPE_FLAG,   NULL, ui_cmd_quit, NULL,
+                "Quit the server", NULL },
+        { "dump",    NULL,   CMDL_UI,      PARTYPE_FLAG,   NULL, ui_cmd_dump, NULL, 
+                "Dump internal memory structures", NULL },
+};
+
+void in_ui_init() {
+        cmdline_register_mult(ui_options, sizeof(ui_options)/sizeof(cmdline_t));
+}
 
 //------------------------------------------------------------------------------------
 // helpers
@@ -88,46 +120,12 @@ int in_ui_loop(void) {
 
 	log_debug("stdin: %s\n", buf);
 
-	// Q / QUIT
-	if((!strcasecmp(buf, "Q")) || (!strcasecmp(buf, "QUIT"))) {
-		log_info("Aborted by user request.\n");
-		return true;
+        err_t rv = cmdline_parse_cfg(buf, CMDL_INIT+CMDL_PARAM+CMDL_CMD+CMDL_UI, 1);
+	if (rv) {
+		log_error("Syntax error: '%s'\n", buf);
 	}
 
-	// Enable *=+ / disable *=- advanced wildcards
-	if ((buf[0] == '*') && (buf[1] == '=')) {
-		if (buf[2] == '+') {
-			advanced_wildcards = true;
-			log_info("Advanced wildcards enabled.\n");
-			return false;
-		}
-		if (buf[2] == '-') {
-			advanced_wildcards = false;
-			log_info("Advanced wildcards disabled.\n");
-			return false;
-		}
-	}
-
-	if (!strcmp(buf, "D")) {
-		// dump memory structures for analysis
-
-		// dump open endpoints, files etc
-		// maybe later compare with dump from mem to find memory leaks
-		provider_dump();
-		return false;
-	}
-
-	if (buf[0] == 'A' || buf[0] == 'a') {
-		// assign from stdin control
-		err = cmd_assign(buf+1, CHARSET_ASCII, 1);
-                if (err != CBM_ERROR_OK) {
-                        log_error("%d Error assigning %s\n", err, buf+1);
-                }
-		return false;
-	}
-
-	log_error("Syntax error: '%s'\n", buf);
-	return false;
+	return user_interface_aborted;
 }
 
 
