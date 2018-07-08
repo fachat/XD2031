@@ -51,7 +51,7 @@ static err_t ui_cmd_quit(int flag, void *param) {
 	(void)param;
 	log_info("Aborted by user request.\n");
 	user_interface_aborted = true;
-        return CBM_ERROR_OK;
+        return E_OK;
 }
 
 static err_t ui_cmd_dump(int flag, void *param) {
@@ -63,7 +63,7 @@ static err_t ui_cmd_dump(int flag, void *param) {
         // maybe later compare with dump from mem to find memory leaks
         provider_dump();
 
-        return CBM_ERROR_OK;
+        return E_OK;
 }
 
 static cmdline_t ui_options[] = {
@@ -120,7 +120,7 @@ int in_ui_loop(void) {
 
 	log_debug("stdin: %s\n", buf);
 
-        err_t rv = cmdline_parse_cfg(buf, CMDL_INIT+CMDL_PARAM+CMDL_CMD+CMDL_UI);
+        err_t rv = cmdline_parse_cfg(buf, CMDL_INIT+CMDL_PARAM+CMDL_CMD+CMDL_UI, 1);
 	if (rv) {
 		log_error("Syntax error: '%s'\n", buf);
 	}

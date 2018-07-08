@@ -151,21 +151,26 @@ static cmdline_t main_options[] = {
 #define	BUFFER_SIZE	8192
 #define	ARGP_SIZE	10
 
-static void cfg_load(void) {
+static err_t cfg_load(void) {
 
 	const char *filename = NULL;
+	err_t rv = E_OK;
 
 	if (cfg_name == NULL) {
 		const char *home = os_get_home_dir();
 		filename = malloc_path(home, ".xdconfig");
 	} else {
 		filename = mem_alloc_str(cfg_name);
+		// default when not found
+		rv = E_ABORT;
 	}
 
 	FILE *fd = fopen(filename, "r");
 	if (fd == NULL) {
 		log_errno("Could not open file '%s'", filename);
 	} else {
+		// file was opened ok
+		rv = E_OK;
 
 		char *line = mem_alloc_c(BUFFER_SIZE, "cfg-file-buffer");
 		int lineno = 0;
@@ -174,7 +179,7 @@ static void cfg_load(void) {
 
 			log_debug("Parsing line % 3d: %s", lineno, line);
 
-			err_t rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_RUN+CMDL_PARAM+CMDL_CMD);
+			rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_RUN+CMDL_PARAM+CMDL_CMD, 0);
 
 			if (rv) {
 				break;
@@ -186,6 +191,11 @@ static void cfg_load(void) {
 		fclose(fd);
 	}
 	mem_free(filename);
+
+	if (rv) {
+		log_error("Error parsing configuration options in %s\n", filename);
+	}
+	return rv;
 }
 
 // --------------------------------------------------------------------------------------
@@ -205,10 +215,7 @@ void end(int rv) {
 	exit(rv);
 }
 
-
-err_t usage(int rv, void* extra) {
-
-	int phase = *(int*)extra;
+void printusage(int isoptions) {
 
 	printf("Usage: fsser [options] run_directory\n"
 		"\n"
@@ -219,11 +226,17 @@ err_t usage(int rv, void* extra) {
 		"   assign 0:fs=/home/user/8bitdir\n"
 	);
 
-	cmdline_usage(phase > 0);
+	cmdline_usage(isoptions);
+}
 
-	if (phase > 0) {
+static err_t mainusage(int rv) {
+
+	printusage(1);
+
+	if (rv) {
 		end(rv);
 	}
+
 	return rv;
 }
 
@@ -330,7 +343,7 @@ int main(int argc, char *argv[]) {
 	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
 	if (cmdline_parse(&p, argv, CMDL_INIT+CMDL_CFG)) {
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	}
 	
 	// set working directory before we actually parse any relevant option for it (like assign)
@@ -340,10 +353,10 @@ int main(int argc, char *argv[]) {
 		dir = ".";
 	} else if (p == argc) {
 		log_error("Missing run_directory\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	} else if (argc > p+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	} else {
 		dir = argv[p];
 	}
@@ -360,12 +373,14 @@ int main(int argc, char *argv[]) {
 	cmd_init();
 
 	// load config file
-	cfg_load();
+	if (cfg_load()) {
+	  	end(EXIT_RESPAWN_NEVER);
+	}
 
 	// parse command line, phase 1, (other options overriding the config file)
 	p = argc;
 	if (cmdline_parse(&p, argv, CMDL_RUN+CMDL_PARAM)) {
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	}
 
 	if (socket_name != NULL && device_name != NULL) {

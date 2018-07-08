@@ -30,6 +30,7 @@
 #include "cmdline.h"
 #include "err.h"
 #include "mem.h"
+#include "os.h"
 
 
 // hash from param name to cmdline_t sruct for quick find
@@ -41,12 +42,23 @@ static list_t *paramlist = NULL;
 
 static const char *prg_name = NULL;
 
-extern err_t usage(int flag, void* extra);
+extern void printusage(int isoptions);
 
-void cmdline_usage(int iscmdline) {
 
-	const char *d = iscmdline ? "-" : "";
-	int xphase = iscmdline ? CMDL_INIT + CMDL_CFG + CMDL_RUN + CMDL_PARAM + CMDL_CMD 
+static err_t cmdusage(int flag, void* extra) {
+	if ((*(int*)extra) > 0) {
+		// command line parsing; E_ABORT results in extra printusage(1) from main()
+		return E_ABORT;
+	} else {
+		printusage(0);
+	}
+	return E_OK;
+}
+
+void cmdline_usage(int isoptions) {
+
+	const char *d = isoptions ? "-" : "";
+	int xphase = isoptions ? CMDL_INIT + CMDL_CFG + CMDL_RUN + CMDL_PARAM + CMDL_CMD 
 				: CMDL_INIT + CMDL_PARAM + CMDL_CMD + CMDL_UI;
 
 	list_iterator_t *iter = list_iterator(paramlist);
@@ -89,7 +101,7 @@ void cmdline_usage(int iscmdline) {
 }
 
 static const cmdline_t help[] = {
-	{ "help", "?", CMDL_INIT, PARTYPE_FLAG, NULL, usage, NULL, "Show this help", NULL },
+	{ "help", "?", CMDL_INIT, PARTYPE_FLAG, NULL, cmdusage, NULL, "Show this help", NULL },
 };
 
 static type_t param_memtype = {
@@ -198,11 +210,11 @@ static err_t cmdline_parse_long(char *name, cmdline_t **opt, char **val, int *fl
  * parse short cmdline params; call flags in case multiple flag options
  * return param option in case of last one is option
  */
-static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int flag, int phase) {
+static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int flag, int phase, int endonerr) {
 	err_t rv = E_OK;
 	*val = NULL;
-
-	int xphase = (phase < 0) ? -phase : phase;
+	
+	int xphase = endonerr ? -phase : phase;
 
  	do {
 		char *name = mem_alloc_strn(pname, 1);
@@ -210,9 +222,9 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 		mem_free(name);
 		if (*opt != NULL) {
 			if ((*opt)->type == PARTYPE_FLAG) {
-				if ((*opt)->phase & xphase) {
+				if ((*opt)->phase & phase) {
 					rv = (*opt)->setflag(flag, 
-						(*opt)->extra_param ? (*opt)->extra_param : &phase);
+						(*opt)->extra_param ? (*opt)->extra_param : &xphase);
 				}
 				*opt = NULL; // done with this one
 			} else {
@@ -228,15 +240,15 @@ static err_t cmdline_parse_short(char *pname, cmdline_t **opt, char **val, int f
 	return rv;
 }
 
-static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase) {
+static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase, int endonerr) {
 
 	err_t rv = CBM_ERROR_OK;
 	
-	void *extra = (opt && opt->extra_param) ? opt->extra_param : &phase;
-	int xphase = (phase < 0) ? -phase : phase;
+	int xphase = endonerr ? -phase : phase;
+	void *extra = (opt && opt->extra_param) ? opt->extra_param : xphase;
  
 	param_enum_t *values = NULL;
-	if (opt != NULL && opt->phase & xphase) {
+	if (opt != NULL && opt->phase & phase) {
 		switch (opt->type) {
 		case PARTYPE_FLAG:
 			rv = opt->setflag(flag, extra);
@@ -268,6 +280,9 @@ static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase) {
 			break;
 		}
 	}
+	if (!endonerr) {
+		rv = E_OK;
+	}
 	return rv;
 }
 
@@ -286,9 +301,11 @@ err_t cmdline_parse(int *argc, char *argv[], int phase) {
 			if (argv[i][1] == '-') {
 				rv = cmdline_parse_long(argv[i]+2, &opt, &val, &flag);
 			} else {
-				rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase);
+				rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase, 0);
 			}
-			if ((opt != NULL) && ((val == NULL) || (val != NULL && *val == 0))) {
+			if ((opt != NULL) 
+					&& (opt->type == PARTYPE_PARAM) 
+					&& ((val == NULL) || (val != NULL && *val == 0))) {
 				// option needed, but value not set
 				if (i+1 < *argc && argv[i+1][0] != '-') {
 					val = argv[i+1];
@@ -300,13 +317,15 @@ err_t cmdline_parse(int *argc, char *argv[], int phase) {
 			}
 		} else if (argv[i][0] == '+') {
 			flag = 0;
-			rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase);
+			rv = cmdline_parse_short(argv[i]+1, &opt, &val, flag, phase, 0);
                 } else {
 			// not starting with '-' or '+'
 			break;
 		}
 
-		rv = eval_opt(opt, val, flag, phase);
+		if (opt && rv == E_OK) {
+			rv = eval_opt(opt, val, flag, phase, 1);
+		}
 
 		i++;
         }   
@@ -316,7 +335,7 @@ err_t cmdline_parse(int *argc, char *argv[], int phase) {
 }
 
 
-err_t cmdline_parse_cfg(char *line, int phase) {
+err_t cmdline_parse_cfg(char *line, int phase, int printhelp) {
 
 	err_t rv = E_OK;
 	char *p = NULL;
@@ -359,7 +378,7 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 		} while (isspace(*p));
 
 		if (strlen(cmd) == 1) {
-			rv = cmdline_parse_short(cmd, &opt, &val, 1, -phase);
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase, printhelp);
 		} else {
 			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
 		}
@@ -372,16 +391,16 @@ err_t cmdline_parse_cfg(char *line, int phase) {
 	} else {
 		
 		if (strlen(cmd) == 1) {
-			rv = cmdline_parse_short(cmd, &opt, &val, 1, -phase);
+			rv = cmdline_parse_short(cmd, &opt, &val, 1, phase, printhelp);
 		} else {
 			rv = cmdline_parse_long(cmd, &opt, &val, &flag);
 		}
 	}
 
-	if (rv) {
-		return rv;
+	if (opt && rv == E_OK) {
+		rv = eval_opt(opt, val, flag, phase, printhelp);
 	}
-	return eval_opt(opt, val, flag, -phase);
+	return rv;
 }
 
 
