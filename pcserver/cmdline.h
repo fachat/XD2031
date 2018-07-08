@@ -26,6 +26,14 @@
 
 #include "errors.h"
 
+// the different types of cmdline entries for the phases bitmap
+#define CMDL_INIT       1       /* help, verbose */
+#define CMDL_CFG        2       /* config file */
+#define CMDL_RUN	4       /* normal parameters */
+#define CMDL_PARAM      8       /* normal parameters */
+#define CMDL_CMD        16      /* commands to be executed after params */
+#define CMDL_UI         32      /* UI commands */
+
 typedef cbm_errno_t err_t;
 
 #define	E_OK	0
@@ -38,7 +46,7 @@ void cmdline_module_free();
 
 // parse the options
 err_t cmdline_parse(int *argc, char *argv[], int phase);
-err_t cmdline_parse_cfg(char *arg, int phase);
+err_t cmdline_parse_cfg(char *arg, int phase, int endonerr);
 
 typedef enum {
 	// no parameter, sets a bool when present with/without "no-" prefix
@@ -83,7 +91,7 @@ typedef struct {
 	param_enum_t*	(*values)();
 } cmdline_t;
 
-void cmdline_usage();
+void cmdline_usage(int isoptions);
 
 // template method where extra_param is the pointer to an int variable to set
 err_t cmdline_set_flag(int flag, void *extra_param);

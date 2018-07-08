@@ -119,29 +119,29 @@ static err_t main_set_verbose(int flag, void *param) {
 }
 
 static cmdline_t main_options[] = {
-        { "verbose",    "v",	1,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
+        { "verbose",    "v",	CMDL_INIT,	PARTYPE_FLAG,   NULL, main_set_verbose, NULL,
                 "Set verbose mode", NULL },
-	{ "config",	"c",	2,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
+	{ "config",	"c",	CMDL_CFG,	PARTYPE_PARAM,	cmdline_set_param, NULL, &cfg_name,
 		"Set name of config file instead of default ~/.xdconfig", NULL },
-	{ "device",	"d",	4,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
+        { "daemon", 	"D",	CMDL_RUN,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
+		"Run as daemon, disable cli user interface.", NULL },
+	{ "device",	"d",	CMDL_RUN,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
 		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
 #ifndef _WIN32
-	{ "socket",	"s",	4,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
+	{ "socket",	"s",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
-	{ "tools",	"T",	4,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
+	{ "tools",	"T",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
-        { "wildcards", 	"w",	4,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+        { "wildcards", 	"w",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
 		"Use advanced wildcards", NULL },
-        { "daemon", 	"D",	4,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
-		"Run as daemon, disable cli user interface.", NULL },
-        { "assign", 	"A",	8,	PARTYPE_PARAM,  main_assign, NULL, NULL,
+        { "assign", 	"A",	CMDL_CMD,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
 		, NULL },
-        { "xcmd", 	"X",	8,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
+        { "xcmd", 	"X",	CMDL_CMD,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
@@ -151,21 +151,26 @@ static cmdline_t main_options[] = {
 #define	BUFFER_SIZE	8192
 #define	ARGP_SIZE	10
 
-static void cfg_load(void) {
+static err_t cfg_load(void) {
 
 	const char *filename = NULL;
+	err_t rv = E_OK;
 
 	if (cfg_name == NULL) {
 		const char *home = os_get_home_dir();
 		filename = malloc_path(home, ".xdconfig");
 	} else {
 		filename = mem_alloc_str(cfg_name);
+		// default when not found
+		rv = E_ABORT;
 	}
 
 	FILE *fd = fopen(filename, "r");
 	if (fd == NULL) {
 		log_errno("Could not open file '%s'", filename);
 	} else {
+		// file was opened ok
+		rv = E_OK;
 
 		char *line = mem_alloc_c(BUFFER_SIZE, "cfg-file-buffer");
 		int lineno = 0;
@@ -174,7 +179,7 @@ static void cfg_load(void) {
 
 			log_debug("Parsing line % 3d: %s", lineno, line);
 
-			err_t rv = cmdline_parse_cfg(line, 1+4+8);
+			rv = cmdline_parse_cfg(line, CMDL_INIT+CMDL_RUN+CMDL_PARAM+CMDL_CMD, 0);
 
 			if (rv) {
 				break;
@@ -186,6 +191,11 @@ static void cfg_load(void) {
 		fclose(fd);
 	}
 	mem_free(filename);
+
+	if (rv) {
+		log_error("Error parsing configuration options in %s\n", filename);
+	}
+	return rv;
 }
 
 // --------------------------------------------------------------------------------------
@@ -205,20 +215,28 @@ void end(int rv) {
 	exit(rv);
 }
 
-
-err_t usage(int rv, void* extra) {
-	(void) extra;
+void printusage(int isoptions) {
 
 	printf("Usage: fsser [options] run_directory\n"
 		"\n"
-		"Typical examples are:\n"
+		"Typical option examples are:\n"
 		"   fsser -A0:fs=/home/user/8bitdir .\n"
 		"   fsser -d /dev/ttyUSB0 -A0:=/home/user/8bitdir/somegame.d64 /tmp\n"
+		"Ui entry commands are same options, examples:\n"
+		"   assign 0:fs=/home/user/8bitdir\n"
 	);
 
-	cmdline_usage();
+	cmdline_usage(isoptions);
+}
 
-	end(rv);
+static err_t mainusage(int rv) {
+
+	printusage(1);
+
+	if (rv) {
+		end(rv);
+	}
+
 	return rv;
 }
 
@@ -315,6 +333,8 @@ int main(int argc, char *argv[]) {
 	cmdline_module_init();
 	cmdline_register_mult(main_options, sizeof(main_options)/sizeof(cmdline_t));
 
+	in_ui_init();
+
 	poll_init();
 
 	terminal_init();
@@ -322,8 +342,8 @@ int main(int argc, char *argv[]) {
 
 	// parse command line, phase 0 (verbose, cfg file)
 	int p = argc;
-	if (cmdline_parse(&p, argv, 1+2)) {
-		usage(EXIT_RESPAWN_NEVER, NULL);
+	if (cmdline_parse(&p, argv, CMDL_INIT+CMDL_CFG)) {
+		mainusage(EXIT_RESPAWN_NEVER);
 	}
 	
 	// set working directory before we actually parse any relevant option for it (like assign)
@@ -333,10 +353,10 @@ int main(int argc, char *argv[]) {
 		dir = ".";
 	} else if (p == argc) {
 		log_error("Missing run_directory\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	} else if (argc > p+1) {
 		log_error("Multiple run_directories or missing option sign '-'\n");
-		usage(EXIT_RESPAWN_NEVER, NULL);
+		mainusage(EXIT_RESPAWN_NEVER);
 	} else {
 		dir = argv[p];
 	}
@@ -353,12 +373,14 @@ int main(int argc, char *argv[]) {
 	cmd_init();
 
 	// load config file
-	cfg_load();
+	if (cfg_load()) {
+	  	end(EXIT_RESPAWN_NEVER);
+	}
 
 	// parse command line, phase 1, (other options overriding the config file)
 	p = argc;
-	if (cmdline_parse(&p, argv, 4)) {
-		usage(EXIT_RESPAWN_NEVER, NULL);
+	if (cmdline_parse(&p, argv, CMDL_RUN+CMDL_PARAM)) {
+		mainusage(EXIT_RESPAWN_NEVER);
 	}
 
 	if (socket_name != NULL && device_name != NULL) {
@@ -439,7 +461,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		// parse cmdline, phase 2 (assign and xcmd options)
 		p = argc;
-		cmdline_parse(&p, argv, 8);
+		cmdline_parse(&p, argv, CMDL_CMD);
 	}
 
 
