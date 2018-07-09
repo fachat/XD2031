@@ -69,6 +69,46 @@ int cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t
 	return 0;
 }
 
+// comparator functions
+int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
+	if (in1len != in2len) {
+		return in1len - in2len;
+	}
+	return strncmp(in1, in2, in1len);
+}
+
+static int ccomp_asciipetscii(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
+	uint8_t i = 0;
+	if (in1len != in2len) {
+		return in1len - in2len;
+	}
+	while (i < in1len) {
+		uint8_t c1 = ascii_to_petscii(*(in1++));
+		uint8_t c2 = *(in2++);
+		i++;
+		if (c1 != c2) {
+			return i;
+		}
+	}
+	return 0;
+}
+
+static int ccomp_petsciiascii(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
+	uint8_t i = 0;
+	if (in1len != in2len) {
+		return in1len - in2len;
+	}
+	while (i < in1len) {
+		uint8_t c1 = *(in1++);
+		uint8_t c2 = ascii_to_petscii(*(in2++));
+		i++;
+		if (c1 != c2) {
+			return i;
+		}
+	}
+	return 0;
+}
+
 static int cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_ascii2petscii(%s)\n", in);
 	uint8_t i = 0;
@@ -91,11 +131,14 @@ static int cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, c
 
 // this table is ordered such that the outer index defines where to convert FROM,
 // and the inner index defines where to convert TO 
-static charconv_t convtable[NUM_OF_CHARSETS][NUM_OF_CHARSETS] = {
+static struct {
+	charconv_t conv;
+	charcomp_t comp;
+} convtable[NUM_OF_CHARSETS][NUM_OF_CHARSETS] = {
 	{ 	// from ASCII
-		cconv_identity,		cconv_ascii2petscii
+		{ cconv_identity, ccomp_samecset }, { cconv_ascii2petscii, ccomp_asciipetscii }
 	}, {	// from PETSCII
-		cconv_petscii2ascii,	cconv_identity
+		{ cconv_petscii2ascii, ccomp_petsciiascii }, { cconv_identity, ccomp_samecset }
 	}
 };
 
@@ -108,7 +151,19 @@ charconv_t cconv_converter(charset_t from, charset_t to) {
 	if (to < 0 || to >= NUM_OF_CHARSETS) {
 		return cconv_identity;
 	}
-	return convtable[from][to];
+	return convtable[from][to].conv;
+}
+
+// get a comparator between charsets
+charcomp_t cconv_comparator(charset_t from, charset_t to) {
+	//printf("Getting converter from %d to %d\n", from, to);
+	if (from < 0 || from >= NUM_OF_CHARSETS) {
+		return cconv_identity;
+	}
+	if (to < 0 || to >= NUM_OF_CHARSETS) {
+		return cconv_identity;
+	}
+	return convtable[from][to].comp;
 }
 
 

@@ -50,13 +50,24 @@ charset_t cconv_getcharset(const char *charsetname);
 typedef int (*charconv_t) (const char *in, const uint8_t inlen, char *out,
 			    const uint8_t outlen);
 
+// compare in1 and in2 and return 0 on equal.
+typedef int (*charcomp_t) (const char *in1, const uint8_t in1len, char *in2,
+			    const uint8_t in2len);
+
 // fallback
 //charconv_t cconv_identity;
 int cconv_identity(const char *in, const uint8_t inlen, char *out,
 		    const uint8_t outlen);
 
+//charcomp_t ccomp_identity;
+int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2,
+		    const uint8_t in2len);
+
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
+
+// get a comparator between two charsets
+charcomp_t cconv_comparator(charset_t from, charset_t to);
 
 // get a const pointer to the string name of the character set
 const char *cconv_charsetname(charset_t cnum);

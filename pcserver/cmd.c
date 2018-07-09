@@ -234,7 +234,14 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 		*readflag = 0;	// default just in case
 		if (fp->openmode == FS_OPEN_DR) {
 			// read directory
-			rv = fp->handler->direntry2(fp, &direntry, 0, readflag);
+			do {
+				rv = fp->handler->direntry2(fp, &direntry, 0, readflag);
+			} while (
+				rv == CBM_ERROR_OK
+				&& direntry->name
+				&& cconv_comparator(outcset, direntry->cset)
+						(fp->pattern, strlen(fp->pattern), direntry->name, strlen(direntry->name))
+			);
 			if (!rv) {
 				rv = dir_fill_entry_from_direntry(outbuf, direntry, MAX_BUFFER_SIZE-FSP_DATA);
 			}
