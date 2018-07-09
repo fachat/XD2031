@@ -195,6 +195,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 			rv = CBM_ERROR_OPEN_REL;
 		}
 		if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+			fp->openmode = cmd;
 			channel_set(tfd, fp);
 		} else {
 			if (fp != NULL) {
@@ -229,17 +230,26 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 
 	file_t *fp = channel_to_file(tfd);
 	if (fp != NULL) {
-		    *readflag = 0;	// default just in case
-		    rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
-		    // TODO: handle error (rv<0)
-		    if (rv < 0) {
-				// an error is sent as REPLY with error code
-				rv = -rv;
-				log_rv(rv);
-		    } else {
-				*outlen = rv;
-				rv = CBM_ERROR_OK;
-		    }
+		direntry_t *direntry;
+		*readflag = 0;	// default just in case
+		if (fp->openmode == FS_OPEN_DR) {
+			// read directory
+			rv = fp->handler->direntry2(fp, &direntry, 0, readflag);
+			if (!rv) {
+				rv = dir_fill_entry_from_direntry(outbuf, direntry, MAX_BUFFER_SIZE-FSP_DATA);
+			}
+		} else {
+		    	rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
+		}
+		// TODO: handle error (rv<0)
+		if (rv < 0) {
+			// an error is sent as REPLY with error code
+			rv = -rv;
+			log_rv(rv);
+		} else {
+			*outlen = rv;
+			rv = CBM_ERROR_OK;
+		}
 	}
 	return rv;
 }
@@ -319,6 +329,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
 		rv = handler_resolve_dir(ep, &fp, name, cset, NULL, options);
 		if (rv == 0) {
+			fp->openmode = FS_OPEN_DR;
 			channel_set(tfd, fp);
 		} else {
 			log_rv(rv);

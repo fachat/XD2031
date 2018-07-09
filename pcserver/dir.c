@@ -221,6 +221,58 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 
 
 /**
+ * fill in the buffer with a directory entry from a direntry_t struct
+ */
+int dir_fill_entry_from_direntry(char *dest, direntry_t *de, int maxsize) {
+	struct tm *tp;
+
+	ssize_t size = de->size;
+	// TODO: overflow check if ssize_t has more than 32 bits
+        dest[FS_DIR_LEN] = size & 255;
+        dest[FS_DIR_LEN+1] = (size >> 8) & 255;
+        dest[FS_DIR_LEN+2] = (size >> 16) & 255;
+        dest[FS_DIR_LEN+3] = (size >> 24) & 255;
+
+        tp = localtime(&(de->moddate));
+        dest[FS_DIR_YEAR]  = tp->tm_year;
+        dest[FS_DIR_MONTH] = tp->tm_mon;
+        dest[FS_DIR_DAY]   = tp->tm_mday;
+        dest[FS_DIR_HOUR]  = tp->tm_hour;
+        dest[FS_DIR_MIN]   = tp->tm_min;
+        dest[FS_DIR_SEC]   = tp->tm_sec;
+
+//	if (file->writable == 0) {
+//		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
+//	}
+	// test
+	//if (sbuf.st_size & 1) {
+	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
+	//}
+
+	log_debug("dir_fill_entry: type=%02x, attr=%02x\n", de->type, de->attr);
+
+        dest[FS_DIR_MODE] = de->mode;
+        dest[FS_DIR_ATTR] = de->attr | de->type;
+
+	// file name
+       	int l = 0;
+	if (de->name == NULL) {
+		// blocks free
+		dest[FS_DIR_NAME] = 0;
+	} else {
+        	l = strlen(de->name);
+        	strncpy(dest+FS_DIR_NAME, de->name,
+                	  min(l+1, maxsize-1-FS_DIR_NAME));
+		// make sure we're still null-terminated
+		dest[maxsize-1] = 0;
+	}
+	// character set conversion
+      	l = strlen(dest+FS_DIR_NAME);
+
+	return FS_DIR_NAME + l + 1;
+}
+
+/**
  * fill in the buffer with a directory entry from a file_t struct
  */
 int dir_fill_entry_from_file(char *dest, file_t *file, int maxsize) {

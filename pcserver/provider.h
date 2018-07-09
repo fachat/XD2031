@@ -133,6 +133,11 @@ struct _file {
 	// for traversing a directory
 	int dirstate;		// 0 = first line, 1 = file matches, 2 = end line
 	const char *pattern;	// pattern for dir matching
+	uint8_t writable;	// is file writable?
+	uint8_t seekable;	// is file seekable?    
+	uint8_t openmode;	// FS_OPEN_*
+
+	// TODO: replace with inline direntry
 	// file/dir attributes
 	size_t filesize;	// size of file
 	time_t lastmod;		// last modification timestamp
@@ -141,8 +146,6 @@ struct _file {
 	uint8_t mode;		// same as FS_DIR_MODE
 	uint8_t type;		// same as FS_DIR_TYPE
 	uint8_t attr;		// same as FS_DIR_ATTR
-	uint8_t writable;	// is file writable?
-	uint8_t seekable;	// is file seekable?    
 };
 
 // note: go from FIRST to ENTRIES to END by +1
@@ -156,11 +159,12 @@ struct _file {
 struct _direntry {
 	uint32_t	size;
 	time_t		moddate;
+	uint16_t 	recordlen;	// record length (if REL file)
 	uint8_t		mode;	// mode of dir entry - FS_DIR_MOD_*, file/disk name/free bytes/subdir
 	uint8_t		attr;	// file attributes - FS_DIR_ATTR_*, splat, write prot, transient, estimate
 	uint8_t		type;	// file type - FS_DIR_TYPE_*, DEL / SEQ / PRG / USR / REL
-	uint8_t		*name;	// pointer to file name
 	charset_t	cset;	// charset of name
+	uint8_t		*name;	// pointer to file name
 };
 
 // file operations
@@ -214,7 +218,7 @@ struct _handler {
 
 	// scan a directory one by one entry
 	// when isresolve is set, do not read headers or blocks free
-	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isresolve);
+	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isresolve, int *readflag);
 
 	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
 			 int *readflag, const char **outpattern, charset_t outcset);
