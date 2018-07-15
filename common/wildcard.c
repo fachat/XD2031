@@ -197,7 +197,7 @@ int8_t match_pattern(const char **pattern, unic_t (*pconv)(const char **p),
 				// next in loop
 				continue;
 			}
-			match = false;
+			match = true;
 			// now tomatch and pattern point after wildcard area
 		}
 		if (0 == **pattern) {
@@ -214,7 +214,7 @@ int8_t match_pattern(const char **pattern, unic_t (*pconv)(const char **p),
 			continue;
 		}
 		if (pc == '*') {
-			match = true;
+			match = false;
 			if (advanced) {
 				next = pconv(pattern);
 			}
