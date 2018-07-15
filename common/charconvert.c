@@ -58,6 +58,7 @@ charset_t cconv_getcharset(const char *charsetname) {
 }
 
 
+// ------------------------------------------------------------------------------
 // conversion functions
 int cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
 	//printf("cconv_identity(%s)\n", in);
@@ -69,7 +70,30 @@ int cconv_identity(const char *in, const uint8_t inlen, char *out, const uint8_t
 	return 0;
 }
 
+static int cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
+	//printf("cconv_ascii2petscii(%s)\n", in);
+	uint8_t i = 0;
+	while (i < inlen && i < outlen) {
+		*(out++) = ascii_to_petscii(*(in++));
+		i++;
+	}
+	return i;
+}
+
+static int cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
+	//printf("cconv_petscii2ascii(%s)\n", in);
+	uint8_t i = 0;
+	while (i < inlen && i < outlen) {
+		*(out++) = petscii_to_ascii(*(in++));
+		i++;
+	}
+	return i;
+}
+
+#if 0
+// ------------------------------------------------------------------------------
 // comparator functions
+
 int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
 	if (in1len != in2len) {
 		return in1len - in2len;
@@ -108,37 +132,36 @@ static int ccomp_petsciiascii(const char *in1, const uint8_t in1len, char *in2, 
 	}
 	return 0;
 }
+#endif
 
-static int cconv_ascii2petscii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
-	//printf("cconv_ascii2petscii(%s)\n", in);
-	uint8_t i = 0;
-	while (i < inlen && i < outlen) {
-		*(out++) = ascii_to_petscii(*(in++));
-		i++;
-	}
-	return i;
+// ------------------------------------------------------------------------------
+// match functions
+
+int cmatch_identity(const char **pattern, const char **tomatch, const uint8_t advanced) {
+	return match_pattern(pattern, isolatin1_to_unic, tomatch, isolatin1_to_unic, advanced);
 }
 
-static int cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, const uint8_t outlen) {
-	//printf("cconv_petscii2ascii(%s)\n", in);
-	uint8_t i = 0;
-	while (i < inlen && i < outlen) {
-		*(out++) = petscii_to_ascii(*(in++));
-		i++;
-	}
-	return i;
+int cmatch_asciipetscii(const char **pattern, const char **tomatch, const uint8_t advanced) {
+	return match_pattern(pattern, isolatin1_to_unic, tomatch, petscii_to_unic, advanced);
 }
+
+int cmatch_petsciiascii(const char **pattern, const char **tomatch, const uint8_t advanced) {
+	return match_pattern(pattern, petscii_to_unic, tomatch, isolatin1_to_unic, advanced);
+}
+
+// ------------------------------------------------------------------------------
+
 
 // this table is ordered such that the outer index defines where to convert FROM,
 // and the inner index defines where to convert TO 
 static struct {
 	charconv_t conv;
-	charcomp_t comp;
+	charmatch_t match;
 } convtable[NUM_OF_CHARSETS][NUM_OF_CHARSETS] = {
 	{ 	// from ASCII
-		{ cconv_identity, ccomp_samecset }, { cconv_ascii2petscii, ccomp_asciipetscii }
+		{ cconv_identity, cmatch_identity }, { cconv_ascii2petscii, cmatch_asciipetscii }
 	}, {	// from PETSCII
-		{ cconv_petscii2ascii, ccomp_petsciiascii }, { cconv_identity, ccomp_samecset }
+		{ cconv_petscii2ascii, cmatch_petsciiascii }, { cconv_identity, cmatch_identity }
 	}
 };
 
@@ -154,6 +177,7 @@ charconv_t cconv_converter(charset_t from, charset_t to) {
 	return convtable[from][to].conv;
 }
 
+#if 0
 // get a comparator between charsets
 charcomp_t cconv_comparator(charset_t from, charset_t to) {
 	//printf("Getting converter from %d to %d\n", from, to);
@@ -164,6 +188,19 @@ charcomp_t cconv_comparator(charset_t from, charset_t to) {
 		return cconv_identity;
 	}
 	return convtable[from][to].comp;
+}
+#endif
+
+// get a comparator between charsets
+charmatch_t cconv_matcher(charset_t from, charset_t to) {
+	//printf("Getting converter from %d to %d\n", from, to);
+	if (from < 0 || from >= NUM_OF_CHARSETS) {
+		return cmatch_identity;
+	}
+	if (to < 0 || to >= NUM_OF_CHARSETS) {
+		return cmatch_identity;
+	}
+	return convtable[from][to].match;
 }
 
 

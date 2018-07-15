@@ -43,4 +43,16 @@ int8_t compare_pattern(const char *name, const char *pattern,
 int8_t compare_dirpattern(const char *name, const char *pattern,
 			  const char **outpattern);
 
+/**
+ * compares the given name to the given pattern
+ * and returns true if it matches.
+ * Both names are null-terminated, but if the name is finished, 
+ * and the pattern ends with a character given in the brkchars string, the name still matches.
+ * The inout pointers to pattern and name are moved behind the position
+ * where there is no match, or to the end.
+ */
+int8_t match_pattern(const char **pattern, unic_t (*pconv)(const char **p), 
+			const char **tomatch, unic_t (*mconv)(const char **p),
+			bool advanced);
+
 #endif

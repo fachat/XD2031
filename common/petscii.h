@@ -63,6 +63,7 @@ static inline uint8_t ascii_to_petscii(uint8_t v)
 	return v;
 }
 
+
 /**
  * string ASCII --> PETSCII
  */

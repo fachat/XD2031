@@ -29,6 +29,28 @@
 
 #include <inttypes.h>
 
+#include "petscii.h"
+
+typedef uint16_t unic_t;
+
+/** 
+ * to unicode
+ */
+static inline unic_t petscii_to_unic(const char **ptr) {
+        unic_t c = petscii_to_ascii(**ptr);
+        (*ptr)++;       // petscii is single char
+        return c;
+}
+
+/** 
+ * to unicode
+ */
+static inline unic_t isolatin1_to_unic(const char **ptr) {
+        unic_t c = **ptr;
+        (*ptr)++;       // iso-8859-1 is single char
+        return c;
+}
+
 // charset number is defined by supported charset table, -1 is unsupported
 typedef signed char charset_t;
 
@@ -54,6 +76,11 @@ typedef int (*charconv_t) (const char *in, const uint8_t inlen, char *out,
 typedef int (*charcomp_t) (const char *in1, const uint8_t in1len, char *in2,
 			    const uint8_t in2len);
 
+// compare in1 and in2 and return 0 on equal.
+typedef int (*charmatch_t) (const char **pattern, const char **tomatch,
+			    uint8_t advanced);
+
+#if 0
 // fallback
 //charconv_t cconv_identity;
 int cconv_identity(const char *in, const uint8_t inlen, char *out,
@@ -62,12 +89,16 @@ int cconv_identity(const char *in, const uint8_t inlen, char *out,
 //charcomp_t ccomp_identity;
 int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2,
 		    const uint8_t in2len);
+#endif
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
 
 // get a comparator between two charsets
 charcomp_t cconv_comparator(charset_t from, charset_t to);
+
+// get a matcher between two charsets
+charmatch_t cconv_matcher(charset_t pattern, charset_t tomatch);
 
 // get a const pointer to the string name of the character set
 const char *cconv_charsetname(charset_t cnum);
