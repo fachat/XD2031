@@ -332,6 +332,7 @@ static void provider_free_ep(registry_t *reg, void *entry) {
 }
 
 static void provider_free_entry(registry_t *reg, void *entry) {
+	(void)reg;
 	((providers_t*)entry)->provider->free();
 	mem_free(entry);
 }

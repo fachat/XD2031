@@ -93,7 +93,6 @@ void disable_user_interface(void) {
 // reads stdin and returns true, if the main loop should abort
 int in_ui_loop(void) {
 
-	int err;
 	char buf[INBUF_SIZE + 1];
 
 	// are we enabled?
