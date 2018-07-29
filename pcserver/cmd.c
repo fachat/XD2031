@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012,2014 Andre Fachat, Nils Eilers
+    Commodore filesystem server
+    Copyright (C) 2012,2018 Andre Fachat, Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -57,6 +57,8 @@
 #include "serial.h"
 #include "handler.h"
 #include "cmdnames.h"
+#include "provider.h"
+#include "resolver.h"
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
@@ -233,11 +235,12 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 		direntry_t *direntry;
 		*readflag = 0;	// default just in case
 		if (fp->openmode == FS_OPEN_DR) {
+#if 0
 			// read directory
 			const char *pattern = NULL;
 			const char *name = NULL;
 			do {
-				rv = fp->handler->direntry2(fp, &direntry, 0, readflag);
+				resolve_scan(fp, fp->pattern, outcset, &direntry);
 				name = direntry->name;
 				pattern = fp->pattern;
 			} while (
@@ -246,6 +249,9 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 				&& !cconv_matcher(outcset, direntry->cset)
 						(&pattern, &name,false )
 			);
+#endif
+			const char *pattern = fp->pattern;
+			rv = resolve_scan(fp, &pattern, outcset, true, &direntry, readflag);
 			if (!rv) {
 				rv = dir_fill_entry_from_direntry(outbuf, direntry, MAX_BUFFER_SIZE-FSP_DATA);
 			}

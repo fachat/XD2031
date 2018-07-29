@@ -260,8 +260,8 @@ int dir_fill_entry_from_direntry(char *dest, direntry_t *de, int maxsize) {
 		// blocks free
 		dest[FS_DIR_NAME] = 0;
 	} else {
-        	l = strlen(de->name);
-        	strncpy(dest+FS_DIR_NAME, de->name,
+        	l = strlen((const char*)de->name);
+        	strncpy(dest+FS_DIR_NAME, (const char*)de->name,
                 	  min(l+1, maxsize-1-FS_DIR_NAME));
 		// make sure we're still null-terminated
 		dest[maxsize-1] = 0;

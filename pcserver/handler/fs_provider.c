@@ -1105,7 +1105,7 @@ static char *get_path(File *parent, const char *child) {
  *
  * outpattern then points into fp->pattern
  */
-static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve, int *readflag) {
+static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *readflag) {
 	  File *file = (File*) fp;
 
 	  int rv = CBM_ERROR_FAULT;
@@ -1142,7 +1142,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve, int *r
 		}
 	  }
 	  // do we have to send the disk header?
-	  if ((!isresolve) && (fp->dirstate == DIRSTATE_FIRST)) {
+	  if ((isdirscan) && (fp->dirstate == DIRSTATE_FIRST)) {
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
@@ -1155,7 +1155,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve, int *r
 		return rv;
 	  } 
 	  // check if we have to send a file entry
-	  if(isresolve || (fp->dirstate == DIRSTATE_ENTRIES)) {
+	  if(isdirscan || (fp->dirstate == DIRSTATE_ENTRIES)) {
 
 	            // read entry from underlying dir
 		    do {
@@ -1163,7 +1163,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve, int *r
 
 	    	        if (file->de == NULL) {
 				log_debug("Got NULL next dir entry\n");
-				if (isresolve) {
+				if (!isdirscan) {
 					rv = CBM_ERROR_OK;
 				} else {
 					fp->dirstate = DIRSTATE_END;
@@ -1225,12 +1225,12 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isresolve, int *r
 		    } while (1);
 	  }
 	  // end of dir entry - blocks free
-	  if ((!isresolve) && (fp->dirstate == DIRSTATE_END)) {
+	  if (isdirscan && (fp->dirstate == DIRSTATE_END)) {
 
 		    dirent->name = NULL;
 		    // ospath is malloc'd
 		    dirent->mode = FS_DIR_MOD_FRE;
-		    unsigned long long total = os_free_disk_space(file->ospath);
+		    size_t total = os_free_disk_space(file->ospath);
 		    if (total > SSIZE_MAX) {
 			total = SSIZE_MAX;
 		    }

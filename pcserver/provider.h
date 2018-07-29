@@ -217,8 +217,8 @@ struct _handler {
 	// directory handling
 
 	// scan a directory one by one entry
-	// when isresolve is set, do not read headers or blocks free
-	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isresolve, int *readflag);
+	// when isdirscan is set, do not read headers or blocks free
+	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isdirscan, int *readflag);
 
 	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
 			 int *readflag, const char **outpattern, charset_t outcset);
@@ -309,6 +309,11 @@ int provider_register(provider_t * provider);
  * initialize the provider registry
  */
 void provider_init(void);
+
+/*
+ * cleanup the provider registry
+ */
+void provider_free(void);
 
 /*
  * dump the in-memory structures (for analysis / debug)
