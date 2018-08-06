@@ -28,6 +28,7 @@
 #define	CHARCONVERT_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "petscii.h"
 
@@ -50,6 +51,7 @@ static inline unic_t isolatin1_to_unic(const char **ptr) {
         (*ptr)++;       // iso-8859-1 is single char
         return c;
 }
+
 
 // charset number is defined by supported charset table, -1 is unsupported
 typedef signed char charset_t;
@@ -80,17 +82,6 @@ typedef int (*charcomp_t) (const char *in1, const uint8_t in1len, char *in2,
 typedef int (*charmatch_t) (const char **pattern, const char **tomatch,
 			    uint8_t advanced);
 
-#if 0
-// fallback
-//charconv_t cconv_identity;
-int cconv_identity(const char *in, const uint8_t inlen, char *out,
-		    const uint8_t outlen);
-
-//charcomp_t ccomp_identity;
-int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2,
-		    const uint8_t in2len);
-#endif
-
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
 
@@ -102,5 +93,11 @@ charmatch_t cconv_matcher(charset_t pattern, charset_t tomatch);
 
 // get a const pointer to the string name of the character set
 const char *cconv_charsetname(charset_t cnum);
+
+// scan the given pattern until a delimiter character is reached
+// during scan, check whether a character in match is found
+// return the length until the delimiter (patter[l]==delim), zero
+// if not found. Return as negative value when a match is found.
+const char *cconv_scan(const char *pattern, charset_t cset, char delim, const char *match, bool *matched);
 
 #endif

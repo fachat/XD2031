@@ -4039,9 +4039,11 @@ static int di_wrap(file_t * file, file_t ** wrapped)
 
 handler_t di_file_handler = {
 	"di_file_handler",
+	NULL,			// resolve2 - not required
 	NULL,			// resolve - not required
 	di_close,		// close
 	di_open,		// open a file_t
+	NULL,			// open2 a direntry_t
 	handler_parent,		// default parent() impl
 	di_seek,		// seek
 	di_readfile,		// readfile

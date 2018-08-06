@@ -156,7 +156,9 @@ struct _file {
 
 // information about a directory entry
 // basically a typed version of the wireformat dir entry
+// TODO: include file_t *parent
 struct _direntry {
+	file_t		*parent;
 	uint32_t	size;
 	time_t		moddate;
 	uint16_t 	recordlen;	// record length (if REL file)
@@ -179,7 +181,11 @@ struct _direntry {
 
 struct _handler {
 	const char *name;	// handler name, for debugging
-	
+
+	// resolve directory path when searching a file path
+	int (*resolve2) (const char **pattern, charset_t cset, file_t **inoutdir);
+
+	// wrap files like P00 or D64 files 	
 	int (*resolve) (file_t * infile, file_t ** outfile,
 			const char *name, charset_t cset, const char **outname);
 
@@ -190,6 +196,8 @@ struct _handler {
 	int (*close) (file_t * fp, int recurse, char *rvbuf, int *rvlen);
 
 	int (*open) (file_t * fp, openpars_t * pars, int opentype);	// open a file
+
+	int (*open2) (direntry_t * fp, openpars_t * pars, int opentype, file_t **outfp);	// open a file
 
 	// -------------------------
 	// return the real parent dir; e.g. for x00_parent
@@ -287,6 +295,8 @@ int provider_assign(int drive, const char *name, const char *assign_to, charset_
  */
 endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset,
 			    const char **outname, int default_drive);
+
+provider_t *provider_find(const char *pname);
 
 /**
  * change directory for an endpoint

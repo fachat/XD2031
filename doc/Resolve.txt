@@ -307,8 +307,13 @@ API
 ===
 
 General
-	resolve(const char **pattern, file_t **outdir)
+	resolve_endpoint(const char **pattern, endpoint_t **outep)
+		resolve an endpoint from the drive/provider-name part of 
+		a provider-address. 
+
+	resolve_dir(const char **pattern, endpoint_t *ep, file_t **outdir)
 		resolve a directory until the last part of a path/filename
+		in the given endpoint
 
 	resolve_scan(file_t *dir, const char *pattern, direntry_t **outdirentry)
 		Scan a given directory, return a found directory entry

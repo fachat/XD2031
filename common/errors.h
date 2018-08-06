@@ -57,6 +57,7 @@ typedef enum {
 	// new problems
 	CBM_ERROR_SYNTAX_INVAL = 40,	// EINVAL
 	CBM_ERROR_SYNTAX_DIR_SEPARATOR = 41,	// name contains directory separator
+	CBM_ERROR_SYNTAX_WILDCARDS = 42,	// name contains wildcards
 	// REL file errors
 	CBM_ERROR_RECORD_NOT_PRESENT = 50,	// also when REL file rec lengths not match
 	CBM_ERROR_OVERFLOW_IN_RECORD = 51,

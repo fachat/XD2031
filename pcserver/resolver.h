@@ -29,11 +29,29 @@
 #define RESOLVER_H
 
 
+/** 
+ * resolve the endpoint for a given pattern. This is separated from the
+ * file-path resolve, as a found endpoint can be reused in later 
+ * file pattern (e.g. in "C0:foo=bar"), where endpoint drive "0" is reused
+ * for the second file-path "bar" as well.
+ *
+ * ep is not changed if not endpoint is found in the pattern, so it should
+ * be set to either NULL or the endpoint to reuse before the call.
+ * If an endpoint is found, ep is set to it.
+ *
+ * pattern should be set to the beginning of a provider-address as input,
+ * and will be set to the beginning of the file-path on successful return.
+ */
+int resolve_endpoint(const char **pattern, charset_t cset, endpoint_t **ep);
+
 /**
  * resolve a given file-path (pattern) to the final directory (returned in outdir)
  * and the filename rest of the given file-path (returned in pattern)
+ * The rootprov provider is used in case there is no drive number given. This
+ * can be used in commands with multiple patterns, where the drive is only given
+ * in the first name.
  */
-int resolve(const char **pattern, charset_t cset, file_t **outdir);
+int resolve_dir(const char **pattern, charset_t cset, file_t **outdir);
 
 
 /**

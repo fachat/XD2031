@@ -946,6 +946,41 @@ static char *str_concat(const char *str1, const char *str2, const char *str3) {
 	return rv;
 }
 
+/**
+ * return a malloc'd string containing the concatenated contents of the
+ * given strings (if not null)
+ */
+static char *str_concat_os(const char *str1, const char *str2, const char *str3) {
+
+	char *rv = NULL;
+
+	uint16_t len = 0;
+	if (str1 != NULL) {
+		len += strlen(str1);
+	}
+	if (str2 != NULL) {
+		len += strlen(str2);
+	}
+	if (str3 != NULL) {
+		len += strlen(str3);
+	}
+
+	rv = malloc(len + 1);
+
+	rv[0] = 0;
+	if (str1 != NULL) {
+		strcpy(rv, str1);
+	}
+	if (str2 != NULL) {
+		strcat(rv, str2);
+	}
+	if (str3 != NULL) {
+		strcat(rv, str3);
+	}
+	rv[len] = 0;	// just in case
+	return rv;
+}
+
 
 // open a directory read
 static int open_dir(File *file) {
@@ -983,8 +1018,9 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File *
 		log_exitr(CBM_ERROR_NO_PERMISSION);
 		return CBM_ERROR_NO_PERMISSION;
 	}
+	mem_free(fullname);
 
-	File *file = reserve_file(fsep);
+	File *file = reserve_file((fs_endpoint_t*)fsep);
 
 	file->file.pattern = NULL;
 	// convert filename to external charset
@@ -1119,6 +1155,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	  *readflag = READFLAG_DENTRY;
 
 	  direntry_t *dirent = &(file->direntry);
+	  dirent->parent = fp;
 	  *outentry = dirent;
 	
 	  log_debug("ENTER: fs_provider.direntry2 fp=%p, dirstate=%d\n", fp, fp->dirstate);
@@ -1155,7 +1192,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		return rv;
 	  } 
 	  // check if we have to send a file entry
-	  if(isdirscan || (fp->dirstate == DIRSTATE_ENTRIES)) {
+	  if((!isdirscan) || (fp->dirstate == DIRSTATE_ENTRIES)) {
 
 	            // read entry from underlying dir
 		    do {
@@ -1163,11 +1200,13 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 
 	    	        if (file->de == NULL) {
 				log_debug("Got NULL next dir entry\n");
+				dirent->name = NULL;
 				if (!isdirscan) {
 					rv = CBM_ERROR_OK;
 				} else {
 					fp->dirstate = DIRSTATE_END;
 				}
+				rv = CBM_ERROR_FILE_NOT_FOUND;
 				// done with search
 				break;
 			} else {
@@ -1865,6 +1904,8 @@ static int fs_seek(file_t *fp, long position, int flag) {
 	return rv;
 }
 
+
+
 static int fs_open(file_t *fp, openpars_t *pars, int type) {
 
 	cbm_errno_t rv = CBM_ERROR_OK;
@@ -1954,6 +1995,28 @@ static int fs_open(file_t *fp, openpars_t *pars, int type) {
 	return rv;
 }
 
+static File* create_file(direntry_t *dirent) {
+
+	File *parent = (File*) dirent->parent;
+
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+
+	File *newfp = reserve_file((fs_endpoint_t*)parent->file.endpoint);
+	newfp->ospath = newospath;
+
+	return newfp;
+}
+
+static int fs_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **outfile) {
+
+	cbm_errno_t rv = CBM_ERROR_OK;
+
+	File *file = create_file(dirent);
+	*outfile = file;
+
+	return fs_open(file, pars, type);
+}
+
 
 static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset_t cset, openpars_t *pars,
                                 int opentype) {
@@ -1966,13 +2029,11 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset
 
 	if ((rv = os_filename_is_legal(tmpname)) == CBM_ERROR_OK) {
 
-		const char *ospath = str_concat(dir->ospath, dir_separator_string(), tmpname);
+		const char *ospath = str_concat_os(dir->ospath, dir_separator_string(), tmpname);
 		
 		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
-		char *mospath = malloc(strlen(ospath)+1);
-		strcpy(mospath, ospath);
-		retfile->ospath = mospath;
+		retfile->ospath = ospath;
 
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
@@ -2003,6 +2064,74 @@ static int fs_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 		*outlen = 0;
 	}
 	return CBM_ERROR_OK;
+}
+
+// ----------------------------------------------------------------------------------
+
+static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) {
+	
+	cbm_errno_t rv = CBM_ERROR_OK;
+
+	if (*inoutdir == NULL) {
+		return CBM_ERROR_FAULT;
+	}
+	
+	file_t *f = *inoutdir;
+	if (f->handler != &fs_file_handler) {
+		return CBM_ERROR_FAULT;
+	}
+
+	File *fp = (File*) f;
+
+	// we have a File from our fs_provider
+
+	const char *pt = *pattern;
+	bool matched = false;
+	do {
+		log_debug("Scanning pattern '%s'\n", pt);
+	
+		const char *p = cconv_scan(pt, cset, '/', "*?", &matched);
+
+		if (matched || strlen(pt) == 0) {
+			// there are wildcards, so exit and let outer loop resolve it
+			log_debug("-> wildcards detected\n");
+			return CBM_ERROR_SYNTAX_WILDCARDS;
+		}
+
+		if (p == NULL || *p == 0) {
+			// final part of file-path, i.e. the filename
+			log_debug("-> filename detected\n");
+			return CBM_ERROR_OK;
+		}
+
+		const char *tmpname = mem_alloc_strn(pt, (p - pt));
+
+		const char *newospath = str_concat_os(fp->ospath, dir_separator_string(), tmpname);
+
+		log_debug("check path-part '%s' as new os path:'%s'\n", tmpname, newospath);
+
+	  	struct stat sbuf;
+		if(stat(newospath, &sbuf) < 0) {
+			log_errno("Error stat'ing file '%s'\n", newospath);
+			mem_free(tmpname);
+			free(newospath);
+			return CBM_ERROR_DIR_NOT_FOUND;
+		}
+	
+		// create new subdir
+	
+		File *newfp = reserve_file((fs_endpoint_t*)fp->file.endpoint);
+		newfp->ospath = newospath;
+	
+		close_fd(fp, 0);
+	
+		fp = newfp;
+		pt = p;
+
+		*inoutdir = (file_t*) fp;
+		*pattern = pt;
+	} while (true);
+	
 }
 
 // ----------------------------------------------------------------------------------
@@ -2117,9 +2246,11 @@ static size_t fs_realsize(file_t *file) {
 
 handler_t fs_file_handler = {
 	"fs_file_handler",
+	fs_resolve2,		// resolve2
 	NULL,			// resolve
 	fs_close,		// close
 	fs_open,		// open
+	fs_open2,		// open2
 	handler_parent,		// default parent() implementation
 	fs_seek,		// seek
 	readfile,		// readfile

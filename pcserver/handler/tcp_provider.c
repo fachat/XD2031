@@ -639,9 +639,11 @@ static void tnp_dump(int indent) {
 
 static handler_t tcp_file_handler = {
         "tcp_file_handler",
+        NULL,                   // resolve2
         NULL,                   // resolve
         tn_close,               // close
         tn_open,                // open
+        NULL,                	// open2
         handler_parent,         // default parent() implementation
         NULL,			// fs_seek,                // seek
         read_file,               // readfile

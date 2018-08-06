@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Commodore filesystem server
+    Copyright (C) 2012,2018 Andre Fachat
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -34,8 +34,10 @@
 #include "wireformat.h"
 #include "types.h"
 #include "registry.h"
+#include "hashmap.h"
 #include "mem.h"
 #include "handler.h"
+#include "endpoints.h"
 
 #include "charconvert.h"
 
@@ -70,6 +72,7 @@ static type_t providers_type = {
 };
 
 static registry_t providers;
+static hash_t *provider_map;
 
 int provider_register(provider_t *provider) {
 
@@ -82,75 +85,18 @@ int provider_register(provider_t *provider) {
 		p->native_cset_idx = -1;
 	}
 
+	hash_put(provider_map, provider);
 	reg_append(&providers, p);
 
 	return 0;
 }
 
-// return the index of the given provider in the providers[] table
-#if 0
-static int provider_index(provider_t *prov) {
-
-	for (int i = 0; ; i++) {
-		providers_t *p = reg_get(&providers, i);
-		if (p == NULL) {
-			return -1;
-		}
-		if (p->provider == prov) {
-			return i;
-		}
-	}
-	return -1;
-}
-#endif
-
-// -----------------------------------------------------------------
-
-typedef struct {
-        int             drive;
-        endpoint_t      *ep;
-	const char	*cdpath;
-} ept_t;
-
-static void endpoints_init(const type_t *type, void *obj) {
-	(void)type; // silence unused warning
-
-	ept_t *p = (ept_t*) obj;
-
-	p->drive = -1;
-	p->ep = NULL;
-	p->cdpath = NULL;	
+provider_t *provider_find(const char *name) {
+	return (provider_t*) hash_get(provider_map, name);
 }
 
-static type_t endpoints_type = {
-	"endpoints",
-	sizeof(ept_t),
-	endpoints_init
-};
-
-static registry_t endpoints;
-
-static int unassign(int drive) {
-	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	ept_t *ept = NULL;
-        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
-               	if (ept->drive == drive) {
-			// remove from list
-			reg_remove(&endpoints, ept);
-			// clean up
-			provider_t *prevprov = ept->ep->ptype;
-			prevprov->freeep(ept->ep);
-			if (ept->cdpath != NULL) {
-				mem_free(ept->cdpath);
-			}
-			// free it
-			mem_free(ept);
-			ept = NULL;
-			rv = CBM_ERROR_OK;
-			break;
-               	}
-       	}
-	return rv;
+static const char* name_from_provider(const void *entry) {
+	return ((provider_t*)entry)->name;
 }
 
 
@@ -195,7 +141,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, char
 	endpoint_t *newep = NULL;
 
 	if (assign_to == NULL) {
-		return unassign(drive);
+		return endpoints_unassign(drive);
 	}
 
 	int len = strlen(wirename);
@@ -255,6 +201,7 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, char
 
 		if (provider == NULL) {
 			// check each of the providers in turn
+			// TODO provider_t *p = provider_find(ascname);
 			for (int i = 0; ; i++) {
 				providers_t *p = reg_get(&providers, i);
 				if (p != NULL) {
@@ -300,18 +247,9 @@ int provider_assign(int drive, const char *wirename, const char *assign_to, char
 		// check if the drive is already in use and free it if necessary
 		// NOTE: a Map construct would be nice here...
 
-		unassign(drive);
+		endpoints_unassign(drive);
 
-		newep->is_assigned++;
-
-		// build endpoint list entry
-		ept_t *ept = mem_alloc(&endpoints_type);
-		ept->drive = drive;
-		ept->ep = newep;
-		ept->cdpath = mem_alloc_str("/");
-
-		// register new endpoint
-		reg_append(&endpoints, ept);
+		endpoints_assign(drive, newep);
 
 		return CBM_ERROR_OK;
 	}
@@ -326,11 +264,6 @@ void provider_cleanup(endpoint_t *ep) {
 	}
 }
 
-static void provider_free_ep(registry_t *reg, void *entry) {
-	(void) reg;
-	mem_free(entry);
-}
-
 static void provider_free_entry(registry_t *reg, void *entry) {
 	(void)reg;
 	((providers_t*)entry)->provider->free();
@@ -339,7 +272,7 @@ static void provider_free_entry(registry_t *reg, void *entry) {
 
 void provider_free() {
 
-	reg_free(&endpoints, provider_free_ep);
+	endpoints_free();
 
 	reg_free(&providers, provider_free_entry);
 }
@@ -348,7 +281,9 @@ void provider_init() {
 
 	reg_init(&providers, "providers", 10);
 
-	reg_init(&endpoints, "endpoints", 10);
+	provider_map = hash_init_stringkey_nocase(10, 7, name_from_provider);
+
+	endpoints_init();
 
         // manually handle the initial provider
         fs_provider.init();
@@ -452,22 +387,19 @@ endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset, con
 
 	log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);
 
-	ept_t *ept = NULL;
-	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
-                if (ept->drive == drive) {
-			if (outname != NULL) {
-				if (inname != NULL) {
-					*outname = malloc_path(ept->cdpath, inname);
-				} else {
-					*outname = NULL;
-				}
-			}
-                        return ept->ep;
-                }
-        }
-	log_warn("Drive %d is not assigned!\n", drive);
+	ept_t *ept = endpoints_find(drive);
 
-        return NULL;
+	if (ept != NULL) {
+        	if (outname != NULL) {
+	        	if (inname != NULL) {
+       	        		*outname = malloc_path(ept->cdpath, inname);
+                	} else {
+                        	*outname = NULL;
+                	}
+        	}
+		return ept->ep;
+	}
+	return NULL;
 }
 
 
@@ -493,12 +425,7 @@ int provider_chdir(const char *inname, int namelen, charset_t cset) {
 
 	log_debug("Trying to resolve drive %d with path '%s'\n", drive, inname);
 
-	ept_t *ept = NULL;
-	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
-                if (ept->drive == drive) {
-			break;	// found it
-                }
-        }
+	ept_t *ept = endpoints_find(drive);
 
 	if (ept == NULL) {
 		// drive number not found
@@ -525,20 +452,8 @@ void provider_dump() {
 	const char *prefix = dump_indent(indent);
 	const char *eppref = dump_indent(indent+1);
 
-	for (int i = 0; ; i++) {
-		ept_t *ept = reg_get(&endpoints, i);
-		if (ept != NULL) {
-			log_debug("%s// Dumping endpoint for drive %d\n", prefix, ept->drive);
-			log_debug("%s{\n", prefix);
-			log_debug("%sdrive=%d;\n", eppref, ept->drive);
-			log_debug("%scdpath='%s';\n", eppref, ept->cdpath);
-			log_debug("%sendpoint=%p ('%s');\n", eppref, ept->ep, 
-								ept->ep->ptype->name);
-			log_debug("%s}\n", prefix);
-		} else {
-			break;
-		}
-	}
+	endpoints_dump(prefix, eppref);
+
 	for (int i = 0; ; i++) {
 		providers_t *p = reg_get(&providers, i);
 		if (p != NULL) {

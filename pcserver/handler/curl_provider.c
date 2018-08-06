@@ -1136,9 +1136,11 @@ provider_t http_provider = {
 
 static handler_t curl_file_handler = {
         "curl_file_handler",
+        NULL,                   // resolve2
         NULL,                   // resolve
         curl_close,             // close
         curl_open,              // open
+        NULL, 	             	// open2
         handler_parent,         // default parent() implementation
         NULL,                   // fs_seek,                // seek
         read_file,              // readfile

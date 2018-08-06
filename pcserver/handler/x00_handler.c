@@ -256,12 +256,16 @@ static size_t x00_realsize(file_t *file) {
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
 
+	NULL,		// resolve2
+
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
 
 	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
 	default_open,	//int		(*open)(file_t *fp); 	// open a file
+
+	NULL,		//int		(*open2)(direntry_t *fp); 	// open a file
 
 	// -------------------------
 			// get converter for DIR entries

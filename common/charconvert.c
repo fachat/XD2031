@@ -30,14 +30,48 @@
 
 #include "charconvert.h"
 #include "petscii.h"
+#include "wildcard.h"
 
 #define	NUM_OF_CHARSETS		2
 
 #define min(a,b)	(((a)<(b))?(a):(b))
 
+// ------------------------------------------------------------------------------
+
 static char *charsets[] = { 
-	CHARSET_ASCII_NAME, CHARSET_PETSCII_NAME
+	CHARSET_ASCII_NAME, 
+	CHARSET_PETSCII_NAME
 };
+
+static unic_t (*to_unic_funcs[])(const char **ptr) = {
+	isolatin1_to_unic,
+	petscii_to_unic
+};
+
+// ------------------------------------------------------------------------------
+
+// scan the given pattern until a delimiter character is reached
+// during scan, check whether a character in match is found
+// return the pointer to the char after the delimiter when found, NULL otherwise.
+// if not found. Set *matched if character is found in match parameter 
+const char *cconv_scan(const char *pattern, charset_t cset, char delim, const char *match, bool *matched) {
+
+	*matched = false;
+	unic_t (*to_unic)(const char **ptr) = to_unic_funcs[cset];
+	unic_t c;
+
+	while ( (c = to_unic(&pattern)) != 0) {
+		if (c == delim) {
+			return pattern;
+		}
+		if (strchr(match, c)) {
+			*matched = true;
+		}
+	}
+	return NULL;
+}
+
+// ------------------------------------------------------------------------------
 
 // get a const pointer to the string name of the character set
 const char *cconv_charsetname(charset_t cnum) {
@@ -90,50 +124,6 @@ static int cconv_petscii2ascii(const char *in, const uint8_t inlen, char *out, c
 	return i;
 }
 
-#if 0
-// ------------------------------------------------------------------------------
-// comparator functions
-
-int ccomp_samecset(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
-	if (in1len != in2len) {
-		return in1len - in2len;
-	}
-	return strncmp(in1, in2, in1len);
-}
-
-static int ccomp_asciipetscii(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
-	uint8_t i = 0;
-	if (in1len != in2len) {
-		return in1len - in2len;
-	}
-	while (i < in1len) {
-		uint8_t c1 = ascii_to_petscii(*(in1++));
-		uint8_t c2 = *(in2++);
-		i++;
-		if (c1 != c2) {
-			return i;
-		}
-	}
-	return 0;
-}
-
-static int ccomp_petsciiascii(const char *in1, const uint8_t in1len, char *in2, const uint8_t in2len) {
-	uint8_t i = 0;
-	if (in1len != in2len) {
-		return in1len - in2len;
-	}
-	while (i < in1len) {
-		uint8_t c1 = *(in1++);
-		uint8_t c2 = ascii_to_petscii(*(in2++));
-		i++;
-		if (c1 != c2) {
-			return i;
-		}
-	}
-	return 0;
-}
-#endif
-
 // ------------------------------------------------------------------------------
 // match functions
 
@@ -176,20 +166,6 @@ charconv_t cconv_converter(charset_t from, charset_t to) {
 	}
 	return convtable[from][to].conv;
 }
-
-#if 0
-// get a comparator between charsets
-charcomp_t cconv_comparator(charset_t from, charset_t to) {
-	//printf("Getting converter from %d to %d\n", from, to);
-	if (from < 0 || from >= NUM_OF_CHARSETS) {
-		return cconv_identity;
-	}
-	if (to < 0 || to >= NUM_OF_CHARSETS) {
-		return cconv_identity;
-	}
-	return convtable[from][to].comp;
-}
-#endif
 
 // get a comparator between charsets
 charmatch_t cconv_matcher(charset_t from, charset_t to) {
