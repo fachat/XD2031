@@ -168,6 +168,13 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 
 			}
 		}
+
+		if (rv == CBM_ERROR_FILE_EXISTS) {
+			dir->pattern = mem_alloc_str(*pattern);
+			rv = CBM_ERROR_OK;
+			// found name
+			break;
+		}
 	
 	} while(rv == CBM_ERROR_OK);
 
@@ -192,6 +199,8 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
  */
 int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdirscan,
 	direntry_t **outde, int *rdflag) {
+
+	log_debug("resolve_scan: pattern='%s'\n", *pattern);
 
 	int rv = CBM_ERROR_OK;
 

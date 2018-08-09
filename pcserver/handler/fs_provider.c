@@ -2092,17 +2092,19 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 	
 		const char *p = cconv_scan(pt, cset, '/', "*?", &matched);
 
+		if (p == NULL || *p == 0) {
+			// final part of file-path, i.e. the filename
+			log_debug("-> filename detected\n");
+			return CBM_ERROR_FILE_EXISTS;
+		}
+
 		if (matched || strlen(pt) == 0) {
 			// there are wildcards, so exit and let outer loop resolve it
 			log_debug("-> wildcards detected\n");
 			return CBM_ERROR_SYNTAX_WILDCARDS;
 		}
 
-		if (p == NULL || *p == 0) {
-			// final part of file-path, i.e. the filename
-			log_debug("-> filename detected\n");
-			return CBM_ERROR_OK;
-		}
+		// TODO: handle charset
 
 		const char *tmpname = mem_alloc_strn(pt, (p - pt));
 
@@ -2118,11 +2120,12 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 			return CBM_ERROR_DIR_NOT_FOUND;
 		}
 	
-		// create new subdir
+		// create new struct for subdir
 	
 		File *newfp = reserve_file((fs_endpoint_t*)fp->file.endpoint);
 		newfp->ospath = newospath;
 	
+		// close old
 		close_fd(fp, 0);
 	
 		fp = newfp;

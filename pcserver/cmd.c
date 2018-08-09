@@ -319,6 +319,8 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 
+	log_debug("Open directory for drive: %d, path='%s'\n", 0xff & *inname, inname+1);
+
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *fp = NULL;
 
