@@ -39,6 +39,7 @@
 
 
 #define	DEBUG_MEM
+#undef	DEBUG_MEM_VERBOSE
 
 #ifdef DEBUG_MEM
 #define	MEM_MAGIC	0xbadc0de
@@ -123,7 +124,9 @@ static void check_free_(const void *ptr) {
 
 	for (int i = 0; i < mem_last; i++) {
 		if (mem_records[i].ptr == ptr) {
+#ifdef DEBUG_MEM_VERBOSE
 			log_debug("Free memory at %p (from %s:%d)\n", ptr, mem_records[i].file, mem_records[i].line);
+#endif
 			// unalloc
 			mem_records[i].ptr = NULL;
 			if (i < mem_tag) {
@@ -301,7 +304,9 @@ void mem_free_(const void* ptr) {
  */
 char *malloc_path_(const char *base, const char *name, char *file, int line) {
 
+#ifdef DEBUG_MEM_VERBOSE
         log_debug("malloc_path: base=%s, name=%s\n", base, name);
+#endif
 
         if(name[0] == '/' || name[0]=='\\') base=NULL;  // omit base for absolute paths
         int l = (base == NULL) ? 0 : strlen(base);
@@ -321,7 +326,9 @@ char *malloc_path_(const char *base, const char *name, char *file, int line) {
                 strcat(dirpath, name);
         }
 
+#ifdef DEBUG_MEM_VERBOSE
         log_debug("Calculated new dir path: %s\n", dirpath);
+#endif
 
         return dirpath;
 }
