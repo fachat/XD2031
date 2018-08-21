@@ -1,4 +1,6 @@
 
+SRC=dir.c put.c
+
 COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../pcserver/util/mem.c ../testrunner/connect.c ../common/name.c ../common/cmdnames.c
 INCLUDES=-I../pcserver -I../common -I../pcserver/util -I../pcserver/os -I../testrunner/
 LIBS=-lncurses 
@@ -9,7 +11,7 @@ all: xdcmd
 clean:
 	rm -f xdcmd 
 
-xdcmd: xdcmd.c  ${COMMON}
-	gcc -o $@ ${CFLAGS} ${INCLUDES} $< ${COMMON} ${LIBS}
+xdcmd: xdcmd.c  ${COMMON} ${SRC}
+	gcc -o $@ ${CFLAGS} ${INCLUDES} $< ${COMMON} ${SRC} ${LIBS}
 
 
