@@ -123,6 +123,7 @@ static void print_dir_packet(dirinfo_t *dir) {
 		break;
 	case FS_DIR_MOD_DIR:
 		dir->ftype = 8;	// hack to get "DIR"
+		// fall-through
 	case FS_DIR_MOD_FIL:
 		len = (dir->len + 253) / 254;
 		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
@@ -160,6 +161,7 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 	if (argc > 2) {
 		log_error("Too many parameters!\n");
 		mem_free(name);
+		mem_free(buf);
 		return -1;
 	}
 

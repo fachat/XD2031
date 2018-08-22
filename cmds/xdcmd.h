@@ -23,6 +23,7 @@
 extern int cmd_dir(int sockfd, int argc, const char *argv[]);
 extern int cmd_ls(int sockfd, int argc, const char *argv[]);
 extern int cmd_put(int sockfd, int argc, const char *argv[]);
+extern int cmd_get(int sockfd, int argc, const char *argv[]);
 
 // --------------------------------------------------------------------------
 // send/receive packets

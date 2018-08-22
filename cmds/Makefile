@@ -2,8 +2,8 @@
 
 TARGET=xdcmd
 
-CMDSRC=dir.c put.c xdcmd.c
-COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../pcserver/util/mem.c ../testrunner/connect.c ../common/name.c ../common/cmdnames.c
+CMDSRC=dir.c put.c xdcmd.c get.c
+COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../pcserver/util/mem.c ../testrunner/connect.c ../common/name.c ../common/cmdnames.c ../pcserver/cerrno.c
 
 SRC=$(CMDSRC) $(COMMON)
 
