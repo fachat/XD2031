@@ -56,7 +56,7 @@ int reg_size(registry_t *reg) {
 // adds a pre-allocated struct
 void reg_append(registry_t *reg, void *ptr) {
 
-	log_debug("Adding entry %p to registry %pd (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
+	log_debug("Adding entry %p to registry %p (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
 
 	if (reg->numentries >= reg->capacity) {
 		int newcap = reg->capacity * 3. / 2.;
