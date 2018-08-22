@@ -163,7 +163,8 @@ endopts:
 					}
 		    		} while(rv == 0); 
 
-		    		rv = send_cmd(sockfd, FS_CLOSE, pkgfd);
+		    		send_cmd(sockfd, FS_CLOSE, pkgfd);
+				recv_packet(sockfd, buf, 256);
 			}
 		}
 	}
