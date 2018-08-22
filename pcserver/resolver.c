@@ -166,6 +166,10 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 				// open the found dir entry
 				rv = dir->handler->open2(de, NULL, FS_OPEN_DR, &fp);
 
+				if (rv == CBM_ERROR_OK) {
+					dir = fp;
+					*pattern = p;
+				}
 			}
 		}
 
@@ -178,6 +182,9 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 	
 	} while(rv == CBM_ERROR_OK);
 
+	if (rv == CBM_ERROR_OK) {
+		*inoutdir = dir;
+	}
 	return rv;
 }
 
