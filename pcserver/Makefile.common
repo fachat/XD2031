@@ -48,12 +48,9 @@ PKG_CONFIG=$(CROSS)pkg-config
 AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 
 # Sorting include paths and defines simplifies checking them
-#INCPATHS=. ../common util os handler $(ARCH)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
 
-CFLAGS+=-g -W -Wall -pedantic -ansi -std=c99 -funsigned-char $(INCLUDE) -DSERVER
-
-#SRC=$(wildcard *.c) $(wildcard util/*.c) $(wildcard os/*.c)  $(wildcard handler/*.c) $(wildcard ../common/*.c) $(wildcard $(ARCH)/*.c)
+CFLAGS+=-g -W -Wall -pedantic -ansi -std=c11 -funsigned-char $(INCLUDE) $(EXTCFLAGS)
 
 
 # Create object names from .c and .S
@@ -63,7 +60,7 @@ OBJ=$(addprefix $(OBJDIR),$(_OBJ))
 DEP=$(addprefix $(DEPDIR),$(_OBJ:.o=.o.d))
 
 # locations where make searches C source files
-#vpath %.c . ../common util os handler $(ARCH)
+vpath %.c . $(INCPATHS)
 
 # Include automatic dependencies, continue if they don't exist yet
 -include $(DEP)
@@ -79,7 +76,6 @@ $(TARGET): $(OBJDIR) $(DEPDIR) $(OBJ)
 	$(V2) LD $(notdir $@)
 	$(V1) $(LD) $(OBJ) -o $@ $(LDFLAGS)
 	$(V1)# Note: LIBS must be at the end for curl/libs to be found
-	@echo 'fsser opens the serial device with user rights.'
 
 veryclean: clean
 	rm -rf $(TARGET) obj
@@ -108,7 +104,7 @@ install:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
 	test -d $(PREFIX) || mkdir -p $(PREFIX)
 	test -d $(PREFIX)/$(BINDIR) || mkdir -p $(PREFIX)/$(BINDIR)
-	install -m 0755 fsser $(PREFIX)/$(BINDIR)
+	install -m 0755 $(TARGET) $(PREFIX)/$(BINDIR)
 	test -d $(PREFIX)/$(DOCDIR) || mkdir -p $(PREFIX)/$(DOCDIR)
 	cp ../doc/* $(PREFIX)/$(DOCDIR)
 	test -d $(PREFIX)/$(SAMPLEDIR) || mkdir -p $(PREFIX)/$(SAMPLEDIR)
@@ -118,7 +114,7 @@ install:
 
 uninstall:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
-	rm -f $(PREFIX)/$(BINDIR)/fsser
+	rm -f $(PREFIX)/$(BINDIR)/$(TARGET)
 	rm -f $(PREFIX)/$(DOCDIR)/*
 	rmdir $(PREFIX)/$(DOCDIR) 2>/dev/null | exit 0
 	rm -f $(PREFIX)/$(SAMPLEDIR)/*

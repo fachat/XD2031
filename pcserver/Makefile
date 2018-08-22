@@ -17,6 +17,8 @@ INCPATHS=. ../common util os handler $(ARCH)
 # TODO: expand SRC and vpath from INCPATHS
 SRC=$(wildcard *.c) $(wildcard util/*.c) $(wildcard os/*.c)  $(wildcard handler/*.c) $(wildcard ../common/*.c) $(wildcard $(ARCH)/*.c)
 
+EXTCFLAGS=-DSERVER
+
 # locations where make searches C source files
 vpath %.c . ../common util os handler $(ARCH)
 
