@@ -474,6 +474,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (poll_num_sockets() < min_num_socks) {
+			log_debug("number of sockets %d below minimum %d - terminating\n", poll_num_sockets, min_num_socks);
 			break;
 		}
 	}
