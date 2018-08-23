@@ -108,7 +108,7 @@ typedef struct {
 
 // values to be set in the out parameter readflag for readfile()
 #define	READFLAG_EOF	1
-#define	READFLAG_DENTRY	2
+//#define	READFLAG_DENTRY	2
 
 struct _endpoint {
 	provider_t *ptype;
@@ -156,7 +156,6 @@ struct _file {
 
 // information about a directory entry
 // basically a typed version of the wireformat dir entry
-// TODO: include file_t *parent
 struct _direntry {
 	file_t		*parent;
 	uint32_t	size;

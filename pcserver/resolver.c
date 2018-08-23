@@ -202,7 +202,10 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
  *
  * When isdirscan is true, the directory entries for disk header and blocks free
  * are also returned where available.
- * rdflag 
+ *
+ * rdflag is set to return side-channel information and consists of multiple ORd
+ * values.
+ * 	READFLAG_EOF	-> next read will not return further data, so set EOF
  */
 int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdirscan,
 	direntry_t **outde, int *rdflag) {

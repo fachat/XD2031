@@ -175,7 +175,64 @@ const char *get_options(const char *name, int len) {
 // ----------------------------------------------------------------------------------
 
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd) {
-	
+
+	log_info("Open file for drive: %d, path='%s'\n", 0xff & *inname, inname+1);
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	file_t *fp = NULL;
+	file_t *dir = NULL;
+	openpars_t pars;
+	openpars_init_options(&pars);
+	int outln = 0;
+
+	// TODO: improve this
+	// inname is NOT zero-terminated! So alloc it and create a zero-terminated string
+	// note: first char currently is the drive#, opts are zero-separated, so mem_alloc_strn does not work
+	char *memname = mem_alloc_c(namelen+1, "open_file_name");
+	memcpy(memname, inname, namelen);
+	memname[namelen] = 0;
+	const char *name = memname;
+
+	const uint8_t *options = (const uint8_t*) get_options(inname + 1, namelen - 1);
+	openpars_process_options(options, &pars);
+
+	// TODO: default endpoint? 
+	endpoint_t *ep = NULL;
+	rv = resolve_endpoint(&name, cset, &ep);
+	if (rv == CBM_ERROR_OK) {
+		dir = ep->ptype->root(ep);
+		rv = resolve_dir(&name, cset, &dir);
+		if (rv == CBM_ERROR_OK) {
+			int rdflag = 0;
+			direntry_t *dirent;
+			// now resolve the actual filename
+			rv = resolve_scan(dir, &name, cset, false, &dirent, &rdflag);
+			if (rv == CBM_ERROR_OK) {
+				// ok, we have the directory entry, we need to open it
+				rv = dir->handler->open2(dirent, &pars, cmd, &fp);
+				if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
+					int record = fp->recordlen;
+					outbuf[0] = record & 0xff;
+					outbuf[1] = (record >> 8) & 0xff;
+					outln = 2;
+					rv = CBM_ERROR_OPEN_REL;
+				}
+				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+					fp->openmode = cmd;
+					channel_set(tfd, fp);
+				}
+			}
+		}
+	}
+	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
+		log_rv(rv);
+		dir->handler->close(dir, 1, outbuf, outlen);
+	}
+
+	mem_free(memname);
+
+	return rv;
+#if 0	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	const char *name = NULL;
 	file_t *fp = NULL;
@@ -212,6 +269,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 	}
 	*outlen = outln;
 	return rv;
+#endif
 }
 
 
@@ -319,7 +377,7 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 
-	log_debug("Open directory for drive: %d, path='%s'\n", 0xff & *inname, inname+1);
+	log_info("Open directory for drive: %d, path='%s'\n", 0xff & *inname, inname+1);
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *fp = NULL;
@@ -327,8 +385,10 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 	// TODO: improve this
 	// inname is NOT zero-terminated! So alloc it and create a zero-terminated string
 	// note: first char currently is the drive#, so mem_alloc_strn does not work
-	const char *memname = mem_alloc_c(namelen, "open_dir_name");
+	char *memname = mem_alloc_c(namelen+1, "open_dir_name");
 	memcpy(memname, inname, namelen);
+	memname[namelen] = 0;
+
 	const char *name = memname;
 	// TODO: default endpoint? 
 	endpoint_t *ep = NULL;
@@ -347,25 +407,6 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 	}
 
 	mem_free(memname);
-#if 0
-	//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		provider_t *prov = (provider_t*) ep->ptype;
-		const char *options = get_options(inname, namelen - 1);
-		log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-		rv = handler_resolve_dir(ep, &fp, name, cset, NULL, options);
-		if (rv == 0) {
-			fp->openmode = FS_OPEN_DR;
-			channel_set(tfd, fp);
-		} else {
-			log_rv(rv);
-		}
-		// cleanup when not needed anymore
-		provider_cleanup(ep);
-		mem_free(name);
-	}
-#endif
 
 	return rv;
 }
