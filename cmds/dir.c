@@ -236,11 +236,28 @@ int cmd_dir(int sockfd, int argc, const char *argv[]) {
 
 int cmd_ls(int sockfd, int argc, const char *argv[]) {
 
-	if (argc>0 && !strcmp("-l", argv[0])) {
-		return cmd_dir_int(sockfd, 2, argc, argv);
-	} else {
-		return cmd_dir_int(sockfd, 1, argc, argv);
-	}
+	int islong = 0;
+
+        int p = 0;
+        // parse options
+        while ((p < argc) && (argv[p][0] == '-')) {
+                switch(argv[p][1]) {
+                case 'l':
+                        islong = 1;
+                        break;
+                case '-':
+                        // break options
+                        p++;
+                        goto endopts;
+                default:
+                        log_error("Unknown option '%c'\n", argv[p][1]);
+                        return CBM_ERROR_SYNTAX_INVAL;
+                }
+                p++;
+        }
+endopts:
+
+	return cmd_dir_int(sockfd, islong ? 2 : 1, argc - p, argv + p); 
 }
 
 

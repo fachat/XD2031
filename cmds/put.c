@@ -64,15 +64,19 @@ static int cmd_put_int(int sockfd, int type, int argc, const char *argv[]) {
 endopts:
 
         // check filenames
-        if ((argc - p) < 2) {
+        if ((argc - p) < 1) {
                 log_error("Too few parameters!\n");
                 return CBM_ERROR_SYNTAX_NONAME;
         }
 
-        // take target name out of list
-        argc--;
         // open target on host filesystem
-        const char *trgname = argv[argc];
+        const char *trgname = argv[argc - 1];
+	if ((argc - p) == 1) {
+		// single name parameter, use name for both source and target
+	} else {
+        	// take target name out of list
+        	argc--;
+	}
 
 	// look at the target file
 
