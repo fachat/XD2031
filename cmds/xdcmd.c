@@ -236,12 +236,14 @@ static const cmdtab_t cmdtab[] = {
 			"Put file(s) from the local filesystem to the CBM server filesystem. Multiple source files are concatenated.",
 			{	"[options] <local_file> <drive:>[<target_file>]",
 				"[options] <local_file_1> [ <local_file_2> ... ] <drive:>[<target_file>]",
+				"[options] <local_and_target_file>",
 				"Options:",
 				"-f                  overwrite existing file (default is not to overwrite)",
 			NULL }},
 	{	"get",	cmd_get,
 			"Get file(s) from the CBM server filesystem. Multiple source files are concatenated.",
 			{	"[options] <drive:><src_file_1> [ <drive:><src_file_2> ... ] <local_target_file>",
+				"[options] <source_and_local_file>",
 				"Options:",
 				"-f                  overwrite existing files (default is not to overwrite)",
 			NULL }},
@@ -258,6 +260,7 @@ void usage(int rv) {
                 " options=\n"
                 "   -T <socket> define socket device to use (instead of device)\n"
                 "   -?          gives you this help text\n"
+		" Commands have own options and usually include '--' to end options list\n"
 		" commands:\n"
         );
 	for (int i = 0; i < numcmds; i++) {

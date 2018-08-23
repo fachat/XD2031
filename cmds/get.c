@@ -61,21 +61,25 @@ static int cmd_get_int(int sockfd, int type, int argc, const char *argv[]) {
 endopts:
 
 	// check filenames
-	if ((argc - p) < 2) {
+	if ((argc - p) < 1) {
 		log_error("Too few parameters!\n");
 		return CBM_ERROR_SYNTAX_NONAME;
 	}
 
+	// open target on host filesystem
+	const char *trgname = argv[argc-1];
+	if ((argc - p) == 1) {
+		// single parameter - use same name for both source and target
+	} else {
+		// take target name out of list
+		argc--;
+	}
+
+	// check if file exists and what type it is
+	struct stat statbuf;
 
 	// truncate the opened file?
 	int trunc = 0;
-
-	// take target name out of list
-	argc--;
-	// open target on host filesystem
-	const char *trgname = argv[argc];
-	// check if file exists and what type it is
-	struct stat statbuf;
 
 	if (stat(trgname, &statbuf) < 0) {
 		if (errno != ENOENT) {
