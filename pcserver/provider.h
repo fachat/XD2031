@@ -303,14 +303,22 @@ endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path,
 			     int from_cmdline);
 
 
-static inline char *conv_name_alloc(const char *str, charset_t from, charset_t to)
+#define	conv_name_alloc(str,from,to)	conv_name_alloc_(str,from,to,__FILE__,__LINE__)
+static inline char *conv_name_alloc_(const char *str, charset_t from, charset_t to, char *file, int line)
 {
 	int len = strlen(str);
 
 	log_debug("convert %s from %s to %s\n", str, cconv_charsetname(from),
 		  cconv_charsetname(to));
 
-	char *trg = mem_alloc_c(len + 1, "converted_to_name");
+	const char *allocname = "converted_to_name";
+#if 0
+	int l = strlen(allocname) + strlen(file) + 20;
+	char *newallocname = malloc(l);
+	snprintf(newallocname, l, "%s:%s:%d", allocname, file, line);
+	allocname = newallocname;
+#endif
+	char *trg = mem_alloc_c(len + 1, allocname);
 
 	cconv_converter(from, to) (str, len, trg, len);
 

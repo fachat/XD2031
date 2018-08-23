@@ -54,6 +54,7 @@ static const int mem_records_initial = 1000;
 
 typedef struct {
 	void *ptr;
+	char *name;
 	char *file;
 	int line;
 } mem_record_t;
@@ -67,10 +68,11 @@ static int mem_last = 0;
 // first unused entry lies here or behind this rec#
 static int mem_tag = 0;
 
-#define check_alloc(ptr, file, line) check_alloc_(ptr, file, line)
+#define check_alloc(ptr, file, line) check_alloc_(ptr, NULL, file, line)
+#define check_alloc2(ptr, name, file, line) check_alloc_(ptr, name, file, line)
 #define check_free(ptr) check_free_(ptr)
 
-static void check_alloc_(void *ptr, char *file, int line) {
+static void check_alloc_(void *ptr, char *name, char *file, int line) {
 	if(!ptr) {
 		fprintf(stderr, "Could not allocate memory, "
 		"file: %s line: %d\n", file, line);
@@ -117,13 +119,14 @@ static void check_alloc_(void *ptr, char *file, int line) {
 	mem_records[mem_tag].ptr = ptr;
 	mem_records[mem_tag].file = file;
 	mem_records[mem_tag].line = line;
+	mem_records[mem_tag].name = name;
 }
 
 static void check_free_(const void *ptr) {
 
 	for (int i = 0; i < mem_last; i++) {
 		if (mem_records[i].ptr == ptr) {
-			log_debug("Free memory at %p (from %s:%d)\n", ptr, mem_records[i].file, mem_records[i].line);
+			log_debug("Free memory at %p (from %s:%d, name=%s)\n", ptr, mem_records[i].file, mem_records[i].line, mem_records[i].name);
 			// unalloc
 			mem_records[i].ptr = NULL;
 			if (i < mem_tag) {
@@ -149,7 +152,9 @@ void mem_exit (void) {
 	for (int i = 0; i < mem_last; i++) {
 
 		if (mem_records[i].ptr != NULL) {
-			fprintf(stderr, "Did not free memory at %p, allocated in %s:%d\n", mem_records[i].ptr, mem_records[i].file, mem_records[i].line);
+			fprintf(stderr, "Did not free memory at %p, allocated in %s:%d, name=%s\n", 
+					mem_records[i].ptr, mem_records[i].file, mem_records[i].line, mem_records[i].name);
+
 		}
 	}
 }
@@ -228,11 +233,11 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 	// for now just malloc()
 
-	(void) name; // name not used at the moment, silence warning
+	//(void) name; // name not used at the moment, silence warning
 
 	void *ptr = malloc(n + MEM_OFFSET);
 
-	check_alloc(ptr, file, line);
+	check_alloc2(ptr, name, file, line);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;

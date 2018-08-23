@@ -3464,6 +3464,8 @@ di_create(file_t * dirp, file_t ** newfile, const char *pattern, charset_t cset,
 
 	int rv = di_create_entry(diep, file, dosname, pars);
 
+	mem_free(dosname);
+
 	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
 			return rv;
 	}
@@ -3751,6 +3753,9 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f, uint8_t *tr, uint
 	log_debug
 	    ("di_close_fd: diep=%p Closing file %p (%s) access mode = %d\n",
 	     diep, f, f->file.filename, f->access_mode);
+
+	mem_free(f->file.filename);
+	mem_free(f->dospattern);
 
 	if (f->access_mode == 0) {
 		// no access mode - not opened, so just return
