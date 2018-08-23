@@ -52,12 +52,19 @@ typedef struct {
 	uint8_t namelen;	// length of file name
 } drive_and_name_t;
 
+// the parameter actually used for an OPEN on the server
+typedef struct {
+        uint8_t filetype;
+        uint16_t recordlen;
+} openpars_t;
+
 typedef struct {
 	command_t cmd;		// command, "$" for directory open
-	uint8_t type;		// file type requested ("S", "P", ...)
+	//uint8_t type;		// file type requested ("S", "P", ...)
 	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
 	uint8_t options;	// access options, as bit mask
-	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
+	//uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
+	openpars_t pars;
 	uint8_t num_files;	// number of secondary (source) drive_filenames
 	drive_and_name_t trg;	// target file pattern
 	drive_and_name_t file[MAX_NAMEINFO_FILES];	// optional source drive_name info
@@ -91,7 +98,6 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
  *
  * The packet has the following structure:
  * 
- * for FS_OPEN_*:
  * 	DRV	- single byte drive, either 0-9 or NAMEINFO_* for unused, undefined 
  * 		  or reused drive (see wireformat)
  *	PATTERN	- path and filename or pattern, zero-terminated
@@ -99,12 +105,10 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
  *		  provider name and ':' as separator, like
  *		  "ftp:ftp.zimmers.net/pub/cbm"
  *	OPTIONS	- option string (see below), zero-terminated
- *
- * for FS_* commands:
  * 	[
  * 	DRV	- single drive or NAMEINFO_*_DRIVE
  *	PATTERN	- path and filename or pattern, zero-terminated. Format as above.
- *	] repeated 1 to 5 times
+ *	] repeated 0 to 4 times
  *
  * The options string is a comma-separated list of "<option-char>=<value>".
  * Currently defined options are:
@@ -135,7 +139,7 @@ uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
  * Returns error code, most specifically SYNTAX codes if the packet
  * cannot be parsed.
  */
-uint8_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo);
+cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo);
 
 #endif
 

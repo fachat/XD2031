@@ -97,7 +97,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 				&nameinfo, (openflag & OPENFLAG_LOAD) ? PARSEHINT_LOAD : 0);
 
 #ifdef DEBUG_FILE
-	debug_printf("  PARSE -> ACCESS=%c, TYPE=%c\n", nameinfo.access, nameinfo.type);
+	debug_printf("  PARSE -> ACCESS=%c, TYPE=%c\n", nameinfo.access, nameinfo.pars.filetype);
 #endif
 
 	// drive handling needed for error message drive
@@ -118,10 +118,10 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		debug_printf("NO CORRECT CMD: %s\n", command_to_name(nameinfo.cmd));
 		nameinfo.cmd = 0;
 	}
-	if (nameinfo.type != 0 && nameinfo.type != 'S' && nameinfo.type != 'P' 
-		&& nameinfo.type != 'U' && nameinfo.type != 'L') {
+	if (nameinfo.pars.filetype != 0 && nameinfo.pars.filetype != 'S' && nameinfo.pars.filetype != 'P' 
+		&& nameinfo.pars.filetype != 'U' && nameinfo.pars.filetype != 'L') {
 		// not set, or set as not sequential and not program
-		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.type); debug_putcrlf();
+		debug_puts("UNKOWN FILE TYPE: "); debug_putc(nameinfo.pars.filetype); debug_putcrlf();
 		set_error_tsd(errormsg, CBM_ERROR_FILE_TYPE_MISMATCH, 0, 0, errdrive);
 		return -1;
 	}
@@ -152,20 +152,20 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 	// file type defaults
-	if (nameinfo.type == 0) {
+	if (nameinfo.pars.filetype == 0) {
 		// do we create a file (access=='W')?
 		if (nameinfo.access == 'W') {
 			// write (like save)
 			if (openflag == OPENFLAG_SAVE) {
-				nameinfo.type = 'P';
+				nameinfo.pars.filetype = 'P';
 			} else {
-				nameinfo.type = 'S';
+				nameinfo.pars.filetype = 'S';
 			}
 		}
 		if (nameinfo.access == 'R') {
 			if (openflag == OPENFLAG_LOAD) {
 				// on load, 'P' is the default
-				nameinfo.type = 'P';
+				nameinfo.pars.filetype = 'P';
 			}
 		}
 	}

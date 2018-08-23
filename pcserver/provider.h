@@ -317,6 +317,9 @@ static inline char *conv_name_alloc_(const char *str, charset_t from, charset_t 
 	char *newallocname = malloc(l);
 	snprintf(newallocname, l, "%s:%s:%d", allocname, file, line);
 	allocname = newallocname;
+#else
+	(void) file;
+	(void) line;
 #endif
 	char *trg = mem_alloc_c(len + 1, allocname);
 

@@ -54,8 +54,8 @@ static const int mem_records_initial = 1000;
 
 typedef struct {
 	void *ptr;
-	char *name;
-	char *file;
+	const char *name;
+	const char *file;
 	int line;
 } mem_record_t;
 
@@ -72,7 +72,7 @@ static int mem_tag = 0;
 #define check_alloc2(ptr, name, file, line) check_alloc_(ptr, name, file, line)
 #define check_free(ptr) check_free_(ptr)
 
-static void check_alloc_(void *ptr, char *name, char *file, int line) {
+static void check_alloc_(void *ptr, const char *name, char *file, int line) {
 	if(!ptr) {
 		fprintf(stderr, "Could not allocate memory, "
 		"file: %s line: %d\n", file, line);
