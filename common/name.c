@@ -43,12 +43,12 @@
 #if defined(DEBUG_NAME) || defined(PCTEST)
 static void dump_result(nameinfo_t *result) {
 	printf("CMD=%s\n", command_to_name(result->cmd));
-	printf("DRIVE=%c\n", result->drive == NAMEINFO_UNUSED_DRIVE ? '-' :
-				(result->drive == NAMEINFO_UNDEF_DRIVE ? '*' :
-				(result->drive == NAMEINFO_LAST_DRIVE ? 'L' :
-				result->drive + 0x30)));
-	printf("DRIVENAME='%s'\n", result->drivename ? (char*) result->drivename : nullstring);
-	printf("NAME='%s' (%d)\n", result->name ? (char*)result->name : nullstring, result->namelen);
+	printf("DRIVE=%c\n", result->trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+				(result->trg.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+				(result->trg.drive == NAMEINFO_LAST_DRIVE ? 'L' :
+				result->trg.drive + 0x30)));
+	printf("DRIVENAME='%s'\n", result->trg.drivename ? (char*) result->trg.drivename : nullstring);
+	printf("NAME='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : nullstring, result->trg.namelen);
 	printf("ACCESS=%c\n", result->access ? result->access : '-');
 	printf("TYPE=%c", result->type ? result->type : '-'); debug_putcrlf();
 	printf("DRIVE2=%c\n", result->file[0].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
@@ -128,15 +128,15 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 
 	// the position command is fully binary
 	if (result->cmd == CMD_POSITION || result->cmd == CMD_TIME) {
-		result->name = cmdstr + cmdlen;
-		result->namelen = len - cmdlen;
+		result->trg.name = cmdstr + cmdlen;
+		result->trg.namelen = len - cmdlen;
 		return;
 	}
 	// check for disk copy "Dt=s" or "Ct=s"
 	if ((result->cmd == CMD_DUPLICATE || result->cmd == CMD_COPY) &&
 		cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
 		isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
-		result->drive         = cmdstr[cmdlen  ] & 15; // target drive
+		result->trg.drive         = cmdstr[cmdlen  ] & 15; // target drive
 		result->file[0].drive = cmdstr[cmdlen+2] & 15; // source drive
 		return;
 	}
@@ -156,10 +156,10 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		}
 		result->num_files = i;
 	}
-	result->drive = parse_drive (cmdstr+cmdlen, &result->name, &result->namelen, &result->drivename);
+	result->trg.drive = parse_drive (cmdstr+cmdlen, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
 	// set source drives to target drive if not specified
 	for (uint8_t i=0 ; i < result->num_files ; ++i) {
-		if (result->file[i].drive > 9) result->file[i].drive = result->drive;
+		if (result->file[i].drive > 9) result->file[i].drive = result->trg.drive;
 	}
 }
 
@@ -172,7 +172,7 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 			strcat((char *)filename,":*");
 		}
 		result->cmd  = CMD_DIR;
-		result->drive = parse_drive (filename+1, &result->name, &result->namelen, &result->drivename);
+		result->trg.drive = parse_drive (filename+1, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
 		return;
 	}
 
@@ -181,7 +181,7 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 		filename++;
 	}
 
-	result->drive = parse_drive (filename, &result->name, &result->namelen, &result->drivename);
+	result->trg.drive = parse_drive (filename, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
 
 	// Process options that may follow comma separated after the filename
 	// In general, options can be used in any order, but each type only once.
@@ -192,7 +192,7 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 
 	for (uint8_t i=0 ; i < sizeof(file_options)-1 ;  ++i) {
 		opt[1] = file_options[i];  // modify search string (",R" ",P" etc.)
-		if ((p = (uint8_t *)strstr((char *)result->name,opt))) {
+		if ((p = (uint8_t *)strstr((char *)result->trg.name,opt))) {
 			if (p[1] == 'N') result->options |= NAMEOPT_NONBLOCKING;  // N
 			else if (i < 4)  result->type     = file_options[i];      // PSUL
 			else             result->access   = file_options[i];      // RWAX
@@ -210,10 +210,10 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 			result->access = 'X';
 		}
 	}
-	if ((p = (uint8_t *)strchr((char *)result->name,','))) {
+	if ((p = (uint8_t *)strchr((char *)result->trg.name,','))) {
 		*p = 0; // cut off options
 	}
-	result->namelen = strlen((char *)result->name);
+	result->trg.namelen = strlen((char *)result->trg.name);
 }
 
 /*
@@ -251,7 +251,7 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 
 	// init output
 	memset(result, 0, sizeof(*result));
-	result->drive  = NAMEINFO_UNUSED_DRIVE;
+	result->trg.drive  = NAMEINFO_UNUSED_DRIVE;
 	for (uint8_t i=0; i < MAX_NAMEINFO_FILES ; ++i) {
 		result->file[i].drive = NAMEINFO_UNUSED_DRIVE;
 	}
@@ -260,8 +260,8 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 	if (parsehint & PARSEHINT_COMMAND) {
 		parse_cmd(p, len, result);
 	} else {
-		result->name = p;	// full name
-		result->namelen = len;	// default
+		result->trg.name = p;	// full name
+		result->trg.namelen = len;	// default
 		parse_open(p, parsehint & PARSEHINT_LOAD, len, result);
 	}
 	dump_result(result);
@@ -286,32 +286,32 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 	uint8_t len;
 	uint8_t i;
 
-	*p++ = nameinfo->drive;
+	*p++ = nameinfo->trg.drive;
 
 	if ((nameinfo->cmd == CMD_DUPLICATE || nameinfo->cmd == CMD_COPY) &&
-		nameinfo->name == NULL) { // disk copy
+		nameinfo->trg.name == NULL) { // disk copy
 		*p++ = '*'; *p++ = 0;
-      *p++ = nameinfo->file[0].drive;
+      		*p++ = nameinfo->file[0].drive;
 		*p++ = '*'; *p   = 0;
 		return 6; // target,"*",source,"*"
 	}
 
-	if (!nameinfo->namelen) {
+	if (!nameinfo->trg.namelen) {
 		*p = 0;
 		return 2; // drive and zero byte
 	}
 
-	if (nameinfo->drivename) {
-		len = strlen((char*)nameinfo->drivename);
-		memmove (p, nameinfo->drivename, len);
+	if (nameinfo->trg.drivename) {
+		len = strlen((char*)nameinfo->trg.drivename);
+		memmove (p, nameinfo->trg.drivename, len);
 		p += len;
 		*p++ = ':';	// TODO: use '\0' instead of ':' as separator
 	}
 
 	// those areas may overlap
-	memmove (p, nameinfo->name, nameinfo->namelen + 1);
+	memmove (p, nameinfo->trg.name, nameinfo->trg.namelen + 1);
 	// let p point to the byte after the null byte
-	p += nameinfo->namelen + 1;
+	p += nameinfo->trg.namelen + 1;
 
 	// it's either two file names (like MOVE), or one file name with parameters (for OPEN_*)
 	// COPY accepts up to 4 comma separated source file names for merging
@@ -341,3 +341,23 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
 	return p-trg;
 }
+
+#ifdef SERVER
+
+/**
+ * dis-assembles a filename packet back into a nameinfo struct.
+ * (Note: only available on the server).
+ *
+ * cmd, access, and options are not set.
+ *
+ * Returns error code, most specifically SYNTAX codes if the packet
+ * cannot be parsed.
+ */
+uint8_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo) {
+
+
+}
+
+
+#endif
+

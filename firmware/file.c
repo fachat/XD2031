@@ -101,14 +101,14 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 #endif
 
 	// drive handling needed for error message drive
-	if (nameinfo.drive == NAMEINFO_LAST_DRIVE) {
-		nameinfo.drive = rtconf->last_used_drive;
+	if (nameinfo.trg.drive == NAMEINFO_LAST_DRIVE) {
+		nameinfo.trg.drive = rtconf->last_used_drive;
 	}
-	else if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+	else if (nameinfo.trg.drive == NAMEINFO_UNUSED_DRIVE) {
 		// TODO: match CBM behavior
-		nameinfo.drive = rtconf->last_used_drive;
+		nameinfo.trg.drive = rtconf->last_used_drive;
 	}
-	int8_t errdrive = rtconf->errmsg_with_drive ? nameinfo.drive : -1;
+	int8_t errdrive = rtconf->errmsg_with_drive ? nameinfo.trg.drive : -1;
 
 	// post-parse
 
@@ -176,7 +176,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		type = FS_OPEN_RW;
 	}
 
-	if (nameinfo.name[0] == '#') {
+	if (nameinfo.trg.name[0] == '#') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
 		// Note: '#' is still blocking on read!
@@ -204,7 +204,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	}
 
 #ifdef DEBUG_FILE
-	debug_printf("NAME='%s' (%d)\n", nameinfo.name, nameinfo.namelen);
+	debug_printf("NAME='%s' (%d)\n", nameinfo.trg.name, nameinfo.trg.namelen);
 	debug_printf("ACCESS=%c\n", nameinfo.access);
 	debug_printf("CMD=%d\n", nameinfo.cmd);
 	debug_flush();
@@ -225,22 +225,22 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
 	// check for default drive (here is the place to set the last used one)
-	if (nameinfo->drive == NAMEINFO_LAST_DRIVE) {
-		nameinfo->drive = rtconf->last_used_drive;
+	if (nameinfo->trg.drive == NAMEINFO_LAST_DRIVE) {
+		nameinfo->trg.drive = rtconf->last_used_drive;
 	}
-	else if (nameinfo->drive == NAMEINFO_UNUSED_DRIVE) {
+	else if (nameinfo->trg.drive == NAMEINFO_UNUSED_DRIVE) {
 		// TODO: match CBM behavior
-		nameinfo->drive = rtconf->last_used_drive;
+		nameinfo->trg.drive = rtconf->last_used_drive;
 	}
-	else if (nameinfo->drive < MAX_DRIVES) {
+	else if (nameinfo->trg.drive < MAX_DRIVES) {
 		// only save real drive numbers as last used default
-		rtconf->last_used_drive = nameinfo->drive;
+		rtconf->last_used_drive = nameinfo->trg.drive;
 	}
 
 	// if second name does not have a drive, use drive from first,
 	// but only if it is defined
-	if (nameinfo->file[0].drive == NAMEINFO_UNUSED_DRIVE && nameinfo->drive != NAMEINFO_UNDEF_DRIVE) {
-		nameinfo->file[0].drive = nameinfo->drive;
+	if (nameinfo->file[0].drive == NAMEINFO_UNUSED_DRIVE && nameinfo->trg.drive != NAMEINFO_UNDEF_DRIVE) {
+		nameinfo->file[0].drive = nameinfo->trg.drive;
 	}
 
 	// here is the place to plug in other file system providers,
@@ -253,7 +253,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
 		endpoint = direct_provider();
 	} else {
-		endpoint = provider_lookup(nameinfo->drive, (char*) nameinfo->drivename);
+		endpoint = provider_lookup(nameinfo->trg.drive, (char*) nameinfo->trg.drivename);
 	}
 
 	// convert from bus' PETSCII to provider
@@ -261,8 +261,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// are still ASCII only
 	// in the future the bus may have an own conversion option...
 	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-		((char*)nameinfo->name, strlen((char*)nameinfo->name), 
-		(char*)nameinfo->name, strlen((char*)nameinfo->name));
+		((char*)nameinfo->trg.name, strlen((char*)nameinfo->trg.name), 
+		(char*)nameinfo->trg.name, strlen((char*)nameinfo->trg.name));
 	for (uint8_t i=0 ; i < nameinfo->num_files ; ++i) {
 		if (nameinfo->file[i].name != NULL) {
 			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
@@ -273,14 +273,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 
 	if (type == FS_MOVE 
 		&& nameinfo->file[0].drive != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
-		&& nameinfo->file[0].drive != nameinfo->drive) {		// no need to check if the same
+		&& nameinfo->file[0].drive != nameinfo->trg.drive) {		// no need to check if the same
 
 		// two-name command(s) with possibly different drive numbers
 		endpoint_t *endpoint2 = provider_lookup(nameinfo->file[0].drive, (char*) nameinfo->file[0].name);
 
 		if (endpoint2 != endpoint) {
-			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo->drive+0x30, nameinfo->file[0].drive+0x30);
-			set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->drive);
+			debug_printf("ILLEGAL DRIVE COMBINATION: %d vs. %d\n", nameinfo->trg.drive+0x30, nameinfo->file[0].drive+0x30);
+			set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->trg.drive);
 			return -1;
 		}
 	}
@@ -289,8 +289,8 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// returns a default provider - serial-over-USB to the PC, which then 
 	// may do further checks
 	if (endpoint == NULL) {
-		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo->drive); debug_putcrlf();
-		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->drive);
+		debug_puts("ILLEGAL DRIVE: "); debug_putc(0x30+nameinfo->trg.drive); debug_putcrlf();
+		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->trg.drive);
 		return -1;
 	}
 	provider_t *provider = endpoint->provider;
@@ -309,7 +309,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	if (activeslot == NULL) {
 		debug_puts("NO OPEN SLOT FOR OPEN!");
 		debug_putcrlf();
-		set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
+		set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->trg.drive);
 		return -1;
 	}
 
@@ -351,14 +351,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			if (type != FS_OPEN_DIRECT) {
 				debug_puts("FILE OPEN ERROR");
 				debug_putcrlf();
-				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
+				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->trg.drive);
 				return -1;
 			}
 		}
-		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo->drive);
+		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo->trg.drive);
 		if (e < 0) {
 			debug_puts("E="); debug_puthex(e); debug_putcrlf();
-			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->drive);
+			set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->trg.drive);
 			return -1;
 		}
 	}
