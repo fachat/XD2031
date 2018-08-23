@@ -203,34 +203,30 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 		dir = ep->ptype->root(ep);
 		rv = resolve_dir(&name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
-			int rdflag = 0;
-			direntry_t *dirent;
 			// now resolve the actual filename
-			rv = resolve_scan(dir, &name, cset, false, &dirent, &rdflag);
-			if (rv == CBM_ERROR_OK) {
-				// ok, we have the directory entry, we need to open it
-				rv = dir->handler->open2(dirent, &pars, cmd, &fp);
-				if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
+			rv = resolve_open(dir, name, cset, &pars, cmd, &fp);
+			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+				// ok, we have the directory entry
+				if (fp->recordlen > 0) {
 					int record = fp->recordlen;
 					outbuf[0] = record & 0xff;
 					outbuf[1] = (record >> 8) & 0xff;
 					outln = 2;
 					rv = CBM_ERROR_OPEN_REL;
 				}
-				if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-					fp->openmode = cmd;
-					channel_set(tfd, fp);
-				}
+				fp->openmode = cmd;
+				channel_set(tfd, fp);
 			}
 		}
 	}
 	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
 		log_rv(rv);
-		dir->handler->close(dir, 1, outbuf, outlen);
+		dir->handler->close(dir, 1, NULL, NULL);
 	}
 
 	mem_free(memname);
 
+	*outlen = outln;
 	return rv;
 #if 0	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;

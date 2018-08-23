@@ -1156,7 +1156,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 
 	  direntry_t *dirent = &(file->direntry);
 	  dirent->parent = fp;
-	  *outentry = dirent;
+	  *outentry = NULL;
 	
 	  log_debug("ENTER: fs_provider.direntry2 fp=%p, dirstate=%d\n", fp, fp->dirstate);
 
@@ -1257,6 +1257,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 					if (S_ISDIR(sbuf.st_mode)) {
 						dirent->mode = FS_DIR_MOD_DIR;
 					}
+	  				*outentry = dirent;
 					break;
 				}
 			}

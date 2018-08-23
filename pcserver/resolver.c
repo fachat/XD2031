@@ -221,7 +221,7 @@ int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdi
         do {
         	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag);
 
-                name = (const char*)direntry->name;
+                name = direntry ? (const char*)direntry->name : NULL;
                 scanpattern = *pattern;
         } while (
                 rv == CBM_ERROR_OK
@@ -233,6 +233,119 @@ int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdi
 	*outde = direntry;
 
 	return rv;
+}
+
+/**
+ * scan a directory and open the file, optionally creating it.
+ * Does _not_ close the directory so you can call it repeatedly
+ * to open multiple files matching the same pattern.
+ */
+int resolve_open(file_t *dir,
+                const char *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile) {
+
+        file_t *file = NULL;
+        const char *pattern = inname;
+
+        int rdflag = 0;
+        direntry_t *dirent;
+        // now resolve the actual filename
+        int rv = resolve_scan(dir, &inname, cset, false, &dirent, &rdflag);
+        if (rv == CBM_ERROR_OK || rv == CBM_ERROR_FILE_NOT_FOUND) {
+        	// ok, we have the directory entry. Or maybe not.
+		
+                log_info("File resolve gave %d\n", rv);
+                log_debug("File resolve gave file=%p\n", dirent);
+
+                switch (type) {
+                case FS_OPEN_RD:
+                        if (dirent == NULL) {
+                                rv = CBM_ERROR_FILE_NOT_FOUND;
+                        } else {
+                                rv = file->handler->open2(dirent, pars, type, &file);
+                        }
+                        break;
+                case FS_OPEN_WR:
+                        if (dirent != NULL) {
+                                rv = CBM_ERROR_FILE_EXISTS;
+                                break;
+                        }
+                        // fall-through
+                case FS_OPEN_AP:
+                case FS_OPEN_OW:
+                case FS_OPEN_RW:
+                        if (dirent == NULL) {
+                                if (pars->filetype == FS_DIR_TYPE_REL && pars->recordlen == 0) {
+                                        rv = CBM_ERROR_FILE_NOT_FOUND;
+                                        break;
+                                }
+                                rv = dir->handler->create(dir, &file, pattern, cset, pars, type);
+                                if (rv != CBM_ERROR_OK) {
+                                        break;
+                                }
+                        } else {
+                                rv = file->handler->open2(dirent, pars, type, &file);
+				if (rv != CBM_ERROR_OK) {
+					break;
+				}
+                        }
+                        if (pars->filetype != FS_DIR_TYPE_UNKNOWN
+                                && file->type != pars->filetype) {
+                                rv = CBM_ERROR_FILE_TYPE_MISMATCH;
+                                break;
+                        }
+                        if (!file->writable) {
+                                rv = CBM_ERROR_WRITE_PROTECT;
+                                break;
+                        }
+                        break;
+                case FS_MKDIR:
+                        if (dirent != NULL) {
+                                rv = CBM_ERROR_FILE_EXISTS;
+                        } else  {
+                                if (dir->handler->mkdir != NULL) {
+                                        rv = dir->handler->mkdir(dir, pattern, cset, pars);
+                                } else {
+                                        rv = CBM_ERROR_DIR_NOT_SUPPORTED;
+                                }
+                        }
+                        break;
+                }
+                if (rv == CBM_ERROR_OK) {
+                        if (pars->recordlen != 0) {
+                                if (file->recordlen != pars->recordlen
+                                        || file->type != FS_DIR_TYPE_REL) {
+                                        rv = CBM_ERROR_RECORD_NOT_PRESENT;
+                                }
+                        }
+                }
+
+                if (file != NULL) {
+                        if (type == FS_OPEN_AP) {
+                                rv = file->handler->seek(file, 0, SEEKFLAG_END);
+                        }
+
+                        *outfile = file;
+
+                        // and loose the pointer to the parent
+                        //loose_parent(file, dir);
+                }
+        }
+
+        log_info("File open gave %d\n", rv);
+
+        if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
+                // on error
+                if (file != NULL) {
+                        file->handler->close(file, 0, NULL, NULL);
+                }
+                *outfile = NULL;
+        }
+
+        if (pattern != NULL) {
+                mem_free((char*)pattern);
+        }
+
+        return rv;
 }
 
 

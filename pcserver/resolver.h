@@ -72,5 +72,13 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **outdir);
 int resolve_scan(file_t *dir, const char **pattern, charset_t cset, bool isdirscan,
 	direntry_t **outde, int *rdflag);
 
+/**
+ * scan a directory and open the file, optionally creating it.
+ * Does _not_ close the directory so you can call it repeatedly
+ * to open multiple files matching the same pattern.
+ */
+int resolve_open(file_t *dir,
+                const char *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile);
+
 
 #endif
