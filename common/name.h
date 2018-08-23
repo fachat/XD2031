@@ -52,19 +52,22 @@ typedef struct {
 	uint8_t namelen;	// length of file name
 } drive_and_name_t;
 
+// the parameter actually used for an OPEN on the server
 typedef struct {
-	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")
+        uint8_t filetype;
+        uint16_t recordlen;
+} openpars_t;
+
+typedef struct {
 	command_t cmd;		// command, "$" for directory open
-	uint8_t type;		// file type requested ("S", "P", ...)
+	//uint8_t type;		// file type requested ("S", "P", ...)
 	uint8_t access;		// access type requested ("R", "W", "A", or "X" for r/w)
 	uint8_t options;	// access options, as bit mask
-	uint8_t *drivename;	// name of drive ("FTP", ...)
-	uint8_t *name;		// pointer to the actual name
-	uint8_t namelen;	// length of file name
-	uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
-	uint16_t recordno;	// record number from P command
-	uint8_t num_files;	// number of secondary drive_filenames
-	drive_and_name_t file[MAX_NAMEINFO_FILES];	// drive_name info
+	//uint16_t recordlen;	// length of / position in record from opening 'L' file (REL) / P cmd
+	openpars_t pars;
+	uint8_t num_files;	// number of secondary (source) drive_filenames
+	drive_and_name_t trg;	// target file pattern
+	drive_and_name_t file[MAX_NAMEINFO_FILES];	// optional source drive_name info
 } nameinfo_t;
 
 // nameinfo option bits
@@ -86,6 +89,36 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
 
 /**
+ * The following two methods assemble a command packet with the filenames from a 
+ * nameinfo struct (firmware), and dis-assembles a packet back into the struct (on the server).
+ *
+ * Note that access type is not in the packet, but encoded in the command (like FS_OPEN_AP for
+ * append). Also some options may not appear in the packet, as they are firmware-relevant only
+ * (e.g. NONBLOCKING I/O).
+ *
+ * The packet has the following structure:
+ * 
+ * 	DRV	- single byte drive, either 0-9 or NAMEINFO_* for unused, undefined 
+ * 		  or reused drive (see wireformat)
+ *	PATTERN	- path and filename or pattern, zero-terminated
+ *		  Note that for named providers, the path is preceded by the
+ *		  provider name and ':' as separator, like
+ *		  "ftp:ftp.zimmers.net/pub/cbm"
+ *	OPTIONS	- option string (see below), zero-terminated
+ * 	[
+ * 	DRV	- single drive or NAMEINFO_*_DRIVE
+ *	PATTERN	- path and filename or pattern, zero-terminated. Format as above.
+ *	] repeated 0 to 4 times
+ *
+ * The options string is a comma-separated list of "<option-char>=<value>".
+ * Currently defined options are:
+ *
+ * 	T	defines the requested file type, where the R-file adds
+ * 		the record length (in decimal), like
+ *		"T=R64"
+ */
+
+/**
  * assembles the filename packet from nameinfo into the target buffer.
  * For this it is essential, that nameinfo content does not overlap
  * (at least in the order of assembly) with the target buffer.
@@ -96,5 +129,18 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
  * it returns the number of bytes in the buffer
  */
 uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
+
+#ifdef SERVER
+
+/**
+ * dis-assembles a filename packet back into a nameinfo struct.
+ * (Note: only available on the server).
+ *
+ * Returns error code, most specifically SYNTAX codes if the packet
+ * cannot be parsed.
+ */
+cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo);
+
+#endif
 
 #endif

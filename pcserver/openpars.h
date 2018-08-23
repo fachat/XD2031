@@ -21,16 +21,19 @@
 #ifndef OPENPARS_H
 #define OPENPARS_H
 
+// for openpars_t
+#include "name.h"
+
 // ************
 // process options from the optional OPEN parameter string
 // ************
 
 // further possible options:
 // - ignore wrapper, so we see real names (not x00 names for example)
-typedef struct {
-	uint8_t filetype;
-	uint16_t recordlen;
-} openpars_t;
+//typedef struct {
+//	uint8_t filetype;
+//	uint16_t recordlen;
+//} openpars_t;
 
 /**
  * process options and fill parameter struct

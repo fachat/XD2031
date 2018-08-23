@@ -28,7 +28,6 @@
 
 
 // simple hash algorithm. As we use string, we only use the lower 7 bits;
-// we also use max the first 8 characters
 static inline int string_hash(const char *str) {
 	int h = 0;
 
@@ -42,7 +41,6 @@ static inline int string_hash(const char *str) {
 }
 
 // simple hash algorithm. As we use string, we only use the lower 7 bits;
-// we also use max the first 8 characters
 // ignore case by converting tolower() 
 static inline int string_hash_nocase(const char *str) {
 	int h = 0;
@@ -55,7 +53,6 @@ static inline int string_hash_nocase(const char *str) {
 	}
 	return h;
 }
-
 
 
 #endif

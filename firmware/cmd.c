@@ -60,15 +60,15 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 	parse_filename(command->command_buffer, command->command_length, CONFIG_COMMAND_BUFFER_SIZE, &nameinfo, PARSEHINT_COMMAND);
 
-	err_drv = (nameinfo.drive >= MAX_DRIVES ? 0 : nameinfo.drive);
+	err_drv = (nameinfo.trg.drive >= MAX_DRIVES ? 0 : nameinfo.trg.drive);
 
 #ifdef DEBUG_CMD
         debug_printf("CMD=%s\n", command_to_name(nameinfo.cmd));
-        debug_printf("DRIVE=%c\n", nameinfo.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
-                                (nameinfo.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
-                                nameinfo.drive + 0x30));
-        debug_printf("NAME='%s' (%d)\n", (nameinfo.name == NULL) ? "" : (char*)nameinfo.name, 
-				nameinfo.namelen);
+        debug_printf("DRIVE=%c\n", nameinfo.trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+                                (nameinfo.trg.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+                                nameinfo.trg.drive + 0x30));
+        debug_printf("NAME='%s' (%d)\n", (nameinfo.trg.name == NULL) ? "" : (char*)nameinfo.trg.name, 
+				nameinfo.trg.namelen);
         debug_printf("DRIVE2=%c\n", nameinfo.file[0].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
                                 (nameinfo.file[0].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
                                 nameinfo.file[0].drive + 0x30));
@@ -99,13 +99,13 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			// nameinfo cmd enum definition such that wireformat matches it
 			return file_submit_call(channel_no, nameinfo.cmd, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 1);
 		case CMD_ASSIGN:
-			if (nameinfo.drive == NAMEINFO_UNUSED_DRIVE) {
+			if (nameinfo.trg.drive == NAMEINFO_UNUSED_DRIVE) {
 				// no drive; TODO: last drive
 				set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, bus->rtconf.errmsg_with_drive ? 0 : -1);
 				return -1;
 			}
 
-			if (provider_assign( nameinfo.drive, (char*) nameinfo.name, (char*) nameinfo.file[0].name ) < 0) {
+			if (provider_assign( nameinfo.trg.drive, (char*) nameinfo.trg.name, (char*) nameinfo.file[0].name ) < 0) {
 				return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 1);
 			}
 			break;
@@ -119,7 +119,7 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 			rv = rtconfig_set(rtconf, (char*) command->command_buffer);
 			break;
 		case CMD_POSITION:
-			rv = relfile_position(bus, (char*) nameinfo.name, nameinfo.namelen, errormsg);
+			rv = relfile_position(bus, (char*) nameinfo.trg.name, nameinfo.trg.namelen, errormsg);
 			break;
 #ifdef HAS_RTC
 		case CMD_TIME:
