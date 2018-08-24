@@ -57,77 +57,59 @@
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
  */
-int resolve_endpoint(const char **pattern, charset_t cset, endpoint_t **outep) {
+int resolve_endpoint(drive_and_name_t *dname, charset_t cset, endpoint_t **outep) {
 
-	const char *inname = *pattern;
-
-        int drive = inname[0];
-        inname++;
-
-        if (drive == NAMEINFO_LAST_DRIVE) {
+        if (dname->drive == NAMEINFO_LAST_DRIVE) {
 		// this means there was no drive or provider defined; we can just return
 		// as ep has been set to the default value by the caller.
 		return CBM_ERROR_OK;
         }
 
-        if (drive == NAMEINFO_UNDEF_DRIVE) {
-                if (inname[0] == 0) {
+        if (dname->drive == NAMEINFO_UNDEF_DRIVE) {
+                if (dname->drivename == NULL || dname->drivename[0] == 0) {
                         // no name specified, so return NULL (no provider found)
                         return CBM_ERROR_OK;
                 }
                 // the drive is not specified by number, but by provider name
 		// TODO: charset-aware strchr, only works for provider with ASCII names right now
-                char *p = strchr(inname, ':');
-                if (p != NULL) {
-			// only ASCII names work
-                        unsigned int l = p-(inname);
-                        p++; // first char after ':'
-			const char *pname = mem_alloc_strn(inname, l);
-                        log_debug("Trying to find provider for: %s\n", inname);
+		
+                log_debug("Trying to find provider for: %s\n", dname->drivename);
 
-			provider_t *prov = provider_find(pname);
+		provider_t *prov = provider_find((const char*)dname->drivename);
 
-                        if (prov != NULL) {
+                if (prov != NULL) {
                         // we got a provider, but no endpoint yet
 
-	                        log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n",
-                                               prov->name, p);
+	                log_debug("Found provider '%s', trying to create temporary endpoint for %s\n",
+                                               prov->name, dname->name);
 
-                                if (prov->tempep != NULL) {
-                                	endpoint_t *ep = prov->tempep(&p, cset);
-                                        if (ep != NULL) {
-						*pattern = p;
-                                                log_debug("Created temporary endpoint %p\n", ep);
-                                                ep->is_temporary = 1;
-                                        }
-                                        mem_free(pname);
-					*pattern = p;
-					*outep = ep;
-					return CBM_ERROR_OK;
-                                } else {
-                                        log_error("Provider '%s' does not support temporary drives\n",
-                                                  prov->name);
+                        if (prov->tempep != NULL) {
+                               	endpoint_t *ep = prov->tempep((char**)&dname->name, cset);
+                                if (ep != NULL) {
+                                        log_debug("Created temporary endpoint %p\n", ep);
+                                        ep->is_temporary = 1;
                                 }
-                                mem_free(pname);
-                                return CBM_ERROR_DRIVE_NOT_READY;
+				*outep = ep;
+				return CBM_ERROR_OK;
+                        } else {
+                                log_error("Provider '%s' does not support temporary drives\n",
+                                                  prov->name);
                         }
-                        mem_free(pname);
-                        log_error("Did not find provider for %s\n", inname);
+                        log_error("Did not find provider for %s\n", dname->drivename);
                         return CBM_ERROR_DRIVE_NOT_READY;
                 } else {
                         log_info("No provider name given for undef'd drive '%s', trying default %s\n",
-                                                                        inname, (*outep)?(*outep)->ptype->name:"-");
+                                                              dname->drivename, (*outep)?(*outep)->ptype->name:"-");
 			return CBM_ERROR_OK;
                 }
         }
 
-        log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);
+        log_debug("Trying to resolve drive %d with name '%s'\n", dname->drive, dname->drivename);
 
 	// NOTE: cdpath not yet used!
-	ept_t *ept = endpoints_find(drive);
+	ept_t *ept = endpoints_find(dname->drive);
 
 	if (ept != NULL) {
-		*pattern = inname;
 		*outep = ept->ep;
 		return CBM_ERROR_OK;
 	}

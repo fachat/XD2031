@@ -99,14 +99,19 @@ command_t command_find(uint8_t *input, uint8_t *len) {
 
 static char cmd_string[STRLEN + 1];
 
+// TODO: evaluate second table for non-command messages (like FS_READ etc)
 const char *command_to_name(command_t cmd) {
 	uint8_t i;
 
 	strcpy(cmd_string, "-");          // Initialize with CMD_NONE
 	for (i=0; i < TABLEN; i++) {
 		if (cmd == rom_read_byte( (uint8_t *) &cmd_tab[i].cmd)) {
+#ifdef SERVER
+			return cmd_tab[i].name;
+#else
 			rom_memcpy(cmd_string, cmd_tab[i].name, STRLEN + 1);
 			break;
+#endif
 		}
 	}
 	return cmd_string;

@@ -43,6 +43,13 @@
 #include "list.h"
 #include "cmd.h"
 #include "serial.h"
+#include "cmdnames.h"
+
+#define DEBUG_CMD
+#undef DEBUG_CMD_TERM
+#undef DEBUG_READ
+#undef DEBUG_WRITE
+
 
 #define	MAX_BUFFER_SIZE			64
 #define	RET_BUFFER_SIZE			200

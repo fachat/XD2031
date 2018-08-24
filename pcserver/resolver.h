@@ -35,14 +35,13 @@
  * file pattern (e.g. in "C0:foo=bar"), where endpoint drive "0" is reused
  * for the second file-path "bar" as well.
  *
- * ep is not changed if not endpoint is found in the pattern, so it should
+ * ep is not changed if no endpoint is found in the pattern, so it should
  * be set to either NULL or the endpoint to reuse before the call.
  * If an endpoint is found, ep is set to it.
  *
- * pattern should be set to the beginning of a provider-address as input,
- * and will be set to the beginning of the file-path on successful return.
+ * The parameters drive and drivename come from the nameinfo_t.
  */
-int resolve_endpoint(const char **pattern, charset_t cset, endpoint_t **ep);
+int resolve_endpoint(drive_and_name_t *dname, charset_t cset, endpoint_t **ep);
 
 /**
  * resolve a given file-path (pattern) to the final directory (returned in outdir)

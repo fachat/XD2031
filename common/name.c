@@ -348,7 +348,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
 static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_name_t *name) {
 
-	uint8_t p = 0;
+	uint8_t p = 1;
 	uint8_t l = *len;
 
 	if (l < 2) {
@@ -358,7 +358,7 @@ static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_na
 
 	name->drivename = NULL;
 	name->name = NULL;
-	name->drive = src[p++];
+	name->drive = *src++;
 
 	p += strnlen(src, l-p);
 	if(p >= l) {
@@ -378,6 +378,7 @@ static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_na
 	}
 
 	name->name = src;
+	name->namelen = strlen(name->name);
 
 	// points to the byte after the terminating zero
 	*len = p+1;
@@ -397,6 +398,15 @@ cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * namei
 
 	uint8_t l = len;
 
+	nameinfo->num_files = 0;
+	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+		nameinfo->file[i].name = NULL;
+		nameinfo->file[i].drivename = NULL;
+		nameinfo->file[i].drive = NAMEINFO_UNDEF_DRIVE;
+	}
+
+	openpars_init_options(&nameinfo->pars);
+
 	if (filename_from_packet(src, &l, &nameinfo->trg) == CBM_ERROR_OK) {
 		src += l;
 		len -= l;
@@ -404,20 +414,24 @@ cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * namei
 		return CBM_ERROR_FAULT;
 	}
 
-	l = strnlen(src, len);
-	if (l >= len) {
-		return CBM_ERROR_FAULT;
+	// allow for filename without options
+	if (len > 0) {
+		// got some options
+		l = strnlen(src, len);
+		if (l >= len) {
+			return CBM_ERROR_FAULT;
+		}
+
+		// parse options
+		openpars_process_options(src, &nameinfo->pars);
+
+		// parse potential other filenames
+		src += l+1;
+		len -= l+1;
 	}
 
-	// parse options
-	openpars_init_options(&nameinfo->pars);
-	openpars_process_options(src, &nameinfo->pars);
-
-	// parse potential other filenames
-	src += l+1;
-	len -= l+1;
-	int i = 0;
-	while (len > 0 && i < MAX_NAMEINFO_FILES) {
+	int i;
+	for (i = 0; len > 0 && i < MAX_NAMEINFO_FILES; i++) {
 		l = len;
 		if (filename_from_packet(src, &l, &nameinfo->file[i]) != CBM_ERROR_OK) {
 			return CBM_ERROR_FAULT;
