@@ -70,9 +70,9 @@ int send_longcmd(int sockfd, uint8_t cmd, uint8_t fd, nameinfo_t *ninfo) {
 
 	uint8_t *buf = mem_alloc_c(256, "longcmd buffer");
 
-	if (ninfo->drive == NAMEINFO_UNUSED_DRIVE) {
+	if (ninfo->trg.drive == NAMEINFO_UNUSED_DRIVE) {
 		// default drive
-		ninfo->drive = 0;
+		ninfo->trg.drive = 0;
 	}
 
 	uint8_t len = assemble_filename_packet(buf+FSP_DATA, ninfo);
