@@ -66,7 +66,9 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **outdir);
  *
  * When isdirscan is true, the directory entries for disk header and blocks free
  * are also returned where available.
- * rdflag 
+ *
+ * rdflag is set to READFLAG_EOF if it is the last entry (only relevant on dirscan,
+ * to send an EOF with the last entry.
  */
 int resolve_scan(file_t *dir, const char **pattern, charset_t cset, bool isdirscan,
 	direntry_t **outde, int *rdflag);

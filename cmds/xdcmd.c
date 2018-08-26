@@ -247,6 +247,10 @@ static const cmdtab_t cmdtab[] = {
 				"Options:",
 				"-f                  overwrite existing files (default is not to overwrite)",
 			NULL }},
+	{	"rm",	cmd_rm,
+			"Delete file(s) from the CBM server filesystem. Multiple files or patterns can be specified.",
+			{	"<drive:><file_pattern_1> [ <drive:><file_pattern_2> ... ]",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);

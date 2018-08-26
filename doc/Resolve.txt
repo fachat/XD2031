@@ -6,6 +6,33 @@ The "resolver" identifies a file or directory when it is opened.
 
 This text describes the use cases and implementation of the "resolving" process. 
 
+Commodore DOS Basics
+--------------------
+
+The XD2031 firmware mimics a Commodore disk drive, so we look into the way Commodore DOS
+resolves filenames. It is, in fact, rather flexible - but also somewhat complex:
+
+1) Commodore DOS allows multiple (up to four) filename/patterns in many commands, even 
+when loading a directory. The different patterns are separated by comma.
+
+	file1,file2
+
+2) Each filename/pattern can (optionally) have a drive number before it, separated by 
+a colon ':'. For example:
+
+	0:file1,file2,1:file3
+
+3) If no colon is given, all drives are assumed. I.e. in the example above, when used to
+loading a directory, file1 is returned from drive 0, file3 from drive 1, but file2 is 
+listed in both directories. The same holds true for commands like scratch.
+
+4) If there is only a colon, but no drive number, the drive number of the previous command
+or command part before it is used. In the following example
+
+	0:c*,1:b*,:a*
+
+files starting with a will only be matched from the drive 1.
+
 
 Definitions
 -----------
@@ -68,12 +95,17 @@ Before a file or directory can be accessed, it has to be opened. To open the fil
 or direcory, it must be found, or "resolved" using the name and path given in the
 open command. This is the task of the resolver.
 
-The first step is to find the endpoint. An endpoint can either be directly the name
-of a provider (resp. its provided protocol) like "http:", or a drive number like "0:".
-In the latter case the resolver looks up the driver number and finds an assigned
-endpoint. 
+The first step is to find the drive. In Commodore DOS a drive was indicated by a
+single digit, usually 0 or 1 for dual-disk drives. Here it is generalized into
+the concept of an "endpoint". An endpoint can still be a drive number, but also
+a name of filesystem service provider, like "fs" for the actual filesystem, 
+"http" for a web interface and so on. A drive number actually needs to be assigned 
+to a filesystem provider to be usable. This assign operation defines the endpoint
+for the drive, e.g. the filesystem provider and the path to the directory in that
+filesystem. In case of a drive number the resolver looks up the assigned endpoint
+before it applies the actual filename.
 
-An endpoint basically consists of a provider and a base address on that
+An endpoint thus consists of a provider and a base address on that
 provider. The path and name given in the open is then searched relative 
 to the base address of the endpoint.
 
@@ -362,4 +394,8 @@ UC020	Open a directory for reading
 UC030	Delete a file pattern
 UC031	Rename a file
 UC032	Copy a file
+
+UC040 	Make directory
+UC041	Remove a directory
+UC042	Change into a directory
 

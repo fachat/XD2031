@@ -24,7 +24,7 @@
  * This file contains the file name parser
  */
 
-#undef	DEBUG_NAME
+#define	DEBUG_NAME
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,22 +46,25 @@
 
 #if defined(DEBUG_NAME) || defined(PCTEST)
 static void dump_result(nameinfo_t *result) {
-	printf("CMD=%s\n", command_to_name(result->cmd));
-	printf("DRIVE=%c\n", result->trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+	printf("CMD      =%s\n", command_to_name(result->cmd));
+	printf("DRIVE    =%c\n", result->trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->trg.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				(result->trg.drive == NAMEINFO_LAST_DRIVE ? 'L' :
 				result->trg.drive + 0x30)));
 	printf("DRIVENAME='%s'\n", result->trg.drivename ? (char*) result->trg.drivename : nullstring);
-	printf("NAME='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : nullstring, result->trg.namelen);
-	printf("ACCESS=%c\n", result->access ? result->access : '-');
-	printf("TYPE=%c", result->pars.filetype ? result->pars.filetype : '-'); debug_putcrlf();
-	printf("DRIVE2=%c\n", result->file[0].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
-				(result->file[0].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
-				(result->file[0].drive == NAMEINFO_LAST_DRIVE ? 'L' :
-				result->file[0].drive + 0x30)));
-	printf("DRIVENAME2='%s'\n", result->file[0].drivename ? (char*) result->file[0].drivename : nullstring);
-	printf("NAME2='%s' (%d)\n", result->file[0].name ? (char*)result->file[0].name : nullstring, result->file[0].namelen);
-	printf("RECLEN=%d\n", result->pars.recordlen);
+	printf("NAME     ='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : nullstring, result->trg.namelen);
+	printf("ACCESS   =%c\n", result->access ? result->access : '-');
+	printf("TYPE     =%c", result->pars.filetype ? result->pars.filetype : '-'); debug_putcrlf();
+	printf("RECLEN   =%d\n", result->pars.recordlen);
+	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+		printf("%d.DRIVE    =%c\n", i, result->file[i].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
+				(result->file[i].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
+				(result->file[i].drive == NAMEINFO_LAST_DRIVE ? 'L' :
+				result->file[i].drive + 0x30)));
+		printf("%d.DRIVENAME='%s'\n", i, result->file[i].drivename ? (char*) result->file[i].drivename : nullstring);
+		printf("%d.NAME     ='%s' (%d)\n", i, result->file[i].name ? (char*)result->file[i].name : nullstring, 
+				result->file[i].namelen);
+	}
 	debug_flush();
 }
 #else
@@ -77,36 +80,44 @@ static void dump_result(nameinfo_t *result) {
  * A provider name must not end with a digit to be able to detect numeric drives.
  *
  * @param[in]  in         Single filename with may be preceded by a (named) drive
- * @param[out] filename   Filename without preceding drive
- * @param[out] drivename  Name of drive (e.g. FTP), otherwise NULL
- * @returns    drive      Number or NAMEINFO_*_DRIVE defined in wireformat.h
+ * @param[out] out        drive_and_name_t struct filled
+ * @returns    commap     pointer to next comma if exists, overwritten by zero
  */
-static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, uint8_t **drivename) {
+static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
 	uint8_t *p = (uint8_t *)strchr((char*) in, ':');
 	uint8_t *c = (uint8_t *)strchr((char*) in, ',');
 	uint8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
-	*drivename = NULL;
-	*filename  = in;
+	out->drivename = NULL;
+	out->name  = in;
 	uint8_t len;
 
 	if (p && (c == NULL || c > p)) { // there is a colon (not after a comma)
 		*p = 0;             // zero-terminate drive name
-		*filename = p + 1;  // filename with drive stripped
+		out->name = p + 1;  // filename with drive stripped
 
 		if (p == in) r = NAMEINFO_LAST_DRIVE;          // return filename without ':'
 		else {
 			r = strtol((char *)in,(char **)&p,10);
 			if (*p || r > 9) {            // named drive
-				*drivename = in;
+				out->drivename = in;
 				r = NAMEINFO_UNDEF_DRIVE;
 			}
 		}
 	}
+	if (c) {
+		// comma is end of filename, overwrite comma with string terminator
+		*c = 0;
+		// point to char after comma
+		c++;
+	}
 	// Drop CR if appended to filename
-	len = strlen((char *)*filename);
-	if (*(*filename + len - 1) == 13) *(*filename + --len) = 0;
-	*namelen  = len;
-	return r;
+	len = strlen((char *)out->name);
+	if (out->name[len - 1] == 13) {
+		out->name[--len] = 0;
+	}
+	out->drive = r;
+	out->namelen  = len;
+	return c;
 }
 
 /** @brief Parse command and fill result in a way the specific command expects it
@@ -120,12 +131,10 @@ static uint8_t parse_drive (uint8_t *in, uint8_t **filename, uint8_t *namelen, u
  * @param[in]  len    Length of command string
  * @param[out] result Filled with zero, one to two names
  */
-static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
-	uint8_t cmdlen;
+void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
+	uint8_t cmdlen = 0;
 
 	result->num_files = 0; // Initialize # of secondary files
-	result->cmd = command_find(cmdstr, &cmdlen);
-	if (result->cmd == CMD_SYNTAX) return;
 
 	// skip whitespace if any
 	while(isspace(cmdstr[cmdlen])) ++cmdlen;
@@ -138,33 +147,51 @@ static void parse_cmd (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	}
 	// check for disk copy "Dt=s" or "Ct=s"
 	if ((result->cmd == CMD_DUPLICATE || result->cmd == CMD_COPY) &&
-		cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
-		isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
-		result->trg.drive         = cmdstr[cmdlen  ] & 15; // target drive
-		result->file[0].drive = cmdstr[cmdlen+2] & 15; // source drive
+			cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
+			isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
+		result->trg.drive = cmdstr[cmdlen  ] & 15; 	// target drive
+		result->file[0].drive = cmdstr[cmdlen+2] & 15; 	// source drive
+		result->num_files = 1;
 		return;
 	}
+
+	uint8_t *sep = cmdstr + cmdlen;
 	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
 		// Split cmdstr at '=' for file[0].name
 		// and at ',' for more file names
-      uint8_t i = 0;
-		uint8_t *sep = (uint8_t*) strchr((char*) cmdstr, '=');
-		while (sep && i < MAX_NAMEINFO_FILES) {
+		sep = (uint8_t*) strchr((char*) cmdstr, '=');
+		if (sep) {
 			*sep = 0;
-			result->file[i].drive = parse_drive (sep+1, &result->file[i].name,
-			&result->file[i].namelen, &result->file[i].drivename);
-			sep = (uint8_t*) strchr((char*) result->file[i].name, ',');
-			// Correct length of filename if comma separator found
-			if (sep) result->file[i].namelen = sep - result->file[i].name;
-			++i;
+			sep++;
+			// note: if there is a comma, it should probably be a syntax error
+			// but we currently just ignore it (we could add options here!)
+			parse_drive (cmdstr+cmdlen, &result->trg);
+		} else {
+			// no "=" for assign, rename or copy means syntax error 
+			result->cmd = CMD_SYNTAX;
+			return;
 		}
-		result->num_files = i;
 	}
-	result->trg.drive = parse_drive (cmdstr+cmdlen, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
+
+      	uint8_t i = 0;
+	while (sep && i < MAX_NAMEINFO_FILES) {
+		sep = parse_drive (sep, &result->file[i]);
+		++i;
+	}
+	result->num_files = i;
+
+	if (sep) {
+		// too many file names
+		result->cmd = CMD_SYNTAX;
+		return;
+	}
+
 	// set source drives to target drive if not specified
 	for (uint8_t i=0 ; i < result->num_files ; ++i) {
 		if (result->file[i].drive > 9) result->file[i].drive = result->trg.drive;
 	}
+
+	dump_result(result);
 }
 
 
@@ -176,7 +203,10 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 			strcat((char *)filename,":*");
 		}
 		result->cmd  = CMD_DIR;
-		result->trg.drive = parse_drive (filename+1, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
+		uint8_t *c = parse_drive (filename+1, &result->trg);
+		if (c) {
+			// here we could add parsing of options, e.g. filtering a directory for file types
+		}
 		return;
 	}
 
@@ -185,27 +215,61 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 		filename++;
 	}
 
-	result->trg.drive = parse_drive (filename, &result->trg.name, &result->trg.namelen, &result->trg.drivename);
+	p = parse_drive (filename, &result->trg);
 
 	// Process options that may follow comma separated after the filename
 	// In general, options can be used in any order, but each type only once.
 	// Exception: L has to be the last option
 	// Long form (e.g. SEQ,WRITE instead of S,W) checks only first character.
-	const char file_options[] = "PSULRWAXN";
-	char opt[3] = ",?";
 
-	for (uint8_t i=0 ; i < sizeof(file_options)-1 ;  ++i) {
-		opt[1] = file_options[i];  // modify search string (",R" ",P" etc.)
-		if ((p = (uint8_t *)strstr((char *)result->trg.name,opt))) {
-			if (p[1] == 'N') result->options |= NAMEOPT_NONBLOCKING;  // N
-			else if (i < 4)  result->pars.filetype     = file_options[i];      // PSUL
-			else             result->access   = file_options[i];      // RWAX
-			if (p[1] == 'L') {
-				// CBM is single byte format, but we "integrate" the closing null-byte
-				// to allow two byte record lengths
-				result->pars.recordlen = p[3] + (p[4] << 8);
+	// loop as long as we have options and not yet received the L option
+	while (p && *p && result->pars.filetype != 'L') {
+		switch(*p) {
+		// file type options
+		case 'L':
+			// CBM is single byte format, but we "integrate" the closing null-byte
+			// to allow two byte record lengths
+			result->pars.recordlen = p[1] + (p[2] << 8);
+			// falls through
+		case 'P':
+			// falls through
+		case 'S':
+			// falls through
+		case 'U':
+			if (result->pars.filetype) {
+				result->cmd = CMD_SYNTAX;
+				return;
 			}
+			result->pars.filetype = *p;
+			break;
+		// file access options
+		case 'R':
+			// falls through
+		case 'W':
+			// falls through
+		case 'A':
+			// falls through
+		case 'X':
+			if (result->access) {
+				result->cmd = CMD_SYNTAX;
+				return;
+			}
+			result->access = *p;
+			break;
+		// other options
+		case 'N':
+			result->options |= NAMEOPT_NONBLOCKING;
+			break;
+		default:
+			result->cmd = CMD_SYNTAX;
+			return;
 		}
+		p++;
+		if (*p && *p != ',') {
+			result->cmd = CMD_SYNTAX;
+			return;
+		}
+		p++;
 	}
 
 	if (!result->access) {
@@ -214,10 +278,6 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 			result->access = 'X';
 		}
 	}
-	if ((p = (uint8_t *)strchr((char *)result->trg.name,','))) {
-		*p = 0; // cut off options
-	}
-	result->trg.namelen = strlen((char *)result->trg.name);
 }
 
 /*
@@ -262,13 +322,18 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 	result->cmd    = CMD_NONE;	// no command
 
 	if (parsehint & PARSEHINT_COMMAND) {
-		parse_cmd(p, len, result);
+		uint8_t cmdlen = 0;
+		result->cmd = command_find(p, &cmdlen);
+		if (result->cmd == CMD_SYNTAX) {
+			return;
+		}
+		parse_cmd_pars(p+cmdlen, len-cmdlen, result);
 	} else {
 		result->trg.name = p;	// full name
 		result->trg.namelen = len;	// default
 		parse_open(p, parsehint & PARSEHINT_LOAD, len, result);
+		dump_result(result);
 	}
-	dump_result(result);
 }
 
 
@@ -305,7 +370,6 @@ static void* assemble_filename(uint8_t *p, drive_and_name_t *name) {
 uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
 	uint8_t *p = trg;
-	uint8_t len;
 	uint8_t i;
 
 
@@ -318,8 +382,7 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 		return 6; // target,"*",source,"*"
 	}
 
-	p = assemble_filename(p, &nameinfo->trg);
-
+	// option string first
 	if (nameinfo->pars.filetype) {
 		// parameters are comma-separated lists of "<name>'='<values>", e.g. "T=S"
 		*p++ = 'T';
@@ -330,13 +393,18 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 			p += strlen((char*)p);
 		}
 	}
-	// terminate even if no options
+	// terminate string even if no options
 	*p++ = 0;
+
+	// do we have a target string?
+	if (nameinfo->trg.name) {
+		p = assemble_filename(p, &nameinfo->trg);
+	}
 
 	// Secondary filename(s). RENAME has one source filename. SCRATCH accepts more
 	// than the original file pattern.
 	// COPY accepts up to 4 comma separated source file names for merging
-	for (i=0 ; i < nameinfo->num_files ; ++i) {
+	for (i = 0; i < nameinfo->num_files ; ++i) {
 		// two or more file names
 		p = assemble_filename(p, &nameinfo->file[i]);
 	}
@@ -346,6 +414,11 @@ uint8_t assemble_filename_packet(uint8_t *trg, nameinfo_t *nameinfo) {
 
 #ifdef SERVER
 
+/**
+ * src is the pointer to the drive/filename data.
+ * len is in/out: in is the rest length of the packet, out is the number of 
+ * consumed bytes
+ */
 static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_name_t *name) {
 
 	uint8_t p = 1;
@@ -394,50 +467,40 @@ static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_na
  * Returns error code, most specifically SYNTAX codes if the packet
  * cannot be parsed.
  */
-cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo) {
+cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, drive_and_name_t *names, int *num_files) {
 
 	uint8_t l = len;
 
-	nameinfo->num_files = 0;
-	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
-		nameinfo->file[i].name = NULL;
-		nameinfo->file[i].drivename = NULL;
-		nameinfo->file[i].drive = NAMEINFO_UNDEF_DRIVE;
+	openpars_init_options(pars);
+
+	for (int i = 0; i < *num_files; i++) {
+		names[i].name = NULL;
+		names[i].drivename = NULL;
+		names[i].drive = NAMEINFO_UNDEF_DRIVE;
 	}
 
-	openpars_init_options(&nameinfo->pars);
-
-	if (filename_from_packet(src, &l, &nameinfo->trg) == CBM_ERROR_OK) {
-		src += l;
-		len -= l;
-	} else {
+	// parse options
+	l = strnlen(src, len);
+	if (l >= len) {
 		return CBM_ERROR_FAULT;
 	}
+	// parse options
+	openpars_process_options(src, pars);
+	// move on to other filenames
+	src += l+1;
+	len -= l+1;
 
-	// allow for filename without options
-	if (len > 0) {
-		// got some options
-		l = strnlen(src, len);
-		if (l >= len) {
-			return CBM_ERROR_FAULT;
-		}
-
-		// parse options
-		openpars_process_options(src, &nameinfo->pars);
-
-		// parse potential other filenames
-		src += l+1;
-		len -= l+1;
-	}
-
+	// parse the files
 	int i;
-	for (i = 0; len > 0 && i < MAX_NAMEINFO_FILES; i++) {
+	for (i = 0; len > 0 && i < *num_files; i++) {
 		l = len;
-		if (filename_from_packet(src, &l, &nameinfo->file[i]) != CBM_ERROR_OK) {
+		if (filename_from_packet(src, &l, &names[i]) != CBM_ERROR_OK) {
 			return CBM_ERROR_FAULT;
 		}
+		src += l;
+		len -= l;
 	}
-	nameinfo->num_files = i;
+	*num_files = i;
 
 	if (len != 0) {
 		return CBM_ERROR_FAULT;

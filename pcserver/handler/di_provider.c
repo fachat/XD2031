@@ -4061,8 +4061,10 @@ handler_t di_file_handler = {
 	di_equals,		// check if two files are the same
 	di_realsize,		// compute and return the real linear file size
 	di_scratch,		// scratch
+	NULL	,		// scratch2
 	NULL,			// mkdir not supported
 	NULL,			// rmdir not supported
+	NULL,			// rmdir2 not supported
 	di_move,		// move a file
 	di_dump_file		// dump
 };

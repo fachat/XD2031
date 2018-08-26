@@ -247,9 +247,13 @@ struct _handler {
 
 	int (*scratch) (file_t * file);	// delete file
 
+	int (*scratch2) (direntry_t * dirent);	// delete file
+
 	int (*mkdir) (file_t * dir, const char *name, charset_t cset, openpars_t * pars);	// make directory
 
 	int (*rmdir) (file_t * dir);	// remove directory
+
+	int (*rmdir2) (direntry_t * dirent);	// remove directory
 
 	int (*move) (file_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
 

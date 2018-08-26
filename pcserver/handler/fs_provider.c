@@ -1152,7 +1152,9 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 
 	  file_t *wrapfile = NULL;
 
-	  *readflag = READFLAG_DENTRY;
+	  if (readflag) {
+		  *readflag = READFLAG_DENTRY;
+	  }
 
 	  direntry_t *dirent = &(file->direntry);
 	  dirent->parent = fp;
@@ -1275,7 +1277,9 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 			total = SSIZE_MAX;
 		    }
 		    dirent->size = total;
-		    *readflag = READFLAG_EOF;
+		    if (readflag) {
+			    *readflag = READFLAG_EOF;
+		    }
 		    rv = CBM_ERROR_OK;
 	  	    *outentry = dirent;
 	  	    return rv;
@@ -2267,8 +2271,10 @@ handler_t fs_file_handler = {
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
 	fs_delete,		// delete file
+	NULL,			// delete2 file
 	fs_mkdir,		// create a directory
 	fs_rmdir,		// remove a directory
+	NULL,			// rmdir2 remove a directory
 	fs_move,		// move a file or directory
 	fs_dump_file		// dump file
 };

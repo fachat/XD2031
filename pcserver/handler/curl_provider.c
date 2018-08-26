@@ -1153,8 +1153,10 @@ static handler_t curl_file_handler = {
         NULL,                   // fs_equals,              // check if two files (e.g. d64 files are the same)
         NULL,                   // fs_realsize,            // real size of file (same as file->filesize here)
         NULL,                   // fs_delete,              // delete file
+        NULL,                   // fs_delete2,              // delete file
         NULL,                   // fs_mkdir,               // create a directory
         NULL,                   // fs_rmdir,               // remove a directory
+        NULL,                   // fs_rmdir2,               // remove a directory
         NULL,                   // fs_move,                // move a file or directory
         curl_dump_file            // dump file
 };

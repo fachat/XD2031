@@ -70,6 +70,11 @@ typedef struct {
 	drive_and_name_t file[MAX_NAMEINFO_FILES];	// optional source drive_name info
 } nameinfo_t;
 
+static inline void nameinfo_init(nameinfo_t *ninfo) {
+	memset(ninfo, 0, sizeof(nameinfo_t));
+	ninfo->cmd = CMD_NONE;
+}
+
 // nameinfo option bits
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 
@@ -85,8 +90,14 @@ typedef struct {
  */
 void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result, uint8_t parsehint);
 
-#define	PARSEHINT_COMMAND	1	// when called from command handler
+
+#define	PARSEHINT_COMMAND	1	// when called from command handler, including command
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
+
+/**
+ * Parse a command file parameter
+ */
+void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result);
 
 /**
  * The following two methods assemble a command packet with the filenames from a 
@@ -139,7 +150,7 @@ uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
  * Returns error code, most specifically SYNTAX codes if the packet
  * cannot be parsed.
  */
-cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo);
+cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, drive_and_name_t * names, int *num_files);
 
 #endif
 

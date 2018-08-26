@@ -273,9 +273,13 @@ static handler_t typed_handler = {
 
 	default_scratch,
 
+	NULL,		// delete2
+
 	NULL,		// mkdir not supported
 
 	NULL,		// rmdir not supported
+
+	NULL,		// rmdir2 not supported
 
 	NULL,		// move not supported
 
