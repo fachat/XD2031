@@ -1,9 +1,8 @@
 /* 
    XD2031 - Serial line file server for CBMs
-   Copyright (C) 2012 Andre Fachat <afachat@gmx.de>
+   Copyright (C) 2012, 2018 Andre Fachat <afachat@gmx.de>
  
-   Generating the DOS error message
-   Inspired by sd2iec by Ingo Korb, but rewritten in the end 
+   DOS error messages
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,21 +19,22 @@
 
 */
 
-#include <string.h>
-#include <ctype.h>
+#include <inttypes.h>
 
 #include "archcompat.h"
-#include "errormsg.h"
-#include "channel.h"
-#include "version.h"    /* for SW_NAME */
-#include "hwdefines.h"  /* for HW_NAME */
-#include "debug.h"
-#include "term.h"
-#include "led.h"
+#include "errors.h"
+#include "version.h"
+#include "errnames.h"
 
-#undef	DEBUG_ERROR
+struct err_struct {
+  uint8_t    code;
+  const char *str;
+};
 
-#if 0
+#ifndef HW_NAME
+#define HW_NAME	"<unknown>"
+#endif
+
 /// Version number string, will be added to message 73
 const char IN_ROM versionstr[] = SW_NAME " V" VERSION LONGVERSION "/" HW_NAME;
 
@@ -63,11 +63,6 @@ const char IN_ROM STR_OVERFLOW_IN_RECORD[]   = "OVERFLOW IN RECORD";
 const char IN_ROM STR_RECORD_NOT_PRESENT[]   = " RECORD NOT PRESENT";
 const char IN_ROM STR_TOO_LARGE[]            = "FILE TOO LARGE";
 const char IN_ROM STR_EMPTY[]                = "";
-
-struct err_struct {
-  uint8_t    code;
-  const char *str;
-};
 
 const struct err_struct IN_ROM err_tab[] = {
 	{CBM_ERROR_OK                   , STR_OK                   },
@@ -104,46 +99,13 @@ const struct err_struct IN_ROM err_tab[] = {
 
 const char *errmsg(const uint8_t code) {  // lookup error text
 	uint8_t i;
+	uint8_t l = sizeof(err_tab) / sizeof(struct err_struct);
 
-	for (i=0; i < sizeof(err_tab) / sizeof(struct err_struct); i++) {
+	for (i=0; i < l; i++) {
 		if (code == rom_read_byte( (uint8_t *) &err_tab[i].code))
 			return (const char *) rom_read_pointer (&err_tab[i].str);
 	}
 	return STR_EMPTY;            // default if code not in table
 }	
 
-#endif
 
-void set_error_tsd(errormsg_t *err, uint8_t errornum, uint8_t track, uint8_t sector, int8_t drive) {
-	char *msg = (char *)err->error_buffer;
-	err->errorno = errornum;
-  	err->readp = 0;
-
-	rom_sprintf(msg, IN_ROM_STR("%2.2d,"), errornum);	// error number
-	rom_strcat(msg, errmsg(errornum));			// error message from flash memory
-	if (drive < 0) {
-		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d\r"), track%100, sector%100); // track & sector
-	} else {
-		rom_sprintf(msg + strlen(msg), IN_ROM_STR(",%2.2d,%2.2d,%1.1d\r"), track, sector, drive); // track & sector & drive
-	}
-
-	if (errornum != CBM_ERROR_OK         &&
-	    errornum != CBM_ERROR_DOSVERSION &&
-	    errornum != CBM_ERROR_SCRATCHED) {
-		led_set(ERROR);
-		term_printf("Setting status to: %s\n", err->error_buffer);
-	} else {
-		led_set(OFF); // same as idle, but clears error
-	}
-
-#ifdef DEBUG_ERROR
-debug_printf("Set status to: %s\n", err->error_buffer);
-#endif
-}
-
-void set_status(errormsg_t *err, char* s) {
-	strncpy( (char*) err->error_buffer, s, CONFIG_ERROR_BUFFER_SIZE - 1);
-	err->error_buffer[CONFIG_ERROR_BUFFER_SIZE - 1] = 0;
-	err->readp = 0;
-	err->errorno = 0;
-}

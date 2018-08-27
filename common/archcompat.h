@@ -68,7 +68,7 @@ static inline void *rom_memcpy(void *dest, const void *src, size_t n)
 
 static inline void *rom_read_pointer(void *p)
 {
-	return p;
+	return *((void**)p);
 }
 
 #define rom_sprintf(s, f, ...) sprintf(s, f, __VA_ARGS__)

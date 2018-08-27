@@ -73,10 +73,10 @@ int cmd_rm(int sockfd, int argc, const char *argv[]) {
 			 	&& buf[FSP_CMD] == FS_REPLY) {
 
 			       	if (buf[FSP_DATA] == CBM_ERROR_SCRATCHED) {
-					log_info("Scratched %d files for %s\n", buf[FSP_DATA+1], name);
+					log_cbmerr(buf[FSP_DATA], buf[FSP_DATA+1], 0);
 				} else
 				if (buf[FSP_DATA] != CBM_ERROR_OK) {
-					log_error("Error: %d\n", buf[FSP_DATA]);
+					log_cbmerr(buf[FSP_DATA], 0, 0);
 				}
 			}
 		}

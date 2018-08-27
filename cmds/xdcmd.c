@@ -28,6 +28,7 @@
 #include "wireformat.h"
 #include "name.h"
 #include "xdcmd.h"
+#include "errnames.h"
 
 
 // --------------------------------------------------------------------------
@@ -162,6 +163,20 @@ int recv_packet(int fd, uint8_t *outbuf, int buflen) {
               }
 
             }
+}
+
+// --------------------------------------------------------------------------
+// error message
+
+void log_cbmerr(uint8_t cerrno, uint8_t track, uint8_t sect) {
+
+	const char *errname = errmsg(cerrno);
+
+	log_error("%02d, %s,%02d,%02d\n",
+			cerrno,
+			errname,
+			track,
+			sect);
 }
 
 // --------------------------------------------------------------------------

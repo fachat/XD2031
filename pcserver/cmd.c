@@ -421,6 +421,10 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 				(*outdeleted)++;
 			}
 		}
+		if (rv == CBM_ERROR_FILE_NOT_FOUND) {
+			// no match is ok
+			rv = CBM_ERROR_OK;
+		}
 	}
 	if (dir) {
 		dir->handler->close(dir, 1, NULL, NULL);

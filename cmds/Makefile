@@ -3,7 +3,7 @@
 TARGET=xdcmd
 
 CMDSRC=$(wildcard *.c)
-COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../pcserver/util/mem.c ../testrunner/connect.c ../common/name.c ../common/cmdnames.c ../pcserver/cerrno.c ../pcserver/openpars.c
+COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../pcserver/util/mem.c ../testrunner/connect.c ../common/name.c ../common/cmdnames.c ../pcserver/cerrno.c ../pcserver/openpars.c ../common/errnames.c
 
 SRC=$(CMDSRC) $(COMMON)
 

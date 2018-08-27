@@ -36,36 +36,34 @@
 #include "cmdnames.h"
 #include "archcompat.h"
 
-#ifdef SERVER
-#include "openpars.h"
-#endif
-
 #ifdef FIRMWARE
 #include "debug.h"
 #endif
 
-#if defined(DEBUG_NAME) || defined(PCTEST)
+#if defined(DEBUG_NAME)
+
+
 static void dump_result(nameinfo_t *result) {
 	printf("CMD      =%s\n", command_to_name(result->cmd));
 	printf("DRIVE    =%c\n", result->trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->trg.drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				(result->trg.drive == NAMEINFO_LAST_DRIVE ? 'L' :
 				result->trg.drive + 0x30)));
-	printf("DRIVENAME='%s'\n", result->trg.drivename ? (char*) result->trg.drivename : nullstring);
-	printf("NAME     ='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : nullstring, result->trg.namelen);
+	printf("DRIVENAME='%s'\n", result->trg.drivename ? (char*) result->trg.drivename : "<>");
+	printf("NAME     ='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : "<>", result->trg.namelen);
 	printf("ACCESS   =%c\n", result->access ? result->access : '-');
-	printf("TYPE     =%c", result->pars.filetype ? result->pars.filetype : '-'); debug_putcrlf();
+	printf("TYPE     =%c", result->pars.filetype ? result->pars.filetype : '-'); 
 	printf("RECLEN   =%d\n", result->pars.recordlen);
 	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
 		printf("%d.DRIVE    =%c\n", i, result->file[i].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->file[i].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
 				(result->file[i].drive == NAMEINFO_LAST_DRIVE ? 'L' :
 				result->file[i].drive + 0x30)));
-		printf("%d.DRIVENAME='%s'\n", i, result->file[i].drivename ? (char*) result->file[i].drivename : nullstring);
-		printf("%d.NAME     ='%s' (%d)\n", i, result->file[i].name ? (char*)result->file[i].name : nullstring, 
+		printf("%d.DRIVENAME='%s'\n", i, result->file[i].drivename ? (char*) result->file[i].drivename : "<>");
+		printf("%d.NAME     ='%s' (%d)\n", i, result->file[i].name ? (char*)result->file[i].name : "<>", 
 				result->file[i].namelen);
 	}
-	debug_flush();
+	//debug_flush();
 }
 #else
 #define dump_result(x) do {} while (0)

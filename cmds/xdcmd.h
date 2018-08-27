@@ -27,6 +27,11 @@ extern int cmd_get(int sockfd, int argc, const char *argv[]);
 extern int cmd_rm(int sockfd, int argc, const char *argv[]);
 
 // --------------------------------------------------------------------------
+// helpers
+
+void log_cbmerr(uint8_t cerrno, uint8_t track, uint8_t sect);
+
+// --------------------------------------------------------------------------
 // send/receive packets
 
 
