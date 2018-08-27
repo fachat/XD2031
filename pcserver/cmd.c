@@ -371,7 +371,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 	file_t *fp = NULL;
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
-	drive_and_name_t names[MAX_NAMEINFO_FILES+1] = {};
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
 
         rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
@@ -418,6 +418,21 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 					&dirent, NULL);
 			if (dirent) {
 				log_info("DELETE(%s / %s)\n", dir->filename, dirent->name);
+				if (isrmdir) {
+					// do a "RMDIR"
+					if (dirent->parent->handler->rmdir2) {
+						dirent->parent->handler->rmdir2(dirent);
+					} else {
+						log_error("Unable to RMDIR %s\n", dirent->name);
+					}
+				} else {
+					// do a "DELETE"
+					if (dirent->parent->handler->scratch2) {
+						dirent->parent->handler->scratch2(dirent);
+					} else {
+						log_error("Unable to DELETE %s\n", dirent->name);
+					}
+				}
 				(*outdeleted)++;
 			}
 		}

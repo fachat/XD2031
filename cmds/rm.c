@@ -36,7 +36,7 @@
 // rm/scratch command code
 
 
-int cmd_rm(int sockfd, int argc, const char *argv[]) {
+int cmd_rm_int(int sockfd, int argc, const char *argv[], int isrmdir) {
 
 	int rv = CBM_ERROR_OK;
 	int scratched = 0;
@@ -88,3 +88,10 @@ int cmd_rm(int sockfd, int argc, const char *argv[]) {
 
 }
 
+int cmd_rm(int sockfd, int argc, const char *argv[]) {
+	return cmd_rm_int(sockfd, argc, argv, 0);
+}
+
+int cmd_rmdir(int sockfd, int argc, const char *argv[]) {
+	return cmd_rm_int(sockfd, argc, argv, 1);
+}
