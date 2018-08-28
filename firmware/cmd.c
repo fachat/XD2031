@@ -20,6 +20,7 @@
 */
 
 #include <ctype.h>
+#include <string.h>
 
 #include "cmd.h"
 #include "cmd2.h"

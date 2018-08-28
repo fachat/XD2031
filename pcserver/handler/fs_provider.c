@@ -1185,7 +1185,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
-		dirent->name = fp->pattern;
+		dirent->name = fp->searchpattern[0];
 		dirent->cset = CHARSET_ASCII;
 		dirent->mode = FS_DIR_MOD_NAM;
 
@@ -1270,11 +1270,10 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	  if (isdirscan && (fp->dirstate == DIRSTATE_END)) {
 
 		    dirent->name = NULL;
-		    // ospath is malloc'd
 		    dirent->mode = FS_DIR_MOD_FRE;
 		    size_t total = os_free_disk_space(file->ospath);
-		    if (total > SSIZE_MAX) {
-			total = SSIZE_MAX;
+		    if (total > FS_DIR_LEN_MAX) {
+			total = FS_DIR_LEN_MAX;
 		    }
 		    dirent->size = total;
 		    if (readflag) {
@@ -1693,6 +1692,23 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 
 // ----------------------------------------------------------------------------------
 // command channel
+
+#if 0
+static int fs_delete2(direntry_t *dirent) {
+
+	log_debug("fs_delete2 '%s' (%p -> %s)\n", dirent->name, dirent, ((File*)file)->ospath);
+ 
+	File *fp = (File*) file;
+
+	if (unlink(fp->ospath) < 0) {
+		// error handling
+		log_errno("While trying to unlink %s", fp->ospath);
+
+		return errno_to_error(errno);
+	}
+	return CBM_ERROR_OK;
+}
+#endif
 
 static int fs_delete(file_t *file) {
 

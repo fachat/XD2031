@@ -43,7 +43,7 @@
  * as "0:" is more than the single drive byte.
  */
 
-#define MAX_NAMEINFO_FILES 4
+// MAX_NAMEINFO_FILES is defined in the wireformat.
 
 typedef struct {
 	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")

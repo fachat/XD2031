@@ -133,6 +133,8 @@ struct _file {
 	// for traversing a directory
 	int dirstate;		// 0 = first line, 1 = file matches, 2 = end line
 	const char *pattern;	// pattern for dir matching
+	const char *searchpattern[MAX_NAMEINFO_FILES];	// pattern for dir matching
+	int numpattern;		// number of entries in searchpattern
 	uint8_t writable;	// is file writable?
 	uint8_t seekable;	// is file seekable?    
 	uint8_t openmode;	// FS_OPEN_*
@@ -165,7 +167,7 @@ struct _direntry {
 	uint8_t		attr;	// file attributes - FS_DIR_ATTR_*, splat, write prot, transient, estimate
 	uint8_t		type;	// file type - FS_DIR_TYPE_*, DEL / SEQ / PRG / USR / REL
 	charset_t	cset;	// charset of name
-	uint8_t		*name;	// pointer to file name
+	uint8_t		*name;	// pointer to file name (in cset character set)
 };
 
 // file operations

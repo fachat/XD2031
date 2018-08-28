@@ -69,8 +69,11 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **outdir);
  *
  * rdflag is set to READFLAG_EOF if it is the last entry (only relevant on dirscan,
  * to send an EOF with the last entry.
+ *
+ * num_pattern describes how many patterns are in the pattern[][] parameter. Only
+ * if num_pattern == 1 the found values are modified (e.g. as part of resolve_dir).
  */
-int resolve_scan(file_t *dir, const char **pattern, charset_t cset, bool isdirscan,
+int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t cset, bool isdirscan,
 	direntry_t **outde, int *rdflag);
 
 /**

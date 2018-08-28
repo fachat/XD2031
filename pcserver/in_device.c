@@ -47,7 +47,7 @@
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
-#undef DEBUG_READ
+#define DEBUG_READ
 #undef DEBUG_WRITE
 
 
@@ -99,7 +99,7 @@ static void dev_sync(serial_port_t readfd, serial_port_t writefd) {
 	do {
 		n = os_read(readfd, syncbuf, 1);
 #ifdef DEBUG_READ
-	        log_debug("sync read %d bytes: ",n);
+	        log_debug("sync read %d bytes: \n",n);
 		log_hexdump(syncbuf, n, 0);
 #endif
 		if (n < 0) {

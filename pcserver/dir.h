@@ -71,6 +71,6 @@ struct dirent *dir_next(DIR * dp, const char *dirpattern);
  * returns the length of the written buffer
  */
 int dir_fill_entry_from_file(char *dest, file_t * file, int maxsize);
-int dir_fill_entry_from_direntry(char *dest, direntry_t * file, int maxsize);
+int dir_fill_entry_from_direntry(char *dest, charset_t outcset, direntry_t * file, int maxsize);
 
 #endif

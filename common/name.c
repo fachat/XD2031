@@ -40,6 +40,10 @@
 #include "debug.h"
 #endif
 
+#ifdef SERVER
+#include "openpars.h"
+#endif
+
 #if defined(DEBUG_NAME)
 
 
@@ -52,7 +56,7 @@ static void dump_result(nameinfo_t *result) {
 	printf("DRIVENAME='%s'\n", result->trg.drivename ? (char*) result->trg.drivename : "<>");
 	printf("NAME     ='%s' (%d)\n", result->trg.name ? (char*)result->trg.name : "<>", result->trg.namelen);
 	printf("ACCESS   =%c\n", result->access ? result->access : '-');
-	printf("TYPE     =%c", result->pars.filetype ? result->pars.filetype : '-'); 
+	printf("TYPE     =%c\n", result->pars.filetype ? result->pars.filetype : '-'); 
 	printf("RECLEN   =%d\n", result->pars.recordlen);
 	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
 		printf("%d.DRIVE    =%c\n", i, result->file[i].drive == NAMEINFO_UNUSED_DRIVE ? '-' :

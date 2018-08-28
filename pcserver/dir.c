@@ -223,7 +223,7 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 /**
  * fill in the buffer with a directory entry from a direntry_t struct
  */
-int dir_fill_entry_from_direntry(char *dest, direntry_t *de, int maxsize) {
+int dir_fill_entry_from_direntry(char *dest, charset_t outcset, direntry_t *de, int maxsize) {
 	struct tm *tp;
 
 	ssize_t size = de->size;
@@ -241,14 +241,6 @@ int dir_fill_entry_from_direntry(char *dest, direntry_t *de, int maxsize) {
         dest[FS_DIR_MIN]   = tp->tm_min;
         dest[FS_DIR_SEC]   = tp->tm_sec;
 
-//	if (file->writable == 0) {
-//		dest[FS_DIR_ATTR] |= FS_DIR_ATTR_LOCKED;
-//	}
-	// test
-	//if (sbuf.st_size & 1) {
-	//	dest[FS_DIR_ATTR] |= FS_DIR_ATTR_SPLAT;
-	//}
-
 	log_debug("dir_fill_entry: type=%02x, attr=%02x\n", de->type, de->attr);
 
         dest[FS_DIR_MODE] = de->mode;
@@ -260,11 +252,13 @@ int dir_fill_entry_from_direntry(char *dest, direntry_t *de, int maxsize) {
 		// blocks free
 		dest[FS_DIR_NAME] = 0;
 	} else {
+		charconv_t converter = cconv_converter(de->cset, outcset);
+
+
         	l = strlen((const char*)de->name);
-        	strncpy(dest+FS_DIR_NAME, (const char*)de->name,
-                	  min(l+1, maxsize-1-FS_DIR_NAME));
+		int n = converter(de->name, l, dest+FS_DIR_NAME, maxsize-1-FS_DIR_NAME);
 		// make sure we're still null-terminated
-		dest[maxsize-1] = 0;
+		dest[min(FS_DIR_NAME+n, maxsize-1)] = 0;
 	}
 	// character set conversion
       	l = strlen(dest+FS_DIR_NAME);

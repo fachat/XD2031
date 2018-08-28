@@ -38,6 +38,8 @@
 #include "endpoints.h"
 
 
+static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
+		charset_t outcset, bool isdirscan, direntry_t **outde, int *rdflag);
 
 /** 
  * resolve the endpoint for a given pattern. This is separated from the
@@ -142,13 +144,16 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 			int rdflag = 0;
 			file_t *fp = NULL;
 
-			rv = resolve_scan(dir, &p, cset, false, &de, &rdflag);
+			rv = resolve_scan_int(dir, &p, 1, true, cset, false, &de, &rdflag);
 
 			if (rv == CBM_ERROR_OK) {
 				// open the found dir entry
 				rv = dir->handler->open2(de, NULL, FS_OPEN_DR, &fp);
 
 				if (rv == CBM_ERROR_OK) {
+					// close old dir
+					dir->handler->close(dir, 0, NULL, NULL);
+					// new scan dir
 					dir = fp;
 					*pattern = p;
 				}
@@ -156,7 +161,9 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 		}
 
 		if (rv == CBM_ERROR_FILE_EXISTS) {
-			dir->pattern = mem_alloc_str(*pattern);
+			// the rest of the pattern is a file name (-> "File'name' exists", even 
+			// if no actual file)
+			//dir->pattern = mem_alloc_str(*pattern);
 			rv = CBM_ERROR_OK;
 			// found name
 			break;
@@ -189,7 +196,13 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
  * values.
  * 	READFLAG_EOF	-> next read will not return further data, so set EOF
  */
-int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdirscan,
+int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t outcset, bool isdirscan,
+	direntry_t **outde, int *rdflag) {
+
+	return resolve_scan_int(dir, pattern, num_pattern, false, outcset, isdirscan, outde, rdflag);
+}
+
+static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, charset_t outcset, bool isdirscan,
 	direntry_t **outde, int *rdflag) {
 
 	log_debug("resolve_scan: pattern='%s'\n", *pattern);
@@ -199,19 +212,34 @@ int resolve_scan(file_t *dir, const char **pattern, charset_t outcset, bool isdi
         const char *scanpattern = NULL;
         const char *name = NULL;
 	direntry_t *direntry = NULL;
+	bool found = false;
 
         do {
         	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag);
 
-                name = direntry ? (const char*)direntry->name : NULL;
-                scanpattern = *pattern;
-        } while (
-                rv == CBM_ERROR_OK
-                     && name
-                     && !cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )
-        );
+		if (rv != CBM_ERROR_OK 
+			|| !direntry
+			|| !direntry->name
+			|| direntry->mode == FS_DIR_MOD_NAM
+			|| direntry->mode == FS_DIR_MOD_FRE) {
+			break;
+		}
 
-	*pattern = scanpattern;
+		found = false;
+		for (int i = 0; i < num_pattern; i++) {
+                	scanpattern = pattern[i];
+                	name = (const char*)direntry->name;
+			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
+			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
+				found = true;
+				break;
+			}
+		}
+        } while (!found);
+
+	if (fixpattern) {
+		pattern[0] = scanpattern;
+	}
 	*outde = direntry;
 
 	return rv;
@@ -231,7 +259,7 @@ int resolve_open(file_t *dir,
         int rdflag = 0;
         direntry_t *dirent;
         // now resolve the actual filename
-        int rv = resolve_scan(dir, &inname, cset, false, &dirent, &rdflag);
+        int rv = resolve_scan_int(dir, &inname, 1, true, cset, false, &dirent, &rdflag);
         if (rv == CBM_ERROR_OK || rv == CBM_ERROR_FILE_NOT_FOUND) {
         	// ok, we have the directory entry. Or maybe not.
 		

@@ -75,18 +75,11 @@ typedef int (*charconv_t) (const char *in, const uint8_t inlen, char *out,
 			    const uint8_t outlen);
 
 // compare in1 and in2 and return 0 on equal.
-typedef int (*charcomp_t) (const char *in1, const uint8_t in1len, char *in2,
-			    const uint8_t in2len);
-
-// compare in1 and in2 and return 0 on equal.
 typedef int (*charmatch_t) (const char **pattern, const char **tomatch,
 			    uint8_t advanced);
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
-
-// get a comparator between two charsets
-charcomp_t cconv_comparator(charset_t from, charset_t to);
 
 // get a matcher between two charsets
 charmatch_t cconv_matcher(charset_t pattern, charset_t tomatch);

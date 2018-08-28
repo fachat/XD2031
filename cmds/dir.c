@@ -32,7 +32,7 @@
 // TODO: date/time
 typedef struct {
 	const char 	*name;
-	int		len;
+	unsigned int	len;
 	int		attr;
 	int		estimate;
 	int		etype;		// FS_DIR_MOD_*
@@ -55,8 +55,8 @@ static int parse_dir_packet(const uint8_t *buf, int len, dirinfo_t *dir) {
 
 	dir->len = buf[FS_DIR_LEN]
 			+ (buf[FS_DIR_LEN+1]<<8)
-			+ (buf[FS_DIR_LEN+2]<<8)
-			+ (buf[FS_DIR_LEN+3]<<8);
+			+ (buf[FS_DIR_LEN+2]<<16)
+			+ (buf[FS_DIR_LEN+3]<<24);
 
 	dir->attr = buf[FS_DIR_ATTR];
 	dir->ftype = buf[FS_DIR_ATTR] & FS_DIR_ATTR_TYPEMASK;
@@ -104,11 +104,12 @@ static void print_ls_packet(dirinfo_t *dir) {
 
 static void print_dir_packet(dirinfo_t *dir) {
 
-	int len = 0;
-	int l = 0;
+	unsigned int len = 0;
+	unsigned int l = 0;
 
 	switch (dir->etype) {
 	case FS_DIR_MOD_NAM:
+		// fall-through
 	case FS_DIR_MOD_NAS:
 		len = (dir->len + 255) / 256;
 		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
@@ -141,6 +142,7 @@ static void print_dir_packet(dirinfo_t *dir) {
 			);
 		break;
 	case FS_DIR_MOD_FRE:
+		// fall-through
 	case FS_DIR_MOD_FRS:
 		len = (dir->len + 255) / 256;
 		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
@@ -172,7 +174,8 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 	} else {
 		name[0] = 0;
 	}
-	parse_filename(name, strlen((const char*)name), 255, &ninfo, PARSEHINT_LOAD);
+	nameinfo_init(&ninfo);
+	parse_cmd_pars(name, strlen((const char*)name), &ninfo);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 

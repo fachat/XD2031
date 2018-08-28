@@ -282,10 +282,10 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 		direntry_t *direntry;
 		*readflag = 0;	// default just in case
 		if (fp->openmode == FS_OPEN_DR) {
-			const char *pattern = fp->pattern;
-			rv = resolve_scan(fp, &pattern, outcset, true, &direntry, readflag);
+			rv = resolve_scan(fp, fp->searchpattern, fp->numpattern, outcset, true, &direntry, readflag);
 			if (!rv) {
-				rv = dir_fill_entry_from_direntry(outbuf, direntry, MAX_BUFFER_SIZE-FSP_DATA);
+				rv = dir_fill_entry_from_direntry(outbuf, outcset, direntry, 
+						MAX_BUFFER_SIZE-FSP_DATA);
 			}
 		} else {
 		    	rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
@@ -387,6 +387,10 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		fp = ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &fp);
 		if (rv == 0) {
+			for (int i = 0; i < num_files; i++) {
+				fp->searchpattern[i] = mem_alloc_str(names[i].name);
+			}
+			fp->numpattern = num_files;
 			fp->openmode = FS_OPEN_DR;
 			channel_set(tfd, fp);
 		} else {
@@ -414,7 +418,7 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 			// now resolve the actual filenames
 			const char *pattern = (const char*) name->name;
 			direntry_t *dirent = NULL;
-			rv = resolve_scan(dir, &pattern, cset, false, 
+			rv = resolve_scan(dir, &pattern, 1, cset, false, 
 					&dirent, NULL);
 			if (dirent) {
 				log_info("DELETE(%s / %s)\n", dir->filename, dirent->name);
