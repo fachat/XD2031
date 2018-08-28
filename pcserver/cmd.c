@@ -505,8 +505,62 @@ int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, in
 	return rv;
 }
 
+static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, endpoint_t **epp) {
+
+	int rv = resolve_endpoint(name, cset, epp);
+	endpoint_t *ep = *epp;
+	file_t *dir = NULL;
+
+	if (rv == CBM_ERROR_OK) {
+		dir = ep->ptype->root(ep);
+		rv = resolve_dir((const char**)&name->name, cset, &dir);
+		while (rv == CBM_ERROR_OK) {
+			// now resolve the actual filenames
+			const char *pattern = (const char*) name->name;
+			direntry_t *dirent = NULL;
+			rv = resolve_scan(dir, &pattern, 1, cset, false, 
+					&dirent, NULL);
+			if (dirent) {
+				rv = CBM_ERROR_FILE_EXISTS;
+			}
+		}
+		if (rv == CBM_ERROR_OK
+			|| rv == CBM_ERROR_FILE_NOT_FOUND) {
+			// no match is ok
+			rv = dir->handler->mkdir(dir, name->name, cset, pars);
+		}
+	}
+	if (dir) {
+		dir->handler->close(dir, 1, NULL, NULL);
+	}
+	return rv;
+}
+
 int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	int outdeleted = 0;
+
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (rv == CBM_ERROR_OK) {
+	    	// TODO: default endpoint? 
+	    	endpoint_t *ep = NULL;
+
+	    	int i = 0;
+	    	while (rv == CBM_ERROR_OK && i < num_files) {
+	    		// note: may modify names.trg.name in-place
+			// ep will be carried over from previous invocations
+			rv = mkdir_name(&names[i], cset, &pars, &ep);
+			i++;
+	    	}
+	}
+	return rv;
+#if 0
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *newdir = NULL;
 	const char *name = NULL;
@@ -522,6 +576,7 @@ int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 		mem_free(name);
 	}
 	return rv;
+#endif
 }
 
 int cmd_chdir(const char *inname, int namelen, charset_t cset) {

@@ -270,6 +270,10 @@ static const cmdtab_t cmdtab[] = {
 			"Delete an empty directory from the CBM server filesystem. Multiple patterns can be specified.",
 			{	"<drive:><dir_pattern_1> [ <drive:><dir_pattern_2> ... ]",
 			NULL }},
+	{	"mkdir", cmd_mkdir,
+			"Create a directory on the CBM server filesystem. Multiple patterns can be specified.",
+			{	"<drive:><dir_pattern_1> [ <drive:><dir_pattern_2> ... ]",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);
