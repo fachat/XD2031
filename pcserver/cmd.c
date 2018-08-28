@@ -284,7 +284,7 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 		if (fp->openmode == FS_OPEN_DR) {
 			rv = resolve_scan(fp, fp->searchpattern, fp->numpattern, outcset, true, &direntry, readflag);
 			if (!rv) {
-				rv = dir_fill_entry_from_direntry(outbuf, outcset, direntry, 
+				rv = dir_fill_entry_from_direntry(outbuf, outcset, fp->searchdrive, direntry, 
 						MAX_BUFFER_SIZE-FSP_DATA);
 			}
 		} else {
@@ -372,8 +372,30 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
 	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+	int driveno = -1;
 
         rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	// determine driveno, and ensure all patterns use the same drive
+	// (this is a current limitation compared to CBM DOS, where multiple pattern
+	// in a single LOAD could utilize patterns of multiple drives)
+	driveno = names[0].drive;
+	for (int i = 1; i < num_files; i++) {
+		if (names[i].drive == NAMEINFO_UNUSED_DRIVE
+			|| names[i].drive == NAMEINFO_LAST_DRIVE
+			|| names[i].drive == driveno) {
+			// ok, drive reused (numeric)
+			continue;
+		}
+		if (names[i].drive == NAMEINFO_UNDEF_DRIVE
+			&& names[0].drive == NAMEINFO_UNDEF_DRIVE
+			&& strcmp(names[0].drivename, names[i].drivename)) {
+			// ok, drive reused (named)
+			continue;
+		}
+		// here drives [i] and [0] do not match
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
 
 	log_info("Open directory for drive: %d(%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
 
@@ -387,6 +409,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		fp = ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &fp);
 		if (rv == 0) {
+			fp->searchdrive = driveno;
 			for (int i = 0; i < num_files; i++) {
 				fp->searchpattern[i] = mem_alloc_str(names[i].name);
 			}

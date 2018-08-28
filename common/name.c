@@ -136,6 +136,8 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
 void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	uint8_t cmdlen = 0;
 
+	int driveno = NAMEINFO_UNUSED_DRIVE;
+
 	result->num_files = 0; // Initialize # of secondary files
 
 	// skip whitespace if any
@@ -168,6 +170,9 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 			// note: if there is a comma, it should probably be a syntax error
 			// but we currently just ignore it (we could add options here!)
 			parse_drive (cmdstr+cmdlen, &result->trg);
+			if (result->trg.drive != NAMEINFO_UNDEF_DRIVE) {
+				driveno = result->trg.drive;
+			}
 		} else {
 			// no "=" for assign, rename or copy means syntax error 
 			result->cmd = CMD_SYNTAX;
@@ -178,6 +183,10 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
       	uint8_t i = 0;
 	while (sep && i < MAX_NAMEINFO_FILES) {
 		sep = parse_drive (sep, &result->file[i]);
+		if (result->file[i].drive == NAMEINFO_UNUSED_DRIVE 
+			|| result->file[i].drive == NAMEINFO_LAST_DRIVE) {
+			result->file[i].drive = driveno;
+		}
 		++i;
 	}
 	result->num_files = i;
@@ -187,12 +196,12 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		result->cmd = CMD_SYNTAX;
 		return;
 	}
-
+#if 0
 	// set source drives to target drive if not specified
 	for (uint8_t i=0 ; i < result->num_files ; ++i) {
 		if (result->file[i].drive > 9) result->file[i].drive = result->trg.drive;
 	}
-
+#endif
 	dump_result(result);
 }
 

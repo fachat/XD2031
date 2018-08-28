@@ -223,10 +223,13 @@ struct dirent* dir_next(DIR *dp, const char *dirpattern) {
 /**
  * fill in the buffer with a directory entry from a direntry_t struct
  */
-int dir_fill_entry_from_direntry(char *dest, charset_t outcset, direntry_t *de, int maxsize) {
+int dir_fill_entry_from_direntry(char *dest, charset_t outcset, int driveno, direntry_t *de, int maxsize) {
 	struct tm *tp;
 
 	ssize_t size = de->size;
+	if (de->mode == FS_DIR_MOD_NAM) {
+		size = driveno;
+	}
 	// TODO: overflow check if ssize_t has more than 32 bits
         dest[FS_DIR_LEN] = size & 255;
         dest[FS_DIR_LEN+1] = (size >> 8) & 255;

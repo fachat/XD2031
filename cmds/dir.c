@@ -151,31 +151,16 @@ static void print_dir_packet(dirinfo_t *dir) {
 	}
 }
 
-static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
+static int dir_single(int sockfd, int type, const char *name) {
 
-	uint8_t *name = mem_alloc_c(256, "parse buffer");
 	uint8_t *buf = mem_alloc_c(256, "msg buffer");
 	uint8_t pkgfd = 0;
 
 	nameinfo_t ninfo;
 	dirinfo_t dir;
 
-	if (argc > 2) {
-		log_error("Too many parameters!\n");
-		mem_free(name);
-		mem_free(buf);
-		return -1;
-	}
-
-	if (argc == 1) {
-		// note that parse_filename parses in-place, nameinfo then points to name buffer
-		strncpy((char*)name, argv[0], 255);
-		name[255] = 0;
-	} else {
-		name[0] = 0;
-	}
 	nameinfo_init(&ninfo);
-	parse_cmd_pars(name, strlen((const char*)name), &ninfo);
+	parse_cmd_pars((uint8_t*)name, strlen((const char*)name), &ninfo);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 
@@ -225,13 +210,35 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 				break;
 			}
 		    } while(rv == 0); 
+		} else {
+		    rv = buf[FSP_DATA];
 		}
+	} else {
+		rv = CBM_ERROR_FAULT;
 	}
 	mem_free(buf);
-	mem_free(name);
 	return rv;
 
 }
+
+static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
+
+	char *name = mem_alloc_c(256, "parse buffer");
+	int rv = CBM_ERROR_OK;
+
+	for (int i = 0; rv == CBM_ERROR_OK && i < argc; i++) {
+		// note that parse_filename parses in-place, nameinfo then points to name buffer
+		strncpy(name, argv[i], 255);
+		name[255] = 0;
+
+		rv = dir_single(sockfd, type, name);
+	}
+
+	mem_free(name);
+
+	return rv;
+}
+
 
 int cmd_dir(int sockfd, int argc, const char *argv[]) {
 	return cmd_dir_int(sockfd, 0, argc, argv);

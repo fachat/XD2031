@@ -418,6 +418,9 @@ endpars:
 
 	int rv = cmd->func(sockfd, argc-p, argv+p);
 
+	if (rv != CBM_ERROR_OK) {
+		log_cbmerr(rv, 0, 0);
+	}
 
 	close(sockfd);
 
