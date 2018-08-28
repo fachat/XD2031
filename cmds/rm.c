@@ -67,7 +67,7 @@ int cmd_rm_int(int sockfd, int argc, const char *argv[], int isrmdir) {
 		nameinfo_init(&ninfo);
 		parse_cmd_pars(name, strlen((const char*)name), &ninfo);
 
-		if (send_longcmd(sockfd, FS_DELETE, pkgfd, &ninfo)) {
+		if (send_longcmd(sockfd, isrmdir ? FS_RMDIR : FS_DELETE, pkgfd, &ninfo)) {
 
 			if ((recv_packet(sockfd, buf, 256) > 0) 
 			 	&& buf[FSP_CMD] == FS_REPLY) {

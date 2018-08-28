@@ -1693,22 +1693,26 @@ static int fs_position(endpoint_t *ep, int tfd, int recordno) {
 // ----------------------------------------------------------------------------------
 // command channel
 
-#if 0
 static int fs_delete2(direntry_t *dirent) {
 
-	log_debug("fs_delete2 '%s' (%p -> %s)\n", dirent->name, dirent, ((File*)file)->ospath);
- 
-	File *fp = (File*) file;
+	int rv = CBM_ERROR_OK;
 
-	if (unlink(fp->ospath) < 0) {
+	File *parent = (File*) dirent->parent;
+
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+
+	log_debug("fs_delete2 '%s'\n", newospath);
+
+	if (unlink(newospath) < 0) {
 		// error handling
-		log_errno("While trying to unlink %s", fp->ospath);
+		log_errno("While trying to unlink %s", newospath);
 
-		return errno_to_error(errno);
+		rv = errno_to_error(errno);
 	}
-	return CBM_ERROR_OK;
+
+	mem_free(newospath);
+	return rv;
 }
-#endif
 
 static int fs_delete(file_t *file) {
 
@@ -1815,6 +1819,27 @@ static int fs_mkdir(file_t *file, const char *name, charset_t cset, openpars_t *
 	mem_free(newpath);
 	free(newreal);
 	return er;
+}
+
+static int fs_rmdir2(direntry_t *dirent) {
+
+	int rv = CBM_ERROR_OK;
+
+	File *parent = (File*) dirent->parent;
+
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+
+	log_debug("fs_rmdir2 '%s'\n", newospath);
+
+	if (rmdir(newospath) < 0) {
+		// error handling
+		log_errno("While trying to unlink %s", newospath);
+
+		rv = errno_to_error(errno);
+	}
+
+	mem_free(newospath);
+	return rv;
 }
 
 
@@ -2286,11 +2311,11 @@ handler_t fs_file_handler = {
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
-	fs_delete,		// delete file
-	NULL,			// delete2 file
+	NULL,			// delete file
+	fs_delete2,		// delete2 file
 	fs_mkdir,		// create a directory
-	fs_rmdir,		// remove a directory
-	NULL,			// rmdir2 remove a directory
+	NULL,			// remove a directory
+	fs_rmdir2,		// rmdir2 remove a directory
 	fs_move,		// move a file or directory
 	fs_dump_file		// dump file
 };
