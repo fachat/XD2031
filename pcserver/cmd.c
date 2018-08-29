@@ -913,12 +913,21 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 
 	(void)datalen; // silence warning unused parameter
 
+	drive_and_name_t name;
+	endpoint_t *ep = NULL;
+
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
+
+	nameinfo_init(&name);
 
 	// not file-related, so no file descriptor (tfd)
 	// we only support mapped drives (thus name is NULL)
 	// we only interpret the drive, so namelen for the lookup is 1
-	endpoint_t *ep = provider_lookup(indata, 1, 0, NULL, NAMEINFO_UNDEF_DRIVE);
+
+	name.drive = *indata;
+	rv = resolve_endpoint(&name, CHARSET_ASCII, &ep);
+	//endpoint_t *ep = provider_lookup(indata, 1, 0, NULL, NAMEINFO_UNDEF_DRIVE);
+	
 	if (ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->block != NULL) {
@@ -939,15 +948,30 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 // ----------------------------------------------------------------------------------
 
 int cmd_format(const char *inname, int namelen, charset_t cset) {
-
+	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	const char *name = NULL;
 
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
+	openpars_t pars;
+	int num_files = 1;
+	drive_and_name_t names[1];
+	endpoint_t *ep = NULL;
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+
+	if (num_files != 1) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+
+	rv = resolve_endpoint(names, cset, &ep);
+
+	if (rv == CBM_ERROR_OK && ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->format != NULL) {
-			rv = prov->format(ep, inname + 1);
+			rv = prov->format(ep, names[0].name);
 		}
 	}
 	return rv;
