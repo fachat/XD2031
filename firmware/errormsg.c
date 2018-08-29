@@ -24,6 +24,7 @@
 #include <ctype.h>
 
 #include "archcompat.h"
+#include "errnames.h"
 #include "errormsg.h"
 #include "channel.h"
 #include "version.h"    /* for SW_NAME */
