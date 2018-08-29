@@ -89,8 +89,8 @@ const char *cconv_charsetname(charset_t cnum);
 
 // scan the given pattern until a delimiter character is reached
 // during scan, check whether a character in match is found
-// return the length until the delimiter (patter[l]==delim), zero
-// if not found. Return as negative value when a match is found.
+// return the pointer to the char after the delimiter when found, NULL otherwise.
+// if not found. Return "matched" true when a match is found.
 const char *cconv_scan(const char *pattern, charset_t cset, char delim, const char *match, bool *matched);
 
 #endif

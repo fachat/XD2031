@@ -196,14 +196,8 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
  * values.
  * 	READFLAG_EOF	-> next read will not return further data, so set EOF
  */
-int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t outcset, bool isdirscan,
-	direntry_t **outde, int *rdflag) {
-
-	return resolve_scan_int(dir, pattern, num_pattern, false, outcset, isdirscan, outde, rdflag);
-}
-
-static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, charset_t outcset, bool isdirscan,
-	direntry_t **outde, int *rdflag) {
+static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
+		charset_t outcset, bool isdirscan, direntry_t **outde, int *rdflag) {
 
 	log_debug("resolve_scan: pattern='%s'\n", *pattern);
 
@@ -237,13 +231,20 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 		}
         } while (!found);
 
-	if (fixpattern) {
+	if (found && fixpattern) {
 		pattern[0] = scanpattern;
 	}
 	*outde = direntry;
 
 	return rv;
 }
+
+int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t outcset, bool isdirscan,
+	direntry_t **outde, int *rdflag) {
+
+	return resolve_scan_int(dir, pattern, num_pattern, false, outcset, isdirscan, outde, rdflag);
+}
+
 
 /**
  * scan a directory and open the file, optionally creating it.
@@ -254,12 +255,12 @@ int resolve_open(file_t *dir,
                 const char *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile) {
 
         file_t *file = NULL;
-        const char *pattern = inname;
-
         int rdflag = 0;
         direntry_t *dirent;
+
         // now resolve the actual filename
         int rv = resolve_scan_int(dir, &inname, 1, true, cset, false, &dirent, &rdflag);
+
         if (rv == CBM_ERROR_OK || rv == CBM_ERROR_FILE_NOT_FOUND) {
         	// ok, we have the directory entry. Or maybe not.
 		
@@ -288,7 +289,7 @@ int resolve_open(file_t *dir,
                                         rv = CBM_ERROR_FILE_NOT_FOUND;
                                         break;
                                 }
-                                rv = dir->handler->create(dir, &file, pattern, cset, pars, type);
+                                rv = dir->handler->create(dir, &file, inname, cset, pars, type);
                                 if (rv != CBM_ERROR_OK) {
                                         break;
                                 }
@@ -313,7 +314,7 @@ int resolve_open(file_t *dir,
                                 rv = CBM_ERROR_FILE_EXISTS;
                         } else  {
                                 if (dir->handler->mkdir != NULL) {
-                                        rv = dir->handler->mkdir(dir, pattern, cset, pars);
+                                        rv = dir->handler->mkdir(dir, inname, cset, pars);
                                 } else {
                                         rv = CBM_ERROR_DIR_NOT_SUPPORTED;
                                 }
@@ -348,11 +349,9 @@ int resolve_open(file_t *dir,
                 if (file != NULL) {
                         file->handler->close(file, 0, NULL, NULL);
                 }
-                *outfile = NULL;
-        }
-
-        if (pattern != NULL) {
-                mem_free((char*)pattern);
+		if (outfile) {
+                	*outfile = NULL;
+		}
         }
 
         return rv;

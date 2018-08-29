@@ -274,6 +274,11 @@ static const cmdtab_t cmdtab[] = {
 			"Create a directory on the CBM server filesystem. Multiple patterns can be specified.",
 			{	"<drive:><dir_pattern_1> [ <drive:><dir_pattern_2> ... ]",
 			NULL }},
+	{	"mv", cmd_move,
+			"Move a file or directory to a new location. Only works reliably with source and target on same drive.",
+			{	"<drive:><src_pattern>  <drive:><trg_pattern> ",
+				"<drive:><trg_pattern>=<src_pattern>",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);

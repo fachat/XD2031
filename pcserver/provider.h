@@ -260,6 +260,8 @@ struct _handler {
 
 	int (*move) (file_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
 
+	int (*move2) (direntry_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
+
 	// -------------------------
 
 	void (*dump) (file_t * fp, int recurse, int indent);	// dump info for analysis / debug

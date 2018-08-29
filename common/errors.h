@@ -49,7 +49,7 @@ typedef enum {
 	CBM_ERROR_WRITE_ERROR = 28,
 	// error numbers 30-34 are all just "SYNTAX ERROR" on the 1541
 	CBM_ERROR_SYNTAX_UNKNOWN = 30,	// "general syntax"
-	//CBM_ERROR_SYNTAX_NOCMD        = 31,   // "invalid command"
+	CBM_ERROR_SYNTAX_NOCMD        = 31,   // "invalid command"
 	//CBM_ERROR_SYNTAX_LONGLINE     = 32,   // "command is longer than 58 chars"
 	CBM_ERROR_SYNTAX_PATTERN = 33,	// "invalid file name" - typically patterns in SAVE
 	CBM_ERROR_SYNTAX_NONAME = 34,

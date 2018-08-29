@@ -261,6 +261,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 #endif
 }
 
+// ----------------------------------------------------------------------------------
 
 int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
 	
@@ -272,6 +273,8 @@ int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
 	
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset) {
 	
@@ -303,6 +306,8 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
@@ -327,6 +332,8 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_position(int tfd, const char *indata, int datalen) {
 
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
@@ -349,6 +356,8 @@ int cmd_position(int tfd, const char *indata, int datalen) {
 }
 
 
+// ----------------------------------------------------------------------------------
+
 int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
@@ -363,6 +372,8 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 	}
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 
@@ -427,6 +438,8 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp, int isrmdir, int *outdeleted) {
 
@@ -505,6 +518,8 @@ int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, in
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
+
 static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, endpoint_t **epp) {
 
 	int rv = resolve_endpoint(name, cset, epp);
@@ -514,20 +529,8 @@ static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, 
 	if (rv == CBM_ERROR_OK) {
 		dir = ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
-		while (rv == CBM_ERROR_OK) {
-			// now resolve the actual filenames
-			const char *pattern = (const char*) name->name;
-			direntry_t *dirent = NULL;
-			rv = resolve_scan(dir, &pattern, 1, cset, false, 
-					&dirent, NULL);
-			if (dirent) {
-				rv = CBM_ERROR_FILE_EXISTS;
-			}
-		}
-		if (rv == CBM_ERROR_OK
-			|| rv == CBM_ERROR_FILE_NOT_FOUND) {
-			// no match is ok
-			rv = dir->handler->mkdir(dir, name->name, cset, pars);
+		if (rv == CBM_ERROR_OK) {
+			rv = resolve_open(dir, (const char*)name->name, cset, pars, FS_MKDIR, NULL);
 		}
 	}
 	if (dir) {
@@ -579,6 +582,8 @@ int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 #endif
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_chdir(const char *inname, int namelen, charset_t cset) {
 
 	int rv = CBM_ERROR_FAULT;
@@ -590,8 +595,79 @@ int cmd_chdir(const char *inname, int namelen, charset_t cset) {
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_move(const char *inname, int namelen, charset_t cset) {
 
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	direntry_t *dirent = NULL;
+	file_t *srcdir = NULL;
+	file_t *trgdir = NULL;
+	endpoint_t *srcep = NULL;
+	endpoint_t *trgep = NULL;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+	int outln = 0;
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (num_files != 2) {
+		return CBM_ERROR_SYNTAX_UNKNOWN;
+	}
+
+	if (rv == CBM_ERROR_OK) {
+
+	    // TODO: default endpoint? 
+	    // note: may modify names.trg.name in-place
+	    rv = resolve_endpoint(&names[0], cset, &trgep);
+	    if (rv == CBM_ERROR_OK) {
+
+		srcep = trgep;	// default
+		rv = resolve_endpoint(&names[1], cset, &srcep);
+		if (rv == CBM_ERROR_OK) {
+    	
+		    if (srcep == trgep) {
+
+			// find the source file
+			srcdir = srcep->ptype->root(srcep);
+			rv = resolve_dir((const char**)&names[1].name, cset, &srcdir);
+
+			if (rv == CBM_ERROR_OK) {
+			    // now resolve the actual source filename into dirent
+			    rv = resolve_scan(srcdir, (const char**)&names[1].name, 1, cset, 
+					    false, &dirent, NULL);
+			    if (rv == CBM_ERROR_OK && dirent) {
+		
+				// find the target directory	
+				trgdir = trgep->ptype->root(trgep);
+				rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
+
+				if (rv == CBM_ERROR_OK) {
+
+				    if (srcdir->handler->move2) {
+					rv = srcdir->handler->move2(dirent, trgdir, names[0].name, cset);
+				    } else {
+					rv = CBM_ERROR_FAULT;
+				    }
+				    trgdir->handler->close(trgdir, 0, NULL, NULL);
+				}
+				//fp->handler->close(fp, 0, NULL, NULL);
+				//dirent->handler->declose(dirent);
+			    }
+			    srcdir->handler->close(srcdir, 0, NULL, NULL);
+			}
+		    } else {
+       		    	rv = CBM_ERROR_DRIVE_NOT_READY;
+		    	provider_cleanup(trgep);
+		    }
+		    provider_cleanup(srcep);
+		}
+	    }
+	}
+	return rv;
+
+#if 0
 	int err = CBM_ERROR_DRIVE_NOT_READY;
 
 	int todrive = inname[0];
@@ -641,7 +717,10 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 		provider_cleanup(epto);
 	}
 	return err;
+#endif
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
@@ -713,6 +792,8 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 	return err;
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen) {
 
 	(void)datalen; // silence warning unused parameter
@@ -739,6 +820,8 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 	}
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_format(const char *inname, int namelen, charset_t cset) {
 

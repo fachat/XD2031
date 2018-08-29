@@ -1730,22 +1730,19 @@ static int fs_delete(file_t *file) {
 }
 
 
-static int fs_move(file_t *fromfile, file_t *todir, const char *toname, charset_t cset) {
-#ifdef DEBUG_CMD
-	log_debug("fs_rename: '%s' -> '%s%s'\n", fromfile->filename, todir->filename, toname);
-#endif
+static int fs_move2(direntry_t *dirent, file_t *todir, const char *toname, charset_t cset) {
 	int er = CBM_ERROR_FAULT;
 
-	// both are resolved, so they are valid
-	// endpoints should be the same
-	// so it gets real easy...
+	File *parent = (File*) dirent->parent;
+	const char *frompath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+
+#ifdef DEBUG_CMD
+	log_debug("fs_rename: '%s' -> '%s%s'\n", frompath, todir->filename, toname);
+#endif
 
 	if (strchr(toname, dir_separator_char()) != NULL) {
 		return CBM_ERROR_DIR_ERROR;
 	}
-
-	File *fromfp = (File*) fromfile;
-	const char *frompath = fromfp->ospath;
 
         // convert filename to external charset
         const char *tmpname = conv_name_alloc(toname, cset, CHARSET_ASCII);
@@ -1760,7 +1757,7 @@ static int fs_move(file_t *fromfile, file_t *todir, const char *toname, charset_
 		log_errno("File exists %s", topath);
 		er = CBM_ERROR_FILE_EXISTS;
 	} else {
-		int rv = rename(frompath, newreal);
+		int rv = rename(frompath, topath);
 		if (rv < 0) {
 			er = errno_to_error(errno);
 			log_errno("Error renaming a file\n");
@@ -1771,6 +1768,7 @@ static int fs_move(file_t *fromfile, file_t *todir, const char *toname, charset_
 
 	free(newreal);
 	mem_free(topath);
+	free(frompath);
 
 	return er;
 }
@@ -1784,10 +1782,17 @@ static int fs_mkdir(file_t *file, const char *name, charset_t cset, openpars_t *
 
 	fs_endpoint_t *fsep = (fs_endpoint_t*) file->endpoint;
 
-	if (strchr(name, dir_separator_char()) != NULL) {
+	bool matched = false;
+        const char *p = cconv_scan(name, cset, dir_separator_char(), "*?", &matched);
+	if (p != NULL) {
 		// no separator char
 		log_error("target file name contained dir separator\n");
 		return CBM_ERROR_SYNTAX_DIR_SEPARATOR;
+	}
+	if (matched) {
+		// no separator char
+		log_error("target file name contained wildcards\n");
+		return CBM_ERROR_SYNTAX_WILDCARDS;
 	}
 
         // convert filename to external charset
@@ -2316,7 +2321,8 @@ handler_t fs_file_handler = {
 	fs_mkdir,		// create a directory
 	NULL,			// remove a directory
 	fs_rmdir2,		// rmdir2 remove a directory
-	fs_move,		// move a file or directory
+	NULL,			// move a file or directory
+	fs_move2,		// move2 a file or directory
 	fs_dump_file		// dump file
 };
 

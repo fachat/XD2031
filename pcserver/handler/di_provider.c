@@ -4066,6 +4066,7 @@ handler_t di_file_handler = {
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
 	di_move,		// move a file
+	NULL,			// move2 a file
 	di_dump_file		// dump
 };
 

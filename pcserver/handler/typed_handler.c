@@ -283,6 +283,8 @@ static handler_t typed_handler = {
 
 	NULL,		// move not supported
 
+	NULL,		// move2 not supported
+
 	// -------------------------
 
 	typed_dump

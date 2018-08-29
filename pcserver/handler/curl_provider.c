@@ -1158,6 +1158,7 @@ static handler_t curl_file_handler = {
         NULL,                   // fs_rmdir,               // remove a directory
         NULL,                   // fs_rmdir2,               // remove a directory
         NULL,                   // fs_move,                // move a file or directory
+        NULL,                   // fs_move2,                // move a file or directory
         curl_dump_file            // dump file
 };
 
