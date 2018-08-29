@@ -289,6 +289,7 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 			if (!rv) {
 				rv = dir_fill_entry_from_direntry(outbuf, outcset, fp->searchdrive, direntry, 
 						MAX_BUFFER_SIZE-FSP_DATA);
+				direntry->handler->declose(direntry);
 			}
 		} else {
 		    	rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
@@ -474,6 +475,7 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 					}
 				}
 				(*outdeleted)++;
+				dirent->handler->declose(dirent);
 			}
 		}
 		if (rv == CBM_ERROR_FILE_NOT_FOUND) {
@@ -652,8 +654,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 				    }
 				    trgdir->handler->fclose(trgdir, NULL, NULL);
 				}
-				//fp->handler->close(fp, 0, NULL, NULL);
-				//dirent->handler->declose(dirent);
+				dirent->handler->declose(dirent);
 			    }
 			    srcdir->handler->fclose(srcdir, NULL, NULL);
 			}

@@ -157,6 +157,8 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 					dir = fp;
 					*pattern = p;
 				}
+				de->handler->declose(de);
+				de = NULL;
 			}
 		}
 
@@ -336,10 +338,11 @@ int resolve_open(file_t *dir,
                         }
 
                         *outfile = file;
-
-                        // and loose the pointer to the parent
-                        //loose_parent(file, dir);
                 }
+		if (dirent) {
+			dirent->handler->declose(dirent);
+			dirent = NULL;
+		}
         }
 
         log_info("File open gave %d\n", rv);
