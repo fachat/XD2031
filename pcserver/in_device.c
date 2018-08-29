@@ -336,14 +336,8 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		name2 = strchr(name, 0) + 2; // skips the drive number of the name2
-		if ((name2 - name) > namelen) {
-			// name2 is behind packet - so it's invalid
-			// name2 being NULL means unassign
-			name2 = NULL;
-		}
-		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
-		rv = provider_assign(drive, name, name2, dt->charset, 0);
+		rv = cmd_assign_packet(buf+FSP_DATA, len-FSP_DATA, dt->charset);
+		//rv = provider_assign(drive, name, name2, dt->charset, 0);
 		if (rv != 0) {
 			log_rv(rv);
 		}

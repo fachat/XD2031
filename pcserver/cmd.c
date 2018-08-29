@@ -93,71 +93,71 @@ void cmd_free() {
 
 //------------------------------------------------------------------------------------
 
-int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
+int cmd_assign_cmdline(const char *inname, charset_t cset) {
 
-	log_debug("Assigning from server: '%s'\n", assign_str);
-
-			if (!isdigit(assign_str[0])) {
-				log_error("Could not identify %c as drive number!\n", assign_str[0]);
-				return CBM_ERROR_FAULT;
-			}
-
-			if (assign_str[1] != ':') {
-				log_error("Could not identify %s as ASSIGN parameter\n", assign_str);
-				return CBM_ERROR_FAULT;
-			}
+	int drive = -1;
+	const char *provider_name = NULL;
+	char *provider_parameter = NULL;
+		
+	char *c = strchr(inname, ':');
+	if (c == NULL) {
+		return CBM_ERROR_FAULT;
+	}
+	// zero-terminate
+	*c = 0;
+	c++;
 	
-			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
-			int rv=0;
-			int drive = assign_str[0] & 0x0f;
-			char *provider_parameter;
-			const char *provider_name;
-			int provider_len;
+	drive = strtol(inname, NULL, 10);
+	
+	provider_name = c;
 
-			// provider name followed by parameter?
-			char *p = strchr(assign_str, '=');
-			if (p) {
-				if ((p - assign_str - 2) > MAX_LEN_OF_PROVIDER_NAME) {
-					log_error("Provider name '%.8s'.. exceeds %d characters\n", assign_str + 2,
-						  MAX_LEN_OF_PROVIDER_NAME);
-				} else {
-					// fix provider parameter character set
-					//const char *orig_charset = mem_alloc_str(
-					//				provider_get_ext_charset());
-					//provider_set_ext_charset(CHARSET_ASCII_NAME);
+	char *e = strchr(c, '=');
+	if (e == NULL) {
+		return CBM_ERROR_FAULT;
+	}
+	
+	*e = 0;
+	e++;
 
-					provider_name = assign_str + 2;
-					provider_len = p - assign_str - 2;
-					provider_parameter = p + 1;
+	provider_parameter = e;
 
-					// make provider name a null-terminated string
-					char *pname = mem_alloc_c(provider_len + 1, "provider_name");
-					strncpy (pname, provider_name, provider_len+1);
-					pname[provider_len] = 0;
+	return provider_assign(drive, provider_name, provider_parameter, cset, true);
+	
+}
 
-					// check trailing '/' on provider parameter
-					int l = strlen(provider_parameter);
-					if (l > 0 && provider_parameter[l-1] == '/') {
-						provider_parameter[l-1] = 0;
-					}
+int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 
-					log_debug("cmdline_assign '%s' = '%s'\n", pname, 
-						provider_parameter);
-					rv = provider_assign(drive, pname, 
-						provider_parameter, CHARSET_ASCII, from_cmdline);
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	openpars_t pars;
+	int num_files = 2;
+	drive_and_name_t names[2];
 
-					mem_free(pname);
-					// reset character set
-					//provider_set_ext_charset(orig_charset);
-					//mem_free(orig_charset);
-				}
-			} else {
-				log_debug("No parameter for cmdline_assign\n");
-				rv = provider_assign(drive, assign_str + 2, NULL, cset, 0);
-			} 
-			if (rv < 0) {
-				log_error("Could not assign, error number is %d\n", rv);
-			}
+	rv = parse_filename_packet((uint8_t*) inname, inlen, &pars, names, &num_files);
+
+	if (rv == CBM_ERROR_OK) {
+
+	    if (num_files == 2) {
+
+		log_debug("Assigning from server: %d:%s=%s\n", names[0].drive, names[0].name, names[1].name);
+
+		int drive = names[0].drive;
+		const char *provider_name = names[0].name;
+		char *provider_parameter = names[1].name;
+		
+		// check trailing '/' on provider parameter
+		int l = strlen(provider_parameter);
+		if (l > 0 && provider_parameter[l-1] == '/') {
+			provider_parameter[l-1] = 0;
+		}
+
+		log_debug("cmdline_assign '%s' = '%s'\n", provider_name, provider_parameter);
+		rv = provider_assign(drive, provider_name, 
+				provider_parameter, cset, false);
+	    } else {
+		log_error("Illegal number of parameters (%d)\n", num_files);
+		rv = CBM_ERROR_FAULT;
+	    }
+	}
 	return rv;
 }
 

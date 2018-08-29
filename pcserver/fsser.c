@@ -77,7 +77,7 @@ static err_t main_assign(const char *param, void *extra, int ival) {
 	(void) extra;
 	(void) ival;
 	
-	int err = cmd_assign(param, CHARSET_ASCII, 1);
+	int err = cmd_assign_cmdline(param, CHARSET_ASCII);
         if (err != CBM_ERROR_OK) {
                 log_error("%d Error assigning %s\n", err, param);
         }

@@ -36,7 +36,8 @@
 void cmd_init();
 void cmd_free();
 
-int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline);
+int cmd_assign_cmdline(const char *inname, charset_t cset);
+int cmd_assign_packet(const char *inname, int inlen, charset_t cset);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd);
 int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset);
 int cmd_info(char *outbuf, int *outlen, charset_t outcset);
