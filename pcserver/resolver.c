@@ -152,7 +152,7 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 
 				if (rv == CBM_ERROR_OK) {
 					// close old dir
-					dir->handler->close(dir, 0, NULL, NULL);
+					dir->handler->fclose(dir, NULL, NULL);
 					// new scan dir
 					dir = fp;
 					*pattern = p;
@@ -347,7 +347,7 @@ int resolve_open(file_t *dir,
         if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
                 // on error
                 if (file != NULL) {
-                        file->handler->close(file, 0, NULL, NULL);
+                        file->handler->fclose(file, NULL, NULL);
                 }
 		if (outfile) {
                 	*outfile = NULL;

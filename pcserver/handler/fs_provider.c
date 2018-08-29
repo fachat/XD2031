@@ -203,7 +203,7 @@ static fs_endpoint_t *create_root_ep() {
 
 static void fsp_free_file(registry_t *reg, void *en) {
 
-	((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+	((file_t*)en)->handler->fclose((file_t*)en, NULL, NULL);
 }
 
 static void fsp_free_ep(registry_t *reg, void *en) {
@@ -304,10 +304,11 @@ static int close_fd(File *file, int recurse) {
 		mem_free(file->block);
 		file->block = NULL;
 	}
-
+#if 0
 	if (recurse && file->file.parent != NULL) {
 		file->file.parent->handler->close(file->file.parent, recurse, NULL, NULL);
 	}
+#endif
 
 	endpoint_t *ep = file->file.endpoint;
 
@@ -1053,7 +1054,7 @@ static file_t *fsp_root(endpoint_t *ep) {
 	}
 
 	if (file != NULL) {
-		file->file.handler->close((file_t*)file, 1, NULL, NULL);
+		file->file.handler->fclose((file_t*)file, NULL, NULL);
 	}
 	log_exitr(err);
 	return NULL;
@@ -1110,7 +1111,7 @@ static int read_dir(File *f, char *retbuf, int len, charset_t outcset, int *read
 				retbuf + FS_DIR_NAME, len - FS_DIR_NAME);
 */
 		// just close the entry
-		entry->handler->close(entry, 0, NULL, NULL);
+		entry->handler->fclose(entry, NULL, NULL);
 	}
 
 	log_exitr(rv);
@@ -1444,7 +1445,7 @@ static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 						break;
 					}
 					// cleanup, to read next dir entry
-					retfile->file.handler->close((file_t*)retfile, 0, NULL, NULL);
+					retfile->file.handler->fclose((file_t*)retfile, NULL, NULL);
 					retfile = NULL;
 				}
 			}
@@ -1864,7 +1865,7 @@ static int fs_rmdir(file_t *dir) {
 		// ok
 		er = CBM_ERROR_OK;
 	}
-	dir->handler->close(dir, 0, NULL, NULL);
+	dir->handler->fclose(dir, NULL, NULL);
 	return er;
 }
 
@@ -2106,7 +2107,7 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset
 static int fs_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 	(void) outbuf;
 
-	log_debug("fs_close(%p '%s', recurse=%d)\n", fp, ((File*)fp)->ospath, recurse);
+	log_debug("fs_fclose(%p '%s')\n", fp, ((File*)fp)->ospath);
 
 	//fs_dump_file(fp, 0, 1);
 
@@ -2115,6 +2116,30 @@ static int fs_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 	if (outlen != NULL) {
 		*outlen = 0;
 	}
+	return CBM_ERROR_OK;
+}
+
+static int fs_fclose(file_t *fp, char *outbuf, int *outlen) {
+	(void) outbuf;
+
+	log_debug("fs_fclose(%p '%s')\n", fp, ((File*)fp)->ospath);
+
+	//fs_dump_file(fp, 0, 1);
+
+	close_fd((File*)fp, false);
+
+	if (outlen != NULL) {
+		*outlen = 0;
+	}
+	return CBM_ERROR_OK;
+}
+
+static int fs_declose(direntry_t *de) {
+
+	log_debug("fs_declose(%p '%s')\n", de, de->name);
+
+	// do nothing, as our direntry is part of the directory's File struct
+	
 	return CBM_ERROR_OK;
 }
 
@@ -2304,6 +2329,8 @@ handler_t fs_file_handler = {
 	fs_resolve2,		// resolve2
 	NULL,			// resolve
 	fs_close,		// close
+	fs_fclose,		// close
+	fs_declose,		// close
 	fs_open,		// open
 	fs_open2,		// open2
 	handler_parent,		// default parent() implementation

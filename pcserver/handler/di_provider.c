@@ -4047,6 +4047,8 @@ handler_t di_file_handler = {
 	NULL,			// resolve2 - not required
 	NULL,			// resolve - not required
 	di_close,		// close
+	NULL,			// fclose
+	NULL,			// declose
 	di_open,		// open a file_t
 	NULL,			// open2 a direntry_t
 	handler_parent,		// default parent() impl

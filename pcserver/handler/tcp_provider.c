@@ -642,6 +642,8 @@ static handler_t tcp_file_handler = {
         NULL,                   // resolve2
         NULL,                   // resolve
         tn_close,               // close
+	NULL,			// fclose
+	NULL,			// declose
         tn_open,                // open
         NULL,                	// open2
         handler_parent,         // default parent() implementation

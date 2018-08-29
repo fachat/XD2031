@@ -196,7 +196,12 @@ struct _handler {
 	// parents if recurse is set; rvbuf/rvlen are a return buffer to send
 	// to called. Currently used to send t/s on error messages
 	// rvlen is i/o - in is the buffer len, out is the actual data len
+
+	// deprecated
 	int (*close) (file_t * fp, int recurse, char *rvbuf, int *rvlen);
+	// new	
+	int (*fclose) (file_t *fp, char *rvbuf, int *rvlen);
+	int (*declose) (direntry_t *de);
 
 	int (*open) (file_t * fp, openpars_t * pars, int opentype);	// open a file
 

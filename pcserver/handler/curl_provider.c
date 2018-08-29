@@ -1139,6 +1139,8 @@ static handler_t curl_file_handler = {
         NULL,                   // resolve2
         NULL,                   // resolve
         curl_close,             // close
+	NULL,			// fclose
+	NULL,			// declose
         curl_open,              // open
         NULL, 	             	// open2
         handler_parent,         // default parent() implementation

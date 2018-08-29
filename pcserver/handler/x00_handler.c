@@ -263,6 +263,9 @@ static handler_t x00_handler = {
 
 	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
+	NULL,		// fclose
+	NULL,		// declose
+	
 	default_open,	//int		(*open)(file_t *fp); 	// open a file
 
 	NULL,		//int		(*open2)(direntry_t *fp); 	// open a file

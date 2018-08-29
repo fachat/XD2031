@@ -215,7 +215,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
 		log_rv(rv);
 		if (dir) {
-			dir->handler->close(dir, 1, NULL, NULL);
+			dir->handler->fclose(dir, NULL, NULL);
 		}
 	}
 
@@ -367,7 +367,7 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 	file_t *fp = channel_to_file(tfd);
 	if (fp != NULL) {
 		log_info("CLOSE(%d)\n", tfd);
-		rv = fp->handler->close(fp, 1, outbuf, outlen);
+		rv = fp->handler->fclose(fp, outbuf, outlen);
 		channel_free(tfd);
 	}
 	return rv;
@@ -482,7 +482,7 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 		}
 	}
 	if (dir) {
-		dir->handler->close(dir, 1, NULL, NULL);
+		dir->handler->fclose(dir, NULL, NULL);
 	}
 	return rv;
 }
@@ -534,7 +534,7 @@ static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, 
 		}
 	}
 	if (dir) {
-		dir->handler->close(dir, 1, NULL, NULL);
+		dir->handler->fclose(dir, NULL, NULL);
 	}
 	return rv;
 }
@@ -650,12 +650,12 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 				    } else {
 					rv = CBM_ERROR_FAULT;
 				    }
-				    trgdir->handler->close(trgdir, 0, NULL, NULL);
+				    trgdir->handler->fclose(trgdir, NULL, NULL);
 				}
 				//fp->handler->close(fp, 0, NULL, NULL);
 				//dirent->handler->declose(dirent);
 			    }
-			    srcdir->handler->close(srcdir, 0, NULL, NULL);
+			    srcdir->handler->fclose(srcdir, NULL, NULL);
 			}
 		    } else {
        		    	rv = CBM_ERROR_DRIVE_NOT_READY;
@@ -774,9 +774,9 @@ static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
 			} while ((rv == CBM_ERROR_OK) 
 				&& ((readflag & READFLAG_EOF) == 0));	
 
-			fromfile->handler->close(fromfile, 1, NULL, NULL);
+			fromfile->handler->fclose(fromfile, NULL, NULL);
 		}
-		srcdir->handler->close(srcdir, 0, NULL, NULL);
+		srcdir->handler->fclose(srcdir, NULL, NULL);
 	    }
 	    provider_cleanup(srcep);
 	}
@@ -825,10 +825,10 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 			    rv = copy_file(fp, &names[i], cset);
 			}
 
-			fp->handler->close(fp, 0, NULL, NULL);
+			fp->handler->fclose(fp, NULL, NULL);
 		    }
 		}
-		trgdir->handler->close(trgdir, 0, NULL, NULL);
+		trgdir->handler->fclose(trgdir, NULL, NULL);
 
 		provider_cleanup(trgep);
 	    }
