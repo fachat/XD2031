@@ -279,6 +279,11 @@ static const cmdtab_t cmdtab[] = {
 			{	"<drive:><src_pattern>  <drive:><trg_pattern> ",
 				"<drive:><trg_pattern>=<src_pattern>",
 			NULL }},
+	{	"cp", cmd_copy,
+			"Copy one or more files into a new file.",
+			{	"<drive:><src_pattern> [<drive:><src_pattern_2> ...]  <drive:><trg_pattern> ",
+				"<drive:><trg_pattern>=<drive:><src_pattern>[,<drive:><src_pattern_2>[,...]]",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);
@@ -292,8 +297,14 @@ void usage(int rv) {
                 " options=\n"
                 "   -T <socket> define socket device to use (instead of device)\n"
                 "   -?          gives you this help text\n"
+		"\n"
 		" Commands have own options and usually include '--' to end options list\n"
-		" commands:\n"
+		" A '<drive:><pattern>' spec usually consists of a drive number and filename like so:\n"
+		"   0:testfile\n"
+		" It may, however, be extended with paths, and named drives like:\n"
+		"   ftp://ftp.zimmers.net/pub/cbm\n"
+		"\n"
+		" The following commands are available:\n"
         );
 	for (int i = 0; i < numcmds; i++) {
 		printf(" %-8s   %s\n", cmdtab[i].name, cmdtab[i].usage);

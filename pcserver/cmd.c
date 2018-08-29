@@ -722,8 +722,122 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 
 // ----------------------------------------------------------------------------------
 
+static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	file_t *srcdir = NULL;
+	file_t *fromfile = NULL;
+	endpoint_t *srcep = NULL;
+	openpars_t pars;
+
+	openpars_init_options(&pars);
+
+	// TODO: default endpoint? 
+	// note: may modify names.trg.name in-place
+	rv = resolve_endpoint(name, cset, &srcep);
+	if (rv == CBM_ERROR_OK) {
+
+	    // find the target directory	
+	    srcdir = srcep->ptype->root(srcep);
+	    rv = resolve_dir(&name->name, cset, &srcdir);
+
+	    if (rv == CBM_ERROR_OK) {
+			
+		rv = resolve_open(srcdir, name->name, cset, &pars, FS_OPEN_RD, &fromfile);
+
+		if (rv == CBM_ERROR_OK) {
+			// read file is open, can do the copy
+			char buffer[8192];
+			int readflag = 0;
+			int rlen = 0;
+			int wlen = 0;
+			int nwritten = 0;
+
+			do {
+				rlen = fromfile->handler->readfile(fromfile, 
+					buffer, 8192, &readflag, cset);
+				if (rlen < 0) {
+					rv = -rlen;
+					break;
+				}
+				nwritten = 0;
+				while (rlen > nwritten) {
+					wlen = tofile->handler->writefile(tofile,
+						buffer + nwritten, rlen - nwritten, 
+						readflag & READFLAG_EOF);
+					if (wlen < 0) {
+						rv = -wlen;
+						break;
+					}
+					nwritten += wlen;
+				}
+			} while ((rv == CBM_ERROR_OK) 
+				&& ((readflag & READFLAG_EOF) == 0));	
+
+			fromfile->handler->close(fromfile, 1, NULL, NULL);
+		}
+		srcdir->handler->close(srcdir, 0, NULL, NULL);
+	    }
+	    provider_cleanup(srcep);
+	}
+	return rv;
+}
+
 int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	file_t *trgdir = NULL;
+	file_t *fp = NULL;
+	endpoint_t *trgep = NULL;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+	int outln = 0;
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (num_files < 2) {
+		return CBM_ERROR_SYNTAX_UNKNOWN;
+	}
+
+	if (rv == CBM_ERROR_OK) {
+
+	    // TODO: default endpoint? 
+	    // note: may modify names.trg.name in-place
+	    rv = resolve_endpoint(&names[0], cset, &trgep);
+	    if (rv == CBM_ERROR_OK) {
+
+		// find the target directory	
+		trgdir = trgep->ptype->root(trgep);
+		rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
+
+		if (rv == CBM_ERROR_OK) {
+			
+		    rv = resolve_open(trgdir, names[0].name, cset, &pars, FS_OPEN_WR, &fp);
+
+		    if (rv == CBM_ERROR_OK) {
+
+		    	for (int i = 1; rv == CBM_ERROR_OK && i < num_files; i++) {
+			    if (names[i].drive == NAMEINFO_UNUSED_DRIVE 
+				|| names[i].drive == NAMEINFO_LAST_DRIVE) {
+				names[i].drive = names[i-1].drive;
+			    }
+			    rv = copy_file(fp, &names[i], cset);
+			}
+
+			fp->handler->close(fp, 0, NULL, NULL);
+		    }
+		}
+		trgdir->handler->close(trgdir, 0, NULL, NULL);
+
+		provider_cleanup(trgep);
+	    }
+	}
+	
+	return rv;
+}
+
+#if 0
 	int err = CBM_ERROR_DRIVE_NOT_READY;
 
 	int todrive = inname[0];
@@ -791,6 +905,7 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 	}
 	return err;
 }
+#endif
 
 // ----------------------------------------------------------------------------------
 

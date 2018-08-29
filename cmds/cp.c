@@ -33,28 +33,23 @@
 #include "cerrno.h"
 
 
-#define MAX_BUFFER_SIZE                 64
-
 // move command code
 
 
-int cmd_move(int sockfd, int argc, const char *argv[]) {
+int cmd_copy(int sockfd, int argc, const char *argv[]) {
 
 	// TODO: unify with get
         int force = 0;
         int rv = CBM_ERROR_OK;
 
-        // check filenames
-        if ((argc) > 2) {
-                log_error("Too many parameters!\n");
-                return CBM_ERROR_SYNTAX_NONAME;
-        }
         if ((argc) < 1) {
                 log_error("Too few parameters!\n");
                 return CBM_ERROR_SYNTAX_NONAME;
         }
-
-	// look at the target file
+        if ((argc) > MAX_NAMEINFO_FILES+1) {
+                log_error("Too many parameters!\n");
+                return CBM_ERROR_SYNTAX_LONGLINE;
+        }
 
 	const int BUFLEN = 255;	
 	uint8_t *buf = mem_alloc_c(BUFLEN+1, "msg buffer");
@@ -66,47 +61,51 @@ int cmd_move(int sockfd, int argc, const char *argv[]) {
 	nameinfo_t ninfo2;
 
 	nameinfo_init(&ninfo1);
-	nameinfo_init(&ninfo2);
 
         // note that parse_filename parses in-place, nameinfo then points to name buffer
         strncpy((char*)name1, argv[0], BUFLEN);
         name1[BUFLEN] = 0;
 
 	if (argc == 1) {
-		ninfo1.cmd = CMD_RENAME;
+		ninfo1.cmd = CMD_COPY;
         	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
 		if (ninfo1.cmd != CMD_RENAME) {
 			rv = CBM_ERROR_SYNTAX_NONAME;
 		} else
-		if (ninfo1.num_files != 1) {
+		if (ninfo1.num_files == 0) {
+			// at least one if not more source files
                 	log_error("Wrong number of parameters!\n");
 			rv = CBM_ERROR_SYNTAX_NONAME;
 		}	 
 	} else {
-		// argc is 2
-        	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
+		// argc is larger than 1
+		for (int i = 0; i < argc; i++) {
+			nameinfo_init(&ninfo2);
+       			parse_cmd_pars(argv[i], strlen(argv[i]), &ninfo2);
 
-	        strncpy((char*)name2, argv[1], BUFLEN);
-        	name2[BUFLEN] = 0;
-        	parse_cmd_pars(name2, strlen((const char*)name2), &ninfo2);
-
-		if (ninfo1.num_files != 1 || ninfo2.num_files != 1) {
-                	log_error("Wrong number of parameters!\n");
-			rv = CBM_ERROR_SYNTAX_NONAME;
-		} else {
-			ninfo1.trg = ninfo2.file[0];
+			if (ninfo2.num_files != 1) {
+       	        		log_error("Wrong number of parameters!\n");
+				rv = CBM_ERROR_SYNTAX_NONAME;
+				break;
+			}
+			if (i+1 == argc) {
+				ninfo1.trg = ninfo2.file[0];
+			} else {
+				ninfo1.file[i] = ninfo2.file[0];
+				ninfo1.num_files = i+1;
+			}
 		}
 	}
 
 
         if (rv == CBM_ERROR_OK 
-			&& send_longcmd(sockfd, FS_MOVE, pkgfd, &ninfo1)) {
+			&& send_longcmd(sockfd, FS_COPY, pkgfd, &ninfo1)) {
 	        if ((recv_packet(sockfd, buf, 256) > 0)
                 	&& buf[FSP_CMD] == FS_REPLY) {
 		       	
 			if (buf[FSP_DATA] != CBM_ERROR_OK) {
 
-				log_error("Error moving file: %d\n", buf[FSP_DATA]);
+				log_error("Error copyint file(s): %d\n", buf[FSP_DATA]);
 				rv = buf[FSP_DATA];
 			}
 		} else {

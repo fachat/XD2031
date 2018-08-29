@@ -272,7 +272,7 @@ int resolve_open(file_t *dir,
                         if (dirent == NULL) {
                                 rv = CBM_ERROR_FILE_NOT_FOUND;
                         } else {
-                                rv = file->handler->open2(dirent, pars, type, &file);
+                                rv = dirent->parent->handler->open2(dirent, pars, type, &file);
                         }
                         break;
                 case FS_OPEN_WR:

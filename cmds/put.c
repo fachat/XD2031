@@ -148,6 +148,7 @@ endopts:
 			    }
 			} else {
 				log_error("Error opening file: %d\n", buf[FSP_DATA]);
+				rv = buf[FSP_DATA];
 			}
 		} else {
 			log_error("Problem receiving reply to open\n");

@@ -72,6 +72,7 @@ const struct err_struct IN_ROM err_tab[] = {
 	{CBM_ERROR_WRITE_ERROR          , STR_WRITE_ERROR          },
 	{CBM_ERROR_SYNTAX_UNKNOWN       , STR_SYNTAX_ERROR         },
 	{CBM_ERROR_SYNTAX_NOCMD       	, STR_SYNTAX_ERROR         },
+	{CBM_ERROR_SYNTAX_LONGLINE     	, STR_SYNTAX_ERROR         },
 	{CBM_ERROR_SYNTAX_PATTERN       , STR_SYNTAX_ERROR         },
 	{CBM_ERROR_SYNTAX_NONAME        , STR_SYNTAX_ERROR         },
 	{CBM_ERROR_SYNTAX_INVAL         , STR_SYNTAX_ERROR         },

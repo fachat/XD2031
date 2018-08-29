@@ -33,76 +33,91 @@
 #include "cerrno.h"
 
 
-// Make directory command code
-
-static int cmd_mkdir_single(int sockfd, const char *trgname) {
-
-	int rv = CBM_ERROR_OK;
-
-	// look at the target file
-
-	const int BUFLEN = 255;	
-	uint8_t *name = mem_alloc_c(BUFLEN+1, "parse buffer");
-	uint8_t *buf = mem_alloc_c(BUFLEN+1, "msg buffer");
-	uint8_t pkgfd = 0;
-	nameinfo_t ninfo;
-
-        // note that parse_filename parses in-place, nameinfo then points to name buffer
-        strncpy((char*)name, trgname, BUFLEN);
-        name[BUFLEN] = 0;
-
-	nameinfo_init(&ninfo);
-        parse_cmd_pars(name, strlen((const char*)name), &ninfo);
-
-        if (send_longcmd(sockfd, FS_MKDIR, pkgfd, &ninfo)) {
-	        if ((recv_packet(sockfd, buf, 256) > 0)
-                	&& buf[FSP_CMD] == FS_REPLY) {
-		       	
-			if (buf[FSP_DATA] != CBM_ERROR_OK) {
-
-				log_error("Error opening file: %d\n", buf[FSP_DATA]);
-				rv = buf[FSP_DATA];
-			}
-		} else {
-			log_error("Problem receiving reply to open\n");
-			rv = CBM_ERROR_FAULT;
-		}
-	} else {
-		log_error("Problem sending open\n");
-	}
-	mem_free(buf);
-	mem_free(name);
-	return rv;
-
-}
+// move command code
 
 
-int cmd_mkdir(int sockfd, int argc, const char *argv[]) {
+int cmd_move(int sockfd, int argc, const char *argv[]) {
 
 	// TODO: unify with get
         int force = 0;
         int rv = CBM_ERROR_OK;
 
-        int p = 0;
-
         // check filenames
-        if ((argc - p) < 1) {
+        if ((argc) > 2) {
+                log_error("Too many parameters!\n");
+                return CBM_ERROR_SYNTAX_NONAME;
+        }
+        if ((argc) < 1) {
                 log_error("Too few parameters!\n");
                 return CBM_ERROR_SYNTAX_NONAME;
         }
 
-	if ((argc - p) == 1) {
-		// single name parameter, use name for both source and target
+	// look at the target file
+
+	const int BUFLEN = 255;	
+	uint8_t *buf = mem_alloc_c(BUFLEN+1, "msg buffer");
+	uint8_t pkgfd = 0;
+
+	uint8_t *name1 = mem_alloc_c(BUFLEN+1, "parse buffer");
+	uint8_t *name2 = mem_alloc_c(BUFLEN+1, "parse buffer");
+	nameinfo_t ninfo1;
+	nameinfo_t ninfo2;
+
+	nameinfo_init(&ninfo1);
+	nameinfo_init(&ninfo2);
+
+        // note that parse_filename parses in-place, nameinfo then points to name buffer
+        strncpy((char*)name1, argv[0], BUFLEN);
+        name1[BUFLEN] = 0;
+
+	if (argc == 1) {
+		ninfo1.cmd = CMD_RENAME;
+        	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
+		if (ninfo1.cmd != CMD_RENAME) {
+			rv = CBM_ERROR_SYNTAX_NONAME;
+		} else
+		if (ninfo1.num_files != 1) {
+                	log_error("Wrong number of parameters!\n");
+			rv = CBM_ERROR_SYNTAX_NONAME;
+		}	 
 	} else {
-        	// take target name out of list
-        	argc--;
+		// argc is 2
+        	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
+
+	        strncpy((char*)name2, argv[1], BUFLEN);
+        	name2[BUFLEN] = 0;
+        	parse_cmd_pars(name2, strlen((const char*)name2), &ninfo2);
+
+		if (ninfo1.num_files != 1 || ninfo2.num_files != 1) {
+                	log_error("Wrong number of parameters!\n");
+			rv = CBM_ERROR_SYNTAX_NONAME;
+		} else {
+			ninfo1.trg = ninfo2.file[0];
+		}
 	}
 
-	for (; rv == CBM_ERROR_OK && p < argc; p++) {
 
-		rv = cmd_mkdir_single(sockfd, argv[p]);
+        if (rv == CBM_ERROR_OK 
+			&& send_longcmd(sockfd, FS_MOVE, pkgfd, &ninfo1)) {
+	        if ((recv_packet(sockfd, buf, 256) > 0)
+                	&& buf[FSP_CMD] == FS_REPLY) {
+		       	
+			if (buf[FSP_DATA] != CBM_ERROR_OK) {
+
+				log_error("Error moving file: %d\n", buf[FSP_DATA]);
+				rv = buf[FSP_DATA];
+			}
+		} else {
+			log_error("Problem receiving reply to open\n");
+		}
+	} else {
+		log_error("Problem sending open\n");
 	}
-
+	mem_free(buf);
+	mem_free(name1);
+	mem_free(name2);
 	return rv;
+
 }
+
 
