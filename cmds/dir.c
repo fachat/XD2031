@@ -160,7 +160,7 @@ static int dir_single(int sockfd, int type, const char *name) {
 	dirinfo_t dir;
 
 	nameinfo_init(&ninfo);
-	parse_cmd_pars((uint8_t*)name, strlen((const char*)name), &ninfo);
+	parse_cmd_pars((uint8_t*)name, strlen((const char*)name), FS_OPEN_DR, &ninfo);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 

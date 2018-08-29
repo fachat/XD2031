@@ -29,6 +29,7 @@ extern int cmd_rmdir(int sockfd, int argc, const char *argv[]);
 extern int cmd_mkdir(int sockfd, int argc, const char *argv[]);
 extern int cmd_move(int sockfd, int argc, const char *argv[]);
 extern int cmd_copy(int sockfd, int argc, const char *argv[]);
+extern int cmd_assign(int sockfd, int argc, const char *argv[]);
 
 // --------------------------------------------------------------------------
 // helpers

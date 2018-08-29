@@ -71,8 +71,7 @@ int cmd_move(int sockfd, int argc, const char *argv[]) {
         name1[BUFLEN] = 0;
 
 	if (argc == 1) {
-		ninfo1.cmd = CMD_RENAME;
-        	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
+        	parse_cmd_pars(name1, strlen((const char*)name1), CMD_RENAME, &ninfo1);
 		if (ninfo1.cmd != CMD_RENAME) {
 			rv = CBM_ERROR_SYNTAX_NONAME;
 		} else
@@ -82,11 +81,11 @@ int cmd_move(int sockfd, int argc, const char *argv[]) {
 		}	 
 	} else {
 		// argc is 2
-        	parse_cmd_pars(name1, strlen((const char*)name1), &ninfo1);
+        	parse_cmd_pars(name1, strlen((const char*)name1), FS_OPEN_RD, &ninfo1);
 
 	        strncpy((char*)name2, argv[1], BUFLEN);
         	name2[BUFLEN] = 0;
-        	parse_cmd_pars(name2, strlen((const char*)name2), &ninfo2);
+        	parse_cmd_pars(name2, strlen((const char*)name2), FS_OPEN_RD, &ninfo2);
 
 		if (ninfo1.num_files != 1 || ninfo2.num_files != 1) {
                 	log_error("Wrong number of parameters!\n");

@@ -205,17 +205,6 @@ static int cmd_info(int sockfd, int argc, const char *argv[]) {
 	return 0;
 }
 
-static int cmd_assign(int sockfd, int argc, const char *argv[]) {
-
-	log_error("cmd_assign(sockfd=%d, argc=%d, argv[]=%s) - not yet implemented!\n",
-		sockfd, argc, argc>0 ? argv[0] : "-");
-
-	char *buf = mem_alloc_c(4, "assign buffer");
-
-
-	mem_free(buf);	
-	return 0;
-}
 
 // --------------------------------------------------------------------------
 // command dispatch code

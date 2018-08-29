@@ -95,9 +95,9 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
 
 /**
- * Parse a command file parameter
+ * Parse a command file parameter, using cmd as hint
  */
-void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result);
+void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *result);
 
 /**
  * The following two methods assemble a command packet with the filenames from a 

@@ -64,10 +64,12 @@ int cmd_rm_int(int sockfd, int argc, const char *argv[], int isrmdir) {
 		strncpy((char*)name, argv[p], BUFLEN);
 		name[BUFLEN] = 0;
 
-		nameinfo_init(&ninfo);
-		parse_cmd_pars(name, strlen((const char*)name), &ninfo);
+		command_t cmd = isrmdir ? FS_RMDIR : FS_DELETE;
 
-		if (send_longcmd(sockfd, isrmdir ? FS_RMDIR : FS_DELETE, pkgfd, &ninfo)) {
+		nameinfo_init(&ninfo);
+		parse_cmd_pars(name, strlen((const char*)name), cmd, &ninfo);
+
+		if (send_longcmd(sockfd, cmd, pkgfd, &ninfo)) {
 
 			if ((recv_packet(sockfd, buf, 256) > 0) 
 			 	&& buf[FSP_CMD] == FS_REPLY) {

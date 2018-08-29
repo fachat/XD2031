@@ -52,7 +52,7 @@ static int cmd_mkdir_single(int sockfd, const char *trgname) {
         name[BUFLEN] = 0;
 
 	nameinfo_init(&ninfo);
-        parse_cmd_pars(name, strlen((const char*)name), &ninfo);
+        parse_cmd_pars(name, strlen((const char*)name), FS_MKDIR, &ninfo);
 
         if (send_longcmd(sockfd, FS_MKDIR, pkgfd, &ninfo)) {
 	        if ((recv_packet(sockfd, buf, 256) > 0)

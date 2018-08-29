@@ -133,24 +133,25 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
  * @param[in]  len    Length of command string
  * @param[out] result Filled with zero, one to two names
  */
-void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
+void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *result) {
 	uint8_t cmdlen = 0;
 
 	int driveno = NAMEINFO_UNUSED_DRIVE;
 
 	result->num_files = 0; // Initialize # of secondary files
+	result->cmd = cmd;
 
 	// skip whitespace if any
 	while(isspace(cmdstr[cmdlen])) ++cmdlen;
 
 	// the position command is fully binary
-	if (result->cmd == CMD_POSITION || result->cmd == CMD_TIME) {
+	if (cmd == CMD_POSITION || cmd == CMD_TIME) {
 		result->trg.name = cmdstr + cmdlen;
 		result->trg.namelen = len - cmdlen;
 		return;
 	}
 	// check for disk copy "Dt=s" or "Ct=s"
-	if ((result->cmd == CMD_DUPLICATE || result->cmd == CMD_COPY) &&
+	if ((cmd == CMD_DUPLICATE || cmd == CMD_COPY) &&
 			cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
 			isdigit(cmdstr[cmdlen])  && isdigit(cmdstr[cmdlen+2])) {
 		result->trg.drive = cmdstr[cmdlen  ] & 15; 	// target drive
@@ -160,7 +161,7 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 	}
 
 	uint8_t *sep = cmdstr + cmdlen;
-	if (result->cmd == CMD_ASSIGN || result->cmd == CMD_RENAME || result->cmd == CMD_COPY) {
+	if (cmd == CMD_ASSIGN || cmd == CMD_RENAME || cmd == CMD_COPY) {
 		// Split cmdstr at '=' for file[0].name
 		// and at ',' for more file names
 		sep = (uint8_t*) strchr((char*) cmdstr, '=');
@@ -196,12 +197,6 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, nameinfo_t *result) {
 		result->cmd = CMD_SYNTAX;
 		return;
 	}
-#if 0
-	// set source drives to target drive if not specified
-	for (uint8_t i=0 ; i < result->num_files ; ++i) {
-		if (result->file[i].drive > 9) result->file[i].drive = result->trg.drive;
-	}
-#endif
 	dump_result(result);
 }
 
@@ -338,7 +333,7 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 		if (result->cmd == CMD_SYNTAX) {
 			return;
 		}
-		parse_cmd_pars(p+cmdlen, len-cmdlen, result);
+		parse_cmd_pars(p+cmdlen, len-cmdlen, result->cmd, result);
 	} else {
 		result->trg.name = p;	// full name
 		result->trg.namelen = len;	// default
