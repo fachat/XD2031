@@ -161,6 +161,7 @@ struct _file {
 // basically a typed version of the wireformat dir entry
 struct _direntry {
 	file_t		*parent;
+	handler_t	*handler;
 	uint32_t	size;
 	time_t		moddate;
 	uint16_t 	recordlen;	// record length (if REL file)

@@ -460,15 +460,15 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 				log_info("DELETE(%s / %s)\n", dir->filename, dirent->name);
 				if (isrmdir) {
 					// do a "RMDIR"
-					if (dirent->parent->handler->rmdir2) {
-						dirent->parent->handler->rmdir2(dirent);
+					if (dirent->handler->rmdir2) {
+						dirent->handler->rmdir2(dirent);
 					} else {
 						log_error("Unable to RMDIR %s\n", dirent->name);
 					}
 				} else {
 					// do a "DELETE"
-					if (dirent->parent->handler->scratch2) {
-						dirent->parent->handler->scratch2(dirent);
+					if (dirent->handler->scratch2) {
+						dirent->handler->scratch2(dirent);
 					} else {
 						log_error("Unable to DELETE %s\n", dirent->name);
 					}
@@ -645,8 +645,8 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 
 				if (rv == CBM_ERROR_OK) {
 
-				    if (srcdir->handler->move2) {
-					rv = srcdir->handler->move2(dirent, trgdir, names[0].name, cset);
+				    if (dirent->handler->move2) {
+					rv = dirent->handler->move2(dirent, trgdir, names[0].name, cset);
 				    } else {
 					rv = CBM_ERROR_FAULT;
 				    }

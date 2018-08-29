@@ -1157,6 +1157,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	  }
 
 	  direntry_t *dirent = &(file->direntry);
+	  dirent->handler = &fs_file_handler;
 	  dirent->parent = fp;
 	  *outentry = NULL;
 	
