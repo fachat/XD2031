@@ -47,6 +47,11 @@ file_t *handler_find(file_t * parent, uint8_t type, const char *name, charset_t 
 		     const char *opts, const char **outname);
 
 /*
+ * wrap directory entry
+ */
+int handler_wrap(direntry_t *dirent, direntry_t **outde);
+
+/*
  * recursively resolve a file from an endpoint using the given inname as path
  */
 int handler_resolve_file(endpoint_t * ep, file_t ** outfile,
@@ -115,6 +120,7 @@ file_t *handler_parent(file_t * file);
 // default implementation for handlers
 
 int default_close(file_t *file, int recurse, char *outbuf, int *outlen);
+int default_fclose(file_t *file, char *outbuf, int *outlen);
 
 int default_seek(file_t *file, long pos, int flag);
 

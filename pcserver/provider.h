@@ -192,6 +192,9 @@ struct _handler {
 	int (*resolve) (file_t * infile, file_t ** outfile,
 			const char *name, charset_t cset, const char **outname);
 
+	// wrap files like P00 or D64 files 	
+	int (*wrap) (direntry_t *dirent, direntry_t **wrapped);
+
 	// close the file; do so recursively by closing
 	// parents if recurse is set; rvbuf/rvlen are a return buffer to send
 	// to called. Currently used to send t/s on error messages

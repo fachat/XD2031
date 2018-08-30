@@ -4046,6 +4046,7 @@ handler_t di_file_handler = {
 	"di_file_handler",
 	NULL,			// resolve2 - not required
 	NULL,			// resolve - not required
+	NULL,			// wrap
 	di_close,		// close
 	NULL,			// fclose
 	NULL,			// declose

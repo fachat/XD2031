@@ -641,6 +641,7 @@ static handler_t tcp_file_handler = {
         "tcp_file_handler",
         NULL,                   // resolve2
         NULL,                   // resolve
+	NULL,			// wrap
         tn_close,               // close
 	NULL,			// fclose
 	NULL,			// declose

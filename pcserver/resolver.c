@@ -208,6 +208,7 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
         const char *scanpattern = NULL;
         const char *name = NULL;
 	direntry_t *direntry = NULL;
+	direntry_t *wrapped = NULL;
 	bool found = false;
 
         do {
@@ -221,6 +222,14 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 			break;
 		}
 
+		// wrap
+		rv = handler_wrap(direntry, &wrapped);
+		if (rv == CBM_ERROR_OK
+			&& wrapped != NULL) {
+			direntry = wrapped;
+		}
+
+		// match
 		found = false;
 		for (int i = 0; i < num_pattern; i++) {
                 	scanpattern = pattern[i];
@@ -231,6 +240,10 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 				break;
 			}
 		}
+		if (!found) {
+			direntry->handler->declose(direntry);
+		}
+
         } while (!found);
 
 	if (found && fixpattern) {
@@ -274,7 +287,7 @@ int resolve_open(file_t *dir,
                         if (dirent == NULL) {
                                 rv = CBM_ERROR_FILE_NOT_FOUND;
                         } else {
-                                rv = dirent->parent->handler->open2(dirent, pars, type, &file);
+                                rv = dirent->handler->open2(dirent, pars, type, &file);
                         }
                         break;
                 case FS_OPEN_WR:

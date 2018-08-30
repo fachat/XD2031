@@ -2328,6 +2328,7 @@ handler_t fs_file_handler = {
 	"fs_file_handler",
 	fs_resolve2,		// resolve2
 	NULL,			// resolve
+	NULL,			// wrap
 	fs_close,		// close
 	fs_fclose,		// close
 	fs_declose,		// close

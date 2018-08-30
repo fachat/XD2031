@@ -1138,6 +1138,7 @@ static handler_t curl_file_handler = {
         "curl_file_handler",
         NULL,                   // resolve2
         NULL,                   // resolve
+        NULL,                   // wrap
         curl_close,             // close
 	NULL,			// fclose
 	NULL,			// declose

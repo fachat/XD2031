@@ -63,6 +63,195 @@ static type_t x00_file_type = {
 	x00_file_init
 };
 
+typedef struct {
+	direntry_t	de;		// embedded
+	direntry_t	*parent_de;
+	uint8_t		name[17];
+} x00_dirent_t;
+
+static type_t x00_dirent_type = {
+	"x00_dirent",
+	sizeof(x00_dirent_t),
+	NULL
+};
+
+
+/*
+ * identify whether a given file is an x00 file type
+ *
+ * returns CBM_ERROR_OK even if no match found,
+ * except in case of an error
+ *
+ * name is the current file name
+ */
+static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
+
+	log_debug("x00_wrap: infile=%s\n", dirent->name);
+
+	// check the file name of the given file_t, if it actually is a Pxx file.
+
+	// must be at least one character, plus "." plus "x00" ending
+	if (dirent->name == NULL || strlen(dirent->name) < 5) {
+		// not found, but no error
+		return CBM_ERROR_OK;
+	}
+
+	const char *name = conv_name_alloc(dirent->name, dirent->cset, CHARSET_ASCII);
+
+	//log_debug("x00_resolve: infile converted to=%s\n", name);
+
+	char typechar = 0;
+	uint8_t ftype = 0;
+	const char *p = name + strlen(name) - 4;
+
+	if (*p != '.') {
+		mem_free((char*)name);
+		return CBM_ERROR_OK;
+	}
+	p++;
+	typechar = *p;
+	p++;
+	if (!isdigit(*p)) {
+		mem_free((char*)name);
+		return CBM_ERROR_OK;
+	}
+	p++;
+	if (!isdigit(*p)) {
+		mem_free((char*)name);
+		return CBM_ERROR_OK;
+	}
+
+	switch(typechar) {
+	case 'P':
+	case 'p':
+		ftype = FS_DIR_TYPE_PRG;
+		break;
+	case 'S':
+	case 's':
+		ftype = FS_DIR_TYPE_SEQ;
+		break;
+	case 'U':
+	case 'u':
+		ftype = FS_DIR_TYPE_USR;
+		break;
+	case 'R':
+	case 'r':
+		ftype = FS_DIR_TYPE_REL;
+		break;
+	default:
+		mem_free((char*)name);
+		return CBM_ERROR_OK;
+		break;
+	}
+
+	// clean up
+	mem_free((char*)name);
+
+	// ok, we have ensured we have an x00 file name
+	// now make sure it actually is an x00 file
+
+	// open it first
+	openpars_t pars;
+	openpars_init_options(&pars);
+	file_t *infile = NULL;
+	int rv = dirent->handler->open2(dirent, &pars, FS_OPEN_RD, &infile);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+
+	// read x00 header
+	uint8_t x00_buf[X00_HEADER_LEN];
+	int flg;
+
+	// read p00 header
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, CHARSET_ASCII);
+
+	// close file again
+	infile->handler->fclose(infile, NULL, NULL);
+
+	if (strcmp("C64File", (char*)x00_buf) != 0) { 
+		// not a C64 x00 file
+		return CBM_ERROR_FILE_NOT_FOUND;
+	}
+
+	// check with the open options
+
+	// we don't care if write, overwrite, or read etc,
+	// so there is no need to check for type
+
+	if (x00_buf[0x18] != 0) {
+		// corrupt header - zero is needed here for string termination
+		infile->handler->fclose(infile, NULL, NULL);
+		return CBM_ERROR_FILE_TYPE_MISMATCH;
+	}
+
+	// ok, we found a real x00 file
+	log_info("Found %c00 file '%s' addressed as '%s'\n", typechar, x00_buf+8, name);
+
+	// done, alloc x00_file and prepare for operation
+	// no seek necessary, read pointer is already at start of payload
+
+	x00_dirent_t *de = mem_alloc(&x00_dirent_type);
+
+	de->de.parent = NULL;
+	de->de.handler = &x00_handler;
+
+	de->de.size = dirent->size - X00_HEADER_LEN;
+	de->de.moddate = dirent->moddate;
+	de->de.recordlen = x00_buf[0x19];
+	de->de.mode = dirent->mode;
+	de->de.attr = dirent->attr;
+	de->de.type = ftype;
+	de->de.cset = CHARSET_PETSCII;
+
+	memcpy(&de->name, (char*)&(x00_buf[8]), 16);
+	de->name[16] = 0; // zero-terminate
+	de->de.name = &de->name;
+
+	de->parent_de = dirent;
+
+	*outde = de;
+
+	return CBM_ERROR_OK;
+}
+
+static int x00_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **outfp) {
+
+	x00_dirent_t *dirent = (x00_dirent_t*) de;
+
+	// alloc x00_file and prepare for operation
+	// no seek necessary, read pointer is already at start of payload
+
+	file_t *infile = NULL;
+	int rv = dirent->parent_de->handler->open2(dirent->parent_de, pars, opentype, &infile);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+
+	// TODO: if FS_OPEN_RD/RW, read, otherwise seek, return if not seekable
+	// read p00 header
+	uint8_t x00_buf[X00_HEADER_LEN];
+	int flg;
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, CHARSET_ASCII);
+
+	x00_file_t *file = mem_alloc(&x00_file_type);
+
+	file->file.isdir = 0;
+	file->file.handler = &x00_handler;
+	file->file.parent = infile;
+	file->file.filename = mem_alloc_str(dirent->name);
+	file->file.recordlen = dirent->de.recordlen;
+	file->file.attr = dirent->de.attr;
+	file->file.type = dirent->de.type;
+	file->file.filesize = dirent->de.size;
+
+	*outfp = (file_t*)file;
+
+	return CBM_ERROR_OK;
+}
+
 /*
  * identify whether a given file is an x00 file type
  *
@@ -200,6 +389,11 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 	return CBM_ERROR_OK;
 }
 
+static int x00_declose(direntry_t *de) {
+
+	mem_free(de);
+}
+
 
 static int x00_seek(file_t *file, long pos, int flag) {
 
@@ -260,15 +454,16 @@ static handler_t x00_handler = {
 
 	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
+	x00_wrap,	// wrap
 
 	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
-	NULL,		// fclose
-	NULL,		// declose
+	default_fclose,	// fclose
+	x00_declose,	// declose
 	
 	default_open,	//int		(*open)(file_t *fp); 	// open a file
 
-	NULL,		//int		(*open2)(direntry_t *fp); 	// open a file
+	x00_open2,	//int		(*open2)(direntry_t *fp); 	// open a file
 
 	// -------------------------
 			// get converter for DIR entries

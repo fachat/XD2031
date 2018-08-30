@@ -94,6 +94,37 @@ void path_append(char **path, const char *filename) {
 //----------------------------------------------------------------------------
 
 
+int handler_wrap(direntry_t *dirent, direntry_t **outde) {
+
+	log_debug("handler_wrap(infile=%s)\n", dirent->name);
+
+	int err = CBM_ERROR_OK;
+	*outde = NULL;
+
+	for (int i = 0; ; i++) {
+		handler_t *handler = reg_get(&handlers, i);
+		if (handler == NULL) {
+			// no handler found
+			break;
+		}
+		// outpattern then points into the pattern string
+		if ( handler->wrap && handler->wrap(dirent, outde) == CBM_ERROR_OK) {
+			// worked ok.
+			if (*outde != NULL) {
+				// found a handler
+				err = CBM_ERROR_OK;
+				break;
+			}
+		} else {
+			log_error("Got %d as error from handler %s\n", 
+				err, handler->name);
+			return err;
+		}
+	}
+
+	return err;
+}
+
 int handler_next(file_t *infile, const char *pattern, charset_t cset, const char **outpattern, file_t **outfile) {
 
 	log_debug("handler_next(infile=%s, pattern=%s)\n", infile->filename, pattern);
@@ -695,6 +726,22 @@ file_t *handler_parent(file_t *file) {
 
 // --------------------------------------------------------------------------------------------
 // default implementations for handler
+
+int default_fclose(file_t *file, char *outbuf, int *outlen) {
+
+	if (file->filename) {
+		mem_free(file->filename);
+		file->filename = NULL;
+	}
+
+	// we are a resolve wrapper, so close the inner file as well
+	int err = file->parent->handler->fclose(file->parent, outbuf, outlen);
+
+	// and then free the file struct memory
+	mem_free(file);
+
+	return err;
+}
 
 int default_close(file_t *file, int recurse, char *outbuf, int *outlen) {
 

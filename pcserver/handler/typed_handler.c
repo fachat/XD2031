@@ -229,6 +229,7 @@ static handler_t typed_handler = {
 
 	typed_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
 			//		uint8_t type, const char *name, const char *opts); 
+	NULL,		// wrap
 
 	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
 
