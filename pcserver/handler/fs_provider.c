@@ -95,6 +95,10 @@ static void file_init(const type_t *t, void *obj) {
 
 	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
+	fp->file.pattern = NULL;
+	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+		fp->file.searchpattern[i] = NULL;
+	}
 	fp->file.handler = &fs_file_handler;
 	fp->file.recordlen = 0;
 
@@ -278,6 +282,11 @@ static int close_fd(File *file, int recurse) {
 		free((void*)file->ospath);
 	}
 
+	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+		if (file->file.searchpattern[i] != NULL) {
+			mem_free((void*) file->file.searchpattern[i]);
+		}
+	}
 	if (file->file.pattern != NULL) {
 		mem_free((void*)file->file.pattern);
 	}
