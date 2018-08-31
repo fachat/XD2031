@@ -91,12 +91,13 @@ static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
 	// check the file name of the given file_t, if it actually is a Pxx file.
 
 	// must be at least one character, plus "." plus "x00" ending
-	if (dirent->name == NULL || strlen(dirent->name) < 5) {
+	if (dirent->name == NULL || strlen((char*)dirent->name) < 5) {
 		// not found, but no error
 		return CBM_ERROR_OK;
 	}
 
-	const char *name = conv_name_alloc(dirent->name, dirent->cset, CHARSET_ASCII);
+	const char *name = conv_name_alloc((char*)dirent->name, 
+		dirent->cset, CHARSET_ASCII);
 
 	//log_debug("x00_resolve: infile converted to=%s\n", name);
 
@@ -207,11 +208,11 @@ static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
 
 	memcpy(&de->name, (char*)&(x00_buf[8]), 16);
 	de->name[16] = 0; // zero-terminate
-	de->de.name = &de->name;
+	de->de.name = de->name;
 
 	de->parent_de = dirent;
 
-	*outde = de;
+	*outde = (direntry_t*)de;
 
 	return CBM_ERROR_OK;
 }
@@ -241,7 +242,7 @@ static int x00_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **ou
 	file->file.isdir = 0;
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
-	file->file.filename = mem_alloc_str(dirent->name);
+	file->file.filename = mem_alloc_str((char*)dirent->name);
 	file->file.recordlen = dirent->de.recordlen;
 	file->file.attr = dirent->de.attr;
 	file->file.type = dirent->de.type;
@@ -389,9 +390,18 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 	return CBM_ERROR_OK;
 }
 
+static int x00_scratch2(direntry_t *dirent) {
+
+	x00_dirent_t *de = (x00_dirent_t*) dirent;
+
+	return de->parent_de->handler->scratch2(de->parent_de);
+}
+
 static int x00_declose(direntry_t *de) {
 
 	mem_free(de);
+
+	return CBM_ERROR_OK;
 }
 
 
@@ -502,7 +512,7 @@ static handler_t x00_handler = {
 
 	default_scratch,
 
-	NULL,		// delete2
+	x00_scratch2,	// delete2
 
 	NULL,		// mkdir not supported
 
