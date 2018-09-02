@@ -135,9 +135,13 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 	}
 
 	do {
-		rv = dir->handler->resolve2(pattern, cset, &dir);
+		if (dir->handler->resolve2) {
+			rv = dir->handler->resolve2(pattern, cset, &dir);
+		} else {
+			rv = CBM_ERROR_DIR_NOT_FOUND;
+		}
 
-		if (rv == CBM_ERROR_SYNTAX_WILDCARDS) {
+		if (rv == CBM_ERROR_SYNTAX_WILDCARDS || rv == CBM_ERROR_DIR_NOT_FOUND) {
 
 			direntry_t *de;
 			const char *p = *pattern;
@@ -148,7 +152,7 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 
 			if (rv == CBM_ERROR_OK) {
 				// open the found dir entry
-				rv = dir->handler->open2(de, NULL, FS_OPEN_DR, &fp);
+				rv = de->handler->open2(de, NULL, FS_OPEN_DR, &fp);
 
 				if (rv == CBM_ERROR_OK) {
 					// close old dir
@@ -156,9 +160,14 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 					// new scan dir
 					dir = fp;
 					*pattern = p;
+
+					if (!strchr(*pattern, '/')) {
+						rv = CBM_ERROR_FILE_EXISTS;
+					}
 				}
 				de->handler->declose(de);
 				de = NULL;
+
 			}
 		}
 
@@ -247,6 +256,9 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
         } while (!found);
 
 	if (found && fixpattern) {
+		if (*scanpattern == '/') {
+			scanpattern++;
+		}
 		pattern[0] = scanpattern;
 	}
 	*outde = direntry;

@@ -138,8 +138,12 @@ int handler_next(file_t *infile, const char *pattern, charset_t cset, const char
 			// no handler found
 			break;
 		}
+		if (!handler->resolve) {
+			continue;
+		}
 		// outpattern then points into the pattern string
-		if ( handler->resolve(infile, outfile, pattern, cset, outpattern) == CBM_ERROR_OK) {
+		if (handler->resolve(infile, outfile, pattern, cset, outpattern)
+			 == CBM_ERROR_OK) {
 			// worked ok.
 			if (*outfile != NULL) {
 				// found a handler

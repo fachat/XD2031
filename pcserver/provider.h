@@ -156,6 +156,7 @@ struct _file {
 #define	DIRSTATE_FIRST		1
 #define	DIRSTATE_ENTRIES	2
 #define	DIRSTATE_END		3
+#define	DIRSTATE_FAKE		4
 
 // information about a directory entry
 // basically a typed version of the wireformat dir entry
@@ -256,6 +257,7 @@ struct _handler {
 	int (*equals) (file_t * thisfile, file_t * otherfile);
 
 	 size_t(*realsize) (file_t * file);	// returns the real (correct) size of the file
+	 size_t(*realsize2) (direntry_t * de);	// returns the real (correct) size of the file
 
 	int (*scratch) (file_t * file);	// delete file
 

@@ -1987,11 +1987,12 @@ static int fs_open(file_t *fp, openpars_t *pars, int type) {
 	} else {
 		if (type == FS_OPEN_RW) {
 			// TODO check open block?
+			// TODO: di_provider needs RW open
 
 			// RW is only supported for REL files at the moment
-			if (pars->filetype != FS_DIR_TYPE_REL) {
-				return CBM_ERROR_FILE_TYPE_MISMATCH;
-			}
+			//if (pars->filetype != FS_DIR_TYPE_REL) {
+			//	return CBM_ERROR_FILE_TYPE_MISMATCH;
+			//}
 		}
 
 		file->file.recordlen = pars->recordlen;
@@ -2200,7 +2201,7 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 
 	  	struct stat sbuf;
 		if(stat(newospath, &sbuf) < 0) {
-			log_errno("Error stat'ing file '%s'\n", newospath);
+			log_errno("Error stat'ing file '%s'", newospath);
 			mem_free(tmpname);
 			free(newospath);
 			return CBM_ERROR_DIR_NOT_FOUND;
@@ -2331,6 +2332,12 @@ static size_t fs_realsize(file_t *file) {
 	return file->filesize;
 }
 
+static size_t fs_realsize2(direntry_t *file) {
+
+	// our direntry has the correct size already
+	return file->size;
+}
+
 // ----------------------------------------------------------------------------------
 
 handler_t fs_file_handler = {
@@ -2354,6 +2361,7 @@ handler_t fs_file_handler = {
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
 	fs_realsize,		// real size of file (same as file->filesize here)
+	fs_realsize2,		// real size of file (same as file->filesize here)
 	NULL,			// delete file
 	fs_delete2,		// delete2 file
 	fs_mkdir,		// create a directory

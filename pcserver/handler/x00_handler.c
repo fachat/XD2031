@@ -96,6 +96,11 @@ static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
 		return CBM_ERROR_OK;
 	}
 
+	if (dirent->mode != FS_DIR_MOD_FIL) {
+		// wrong de type
+		return CBM_ERROR_OK;
+	}
+
 	const char *name = conv_name_alloc((char*)dirent->name, 
 		dirent->cset, CHARSET_ASCII);
 
@@ -106,7 +111,7 @@ static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
 	const char *p = name + strlen(name) - 4;
 
 	if (*p != '.') {
-		mem_free((char*)name);
+		mem_free(name);
 		return CBM_ERROR_OK;
 	}
 	p++;
@@ -455,6 +460,13 @@ static size_t x00_realsize(file_t *file) {
 	return CBM_ERROR_FAULT;
 }
 
+static size_t x00_realsize2(direntry_t *dirent) {
+
+	x00_dirent_t *de = (x00_dirent_t*) dirent;
+
+	return de->parent_de->handler->realsize2(de->parent_de) - X00_HEADER_LEN;
+}
+
 
 
 static handler_t x00_handler = {
@@ -509,6 +521,8 @@ static handler_t x00_handler = {
 	x00_equals,
 
 	x00_realsize,
+
+	x00_realsize2,
 
 	default_scratch,
 

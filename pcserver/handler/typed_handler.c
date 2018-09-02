@@ -102,6 +102,11 @@ static int typed_wrap(direntry_t *dirent, direntry_t **outde) {
 		return CBM_ERROR_OK;
 	}
 
+        if (dirent->mode != FS_DIR_MOD_FIL) {
+                // wrong de type
+                return CBM_ERROR_OK;
+        }
+
 	char *name = conv_name_alloc((char*)dirent->name, dirent->cset, CHARSET_ASCII);
 
 	//log_debug("typed_resolve: infile converted to=%s\n", name);
@@ -449,7 +454,8 @@ static handler_t typed_handler = {
 
 	typed_equals,
 
-	NULL,
+	NULL,		// realsize
+	NULL,		// realsize2
 
 	default_scratch,
 

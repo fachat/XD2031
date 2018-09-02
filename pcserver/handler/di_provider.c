@@ -34,7 +34,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
-#include <strings.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -138,6 +137,7 @@ extern provider_t di_provider;
 static registry_t di_endpoint_registry;
 
 handler_t di_file_handler;
+handler_t di_img_file_handler;
 
 // prototypes
 static void di_write_slot(di_endpoint_t * diep, slot_t * slot);
@@ -154,12 +154,47 @@ static void endpoint_init(const type_t * t, void *obj)
 	fsep->base.ptype = &di_provider;
 	fsep->base.is_assigned = 0;
 	fsep->base.is_temporary = 0;
+	fsep->bam1 = NULL;
+	fsep->bam2 = NULL;
+	fsep->dir = NULL;
+	fsep->buf[0] = NULL;
+	fsep->buf[1] = NULL;
+	fsep->buf[2] = NULL;
+	fsep->buf[3] = NULL;
+	fsep->buf[4] = NULL;
 }
 
 static type_t endpoint_type = {
 	"di_endpoint",
 	sizeof(di_endpoint_t),
 	endpoint_init
+};
+
+// ------------------------------------------------------------------
+// direntry for a Dxx file in an outer directory
+
+typedef struct {
+        direntry_t      de;             // embedded
+        direntry_t      *parent_de;
+	Disk_Image_t	di;
+} di_img_dirent_t;
+
+static type_t di_img_dirent_type = {
+        "di_img_dirent",
+        sizeof(di_img_dirent_t),
+        NULL
+};
+
+typedef struct {
+        direntry_t      de;             // embedded
+	di_endpoint_t	*ep;
+	char 		name[23];
+} di_dirent_t;
+
+static type_t di_dirent_type = {
+        "di_dirent",
+        sizeof(di_dirent_t),
+        NULL
 };
 
 // **********
@@ -204,6 +239,25 @@ static File *di_reserve_file(di_endpoint_t * diep)
 // *************
 // di_load_image
 // *************
+
+static cbm_errno_t di_load_image2(direntry_t * dirent, Disk_Image_t *di) {
+
+	// dirent only has approximate size (e.g. derived from 
+	// number of blocks in CBM disk image directory, so we
+	// need to find the real size of a file
+	size_t filelen = dirent->handler->realsize2(dirent);
+
+	if (diskimg_identify(di, filelen)) {
+	} else {
+		log_error("Invalid/unsupported disk image\n");
+		return CBM_ERROR_FILE_TYPE_MISMATCH;	// not an image file
+	}
+
+	log_debug("di_load_image2(%s) as d%d\n", dirent->name, di->ID);
+
+	return CBM_ERROR_OK;	// success
+}
+	
 
 static cbm_errno_t di_load_image(di_endpoint_t * diep, file_t * file)
 {
@@ -2304,7 +2358,7 @@ static void di_write_slot(di_endpoint_t * diep, slot_t * slot)
 // di_read_slot
 // ************
 
-static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
+static cbm_errno_t di_read_slot(di_endpoint_t * diep, slot_t * slot)
 {
 	int i = 0;
 	uint8_t *p;
@@ -2330,6 +2384,7 @@ static void di_read_slot(di_endpoint_t * diep, slot_t * slot)
 
 	log_debug("di_read_slot #%d in %d/%d <(%02x ...) %s>\n", slot->in_sector, slot->dir_track, slot->dir_sector, slot->filename[0],
 		  slot->filename);
+	return err;
 }
 
 // *************
@@ -2356,7 +2411,7 @@ static void di_first_slot(di_endpoint_t * diep, slot_t * slot)
 // di_next_slot
 // ************
 
-static int di_next_slot(di_endpoint_t * diep, slot_t * slot)
+static cbm_errno_t di_next_slot(di_endpoint_t * diep, slot_t * slot)
 {
 	if ((++slot->in_sector) > 7)	// read next dir block
 	{
@@ -2367,7 +2422,7 @@ static int di_next_slot(di_endpoint_t * diep, slot_t * slot)
 		cbm_errno_t err = di_REUSEFLUSHMAP(b, slot->dir_track, slot->dir_sector);
 		if (err != CBM_ERROR_OK) {
 			// TODO: error handling
-			return 0;	// end of
+			return err;	// end of
 		}
 
 		// next block
@@ -2377,12 +2432,12 @@ static int di_next_slot(di_endpoint_t * diep, slot_t * slot)
 		log_debug("Next Slot (%d/%d)\n", t, s);
 		if (t == 0) {
 			slot->eod = 1;
-			return 0;	// end of directory
+			return CBM_ERROR_FILE_NOT_FOUND;	// end of directory
 		}
 		slot->dir_sector = s;
 		slot->dir_track = t;
 	}
-	return 1;
+	return CBM_ERROR_OK;
 }
 
 // *************
@@ -2403,7 +2458,7 @@ di_match_slot(di_endpoint_t * diep, slot_t * slot, const uint8_t * name,
 			return 1;	// found
 		}
 	}
-	while (di_next_slot(diep, slot));
+	while (di_next_slot(diep, slot) == CBM_ERROR_OK);
 	return 0;		// not found
 }
 
@@ -2459,7 +2514,7 @@ static int di_find_free_slot(di_endpoint_t * diep, slot_t * slot)
 		if (slot->type == 0)
 			return 0;	// found
 	}
-	while (di_next_slot(diep, slot));
+	while (di_next_slot(diep, slot) == CBM_ERROR_OK);
 	return di_allocate_new_dir_block(diep, slot);
 }
 
@@ -2603,6 +2658,161 @@ static int di_blocks_free(char *dest, di_endpoint_t * diep)
 	dest[FS_DIR_MODE] = FS_DIR_MOD_FRE;
 	dest[FS_DIR_NAME] = 0;
 	return FS_DIR_NAME + 1;
+}
+
+/*******************
+ * get the next directory entry in the directory given as fp.
+ * If isresolve is set, then the disk header and blocks free entries are skipped
+ * 
+ * outpattern points into a newly malloc'd string
+ */
+static int
+di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag)
+{
+
+	log_debug("di_direntry2(fp=%p)\n", dir);
+
+	cbm_errno_t rv = CBM_ERROR_FAULT;
+
+	if (!dir) {
+		return rv;
+	}
+
+	rv = CBM_ERROR_OK;
+	*outde = NULL;
+
+	di_endpoint_t *diep = (di_endpoint_t *) dir->endpoint;
+
+	*readflag = READFLAG_DENTRY;
+	di_dirent_t *entry = NULL;
+	int FreeBlocks = 0;
+
+	// name
+	buf_t *b = NULL;
+	di_GETBUF_dir(&b, diep);
+
+	if (dir->dirstate == DIRSTATE_FIRST) {
+		di_first_slot(diep, &diep->Slot);
+	}
+	if (!isdirscan) {
+		dir->dirstate = DIRSTATE_ENTRIES;
+	}
+
+	switch (dir->dirstate) {
+	case DIRSTATE_FIRST:
+		// give disk header
+		entry = mem_alloc(&di_dirent_type);
+
+		entry->de.handler = &di_file_handler;
+		entry->ep = diep;
+		entry->de.parent = dir;
+
+		entry->de.size = 0;
+		entry->de.moddate = 0;
+
+		entry->de.mode = FS_DIR_MOD_NAM;
+		entry->de.type = 0;
+		entry->de.attr = 0;
+
+		di_REUSEFLUSHMAP(b, diep->DI.DirTrack, diep->DI.HdrSector);
+
+		memcpy(entry->name, b->buf + diep->DI.HdrOffset, 16);
+		memcpy(entry->name + 16, b->buf + diep->DI.HdrOffset + 18, 5);
+
+		// fix up $a0 into $20 characters
+		for (int i = 0; i < 22; i++) {
+			if (entry->name[i] == 0xa0) {
+				entry->name[i] = 0x20;
+			}
+		}
+		entry->name[22] = 0;
+		entry->de.name = entry->name;
+
+		log_debug("di_directory_header (%s)\n", entry->de.name);
+
+		//dir->dirstate = isdirscan ? DIR_ENTRIES : DIRSTATE_FAKE;
+		dir->dirstate = DIRSTATE_ENTRIES;
+		*outde = (direntry_t*) entry;
+
+		break;
+
+	case DIRSTATE_ENTRIES:
+		do {
+
+			if (diep->Slot.eod) {
+				*outde = NULL;
+				//fp->dirstate = DIRSTATE_END;
+				// end of search
+				break;
+			}
+
+			rv = di_read_slot(diep, &diep->Slot);
+	
+			if (rv != CBM_ERROR_OK) {
+				break;
+			}
+
+			if (diep->Slot.type != 0) {
+				di_dirent_t *entry = mem_alloc(&di_dirent_type);
+
+				entry->de.handler = &di_file_handler;
+				entry->ep = diep;
+
+				entry->de.parent = dir;
+				entry->de.mode = FS_DIR_MOD_FIL;
+				entry->de.size = diep->Slot.size * 254;
+				entry->de.type =
+				    diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
+				entry->de.attr =
+				    FS_DIR_ATTR_ESTIMATE | 
+				    ((diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^
+				    FS_DIR_ATTR_SPLAT);
+
+				entry->de.name = diep->Slot.filename;
+				entry->de.cset = CHARSET_PETSCII;
+
+
+				if (!diep->Ip->writable) {
+					entry->de.attr |= FS_DIR_ATTR_LOCKED;
+				}
+				*outde = (direntry_t*) entry;
+				break;
+			}
+			// .. and this state is the reason for the stupid copy above...
+			rv = di_next_slot(diep, &diep->Slot);
+
+		} while (rv == CBM_ERROR_OK);
+
+		dir->dirstate = DIRSTATE_END;
+
+		break;
+	case DIRSTATE_END:
+		// blocks free
+		entry = mem_alloc(&di_dirent_type);
+		entry->de.handler = &di_file_handler;
+		entry->ep = diep;
+		entry->de.parent = dir;
+
+		FreeBlocks = di_BAM_blocks_free(diep);
+		FreeBlocks <<= 8;
+
+		entry->de.attr = FS_DIR_ATTR_ESTIMATE;
+		entry->de.size = FreeBlocks;
+		entry->de.mode = FS_DIR_MOD_FRE;
+		entry->de.type = 0;
+		entry->de.name = NULL;
+		*outde = (direntry_t*) entry;
+		*readflag = READFLAG_EOF;	
+		break;
+	case DIRSTATE_FAKE:
+		// "$" entry for file matching (not supported right now)
+		break;
+	default:
+		rv = CBM_ERROR_FAULT;
+		break;
+	}
+
+	return rv;
 }
 
 /*******************
@@ -2776,8 +2986,6 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, char
 
 static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 {
-	int rv;
-
 	const char *filename = file->file.filename;
 
 	log_info("OpenFile(%s,%c,%d)\n", filename, pars->filetype + 0x30,
@@ -2789,18 +2997,18 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 
 	di_endpoint_t *diep = (di_endpoint_t *) (file->file.endpoint);
 
-	int file_required = false;
-	int file_must_not_exist = false;
+	//int file_required = false;
+	//int file_must_not_exist = false;
 
 	file->access_mode = 0;
 
 	switch (di_cmd) {
 	case FS_OPEN_AP:
 	case FS_OPEN_RD:
-		file_required = true;
+		//file_required = true;
 		break;
 	case FS_OPEN_WR:
-		file_must_not_exist = true;
+		//file_must_not_exist = true;
 		break;
 	case FS_OPEN_OW:
 		break;
@@ -2816,7 +3024,7 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		return CBM_ERROR_FAULT;
 	}
 
-	if (*filename == '$' && di_cmd == FS_OPEN_RD) {
+	if (filename && *filename == '$' && di_cmd == FS_OPEN_RD) {
 		// reading the directory as normal file just returns the standard
 		// blocks 18/0 -> 18/1 -> and following the block chain
 		Disk_Image_t *di = &diep->DI;
@@ -3003,7 +3211,7 @@ static int di_format(endpoint_t * ep, const char *name)
 	uint8_t idbuffer[5];
 	uint8_t *buf;
 
-	const char *p = index(name, ',');
+	const char *p = strchr(name, ',');
 	int len = strlen(name);
 
 	// the buffer we are going to use for format
@@ -3385,6 +3593,45 @@ static size_t di_realsize(file_t * file)
 
 }
 
+// TODO: detect loop / break after max len
+static size_t di_realsize2(direntry_t * dirent)
+{
+	di_dirent_t *de = (di_dirent_t*) dirent;
+
+	// diep with Slot is here...
+	
+	size_t len = 0;
+
+	uint8_t next_t = de->ep->Slot.start_track;
+	uint8_t next_s = de->ep->Slot.start_sector;
+
+	buf_t *b = NULL;
+	di_GETBUF(&b, de->ep);
+
+	// each block is 254 data bytes
+	do {
+		di_REUSEFLUSHMAP(b, next_t, next_s);
+		next_t = b->buf[0];
+		next_s = b->buf[1];
+		if (next_t == 0) {
+			// no next block
+			break;
+		}
+		len += 254;
+	}
+	while (1);
+
+	//f->next_track = next_t;
+	//f->next_sector = next_s;
+
+	len += next_s - 1;
+
+	log_debug("Found length of %d for file %s\n", len, dirent->name);
+
+	return len;
+
+}
+
 //***********
 // di_create 
 //***********
@@ -3516,6 +3763,29 @@ static int di_open(file_t * fp, openpars_t * pars, int type)
 	return rv;
 }
 
+//***********
+// di_open2
+//***********
+
+static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **outfp)
+{
+	int rv = CBM_ERROR_FAULT;
+
+	di_dirent_t *de = (di_dirent_t*) dirent;
+
+	File *file = di_reserve_file(de->ep);
+
+	if (type == FS_OPEN_DR) {
+		rv = di_open_dir(file);
+	} else {
+		rv = di_open_file(file, pars, type);
+	}
+	if (rv == CBM_ERROR_OK) {
+		*outfp = (file_t*) file;
+	}
+	return rv;
+}
+
 // ***********
 // di_readfile
 // ***********
@@ -3546,7 +3816,12 @@ static int di_readfile(file_t * fp, char *retbuf, int len, int *eof, charset_t o
 
 static void di_free_file(registry_t *reg, void *en) {
 	(void) reg;
-        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+	if (((file_t*)en)->handler->close) {
+	        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+	} else 
+	if (((file_t*)en)->handler->fclose) {
+	        ((file_t*)en)->handler->fclose((file_t*)en, NULL, NULL);
+	}
 }
 
 static void di_free_ep(registry_t *reg, void *en) {
@@ -3571,6 +3846,8 @@ static void di_init(void)
 	log_debug("di_init\n");
 
 	provider_register(&di_provider);
+
+	handler_register(&di_img_file_handler);
 
 	reg_init(&di_endpoint_registry, "di_endpoint_registry", 5);
 }
@@ -3929,11 +4206,13 @@ static file_t *di_root(endpoint_t * ep)
 	di_endpoint_t *diep = (di_endpoint_t *) ep;
 
 	File *file = di_reserve_file(diep);
+
+	file->file.handler = &di_img_file_handler;
 	file->file.endpoint = ep;
 	file->file.filename = mem_alloc_str("$");
-	//file->file.pattern = mem_alloc_str("*");
 	file->file.writable = diep->Ip->writable;
 	file->file.isdir = 1;
+	file->file.dirstate = DIRSTATE_FIRST;
 
 	// TODO: move from global to file
 	di_first_slot(diep, &diep->Slot);
@@ -3941,6 +4220,176 @@ static file_t *di_root(endpoint_t * ep)
 	log_debug("di_root: diep=%p -> root=%p\n", file);
 
 	return (file_t *) file;
+}
+
+// *********
+// di_wrap2
+// *********
+//
+// wrap a file_t that represents a Dxx file into a temporary endpoint, 
+// and return the root file_t of it to access the directory of the 
+// Dxx image.
+//
+// This is called when traversing a path, so Dxx files can be "seen" as 
+// subdirectories e.g. in another container (larger Dxx file, zip file etc).
+
+static int di_wrap2(direntry_t * dirent, direntry_t ** outde)
+{
+	cbm_errno_t err = CBM_ERROR_OK;
+
+	log_debug("di_wrap: infile=%s\n", dirent->name);
+
+	*outde = NULL;
+
+	// first check name
+        const char *name = conv_name_alloc((char*)dirent->name,
+                dirent->cset, CHARSET_ASCII);
+
+
+	if (dirent->mode != FS_DIR_MOD_FIL) {
+		return err;
+	}
+
+	int l = 0;
+	if (name == NULL || (l = strlen(name)) < 4) {
+		mem_free(name);
+		return err;
+	}
+
+	if (name[l - 4] != '.' || (name[l - 3] != 'd' && name[l - 3] != 'D')) {
+		mem_free(name);
+		return err;
+	}
+	if ((!isdigit(name[l - 2])) || ((!isdigit(name[l - 1])))) {
+		mem_free(name);
+		return err;
+	}
+
+	mem_free(name);
+	name = NULL;
+
+	Disk_Image_t di;
+	if ((err = di_load_image2(dirent, &di)) != CBM_ERROR_OK) {
+		// image not identified 
+		return err;
+	}
+
+	// correctly identified
+
+        di_img_dirent_t *de = mem_alloc(&di_img_dirent_type);
+
+        de->de.parent = NULL;
+        de->de.handler = &di_img_file_handler;
+
+        de->de.size = dirent->size;
+        de->de.moddate = di.Blocks * 256; // dirent->moddate;
+        de->de.recordlen = 0;
+        de->de.mode = FS_DIR_MOD_DIR;
+        de->de.attr = dirent->attr & FS_DIR_ATTR_LOCKED;
+        de->de.type = FS_DIR_TYPE_UNKNOWN & FS_DIR_ATTR_TYPEMASK;
+        de->de.cset = dirent->cset;
+
+        de->de.name = (uint8_t*) mem_alloc_str((char*)dirent->name);
+	// cut off extension
+        de->de.name[l-4] = 0;
+
+        de->parent_de = dirent;
+
+        *outde = (direntry_t*)de;
+
+	return err;
+}
+
+static int di_img_declose(direntry_t *dirent) {
+
+	di_img_dirent_t *de = (di_img_dirent_t*) dirent;
+	de->parent_de->handler->declose(de->parent_de);
+
+	mem_free(dirent->name);
+	mem_free(dirent);
+
+	return CBM_ERROR_OK;
+}
+
+static int di_declose(direntry_t *dirent) {
+
+	//di_dirent_t *de = (di_dirent_t*) dirent;
+
+	mem_free(dirent->name);
+	mem_free(dirent);
+
+	return CBM_ERROR_OK;
+}
+
+static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file_t **outfp) {
+
+	di_img_dirent_t *de = (di_img_dirent_t*) dirent;
+
+	file_t *imgfp = NULL;
+	file_t *dirfp = NULL;
+	openpars_t imgpars;
+	openpars_init_options(&imgpars);
+
+	int rv = de->parent_de->handler->open2(de->parent_de, &imgpars, FS_OPEN_RW, &imgfp);
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+		
+	// check existing endpoints (so we re-use them and do not confuse
+	// underlying data structures by parallel access paths
+	for (int i = 0;; i++) {
+		di_endpoint_t *diep = reg_get(&di_endpoint_registry, i);
+
+		if (diep == NULL) {
+			// no more endpoint
+			break;
+		}
+
+		log_debug("checking ep %p for reuse (root=%p)\n", diep,
+			  diep->Ip);
+
+		if (!diep->Ip->handler->equals(diep->Ip, imgfp)) {
+			// root of endpoint equals the given parent file
+			// so we reuse the endpoint
+
+			log_debug("Found ep %p to reuse with file %p\n", diep,
+				  imgfp);
+
+			dirfp = di_root((endpoint_t *) diep);
+			dirfp->handler = &di_img_file_handler;
+
+			// close the image file we opened
+			imgfp->handler->fclose(imgfp, NULL, NULL);
+
+			break;
+		}
+	}
+
+	if (!dirfp) {
+		// allocate a new endpoint
+		di_endpoint_t *newep = (di_endpoint_t *) di_newep(dirent->name);
+		newep->Ip = imgfp;
+		dirfp = di_root(newep);
+
+		newep->base.is_temporary = 1;
+
+		if ((rv = di_load_image2(de->parent_de, &newep->DI)) == CBM_ERROR_OK) {
+			// image identified correctly
+			dirfp = di_root((endpoint_t *) newep);
+
+			log_debug("di_wrap (%p: %s) -> %p\n",
+				  dirent, dirent->name, dirfp);
+
+			*outfp = dirfp;
+		} else {
+			// we don't need to close file, so clear it here
+			newep->Ip = NULL;
+			di_freeep((endpoint_t *) newep);
+		}
+	}
+
+	return rv;
+
 }
 
 // *********
@@ -4042,33 +4491,68 @@ static int di_wrap(file_t * file, file_t ** wrapped)
 
 // ----------------------------------------------------------------------------------
 
+// handler for the image direntry in the outer directory
+handler_t di_img_file_handler = {
+	"di_img_file_handler",
+	NULL,			// resolve2 - not required
+	NULL,			// resolve - not required
+	di_wrap2,		// wrap
+	NULL,			// close
+	NULL,			// fclose
+	di_img_declose,		// declose 
+	NULL,			// open a file_t
+	di_img_open2,		// open2 a direntry_t TODO
+	NULL,			// parent() impl
+	NULL,			// seek
+	NULL,			// readfile
+	NULL,			// writefile
+	NULL,			// truncate
+	di_img_direntry2,	// direntry2 TODO
+	NULL,			// direntry
+	di_create,		// create
+	NULL,			// flush data to disk
+	di_equals,		// check if two files are the same
+	di_realsize,		// compute and return the real linear file size
+	NULL,			// compute and return the real linear file size TODO
+	di_scratch,		// scratch
+	NULL	,		// scratch2 TODO
+	NULL,			// mkdir not supported
+	NULL,			// rmdir not supported
+	NULL,			// rmdir2 not supported
+	di_move,		// move a file
+	NULL,			// move2 a file TODO
+	NULL			// dump
+};
+
+// the handler for files within a Disk image
 handler_t di_file_handler = {
 	"di_file_handler",
 	NULL,			// resolve2 - not required
 	NULL,			// resolve - not required
 	NULL,			// wrap
 	di_close,		// close
-	NULL,			// fclose
-	NULL,			// declose
+	NULL,			// fclose TODO
+	di_declose,		// declose TODO
 	di_open,		// open a file_t
-	NULL,			// open2 a direntry_t
+	di_open2,		// open2 a direntry_t TODO
 	handler_parent,		// default parent() impl
 	di_seek,		// seek
 	di_readfile,		// readfile
 	di_writefile,		// writefile
 	NULL,			// truncate
-	NULL,			// direntry2
+	NULL,			// direntry2 TODO
 	di_direntry,		// direntry
 	di_create,		// create
 	di_fflush,		// flush data to disk
 	di_equals,		// check if two files are the same
-	di_realsize,		// compute and return the real linear file size
-	di_scratch,		// scratch
+	NULL,			// compute and return the real linear file size
+	di_realsize2,		// compute and return the real linear file size TODO
+	NULL,			// scratch
 	NULL	,		// scratch2
 	NULL,			// mkdir not supported
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
-	di_move,		// move a file
+	NULL,			// move a file
 	NULL,			// move2 a file
 	di_dump_file		// dump
 };

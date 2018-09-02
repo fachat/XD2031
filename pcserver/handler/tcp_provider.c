@@ -658,6 +658,7 @@ static handler_t tcp_file_handler = {
 	NULL,			// fs_flush,               // flush data out to disk
 	NULL,			// fs_equals,              // check if two files (e.g. d64 files are the same)
         NULL,			// fs_realsize,            // real size of file (same as file->filesize here)
+        NULL,			// fs_realsize2,            // real size of file (same as file->filesize here)
         NULL,			// fs_delete,              // delete file
         NULL,			// fs_delete2,              // delete file
         NULL,			// fs_mkdir,               // create a directory
