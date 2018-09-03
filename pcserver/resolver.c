@@ -130,10 +130,6 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 
 	file_t *dir = *inoutdir;
 
-	if (!dir->handler->resolve2) {
-		return CBM_ERROR_FAULT;
-	}
-
 	do {
 		if (dir->handler->resolve2) {
 			rv = dir->handler->resolve2(pattern, cset, &dir);

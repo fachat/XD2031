@@ -2066,6 +2066,7 @@ static File* create_file(direntry_t *dirent) {
 
 	File *newfp = reserve_file((fs_endpoint_t*)parent->file.endpoint);
 	newfp->ospath = newospath;
+	newfp->file.writable = (dirent->attr & FS_DIR_ATTR_LOCKED) ? 0 : 1;
 
 	return newfp;
 }

@@ -188,6 +188,7 @@ static type_t di_img_dirent_type = {
 typedef struct {
         direntry_t      de;             // embedded
 	di_endpoint_t	*ep;
+	slot_t		slot;
 	char 		name[23];
 } di_dirent_t;
 
@@ -2693,7 +2694,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 	if (dir->dirstate == DIRSTATE_FIRST) {
 		di_first_slot(diep, &diep->Slot);
-	}
+	} 
 	if (!isdirscan) {
 		dir->dirstate = DIRSTATE_ENTRIES;
 	}
@@ -2757,6 +2758,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 				entry->de.handler = &di_file_handler;
 				entry->ep = diep;
+				entry->slot = diep->Slot;
 
 				entry->de.parent = dir;
 				entry->de.mode = FS_DIR_MOD_FIL;
@@ -2768,7 +2770,9 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 				    ((diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^
 				    FS_DIR_ATTR_SPLAT);
 
-				entry->de.name = diep->Slot.filename;
+				memcpy(entry->name, diep->Slot.filename, 16);
+				entry->name[16] = 0;
+				entry->de.name = entry->name;
 				entry->de.cset = CHARSET_PETSCII;
 
 
@@ -2776,16 +2780,21 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 					entry->de.attr |= FS_DIR_ATTR_LOCKED;
 				}
 				*outde = (direntry_t*) entry;
+				rv = di_next_slot(diep, &diep->Slot);
 				break;
 			}
-			// .. and this state is the reason for the stupid copy above...
 			rv = di_next_slot(diep, &diep->Slot);
 
 		} while (rv == CBM_ERROR_OK);
 
-		dir->dirstate = DIRSTATE_END;
+		if (rv != CBM_ERROR_FILE_NOT_FOUND || !isdirscan) {
+			return rv;
+		}
+		rv = CBM_ERROR_OK;
 
-		break;
+		dir->dirstate = DIRSTATE_END;
+		// falls through
+
 	case DIRSTATE_END:
 		// blocks free
 		entry = mem_alloc(&di_dirent_type);
@@ -3115,6 +3124,7 @@ di_read_seq(File * file, char *retbuf, int len, int *eof)
 		}
 		if (datap->buf[0] != 0 && file->chp + 1 >= 255) {
 			err = di_REUSEFLUSHMAP(datap, datap->buf[0], datap->buf[1]);
+			file->chp = 0;
 		}
 		if (*eof)
 			return i + 1;
@@ -3774,6 +3784,7 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 	di_dirent_t *de = (di_dirent_t*) dirent;
 
 	File *file = di_reserve_file(de->ep);
+	file->Slot = de->slot;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
@@ -4116,6 +4127,7 @@ static cbm_errno_t di_close_fd(di_endpoint_t * diep, File * f, uint8_t *tr, uint
 	return err;
 }
 
+
 static int di_close(file_t * fp, int recurse, char *outbuf, int *outlen)
 {
 	File *file = (File *) fp;
@@ -4146,6 +4158,11 @@ static int di_close(file_t * fp, int recurse, char *outbuf, int *outlen)
 	mem_free(file);
 
 	return err;
+}
+
+static int di_fclose(file_t * fp, char *outbuf, int *outlen) {
+	
+	di_close(fp, 0, NULL, NULL);
 }
 
 static int di_equals(file_t * thisfile, file_t * otherfile)
@@ -4247,6 +4264,7 @@ static int di_wrap2(direntry_t * dirent, direntry_t ** outde)
 
 
 	if (dirent->mode != FS_DIR_MOD_FIL) {
+		mem_free(name);
 		return err;
 	}
 
@@ -4321,6 +4339,25 @@ static int di_declose(direntry_t *dirent) {
 	return CBM_ERROR_OK;
 }
 
+//***********
+// di_open2
+//***********
+
+static int di_img_fclose(file_t *file, char *rvbuf, int *rvlen)
+{
+	int rv = CBM_ERROR_FAULT;
+
+	File *fp = (File*) file;
+	
+	
+	return rv;
+}
+
+//***********
+// di_open2
+//***********
+
+
 static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file_t **outfp) {
 
 	di_img_dirent_t *de = (di_img_dirent_t*) dirent;
@@ -4357,6 +4394,7 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 
 			dirfp = di_root((endpoint_t *) diep);
 			dirfp->handler = &di_img_file_handler;
+			*outfp = dirfp;
 
 			// close the image file we opened
 			imgfp->handler->fclose(imgfp, NULL, NULL);
@@ -4369,13 +4407,13 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 		// allocate a new endpoint
 		di_endpoint_t *newep = (di_endpoint_t *) di_newep(dirent->name);
 		newep->Ip = imgfp;
-		dirfp = di_root(newep);
 
 		newep->base.is_temporary = 1;
 
 		if ((rv = di_load_image2(de->parent_de, &newep->DI)) == CBM_ERROR_OK) {
 			// image identified correctly
 			dirfp = di_root((endpoint_t *) newep);
+			dirfp->handler = &di_img_file_handler;
 
 			log_debug("di_wrap (%p: %s) -> %p\n",
 				  dirent, dirent->name, dirfp);
@@ -4385,6 +4423,9 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 			// we don't need to close file, so clear it here
 			newep->Ip = NULL;
 			di_freeep((endpoint_t *) newep);
+
+			// close the image file we opened
+			imgfp->handler->fclose(imgfp, NULL, NULL);
 		}
 	}
 
@@ -4498,7 +4539,7 @@ handler_t di_img_file_handler = {
 	NULL,			// resolve - not required
 	di_wrap2,		// wrap
 	NULL,			// close
-	NULL,			// fclose
+	di_img_fclose,		// fclose
 	di_img_declose,		// declose 
 	NULL,			// open a file_t
 	di_img_open2,		// open2 a direntry_t TODO
@@ -4531,7 +4572,7 @@ handler_t di_file_handler = {
 	NULL,			// resolve - not required
 	NULL,			// wrap
 	di_close,		// close
-	NULL,			// fclose TODO
+	di_fclose,		// fclose TODO
 	di_declose,		// declose TODO
 	di_open,		// open a file_t
 	di_open2,		// open2 a direntry_t TODO
