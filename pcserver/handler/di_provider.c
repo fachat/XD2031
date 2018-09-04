@@ -2684,7 +2684,9 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 	di_endpoint_t *diep = (di_endpoint_t *) dir->endpoint;
 
-	*readflag = READFLAG_DENTRY;
+	if (readflag) {
+		*readflag = READFLAG_DENTRY;
+	}
 	di_dirent_t *entry = NULL;
 	int FreeBlocks = 0;
 
@@ -2811,7 +2813,9 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 		entry->de.type = 0;
 		entry->de.name = NULL;
 		*outde = (direntry_t*) entry;
-		*readflag = READFLAG_EOF;	
+		if (readflag) {
+			*readflag = READFLAG_EOF;	
+		}
 		break;
 	case DIRSTATE_FAKE:
 		// "$" entry for file matching (not supported right now)
@@ -3523,6 +3527,24 @@ static int di_scratch(file_t * file)
 
 	return CBM_ERROR_OK;
 }
+
+// **********
+// di_scratch2
+// **********
+
+static int di_scratch2(direntry_t * dirent)
+{
+	di_dirent_t *de = (di_dirent_t *) dirent;
+	di_endpoint_t *diep = de->ep;
+
+	di_delete_file(diep, &de->slot);
+
+	return CBM_ERROR_OK;
+}
+
+// *********
+// di_move
+// *********
 
 // *********
 // di_move
@@ -4555,8 +4577,8 @@ handler_t di_img_file_handler = {
 	di_equals,		// check if two files are the same
 	di_realsize,		// compute and return the real linear file size
 	NULL,			// compute and return the real linear file size TODO
-	di_scratch,		// scratch
-	NULL	,		// scratch2 TODO
+	NULL,			// scratch
+	NULL,			// scratch2 TODO
 	NULL,			// mkdir not supported
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
@@ -4589,7 +4611,7 @@ handler_t di_file_handler = {
 	NULL,			// compute and return the real linear file size
 	di_realsize2,		// compute and return the real linear file size TODO
 	NULL,			// scratch
-	NULL	,		// scratch2
+	di_scratch2,		// scratch2
 	NULL,			// mkdir not supported
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
