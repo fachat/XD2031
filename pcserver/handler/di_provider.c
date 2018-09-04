@@ -4410,7 +4410,7 @@ static int di_declose(direntry_t *dirent) {
 
 	//di_dirent_t *de = (di_dirent_t*) dirent;
 
-	mem_free(dirent->name);
+	//mem_free(dirent->name);
 	mem_free(dirent);
 
 	return CBM_ERROR_OK;
