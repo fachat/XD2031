@@ -188,7 +188,6 @@ static type_t di_img_dirent_type = {
 typedef struct {
         direntry_t      de;             // embedded
 	di_endpoint_t	*ep;
-	slot_t		slot;
 	char 		name[23];
 } di_dirent_t;
 
@@ -2694,9 +2693,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 	buf_t *b = NULL;
 	di_GETBUF_dir(&b, diep);
 
-	if (dir->dirstate == DIRSTATE_FIRST) {
-		di_first_slot(diep, &diep->Slot);
-	} 
+
 	if (!isdirscan) {
 		dir->dirstate = DIRSTATE_ENTRIES;
 	}
@@ -2740,7 +2737,12 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 		break;
 
 	case DIRSTATE_ENTRIES:
-		do {
+ 		do {
+			if (diep->Slot.dir_track == 0) {
+				di_first_slot(diep, &diep->Slot);
+			} else {
+				rv = di_next_slot(diep, &diep->Slot);
+			}
 
 			if (diep->Slot.eod) {
 				*outde = NULL;
@@ -2760,7 +2762,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 				entry->de.handler = &di_file_handler;
 				entry->ep = diep;
-				entry->slot = diep->Slot;
+				//entry->slot = diep->Slot;
 
 				entry->de.parent = dir;
 				entry->de.mode = FS_DIR_MOD_FIL;
@@ -2772,9 +2774,10 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 				    ((diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^
 				    FS_DIR_ATTR_SPLAT);
 
-				memcpy(entry->name, diep->Slot.filename, 16);
-				entry->name[16] = 0;
-				entry->de.name = entry->name;
+				//memcpy(entry->name, diep->Slot.filename, 16);
+				//entry->name[16] = 0;
+				//entry->de.name = entry->name;
+				entry->de.name = diep->Slot.filename;
 				entry->de.cset = CHARSET_PETSCII;
 
 
@@ -2782,10 +2785,8 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 					entry->de.attr |= FS_DIR_ATTR_LOCKED;
 				}
 				*outde = (direntry_t*) entry;
-				rv = di_next_slot(diep, &diep->Slot);
 				break;
 			}
-			rv = di_next_slot(diep, &diep->Slot);
 
 		} while (rv == CBM_ERROR_OK);
 
@@ -3537,7 +3538,7 @@ static int di_scratch2(direntry_t * dirent)
 	di_dirent_t *de = (di_dirent_t *) dirent;
 	di_endpoint_t *diep = de->ep;
 
-	di_delete_file(diep, &de->slot);
+	di_delete_file(diep, &de->ep->Slot);
 
 	return CBM_ERROR_OK;
 }
@@ -3806,7 +3807,7 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 	di_dirent_t *de = (di_dirent_t*) dirent;
 
 	File *file = di_reserve_file(de->ep);
-	file->Slot = de->slot;
+	file->Slot = de->ep->Slot;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
@@ -4254,7 +4255,8 @@ static file_t *di_root(endpoint_t * ep)
 	file->file.dirstate = DIRSTATE_FIRST;
 
 	// TODO: move from global to file
-	di_first_slot(diep, &diep->Slot);
+	//di_first_slot(diep, &diep->Slot);
+	diep->Slot.dir_track = 0;
 
 	log_debug("di_root: diep=%p -> root=%p\n", file);
 
