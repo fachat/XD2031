@@ -112,7 +112,8 @@ static void print_dir_packet(dirinfo_t *dir) {
 		// fall-through
 	case FS_DIR_MOD_NAS:
 		len = (dir->len + 255) / 256;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		color_reverse();
 		l = strlen(dir->name);
 		l = (l > 16) ? 16 : l;
@@ -127,7 +128,8 @@ static void print_dir_packet(dirinfo_t *dir) {
 		// fall-through
 	case FS_DIR_MOD_FIL:
 		len = (dir->len + 253) / 254;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		l = len;
 		l = (l<10)?0:(l<100)?1:(l<1000)?2:(l<10000)?3:(l<100000)?4:5;
 		printf("%s ", "      "+l); 
@@ -145,7 +147,8 @@ static void print_dir_packet(dirinfo_t *dir) {
 		// fall-through
 	case FS_DIR_MOD_FRS:
 		len = (dir->len + 255) / 256;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		printf("BLOCKS FREE\n");
 		break;
 	}
