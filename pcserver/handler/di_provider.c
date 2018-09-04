@@ -101,7 +101,7 @@ typedef struct {		// derived from endpoint_t
 	uint8_t CurrentTrack;	// start track for scannning of BAM
 	uint8_t U2_track;	// track  for U2 command
 	uint8_t U2_sector;	// sector for U2 command
-	slot_t Slot;		// directory slot - should be deprecated!
+	//slot_t Slot;		// directory slot - should be deprecated!
 } di_endpoint_t;
 
 // buffer handling
@@ -2598,7 +2598,7 @@ static int di_open_dir(File * file)
 	if (strcmp(file->file.filename, "$") == 0) {
 		file->file.dirstate = DIRSTATE_FIRST;
 
-		di_first_slot(diep, &diep->Slot);
+		di_first_slot(diep, &file->Slot);
 
 		log_exitr(CBM_ERROR_OK);
 		return CBM_ERROR_OK;
@@ -2678,6 +2678,8 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 		return rv;
 	}
 
+	File *dirp = (File*) dir;
+
 	rv = CBM_ERROR_OK;
 	*outde = NULL;
 
@@ -2738,26 +2740,26 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 	case DIRSTATE_ENTRIES:
  		do {
-			if (diep->Slot.dir_track == 0) {
-				di_first_slot(diep, &diep->Slot);
+			if (dirp->Slot.dir_track == 0) {
+				di_first_slot(diep, &dirp->Slot);
 			} else {
-				rv = di_next_slot(diep, &diep->Slot);
+				rv = di_next_slot(diep, &dirp->Slot);
 			}
 
-			if (diep->Slot.eod) {
+			if (dirp->Slot.eod) {
 				*outde = NULL;
 				//fp->dirstate = DIRSTATE_END;
 				// end of search
 				break;
 			}
 
-			rv = di_read_slot(diep, &diep->Slot);
+			rv = di_read_slot(diep, &dirp->Slot);
 	
 			if (rv != CBM_ERROR_OK) {
 				break;
 			}
 
-			if (diep->Slot.type != 0) {
+			if (dirp->Slot.type != 0) {
 				di_dirent_t *entry = mem_alloc(&di_dirent_type);
 
 				entry->de.handler = &di_file_handler;
@@ -2766,18 +2768,18 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 
 				entry->de.parent = dir;
 				entry->de.mode = FS_DIR_MOD_FIL;
-				entry->de.size = diep->Slot.size * 254;
+				entry->de.size = dirp->Slot.size * 254;
 				entry->de.type =
-				    diep->Slot.type & FS_DIR_ATTR_TYPEMASK;
+				    dirp->Slot.type & FS_DIR_ATTR_TYPEMASK;
 				entry->de.attr =
 				    FS_DIR_ATTR_ESTIMATE | 
-				    ((diep->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^
+				    ((dirp->Slot.type & (~FS_DIR_ATTR_TYPEMASK)) ^
 				    FS_DIR_ATTR_SPLAT);
 
 				//memcpy(entry->name, diep->Slot.filename, 16);
 				//entry->name[16] = 0;
 				//entry->de.name = entry->name;
-				entry->de.name = diep->Slot.filename;
+				entry->de.name = dirp->Slot.filename;
 				entry->de.cset = CHARSET_PETSCII;
 
 
@@ -2829,6 +2831,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 	return rv;
 }
 
+#if 0
 /*******************
  * get the next directory entry in the directory given as fp.
  * If isresolve is set, then the disk header and blocks free entries are skipped
@@ -2941,11 +2944,13 @@ di_direntry(file_t * fp, file_t ** outentry, int isresolve, int *readflag,
 
 	return rv;
 }
+#endif
 
 // *****************
 // di_read_dir_entry
 // *****************
 
+#if 0
 static int
 di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, charset_t outcset,
 		  int *eof)
@@ -2964,11 +2969,11 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, char
 	if (file->file.dirstate == DIRSTATE_FIRST) {
 		file->file.dirstate++;
 		rv = di_directory_header(retbuf, diep);
-		di_first_slot(diep, &diep->Slot);
+		di_first_slot(diep, &file->Slot);
 		return rv;
 	}
 
-	if (!diep->Slot.eod) {
+	if (!file->Slot.eod) {
 		File *direntry = NULL;
 		int readflg = 0;
 
@@ -2990,6 +2995,7 @@ di_read_dir_entry(di_endpoint_t * diep, File * file, char *retbuf, int len, char
 	*eof |= READFLAG_EOF;
 	return rv;
 }
+#endif
 
 // ------------------------------------------------------------------
 // OPEN / READ / WRITE a file
@@ -3536,9 +3542,11 @@ static int di_scratch(file_t * file)
 static int di_scratch2(direntry_t * dirent)
 {
 	di_dirent_t *de = (di_dirent_t *) dirent;
+	File *parent = (File*) dirent->parent;
+
 	di_endpoint_t *diep = de->ep;
 
-	di_delete_file(diep, &de->ep->Slot);
+	di_delete_file(diep, &parent->Slot);
 
 	return CBM_ERROR_OK;
 }
@@ -3546,6 +3554,48 @@ static int di_scratch2(direntry_t * dirent)
 // *********
 // di_move
 // *********
+
+static int di_move2(direntry_t * fromfile, file_t * todir, const char *toname, charset_t cset) {
+
+
+	if (fromfile->handler != &di_file_handler) {
+		return CBM_ERROR_FAULT;
+	}
+	if (todir->handler != &di_img_file_handler) {
+		return CBM_ERROR_FAULT;
+	}
+
+	File *fromdir = (File*) fromfile->parent;
+
+	if (todir->endpoint != fromdir->file.endpoint) {
+		return CBM_ERROR_FAULT;
+	}
+
+
+	di_endpoint_t *diep = (di_endpoint_t *) fromdir->file.endpoint;
+
+	slot_t *slot;
+	//slot_t newslot;
+
+	log_debug("di_rename (%s) to (%s)\n", fromdir->file.filename, toname);
+
+	const char *nameto = conv_name_alloc(toname, cset, CHARSET_PETSCII);
+
+	// fromfile is known and we have the slot already
+	slot = &fromdir->Slot;
+
+	int n = strlen(nameto);
+	if (n > 16) {
+		n = 16;
+	}
+	memset(slot->filename, 0xA0, 16);	// fill filename with $A0
+	memcpy(slot->filename, nameto, n);
+	di_write_slot(diep, slot);
+
+	mem_free(nameto);
+	return CBM_ERROR_OK;
+}
+
 
 // *********
 // di_move
@@ -3630,13 +3680,14 @@ static size_t di_realsize(file_t * file)
 static size_t di_realsize2(direntry_t * dirent)
 {
 	di_dirent_t *de = (di_dirent_t*) dirent;
+	File *parent = (File*) dirent->parent;
 
 	// diep with Slot is here...
 	
 	size_t len = 0;
 
-	uint8_t next_t = de->ep->Slot.start_track;
-	uint8_t next_s = de->ep->Slot.start_sector;
+	uint8_t next_t = parent->Slot.start_track;
+	uint8_t next_s = parent->Slot.start_sector;
 
 	buf_t *b = NULL;
 	di_GETBUF(&b, de->ep);
@@ -3805,9 +3856,10 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 	int rv = CBM_ERROR_FAULT;
 
 	di_dirent_t *de = (di_dirent_t*) dirent;
+	File *parent = (File*) dirent->parent;
 
 	File *file = di_reserve_file(de->ep);
-	file->Slot = de->ep->Slot;
+	file->Slot = parent->Slot;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
@@ -3833,7 +3885,8 @@ static int di_readfile(file_t * fp, char *retbuf, int len, int *eof, charset_t o
 
 	if (fp->dirstate != DIRSTATE_NONE) {
 		// directory
-		rv = di_read_dir_entry(diep, file, retbuf, len, outcset, eof);
+		//rv = di_read_dir_entry(diep, file, retbuf, len, outcset, eof);
+		rv = CBM_ERROR_FAULT;
 	} else {
 		if (file->access_mode == FS_BLOCK) {
 			return di_read_block(diep, file, retbuf, len, eof);
@@ -4256,7 +4309,7 @@ static file_t *di_root(endpoint_t * ep)
 
 	// TODO: move from global to file
 	//di_first_slot(diep, &diep->Slot);
-	diep->Slot.dir_track = 0;
+	file->Slot.dir_track = 0;
 
 	log_debug("di_root: diep=%p -> root=%p\n", file);
 
@@ -4584,7 +4637,7 @@ handler_t di_img_file_handler = {
 	NULL,			// mkdir not supported
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
-	di_move,		// move a file
+	NULL,			// move a file
 	NULL,			// move2 a file TODO
 	NULL			// dump
 };
@@ -4606,7 +4659,7 @@ handler_t di_file_handler = {
 	di_writefile,		// writefile
 	NULL,			// truncate
 	NULL,			// direntry2 TODO
-	di_direntry,		// direntry
+	NULL,			// direntry
 	di_create,		// create
 	di_fflush,		// flush data to disk
 	di_equals,		// check if two files are the same
@@ -4618,7 +4671,7 @@ handler_t di_file_handler = {
 	NULL,			// rmdir not supported
 	NULL,			// rmdir2 not supported
 	NULL,			// move a file
-	NULL,			// move2 a file
+	di_move2,		// move2 a file
 	di_dump_file		// dump
 };
 
