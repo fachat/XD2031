@@ -94,6 +94,17 @@ static type_t file_type = {
 };
 
 typedef struct {
+	direntry_t 	de;
+	//direntry_t	*parent_de;
+} tcp_dirent_t;
+
+static type_t tcp_dirent_type = {
+	"tcp_dirent",
+	sizeof(tcp_dirent_t),
+	NULL
+};
+
+typedef struct {
 	// derived from endpoint_t
 	endpoint_t 	base;
 	// payload
@@ -254,13 +265,14 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path, charset_t cset,
 static endpoint_t *tnp_temp(char **name, charset_t cset, int priv) {
 
 
-	char *end = strchr(*name, ':');
-	if (end == NULL) {
+	char *end = strchr(*name, '/');
+	
+	if (end != NULL) {
 		// no ':' separator between host and port found
-		log_error("Please provider 'hostname:port' as name!\n");
+		log_error("Do not use ':' name!\n");
 		return NULL;
 	}
-	int n = end - *name;
+	int n = strlen(*name); //end - *name;
 
 	tn_endpoint_t *tnep = create_ep();
 
@@ -269,7 +281,7 @@ static endpoint_t *tnp_temp(char **name, charset_t cset, int priv) {
 	tnep->hostname = conv_name_alloc(hostname, cset, CHARSET_ASCII);
 	mem_free(hostname);
 
-	*name = end+1;	// char after the ':'
+	*name = *name+n;	// char after the ':'
 	
 	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
 
@@ -493,8 +505,7 @@ static int write_file(file_t *fp, const char *buf, int len, int is_eof) {
 // ----------------------------------------------------------------------------------
 // command channel
 
-#if 0
-static int tn_direntry2(file_t *fp, direntry **outentry, int isdirscan, int *readflag) {
+static int tn_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *readflag, const char *preview, charset_t cset) {
 
 	(void)readflag; // silence warning unused parameter;
 
@@ -507,24 +518,35 @@ static int tn_direntry2(file_t *fp, direntry **outentry, int isdirscan, int *rea
 	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
 	*outentry = NULL;
 
-	if (!isresolve) {
+	if (isdirscan) {
 		// escape, we don't show a dir
 		return CBM_ERROR_OK;
 	}
 
-	char *name = conv_name_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, CHARSET_ASCII, outcset);
+	char *name = conv_name_alloc((preview == NULL) ? TELNET_PORT : preview, CHARSET_ASCII, cset);
 
-	File *retfile = reserve_file(tnep);
+	tcp_dirent_t *de = mem_alloc(&tcp_dirent_type);
+	de->de.handler = &tcp_file_handler;
+	de->de.parent = fp;
+	de->de.size = 0;
+	de->de.moddate = 0;
+	de->de.mode = FS_DIR_MOD_FIL;
+	de->de.type = 0;
+	de->de.attr = 0;
+	de->de.name = name;
 
-	retfile->file.filename = name;
-	retfile->file.writable = 1;
+	*outentry = (direntry_t*) de;
 
-	*outentry = (file_t*)retfile;
-	*outpattern = fp->pattern + strlen(fp->pattern);
+	*readflag = READFLAG_EOF;
 
 	return CBM_ERROR_OK;
 }
-#endif
+
+static void tn_declose(direntry_t *dirent) {
+
+	mem_free(dirent->name);
+	mem_free(dirent);
+}
 
 static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 
@@ -557,8 +579,51 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 	return CBM_ERROR_OK;
 }
 
+// ----------------------------------------------------------------------------------
+
+// resolve directory path when searching a file path
+static int tn_resolve2 (const char **pattern, charset_t cset, file_t **inoutdir) {
+
+	return CBM_ERROR_FILE_EXISTS;
+}
+
 
 // ----------------------------------------------------------------------------------
+
+static int tn_open2 (direntry_t * de, openpars_t * pars, int opentype, file_t **outfp) {
+
+	int err = CBM_ERROR_OK;
+
+	File *fp = mem_alloc(&file_type);
+	fp->file.filename = mem_alloc_str(de->name);
+
+	switch (opentype) {
+		case FS_OPEN_RD:
+       			err = open_file(fp, pars, "rb");
+			break;
+		case FS_OPEN_WR:
+		case FS_OPEN_OW:
+       			err = open_file(fp, pars, "wb");
+			break;
+		case FS_OPEN_AP:
+       			err = open_file(fp, pars, "ab");
+			break;
+		case FS_OPEN_RW:
+       			err = open_file(fp, pars, "rwb");
+			break;
+		default:
+			return CBM_ERROR_FAULT;
+	}
+
+	if (err == CBM_ERROR_OK) {
+		*outfp = fp;
+	} else {
+		close_fd(fp);
+		*outfp = NULL;
+	}
+	return err;
+}
+
 
 static int tn_open(file_t *fp, openpars_t *pars, int type) {
 
@@ -671,20 +736,20 @@ static void tnp_dump(int indent) {
 
 static handler_t tcp_file_handler = {
         "tcp_file_handler",
-        NULL,                   // resolve2
+        tn_resolve2,            // resolve2
         NULL,                   // resolve
 	NULL,			// wrap
         tn_close,               // close
 	NULL,			// fclose
-	NULL,			// declose
+	tn_declose,		// declose
         tn_open,                // open
-        NULL,                	// open2
+        tn_open2,              	// open2
         handler_parent,         // default parent() implementation
         NULL,			// fs_seek,                // seek
         read_file,               // readfile
         write_file,              // writefile
         NULL,                   // truncate
-        NULL,                   // direntry2
+        tn_direntry2,           // direntry2
         tn_direntry,            // direntry
         NULL,			// fs_create,              // create
 	NULL,			// fs_flush,               // flush data out to disk

@@ -151,6 +151,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	err = resolve_endpoint(to_addr, cset, from_cmdline, &target);
 	if (err == CBM_ERROR_OK) {
 
+	    if (strlen(to_addr->name) > 0) {
 		file_t *parentdir = target->ptype->root(target);
 
 		err = resolve_dir(&to_addr->name, cset, &parentdir);
@@ -176,6 +177,11 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 		} 
 		
 		provider_cleanup(target);
+	    } else {
+		// make permanent
+		target->is_temporary = 0;
+		newep = target;
+	    }
 	}
 
 	if (newep != NULL) {

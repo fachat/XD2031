@@ -239,7 +239,9 @@ struct _handler {
 
 	// scan a directory one by one entry
 	// when isdirscan is set, do not read headers or blocks free
-	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isdirscan, int *readflag);
+	// preview is the pattern looked for. May be used for internal optimization
+	// (e.g. in curl or tcp, to only return a single matching direntry)
+	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isdirscan, int *readflag, const char *preview, charset_t cset);
 
 	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
 			 int *readflag, const char **outpattern, charset_t outcset);

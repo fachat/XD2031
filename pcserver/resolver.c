@@ -102,14 +102,14 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
                                 if (ep != NULL) {
                                         log_debug("Created temporary endpoint %p\n", ep);
                                         ep->is_temporary = 1;
+					*outep = ep;
+					return CBM_ERROR_OK;
                                 }
-				*outep = ep;
-				return CBM_ERROR_OK;
+				log_error("Provider '%s' did not provide endpoint!\n", prov->name);
                         } else {
                                 log_error("Provider '%s' does not support temporary drives\n",
                                                   prov->name);
                         }
-                        log_error("Did not find provider for %s\n", dname->drivename);
                         return CBM_ERROR_DRIVE_NOT_READY;
                 } else {
                         log_info("No provider name given for undef'd drive '%s', trying default %s\n",
@@ -229,7 +229,7 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 	bool found = false;
 
         do {
-        	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag);
+        	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag, *pattern, outcset);
 
 		if (rv != CBM_ERROR_OK 
 			|| !direntry

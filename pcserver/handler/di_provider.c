@@ -2667,8 +2667,10 @@ static int di_blocks_free(char *dest, di_endpoint_t * diep)
  * outpattern points into a newly malloc'd string
  */
 static int
-di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag)
+di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag, const char *preview, charset_t cset)
 {
+	(void) preview;
+	(void) cset;
 
 	log_debug("di_direntry2(fp=%p)\n", dir);
 

@@ -1175,7 +1175,11 @@ static char *get_path(File *parent, const char *child) {
  *
  * outpattern then points into fp->pattern
  */
-static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *readflag) {
+static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *readflag, const char *preview, charset_t cset) {
+	
+	(void) preview;
+	(void) cset;
+
 	  File *file = (File*) fp;
 
 	  int rv = CBM_ERROR_FAULT;
