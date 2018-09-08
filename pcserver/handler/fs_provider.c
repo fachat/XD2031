@@ -408,7 +408,31 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 	return parentep;
 }
 
-static endpoint_t *fsp_tempep(char **name, charset_t cset) {
+static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) {
+
+	char *new_assign_path = NULL;
+
+	log_debug("fsp_new(path=%s\n", *path);
+
+	if((path == NULL) || (*path == 0)) {
+		log_error("Empty path for assign\n");
+		return NULL;
+	}
+
+	endpoint_t *parentep = NULL;
+
+	// use root endpoint as base
+	parentep = privileged ? create_root_ep() : create_home_ep();
+
+	// skip leading "/"
+	if (**path == '/') {
+		(*path)++;
+	}
+
+	return parentep;
+}
+
+static endpoint_t *fsp_tempep(char **name, charset_t cset, int priv) {
 
 	// make path relative
 	while (**name == dir_separator_char()) {
@@ -1020,7 +1044,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File *
 	char *tmpnamep = NULL;
        	char *fullname = str_concat(fsep->curpath, dir_separator_string(), name);
 
-	log_debug("ENTER: fs_provider.open_dr(name=%s, path=%s)", name, fullname);
+	log_debug("ENTER: fs_provider.open_dr(name=%s, path=%s)\n", name, fullname);
 
 	os_patch_dir_separator(fullname);
 	if(path_under_base(fullname, fsep->basepath)) {
@@ -2180,7 +2204,7 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 	
 		const char *p = cconv_scan(pt, cset, '/', "*?", &matched);
 
-		if (p == NULL || *p == 0) {
+		if (p == NULL) {
 			// final part of file-path, i.e. the filename
 			log_debug("-> filename detected\n");
 			return CBM_ERROR_FILE_EXISTS;
@@ -2379,7 +2403,7 @@ provider_t fs_provider = {
 	fsp_init,
 	fsp_end,
 	fsp_new,
-	fsp_tempep,
+	fsp_temp2,
 	fsp_to_endpoint,	// to_endpoint
 	fsp_ep_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint

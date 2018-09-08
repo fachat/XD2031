@@ -41,16 +41,17 @@
  *
  * The parameters drive and drivename come from the nameinfo_t.
  */
-int resolve_endpoint(drive_and_name_t *dname, charset_t cset, endpoint_t **ep);
+int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, endpoint_t **ep);
 
 /**
- * resolve a given file-path (pattern) to the final directory (returned in outdir)
+ * resolve a given file-path (pattern) from the start directory (given in inoutdir),
+ * to the final directory (returned in inoutdir)
  * and the filename rest of the given file-path (returned in pattern)
  * The rootprov provider is used in case there is no drive number given. This
  * can be used in commands with multiple patterns, where the drive is only given
  * in the first name.
  */
-int resolve_dir(const char **pattern, charset_t cset, file_t **outdir);
+int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir);
 
 
 /**

@@ -1,7 +1,7 @@
 /****************************************************************************
 
     Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Copyright (C) 2012,2018 Andre Fachat
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -28,8 +28,7 @@
  * This file is a filesystem provider implementation, to be
  * used with the FSTCP program on an OS/A65 computer. 
  *
- * In this file the actual command work is done for the 
- * local filesystem.
+ * In this file the actual command work is done for a TCP socket connection
  */
 
 
@@ -252,7 +251,7 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path, charset_t cset,
 // Syntax is:
 //	<hostname>:<portname>
 //
-static endpoint_t *tnp_temp(char **name, charset_t cset) {
+static endpoint_t *tnp_temp(char **name, charset_t cset, int priv) {
 
 
 	char *end = strchr(*name, ':');
@@ -493,6 +492,39 @@ static int write_file(file_t *fp, const char *buf, int len, int is_eof) {
 
 // ----------------------------------------------------------------------------------
 // command channel
+
+#if 0
+static int tn_direntry2(file_t *fp, direntry **outentry, int isdirscan, int *readflag) {
+
+	(void)readflag; // silence warning unused parameter;
+
+        log_debug("ENTER: tcp_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
+
+        if (fp->handler != &tcp_file_handler) {
+                return CBM_ERROR_FAULT;
+        }
+
+	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
+	*outentry = NULL;
+
+	if (!isresolve) {
+		// escape, we don't show a dir
+		return CBM_ERROR_OK;
+	}
+
+	char *name = conv_name_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, CHARSET_ASCII, outcset);
+
+	File *retfile = reserve_file(tnep);
+
+	retfile->file.filename = name;
+	retfile->file.writable = 1;
+
+	*outentry = (file_t*)retfile;
+	*outpattern = fp->pattern + strlen(fp->pattern);
+
+	return CBM_ERROR_OK;
+}
+#endif
 
 static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 

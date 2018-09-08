@@ -82,12 +82,12 @@ typedef enum {
 
 struct curl_endpoint_t;
 
-typedef struct File {
+typedef struct curl_file {
 	file_t	file;			// embedded
 	int	chan;			// channel
 	CURL 	*session;		// curl session info
 	CURLM 	*multi;			// curl session info
-	int	(*read_converter)(struct curl_endpoint_t *cep, struct File *fp, char *retbuf, int len, int *eof);
+	int	(*read_converter)(struct curl_endpoint_t *cep, struct curl_file *fp, char *retbuf, int len, int *eof);
 
 	char	*wrbuffer;		// write transfer buffer (for callback) - malloc'd
 	int	wrbuflen;		// write transfer buffer length (for callback)
@@ -99,12 +99,12 @@ typedef struct File {
 	int	bufrp;			// buffer read pointer
 	// directory read state
 	int	read_state;		// data for read_converter / read_file
-} File;
+} curl_file;
 
 
 static void file_init(const type_t *t, void *obj) {
         (void) t;       // silence unused warning
-        File *fp = (File*) obj;
+        curl_file *fp = (curl_file*) obj;
 
         //log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
@@ -131,7 +131,7 @@ static void file_init(const type_t *t, void *obj) {
 
 static type_t file_type = {
         "curl_file",
-        sizeof(File),
+        sizeof(curl_file),
         file_init
 };
 
@@ -245,7 +245,7 @@ static curl_endpoint_t *_new(const char *path, charset_t cset) {
 //-----------------------------------------------------
 // protocol specific endpoint handling
 
-static endpoint_t *ftp_temp(char **name, charset_t cset) {
+static endpoint_t *ftp_temp(char **name, charset_t cset, int priv) {
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -271,7 +271,7 @@ static endpoint_t *ftp_temp(char **name, charset_t cset) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *http_temp(char **name, charset_t cset) {
+static endpoint_t *http_temp(char **name, charset_t cset, int priv) {
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -355,7 +355,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
                 return CBM_ERROR_FAULT;
         }
 
-        File *fp = (File*) file;
+        curl_file *fp = (curl_file*) file;
         curl_endpoint_t *parentep = (curl_endpoint_t*) file->endpoint;
 
         if (parentep == NULL) {
@@ -385,7 +385,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
 //-----------------------------------------------------
 
 
-static void close_fd(File *fp) {
+static void close_fd(curl_file *fp) {
 
 	reg_remove(&fp->file.endpoint->files, fp);
 
@@ -404,9 +404,9 @@ static void close_fd(File *fp) {
 	mem_free(fp);
 }
 
-static File *reserve_file(endpoint_t *ep) {
+static curl_file *reserve_file(endpoint_t *ep) {
 
-	File *file = mem_alloc(&file_type);
+	curl_file *file = mem_alloc(&file_type);
 
 	file->file.endpoint = ep;
 
@@ -451,7 +451,7 @@ void curl_pfree(endpoint_t *ep) {
 static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 	(void) outbuf;
 
-        close_fd((File*)fp);
+        close_fd((curl_file*)fp);
 
         if (recurse) {
                 if (fp->parent != NULL) {
@@ -465,7 +465,7 @@ static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 
 static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
-	File *fp = (File*) user;
+	curl_file *fp = (curl_file*) user;
 
 	fp->rdbufdatalen = 0;
 
@@ -498,7 +498,7 @@ printf("\n");
 	return inlen;
 }
 
-static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
+static CURLMcode pull_data(curl_endpoint_t *cep, curl_file *fp, int *eof) {
 	int running_handles = 0;
 	
 	*eof = 0;
@@ -546,7 +546,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	return rv;
 }
 
-static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+static int reply_with_data(curl_endpoint_t *cep, curl_file *fp, char *retbuf, int len, int *eof) {
 
 	// we already have some data to give back
 	int datalen = fp->rdbufdatalen - fp->bufrp;
@@ -582,7 +582,7 @@ static int read_file(file_t *file, char *retbuf, int len, int *readflag, charset
 
 	(void) outcset;
 
-	File *fp = (File*) file;
+	curl_file *fp = (curl_file*) file;
 
 		curl_endpoint_t *cep = (curl_endpoint_t*) fp->file.endpoint;
 
@@ -631,7 +631,7 @@ static file_t *curl_root(endpoint_t *ep) {
 
         log_entry("curl_root");
 
-        File *fp = reserve_file(ep);
+        curl_file *fp = reserve_file(ep);
 
         return (file_t*) fp;
 }
@@ -658,7 +658,7 @@ static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *read
         }
 
 
-        File *retfile = reserve_file((endpoint_t*) tnep);
+        curl_file *retfile = reserve_file((endpoint_t*) tnep);
 
 	retfile->file.parent = fp;
 
@@ -694,7 +694,7 @@ static int open_file(file_t *file, openpars_t *pars, int type) {
 	int rv = CBM_ERROR_FAULT;
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
-	File *fp = (File*) file;
+	curl_file *fp = (curl_file*) file;
 
 		// create session	
 		fp->multi = curl_multi_init();
@@ -756,7 +756,7 @@ static int open_rd(file_t *file, openpars_t *pars, int type) {
 	int rv = open_file(file, pars, type);
 
 	if (rv == CBM_ERROR_OK) {
-		File *fp = (File*) file;
+		curl_file *fp = (curl_file*) file;
 
 		// set for receiving
 		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
@@ -786,7 +786,7 @@ static int open_rd(file_t *file, openpars_t *pars, int type) {
  * Because of the FS_DIR_* macros used here, the wireformat.h include
  * is required, which I would like to have avoided...
  */
-int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *readflag) {
+int dir_nlst_read_converter(struct curl_endpoint_t *cep, curl_file *fp, char *retbuf, int len, int *readflag) {
 
 	if (len < FS_DIR_NAME + 1) {
 		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
@@ -901,7 +901,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 	(void)pars; // silence warning unused parameter
 
 	// curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
-	File *fp = (File*) file;
+	curl_file *fp = (curl_file*) file;
 
 	int rv = open_file(file, pars, FS_OPEN_DR);
 	if (rv == CBM_ERROR_OK) {
@@ -937,7 +937,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 
 static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
-	File *fp = (File*) user;
+	curl_file *fp = (curl_file*) user;
 
 	long rdlen = size * nmemb;
 	long datalen = fp->wrbufdatalen - fp->bufwp;
@@ -964,7 +964,7 @@ printf("\n");
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int iseof) {
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
-	File *fp = find_file(ep, tfd);
+	curl_file *fp = find_file(ep, tfd);
 
 	CURLMcode rv = CURLM_OK;
 
@@ -1026,7 +1026,7 @@ static int curl_open(file_t *fp, openpars_t *pars, int type) {
 
 static void curl_dump_file(file_t *fp, int recurse, int indent) {
 
-        File *file = (File*)fp;
+        curl_file *file = (curl_file*)fp;
         const char *prefix = dump_indent(indent);
 
         log_debug("%shandler='%s';\n", prefix, file->file.handler->name);
@@ -1063,7 +1063,7 @@ static void curl_dump_ep(curl_endpoint_t *fsep, int indent) {
         log_debug("%sis_assigned='%d';\n", prefix, fsep->base.is_assigned);
         log_debug("%sfiles={;\n", prefix);
         for (int i = 0; ; i++) {
-                File *file = (File*) reg_get(&fsep->base.files, i);
+                curl_file *file = (curl_file*) reg_get(&fsep->base.files, i);
                 log_debug("%s// file at %p\n", eppref, file);
                 if (file != NULL) {
                         log_debug("%s{\n", eppref, file);

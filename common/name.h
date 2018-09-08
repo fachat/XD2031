@@ -75,6 +75,11 @@ static inline void nameinfo_init(nameinfo_t *ninfo) {
 	ninfo->cmd = CMD_NONE;
 }
 
+static inline void drive_and_name_init(drive_and_name_t *dnt) {
+	memset(dnt, 0, sizeof(drive_and_name_t));
+	dnt->drive = -1;
+}
+
 // nameinfo option bits
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 

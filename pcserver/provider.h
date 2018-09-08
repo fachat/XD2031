@@ -35,6 +35,7 @@
 #include "charconvert.h"
 #include "openpars.h"
 #include "registry.h"
+#include "name.h"
 
 // constant for provider tables (deprecated)
 #define MAXFILES        16
@@ -76,7 +77,7 @@ typedef struct {
 	// create a new temporary endpoint instance;
 	// this happens when a file with direct provider
 	// name is opened, like "ftp:host/dir"
-	endpoint_t *(*tempep) (char **par, charset_t cset);
+	endpoint_t *(*tempep) (char **par, charset_t cset, int priv);
 
 	// convert dir to endpoint for assign
 	int (*to_endpoint) (file_t * f, endpoint_t ** outep);
@@ -287,7 +288,9 @@ struct _handler {
 #define SEEKFLAG_ABS            0	/* count from the start */
 #define SEEKFLAG_END            1	/* count from the end of the file */
 
-int provider_assign(int drive, const char *name, const char *assign_to, charset_t cset,
+int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset,
+		    int from_cmdline);
+int provider_assign_old(int drive, const char *name, const char *assign_to, charset_t cset,
 		    int from_cmdline);
 
 /**

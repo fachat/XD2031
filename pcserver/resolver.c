@@ -58,14 +58,26 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
  * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
+ *
+ * The privileged flag is given to the endpoint, to enable different handling
+ * esp. of the fs provider. Priviliged access starts at /, non-privileged 
+ * starts at the run directory.
  */
-int resolve_endpoint(drive_and_name_t *dname, charset_t cset, endpoint_t **outep) {
+int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, endpoint_t **outep) {
 
         if (dname->drive == NAMEINFO_LAST_DRIVE) {
 		// this means there was no drive or provider defined; we can just return
 		// as ep has been set to the default value by the caller.
 		return CBM_ERROR_OK;
         }
+
+	if (dname->drive == NAMEINFO_UNDEF_DRIVE) {
+		if (dname->drivename != NULL 
+			&& strlen(dname->drivename) == 1
+			&& isdigit(dname->drivename[0])) {
+			dname->drive = dname->drivename[0] & 0x0f;
+		}
+	}
 
         if (dname->drive == NAMEINFO_UNDEF_DRIVE) {
                 if (dname->drivename == NULL || dname->drivename[0] == 0) {
@@ -86,7 +98,7 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, endpoint_t **outep
                                                prov->name, dname->name);
 
                         if (prov->tempep != NULL) {
-                               	endpoint_t *ep = prov->tempep((char**)&dname->name, cset);
+                               	endpoint_t *ep = prov->tempep((char**)&dname->name, cset, privileged);
                                 if (ep != NULL) {
                                         log_debug("Created temporary endpoint %p\n", ep);
                                         ep->is_temporary = 1;
@@ -291,6 +303,7 @@ int resolve_open(file_t *dir,
                 log_debug("File resolve gave file=%p\n", dirent);
 
                 switch (type) {
+                case FS_OPEN_DR:
                 case FS_OPEN_RD:
                         if (dirent == NULL) {
                                 rv = CBM_ERROR_FILE_NOT_FOUND;
@@ -344,6 +357,7 @@ int resolve_open(file_t *dir,
                         }
                         break;
                 }
+
                 if (rv == CBM_ERROR_OK) {
                         if (pars->recordlen != 0) {
                                 if (file->recordlen != pars->recordlen
