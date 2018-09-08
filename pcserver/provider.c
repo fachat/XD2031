@@ -139,6 +139,11 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	endpoint_t *target = NULL;
 	endpoint_t *newep = NULL;
 
+	if (to_addr->name == NULL || strlen(to_addr->name) == 0) {
+		endpoints_unassign(drive);
+		return CBM_ERROR_OK;
+	}
+
 	if (to_addr->drivename == NULL || strlen(to_addr->drivename) == 0) {
 		to_addr->drivename = "fs";
 	}
