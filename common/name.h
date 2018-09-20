@@ -88,7 +88,7 @@ static inline void drive_and_name_init(drive_and_name_t *dnt) {
 
 /*
  * parse a CBM file name or command argument (is_command != 0 for commands), and
- * fill the nameinfo global var with the result.
+ * fill the nameinfo var with the result.
  * Copies the content of the command_buffer to the end of the buffer, so that it
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.

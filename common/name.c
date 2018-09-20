@@ -73,9 +73,6 @@ static void dump_result(nameinfo_t *result) {
 #define dump_result(x) do {} while (0)
 #endif
 
-// shared global variable to be used in parse_filename, as long as it's threadsafe
-//nameinfo_t nameinfo;
-
 /** @brief Extract drive from filename
  *
  * Function changes the in-string to zero-terminate the elements.
@@ -184,7 +181,8 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
       	uint8_t i = 0;
 	while (sep && i < MAX_NAMEINFO_FILES) {
 		sep = parse_drive (sep, &result->file[i]);
-		if (result->file[i].drive == NAMEINFO_UNUSED_DRIVE 
+		// unused drive is passed through to assign
+		if ( (cmd != CMD_ASSIGN && result->file[i].drive == NAMEINFO_UNUSED_DRIVE) 
 			|| result->file[i].drive == NAMEINFO_LAST_DRIVE) {
 			result->file[i].drive = driveno;
 		}

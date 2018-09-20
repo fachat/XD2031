@@ -127,7 +127,7 @@ file_t *provider_wrap(file_t *file) {
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  * 
- * of the "A0:fs=foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
+ * of the "A0:=fs:foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
  * and "foo/bar" becomes the assign_to.
  */
 int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int from_cmdline) {
@@ -144,8 +144,9 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 		return CBM_ERROR_OK;
 	}
 
-	if (to_addr->drivename == NULL || strlen(to_addr->drivename) == 0) {
+	if (to_addr->drive == NAMEINFO_UNUSED_DRIVE) { // || to_addr->drivename == NULL || strlen(to_addr->drivename) == 0) {
 		to_addr->drivename = "fs";
+		to_addr->drive = NAMEINFO_UNDEF_DRIVE;
 	}
 
 	err = resolve_endpoint(to_addr, cset, from_cmdline, &target);

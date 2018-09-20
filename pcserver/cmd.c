@@ -95,6 +95,33 @@ void cmd_free() {
 
 int cmd_assign_cmdline(const char *inname, charset_t cset) {
 
+	int err = CBM_ERROR_OK;
+	const int BUFLEN = 255;
+
+	uint8_t *name = mem_alloc_c(BUFLEN+1, "assign name buffer");
+	strncpy((char*) name, inname, BUFLEN);
+	name[BUFLEN] = 0;
+
+	nameinfo_t ninfo;
+	nameinfo_init(&ninfo);
+
+	parse_cmd_pars(name, strlen(name), CMD_ASSIGN, &ninfo);
+	if (ninfo.cmd != CMD_ASSIGN) {
+		err = CBM_ERROR_SYNTAX_NONAME;
+	} else
+	if (ninfo.num_files != 1) {
+                log_error("Wrong number of parameters!\n");
+                err = CBM_ERROR_SYNTAX_NONAME;
+	}
+
+	if (err == CBM_ERROR_OK) {
+
+		err = provider_assign(ninfo.trg.drive, &ninfo.file[0], cset, 0);
+	}
+
+	mem_free(name);
+	return err;
+#if 0
 	int drive = -1;
 	const char *provider_name = NULL;
 	char *provider_parameter = NULL;
@@ -128,7 +155,7 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 	dnt.name = provider_parameter;
 
 	return provider_assign(drive, &dnt, cset, true);
-	
+#endif	
 }
 
 int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
