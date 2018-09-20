@@ -354,6 +354,7 @@ void mem_append_str5(char **baseptr, const char *s1, const char *s2, const char 
 		+ 1;
 
 	char *base = mem_alloc_c(newlen, "mem_append");
+	base[0] = 0;
 
 	if (*baseptr != NULL) { strcpy(base, *baseptr); };
 	if (s1 != NULL) { strcat(base, s1); }
