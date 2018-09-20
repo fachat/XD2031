@@ -3868,7 +3868,7 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 	} else {
 		rv = di_open_file(file, pars, type);
 	}
-	if (rv == CBM_ERROR_OK) {
+	if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 		*outfp = (file_t*) file;
 	}
 	return rv;
@@ -4239,7 +4239,8 @@ static int di_close(file_t * fp, int recurse, char *outbuf, int *outlen)
 }
 
 static int di_fclose(file_t * fp, char *outbuf, int *outlen) {
-	
+
+	*outlen = 0;
 	di_close(fp, 0, NULL, NULL);
 }
 

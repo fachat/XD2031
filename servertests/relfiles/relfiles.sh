@@ -25,7 +25,7 @@ TESTFILES="rel1.d64"
 COMPAREFILES="rel1.d64"
 
 # server options
-SERVEROPTS="-v -A0:fs=rel1.d64"
+SERVEROPTS="-v -A0:=fs:rel1.d64"
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.trs"

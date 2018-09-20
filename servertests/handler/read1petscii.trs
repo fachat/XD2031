@@ -9,17 +9,17 @@ send :FS_CHARSET .len 7c 'PETSCII' 00
 expect :FS_REPLY .len 7c 00
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 c6 '1' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 "T=S" 00 00 c6 '1' 00 
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file - note, is "hidden" in P2.P01
-send :FS_OPEN_RD .len 00 00 c6 '5' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 "T=S" 00 00 c6 '5' 00 
 # file type mismatch
 expect :FS_REPLY .len 00 40
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 46 '3' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 "T=S" 00 00 46 '3' 00 
 # ok
 expect :FS_REPLY .len 00 00
 
@@ -32,7 +32,7 @@ send :FS_CLOSE .len 00
 expect :FS_REPLY .len 00 00
 
 # open SEQ file
-send :FS_OPEN_RD .len 00 00 c6 '4' 00 "T=S" 00
+send :FS_OPEN_RD .len 00 "T=S" 00 00 c6 '4' 00 
 # OK
 expect :FS_REPLY .len 00 00
 

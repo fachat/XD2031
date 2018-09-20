@@ -4,7 +4,7 @@ message OPEN of non-existing file with L=127
 
 # open REL file (chan 2)
 #send 03 .len 02 00 52 45 4c 32 00 54 3d 4c 31 32 37 00
-send :FS_OPEN_RW .len 02 00 "REL2" 00 "T=L127" 00
+send :FS_OPEN_RW .len 02 "T=L127" 00 00 "REL2" 00 
 expect :FS_REPLY .len 02 02 7f 00
 
 # send POSITION to record 0 (chan 2), expect OK

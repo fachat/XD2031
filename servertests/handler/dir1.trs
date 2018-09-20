@@ -4,7 +4,7 @@ init
 message testing DIR of various handled files (x00 and typed)
 
 # open REL file
-send :FS_OPEN_DR .len 00 00 'F' 2a 00
+send :FS_OPEN_DR .len 00 00 00 'F' 2a 00
 expect :FS_REPLY .len 00 00
 
 # start reading; ignore date/time

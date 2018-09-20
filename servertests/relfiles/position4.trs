@@ -7,7 +7,7 @@ message reltest3.c / C
 
 ##############################################
 # open REL file (chan 2), expect 
-send :FS_OPEN_RW .len 02 00 52 45 4c 32 00 54 3d 4c 32 30 00
+send :FS_OPEN_RW .len 02 54 3d 4c 32 30 00 00 52 45 4c 32 00 
 expect :FS_REPLY .len 02 02 14 00
 
 # send POSITION to record 0 (chan 2), expect OK

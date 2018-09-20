@@ -406,6 +406,9 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 	file_t *fp = channel_to_file(tfd);
 	if (fp != NULL) {
 		log_info("CLOSE(%d)\n", tfd);
+		if (outlen) {
+			*outlen = 0;
+		}
 		rv = fp->handler->fclose(fp, outbuf, outlen);
 		channel_free(tfd);
 	}

@@ -346,7 +346,7 @@ int resolve_open(file_t *dir,
                                         break;
                                 }
                         } else {
-                                rv = file->handler->open2(dirent, pars, type, &file);
+                                rv = dirent->handler->open2(dirent, pars, type, &file);
 				if (rv != CBM_ERROR_OK) {
 					break;
 				}
