@@ -101,7 +101,7 @@ typedef struct {
 		      int *retlen);
 	
 	// format a disk image (where applicable)
-	int (*format) (endpoint_t * ep, const char *name);
+	int (*format) (endpoint_t * ep, const char *name, const char *id);
 
 	// dump / debug
 	void (*dump) (int indent);

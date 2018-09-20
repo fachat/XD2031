@@ -1005,8 +1005,8 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 
 	openpars_t pars;
-	int num_files = 1;
-	drive_and_name_t names[1];
+	int num_files = 2;
+	drive_and_name_t names[2];
 	endpoint_t *ep = NULL;
 
 	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
@@ -1015,8 +1015,18 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 		return rv;
 	}
 
-	if (num_files != 1) {
+	if (num_files > 2) {
 		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+	if (num_files == 2) {
+		// format has ID
+		if (names[1].drive != NAMEINFO_UNUSED_DRIVE) {
+			return CBM_ERROR_SYNTAX_INVAL;
+		}
+		if (names[1].name == NULL
+			|| strlen(names[1].name) > 2) {
+			return CBM_ERROR_SYNTAX_INVAL;
+		}
 	}
 
 	rv = resolve_endpoint(names, cset, 0, &ep);
@@ -1024,7 +1034,7 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 	if (rv == CBM_ERROR_OK && ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->format != NULL) {
-			rv = prov->format(ep, names[0].name);
+			rv = prov->format(ep, names[0].name, num_files == 2 ? names[1].name : NULL);
 		}
 	}
 	return rv;

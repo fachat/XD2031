@@ -2731,6 +2731,7 @@ di_img_direntry2(file_t * dir, direntry_t ** outde, int isdirscan, int *readflag
 		}
 		entry->name[22] = 0;
 		entry->de.name = entry->name;
+		entry->de.cset = CHARSET_PETSCII;
 
 		log_debug("di_directory_header (%s)\n", entry->de.name);
 
@@ -3226,7 +3227,7 @@ end:
 // ------------------------------------------------------------------
 // commands
 
-static int di_format(endpoint_t * ep, const char *name)
+static int di_format(endpoint_t * ep, const char *name, const char *id)
 {
 	di_endpoint_t *diep = (di_endpoint_t *) ep;
 	Disk_Image_t *di = &diep->DI;
@@ -3234,7 +3235,6 @@ static int di_format(endpoint_t * ep, const char *name)
 	uint8_t idbuffer[5];
 	uint8_t *buf;
 
-	const char *p = strchr(name, ',');
 	int len = strlen(name);
 
 	// the buffer we are going to use for format
@@ -3255,10 +3255,8 @@ static int di_format(endpoint_t * ep, const char *name)
 	di_SETBUF(bp, 1, 0);
 	memset(buf, 0, 256);
 
-	if (p != NULL) {
-		len = p - name;
-		p++;
-		if (*p) {
+	if (id != NULL) {
+		if (*id) {
 
 			// we have an ID part, so we have to fully clear the disk image
 
@@ -3303,7 +3301,7 @@ static int di_format(endpoint_t * ep, const char *name)
 	if (len > 16)
 		len = 16;
 	if (len == 0) {
-		if (p) {
+		if (id) {
 			buf[di->HdrOffset] = ',';
 			buf[di->HdrOffset + 27] = 0xa0;
 		} else {
@@ -3315,11 +3313,11 @@ static int di_format(endpoint_t * ep, const char *name)
 	// restore original ID
 	memcpy(buf + di->HdrOffset + 18, idbuffer, 2);
 	// did we format with ID?
-	if (p && *p) {
-		len = strlen(p);
+	if (id && *id) {
+		len = strlen(id);
 		if (len > 2)
 			len = 2;
-		memcpy(buf + di->HdrOffset + 18, p, len);
+		memcpy(buf + di->HdrOffset + 18, id, len);
 		if (len == 1) {
 			buf[di->HdrOffset + 19] = 0x0d;
 		}
