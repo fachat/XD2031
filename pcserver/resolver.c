@@ -312,9 +312,17 @@ int resolve_open(file_t *dir,
         // now resolve the actual filename
         int rv = resolve_scan_int(dir, &inname, 1, true, cset, false, &dirent, &rdflag);
 
+	if (rv == CBM_ERROR_OK && dirent && pars->filetype != FS_DIR_TYPE_UNKNOWN) {
+		// we have a direntry and must check file types
+		if (dirent->type != pars->filetype) {
+			rv = CBM_ERROR_FILE_TYPE_MISMATCH;
+		}
+	}
+
         if (rv == CBM_ERROR_OK || rv == CBM_ERROR_FILE_NOT_FOUND) {
         	// ok, we have the directory entry. Or maybe not.
-		
+	
+	
                 log_info("File resolve gave %d\n", rv);
                 log_debug("File resolve gave file=%p\n", dirent);
 
