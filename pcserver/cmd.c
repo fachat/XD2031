@@ -174,7 +174,7 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 		log_debug("Assigning from server: %d:%s=%s\n", names[0].drive, names[0].name, names[1].name);
 
 		int drive = names[0].drive;
-		const char *provider_name = names[0].name;
+		const char *provider_name = names[1].drivename;
 		char *provider_parameter = names[1].name;
 		
 		// check trailing '/' on provider parameter

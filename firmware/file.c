@@ -261,13 +261,13 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// are still ASCII only
 	// in the future the bus may have an own conversion option...
 	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-		((char*)nameinfo->trg.name, strlen((char*)nameinfo->trg.name), 
-		(char*)nameinfo->trg.name, strlen((char*)nameinfo->trg.name));
+		((char*)nameinfo->trg.name, nameinfo->trg.namelen, 
+		(char*)nameinfo->trg.name, nameinfo->trg.namelen);
 	for (uint8_t i=0 ; i < nameinfo->num_files ; ++i) {
 		if (nameinfo->file[i].name != NULL) {
 			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-				((char*)nameinfo->file[i].name, strlen((char*)nameinfo->file[i].name), 
-				(char*)nameinfo->file[i].name, strlen((char*)nameinfo->file[i].name));
+				((char*)nameinfo->file[i].name, nameinfo->file[i].namelen, 
+				(char*)nameinfo->file[i].name, nameinfo->file[i].namelen);
 		}
 	}
 
