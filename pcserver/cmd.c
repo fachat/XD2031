@@ -430,7 +430,14 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 	
 	    if (rv == 0) {
 		fp = ep->ptype->root(ep);
-		rv = resolve_dir((const char**)&names[0].name, cset, &fp);
+
+		// determine name
+		const char **n = &names[0].name;
+		const char *nn = "*";
+		if (strlen(*n) == 0) {
+			n = &nn;
+		}
+		rv = resolve_dir(n, cset, &fp);
 		if (rv == 0) {
 			fp->searchdrive = driveno;
 			for (int i = 0; i < num_files; i++) {

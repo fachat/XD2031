@@ -52,8 +52,6 @@
 #include "dir.h"
 
 
-#undef DEBUG_CURL
-
 #define	MAX_BUFFER_SIZE	64
 
 #define	MAX_PROTO_SIZE	11	// max length of "<proto>://", like "webdavs://", plus one "/" path separator
@@ -71,6 +69,8 @@ static int curl_init_done = 0;
 static registry_t endpoints;
 
 static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen);
+static int curl_fclose(file_t *fp, char *outbuf, int *outlen);
+static int open_dr(file_t *file, openpars_t *pars);
 
 typedef enum {
 	PROTO_FTP,
@@ -87,6 +87,7 @@ typedef struct curl_file {
 	int	chan;			// channel
 	CURL 	*session;		// curl session info
 	CURLM 	*multi;			// curl session info
+	const char *path;		// path to current file
 	int	(*read_converter)(struct curl_endpoint_t *cep, struct curl_file *fp, char *retbuf, int len, int *eof);
 
 	char	*wrbuffer;		// write transfer buffer (for callback) - malloc'd
@@ -127,6 +128,8 @@ static void file_init(const type_t *t, void *obj) {
 
 	fp->read_converter = NULL;
 	fp->read_state = 0;
+
+	fp->path = NULL;
 }
 
 static type_t file_type = {
@@ -178,6 +181,31 @@ static type_t endpoint_type = {
         endpoint_init
 };
 
+typedef struct {
+	direntry_t	de;
+} curl_dirent_t;
+
+static void curl_dirent_init(const type_t *t, void *obj) {
+	curl_dirent_t *de = (curl_dirent_t*)obj;
+
+	de->de.handler = &curl_file_handler;
+	de->de.parent = NULL;
+	de->de.size = 0;
+	de->de.moddate = 0;
+	de->de.mode = FS_DIR_MOD_FIL;
+	de->de.type = 0;
+	de->de.attr = 0;
+	de->de.name = NULL;
+	de->de.cset = CHARSET_ASCII;
+}
+
+static type_t curl_dirent_type = {
+        "curl_dirent",
+        sizeof(curl_dirent_t),
+	curl_dirent_init
+};
+
+
 static void curl_free_file(registry_t *reg, void *en) {
 	(void)reg;
         ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
@@ -217,9 +245,15 @@ static curl_endpoint_t *new_endpoint(const char *path, charset_t cset) {
 
 	curl_endpoint_t *fsep = mem_alloc(&endpoint_type);
 
+
 	// separate host from path
 	// if hostend is NULL, then we only have the host
 	char *hostend=strchr(path, '/');
+	// remove leading "/"
+	while (hostend == path) {
+		path++;
+		hostend = strchr(path, '/');
+	}
 
 	fsep->host_buffer = conv_name_alloc(path, cset, CHARSET_ASCII);
 	char *p = strchr(fsep->host_buffer, '/');
@@ -235,13 +269,6 @@ static curl_endpoint_t *new_endpoint(const char *path, charset_t cset) {
 }
 
 
-static curl_endpoint_t *_new(const char *path, charset_t cset) {
-
-	curl_endpoint_t *fsep = new_endpoint(path, cset);
-
-	return fsep;
-}
-
 //-----------------------------------------------------
 // protocol specific endpoint handling
 
@@ -250,12 +277,12 @@ static endpoint_t *ftp_temp(char **name, charset_t cset, int priv) {
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
 	// path ends with last '/'
-	char *end = strrchr(*name, '/');
+	char *end = strrchr(name, '/');
 	if (end != NULL) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name, cset);
+	curl_endpoint_t *fsep = new_endpoint(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
@@ -276,12 +303,12 @@ static endpoint_t *http_temp(char **name, charset_t cset, int priv) {
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
 	// path ends with last '/'
-	char *end = strrchr(*name, '/');
+	char *end = strrchr(name, '/');
 	if (end != NULL) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name, cset);
+	curl_endpoint_t *fsep = new_endpoint(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
@@ -302,7 +329,7 @@ static endpoint_t *ftp_new(endpoint_t *parent, const char *path, charset_t cset,
 	(void) parent; // silence warning unused parameter
         (void) from_cmdline;    // silence unused parameter warning
 
-	curl_endpoint_t *fsep = _new(path, cset);
+	curl_endpoint_t *fsep = new_endpoint(path, cset);
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_FTP;
@@ -317,7 +344,7 @@ static endpoint_t *http_new(endpoint_t *parent, const char *path, charset_t cset
 	(void) parent; // silence warning unused parameter
         (void) from_cmdline;    // silence unused parameter warning
 
-	curl_endpoint_t *fsep = _new(path, cset);
+	curl_endpoint_t *fsep = new_endpoint(path, cset);
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_HTTP;
@@ -374,7 +401,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
 	newep->path_buffer = add_parent_path(newep->path_buffer, file);
 
         // free resources
-        curl_close((file_t*)fp, 1, NULL, NULL);
+        curl_fclose((file_t*)fp, NULL, NULL);
 
         *outep = (endpoint_t*)newep;
         return CBM_ERROR_OK;
@@ -401,6 +428,7 @@ static void close_fd(curl_file *fp) {
 		}
 	}
 
+	mem_free(fp->file.filename);
 	mem_free(fp);
 }
 
@@ -446,6 +474,17 @@ void curl_pfree(endpoint_t *ep) {
 
 // ----------------------------------------------------------------------------------
 // commands as sent from the device
+
+// close a file descriptor
+static int curl_fclose(file_t *fp, char *outbuf, int *outlen) {
+	(void) outbuf;
+
+        close_fd((curl_file*)fp);
+
+	if (outlen != NULL) 
+		*outlen = 0;
+	return CBM_ERROR_OK;
+}
 
 // close a file descriptor
 static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
@@ -637,6 +676,163 @@ static file_t *curl_root(endpoint_t *ep) {
 }
 
 
+static int curl_declose(direntry_t *dirent) {
+
+	mem_free(dirent->name);
+	mem_free(dirent);
+}
+
+static int curl_direntry2(file_t *dirfp, direntry_t **outentry, int isdirscan, int *readflag, const char *preview, charset_t cset) {
+
+	(void) readflag;	// silence warning
+
+	int err = CBM_ERROR_OK;
+        *outentry = NULL;	// just in case
+
+        log_debug("ENTER: curl_direntry2 '%s' fp=%p, dirstate=%d\n", dirfp->filename, dirfp, dirfp->dirstate);
+
+        if (dirfp->handler != &curl_file_handler) {
+                return CBM_ERROR_FAULT;
+        }
+
+	curl_file *fp = (curl_file*) dirfp;
+	
+	if (fp->session == NULL) {
+		err = open_dr(dirfp, NULL);
+	}
+
+        curl_endpoint_t *cep = (curl_endpoint_t*) dirfp->endpoint;
+
+	// read direntry
+	*readflag = READFLAG_DENTRY;
+
+	// create direntry to return
+	curl_dirent_t *de = mem_alloc(&curl_dirent_type);
+	de->de.parent = dirfp;
+
+	int eof = 0;	
+	int l = 0;
+	int len = 64;
+	char name[64];
+	char *namep = name;
+
+	switch(fp->read_state) {
+	case 0:		// disk name
+		if (isdirscan) {
+			de->de.mode = FS_DIR_MOD_NAM;
+			de->de.name = mem_alloc_str(cep->path_buffer);
+			de->de.cset = CHARSET_ASCII;
+			fp->read_state++;
+			break;
+		}
+		// falls through
+	case 1:
+		// file names
+#ifdef DEBUG_CURL
+		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
+			fp->rdbufdatalen, fp->bufrp, *readflag);
+#endif
+		de->de.mode = FS_DIR_MOD_FIL;
+		do {
+			while ((fp->rdbufdatalen <= fp->bufrp) && (eof == 0)) {
+
+				//log_debug("Trying to pull...\n");
+
+				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, &eof);
+
+				if (rv != CURLM_OK) {
+					log_error("Error retrieving directory data (%d)\n", rv);
+					mem_free(de);
+					return CBM_ERROR_DIR_ERROR;
+				}
+			}
+			// find length of name
+			
+			while (fp->bufrp < fp->rdbufdatalen) {
+				char c = fp->rdbuffer[fp->bufrp];
+				fp->bufrp ++;
+				if (c == 13) {
+					// ignore
+				} else
+				if (c != 10) {
+					*namep = c;
+					namep++;
+					l++;
+				} else {
+					// end of name
+					*namep = 0;
+					l++;
+#ifdef DEBUG_CURL
+					log_debug("bufrp=%d, datalen=%d\n", fp->bufrp, fp->rdbufdatalen);
+#endif
+					break;
+				}
+				if ((l + 2) >= len) {
+					log_error("read buffer too small for dir name (is %d, need at least %d, concatenating)\n",
+						len, l+2);
+					*namep = 0;
+					l++;
+					break;
+				}
+			}
+
+
+			if (eof != 0) {
+				log_debug("end of dir read\n");
+				fp->read_state++;
+				*namep = 0;
+			}
+		}
+		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
+		eof = 0;
+
+		de->de.name = mem_alloc_str(name);
+
+		de->de.attr |= extension_to_filetype(name,
+					FS_DIR_TYPE_PRG, FS_DIR_TYPE_SEQ);
+		break;
+	case 2:
+		if (isdirscan) {
+			log_debug("final dir entry\n");
+			de->de.mode = FS_DIR_MOD_FRE;
+			*readflag |= READFLAG_EOF;
+			fp->read_state++;
+			break;
+		}
+		// falls through
+	case 3:
+		err = CBM_ERROR_FAULT;
+	}
+
+	*outentry = (direntry_t*) de;
+
+	return err;
+#if 0
+        curl_file *retfile = reserve_file((endpoint_t*) tnep);
+
+	retfile->file.parent = fp;
+
+	// compute file name (filename is stored in the external charset, e.g. PETSCII)
+        char *name = mem_alloc_str(fp->pattern);
+	char *p = strchr(name, '/');
+	if (p != NULL) {
+		// shorten file/dir name to next dir separator if exists
+		*p = 0;
+	}
+        retfile->file.filename = name;
+	retfile->file.isdir = 1;	// just in case
+
+        if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
+                                == CBM_ERROR_OK) {
+	        *outentry = wrapfile;
+                int rv = CBM_ERROR_OK;
+		return rv;
+	}
+
+	curl_close((file_t*)retfile, 0, NULL, NULL);
+        return CBM_ERROR_OK;
+#endif
+}
 static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
 	(void) readflag;	// silence warning
         *outentry = NULL;	// just in case
@@ -720,6 +916,8 @@ static int open_file(file_t *file, openpars_t *pars, int type) {
 		curl_easy_setopt(fp->session, CURLOPT_READDATA, fp);
 		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
 
+		mem_free(cep->name_buffer);
+		cep->name_buffer = NULL;
 		// prepare name
 		mem_append_str5(&cep->name_buffer, 
 			((provider_t*)(cep->base.ptype))->name,
@@ -898,8 +1096,6 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, curl_file *fp, char *re
 
 static int open_dr(file_t *file, openpars_t *pars) {
 
-	(void)pars; // silence warning unused parameter
-
 	// curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
 	curl_file *fp = (curl_file*) file;
 
@@ -1021,6 +1217,33 @@ static int curl_open(file_t *fp, openpars_t *pars, int type) {
         }
 }
 
+static int curl_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **outfp) {
+
+	int err = CBM_ERROR_OK;
+
+	curl_file *cfp = reserve_file(dirent->parent->endpoint);
+	cfp->file.filename = mem_alloc_str(dirent->name);
+
+        switch (type) {
+                case FS_OPEN_RD:
+                        err = open_rd(cfp, pars, FS_OPEN_RD);
+			break;
+                case FS_OPEN_DR:
+                        err = open_dr(cfp, pars);
+			break;
+                default:
+                        err = CBM_ERROR_FAULT;
+        }
+
+	if (err == CBM_ERROR_OK) {
+		*outfp = (file_t*) cfp;
+	} else {
+		close_fd(cfp);
+		*outfp = NULL;
+	}
+	return err;
+}
+
 
 // ----------------------------------------------------------------------------------
 
@@ -1136,20 +1359,20 @@ provider_t http_provider = {
 
 static handler_t curl_file_handler = {
         "curl_file_handler",
-        NULL,                   // resolve2
+        NULL, 		        // resolve2
         NULL,                   // resolve
         NULL,                   // wrap
         curl_close,             // close
-	NULL,			// fclose
-	NULL,			// declose
+	curl_fclose,		// fclose
+	curl_declose,		// declose
         curl_open,              // open
-        NULL, 	             	// open2
+        curl_open2, 	       	// open2
         handler_parent,         // default parent() implementation
         NULL,                   // fs_seek,                // seek
         read_file,              // readfile
         NULL,			// writefile unsupported for now
         NULL,                   // truncate
-        NULL,                   // direntry2
+        curl_direntry2,         // direntry2
         curl_direntry,          // direntry
         NULL,                   // fs_create,              // create
         NULL,                   // fs_flush,               // flush data out to disk

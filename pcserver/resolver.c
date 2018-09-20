@@ -146,7 +146,11 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 		if (dir->handler->resolve2) {
 			rv = dir->handler->resolve2(pattern, cset, &dir);
 		} else {
-			rv = CBM_ERROR_DIR_NOT_FOUND;
+			if (strlen(pattern) == 0 || strchr(pattern, '/') == NULL) {
+				rv = CBM_ERROR_FILE_EXISTS;
+			} else {
+				rv = CBM_ERROR_DIR_NOT_FOUND;
+			}
 		}
 
 		if (rv == CBM_ERROR_SYNTAX_WILDCARDS || rv == CBM_ERROR_DIR_NOT_FOUND) {
@@ -156,6 +160,7 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 			int rdflag = 0;
 			file_t *fp = NULL;
 
+			
 			rv = resolve_scan_int(dir, &p, 1, true, cset, false, &de, &rdflag);
 
 			if (rv == CBM_ERROR_OK) {
