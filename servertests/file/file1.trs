@@ -3,7 +3,7 @@ init
 message testing OPEN and creation of a new PRG file on D64
 
 # open  file
-send :FS_OPEN_WR .len 02 00 55 45 4c 31 
+send :FS_OPEN_WR .len 02 00 00 55 45 4c 31 00
 # OK
 expect :FS_REPLY .len 02 00
 
