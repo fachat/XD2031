@@ -28,7 +28,7 @@ TESTFILES="blk.d82"
 COMPAREFILES="blk.d82"
 
 # server options for the pcserver
-SERVEROPTS="-v -A0:fs=blk.d82"
+SERVEROPTS="-v -A0:=fs:blk.d82"
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"

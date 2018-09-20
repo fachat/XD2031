@@ -30,7 +30,7 @@ COMPAREFILES="blk.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=blk.d64"
+SERVEROPTS="-v -A0:=fs:blk.d64"
 
 #firmware options
 # switch off drive in error messages; also restricts track/sector to two chars
