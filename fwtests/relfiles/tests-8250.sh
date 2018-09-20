@@ -28,7 +28,7 @@ COMPAREFILES="rel.d82"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=rel.d82"
+SERVEROPTS="-v -A0:=fs:rel.d82"
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.frs"
