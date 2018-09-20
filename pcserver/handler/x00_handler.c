@@ -228,9 +228,11 @@ static int x00_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **ou
 
 	// alloc x00_file and prepare for operation
 	// no seek necessary, read pointer is already at start of payload
+	openpars_t mypars;
+	openpars_init_options(&mypars);
 
 	file_t *infile = NULL;
-	int rv = dirent->parent_de->handler->open2(dirent->parent_de, pars, opentype, &infile);
+	int rv = dirent->parent_de->handler->open2(dirent->parent_de, &mypars, opentype, &infile);
 
 	if (rv != CBM_ERROR_OK) {
 		return rv;

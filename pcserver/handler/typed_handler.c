@@ -232,7 +232,20 @@ static int typed_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **
         typed_dirent_t *dirent = (typed_dirent_t*) de;
 
 	// just open the inner file and return its file_t, as we only did a name conversion
+	if (de->type == FS_DIR_TYPE_REL) {
+		if (pars->filetype != FS_DIR_TYPE_UNKNOWN 
+			&& pars->filetype != FS_DIR_TYPE_REL) {
+			return CBM_ERROR_FILE_TYPE_MISMATCH;
+		}
+		pars->filetype = FS_DIR_TYPE_REL;
 
+		if (pars->recordlen > 0 && pars->recordlen != de->recordlen) {
+			// recordlen mismatch
+			return CBM_ERROR_RECORD_NOT_PRESENT;
+		}
+		pars->recordlen = de->recordlen;
+	}
+	
         file_t *infile = NULL;
         int rv = dirent->parent_de->handler->open2(dirent->parent_de, pars, opentype, &infile);
 
