@@ -457,7 +457,8 @@ void bus_close(bus_t *bus) {
 #endif
 
 			if (bus_for_irq->errnum != CBM_ERROR_OK) {
-				int8_t errdrive = bus->rtconf.errmsg_with_drive ? channel_find(bus_secaddr_adjust(bus, secaddr))->drive : -1;
+				channel_t *chan = channel_find(bus_secaddr_adjust(bus, secaddr));
+				int8_t errdrive = bus->rtconf.errmsg_with_drive ? (chan ? chan->drive : 0)  : -1;
 				set_error_tsd(&error, bus_for_irq->errnum, bus_for_irq->errparam, bus_for_irq->errparam2, errdrive);
 			}
 		}
