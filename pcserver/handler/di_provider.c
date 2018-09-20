@@ -4269,7 +4269,7 @@ static int di_equals(file_t * thisfile, file_t * otherfile)
 static int di_to_endpoint(file_t * file, endpoint_t ** outep)
 {
 
-	if (file->handler != &di_file_handler) {
+	if (file->handler != &di_img_file_handler) {
 		log_error("Wrong file type (unexpected)\n");
 		return CBM_ERROR_FAULT;
 	}

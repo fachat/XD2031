@@ -116,7 +116,7 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 
 	if (err == CBM_ERROR_OK) {
 
-		err = provider_assign(ninfo.trg.drive, &ninfo.file[0], cset, 0);
+		err = provider_assign(ninfo.trg.drive, &ninfo.file[0], cset, true);
 	}
 
 	mem_free(name);

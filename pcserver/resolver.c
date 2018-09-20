@@ -244,6 +244,18 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 			break;
 		}
 
+		// match unwrapped entry (to enable unwrapped "foo.d64" addressing)
+		found = false;
+		for (int i = 0; i < num_pattern; i++) {
+                	scanpattern = pattern[i];
+                	name = (const char*)direntry->name;
+			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
+			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
+				found = true;
+				break;
+			}
+		}
+
 		// wrap
 		rv = handler_wrap(direntry, &wrapped);
 		if (rv == CBM_ERROR_OK
@@ -251,8 +263,7 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 			direntry = wrapped;
 		}
 
-		// match
-		found = false;
+		// match wrapped entry (to enable match as in directory entry)
 		for (int i = 0; i < num_pattern; i++) {
                 	scanpattern = pattern[i];
                 	name = (const char*)direntry->name;

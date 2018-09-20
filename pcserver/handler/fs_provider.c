@@ -421,8 +421,8 @@ static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) 
 
 	endpoint_t *parentep = NULL;
 
-	// use root endpoint as base
-	parentep = privileged ? create_root_ep() : create_home_ep();
+	// use root endpoint as base if privileged and absolute path, use home otherwise
+	parentep = (privileged && (**path == '/')) ? create_root_ep() : create_home_ep();
 
 	// skip leading "/"
 	if (**path == '/') {
