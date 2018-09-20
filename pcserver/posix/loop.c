@@ -80,6 +80,7 @@ void poll_init(void) {
  * init data structures
  */
 void poll_free_pinfo(registry_t *reg, void *pinfo) {
+	(void) reg;
 	mem_free(pinfo);
 }
 void poll_free(void) {

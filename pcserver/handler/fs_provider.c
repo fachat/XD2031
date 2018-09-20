@@ -207,6 +207,8 @@ static fs_endpoint_t *create_root_ep() {
 
 static void fsp_free_file(registry_t *reg, void *en) {
 
+	(void) reg;
+
 	((file_t*)en)->handler->fclose((file_t*)en, NULL, NULL);
 }
 
@@ -272,7 +274,7 @@ static File *reserve_file(fs_endpoint_t *fsep) {
 }
 
 // close a file descriptor
-static int close_fd(File *file, int recurse) {
+static int close_fd(File *file) {
 
 	log_debug("Closing file descriptor %p (%s)\n", file, file->ospath);
 	int er = 0;
@@ -370,6 +372,8 @@ static void fsp_ep_free(endpoint_t *ep) {
 
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
+	(void) cset;
+
 	char *new_assign_path = NULL;
 
 	log_debug("fsp_new(parent=%p, path=%s\n", parent, path);
@@ -395,7 +399,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 	if (new_assign_path != NULL) {
 		// use handler_resolve_file with resolve_path and wrap into endpoint
 		endpoint_t *assign_ep = NULL;
-		int err = handler_resolve_assign(parentep, &assign_ep, new_assign_path, cset);
+		int err = -1; //handler_resolve_assign(parentep, &assign_ep, new_assign_path, cset);
 		mem_free(new_assign_path);
 		if (err != CBM_ERROR_OK || assign_ep == NULL) {
 			log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
@@ -410,7 +414,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 
 static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) {
 
-	char *new_assign_path = NULL;
+	(void) cset;
 
 	log_debug("fsp_new(path=%s\n", *path);
 
@@ -419,7 +423,7 @@ static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) 
 		return NULL;
 	}
 
-	endpoint_t *parentep = NULL;
+	fs_endpoint_t *parentep = NULL;
 
 	// use root endpoint as base if privileged and absolute path, use home otherwise
 	parentep = (privileged && (**path == '/')) ? create_root_ep() : create_home_ep();
@@ -429,39 +433,9 @@ static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) 
 		(*path)++;
 	}
 
-	return parentep;
+	return (endpoint_t*) parentep;
 }
 
-static endpoint_t *fsp_tempep(char **name, charset_t cset, int priv) {
-
-	// make path relative
-	while (**name == dir_separator_char()) {
-		(*name)++;
-	}
-
-	char *path = *name;
-
-	// cut off last filename part (either file name or dir mask)
-	char *end = strrchr(*name, dir_separator_char());
-
-	if (end != NULL) {
-		// we have a '/'
-		*end = 0;
-		*name = end+1;	// filename part
-	} else {
-		// no '/', so only mask, path is root
-		path = ".";
-	}
-
-	endpoint_t *assign_ep = NULL;
-	int err = handler_resolve_assign((endpoint_t*)home_endpoint, &assign_ep, path, cset);
-	if (err != CBM_ERROR_OK || assign_ep == NULL) {
-		log_error("resolve path returned err=%d, p=%p\n", err, assign_ep);
-		return NULL;
-	}
-	assign_ep->is_temporary++;
-	return assign_ep;
-}
 
 /**
  *make a dir into an endpoint (only called with isdir=1)
@@ -503,7 +477,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	fsep->curpath = mem_alloc_str(fsep->basepath);
 
 	// free resources
-	close_fd(fp, 1);
+	close_fd(fp);
 
 	*outep = (endpoint_t*)fsep;
 	return CBM_ERROR_OK;
@@ -667,6 +641,8 @@ static int open_block_channel(File *fp) {
 // B-A/B-F/U1/U2
 static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen) {
 
+	(void) ep;
+
 	// Note that buf has already consumed the drive (first byte), so all indexes are -1
 	unsigned char cmd = buf[FS_BLOCK_PAR_CMD-1];
 	unsigned int track = (buf[FS_BLOCK_PAR_TRACK-1]&0xff) | ((buf[FS_BLOCK_PAR_TRACK]<<8)&0xff00);
@@ -674,9 +650,6 @@ static int fs_direct(endpoint_t *ep, const char *buf, char *retbuf, int *retlen)
 	unsigned char channel = buf[FS_BLOCK_PAR_CHANNEL-1];
 
 	log_debug("DIRECT cmd: %d, tr=%d, se=%d, chan=%d\n", cmd, track, sector, channel);
-
-	file_t *fp = NULL;
-	File *file = NULL;
 
 	// (bogus) check validity of parameters, otherwise fall through to error
 	// need to be validated for other commands besides U1/U2
@@ -784,166 +757,6 @@ static int write_block(File *file, const char *buf, int len, int is_eof) {
 // ----------------------------------------------------------------------------------
 // file command handling
 
-/*
-// open a file for reading, writing, or appending
-static int open_file(endpoint_t *ep, int tfd, const char *buf, const char *opts, int *reclen, int fs_cmd) {
-	int er = CBM_ERROR_FAULT;
-	File *file=NULL;
-
-	uint16_t recordlen = 0;
-	uint8_t type;
-	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
-
-	openpars_process_options((const uint8_t*) opts, &type, &recordlen);
-
-	log_info("open file (cmd=%d) for fd=%d in dir %s with name %s (type=%c, recordlen=%d)\n", 
-						fs_cmd, tfd, fsep->curpath, buf, 0x30+type, recordlen);
-
-	if (fs_cmd == FS_OPEN_RW) {
-		if (*buf == '#') {
-			// ok, open a direct block channel
-
-			File *file = reserve_file(fsep, tfd);
-
-			int er = open_block_channel(file);
-
-			if (er) {
-				// error
-				close_fd(file);
-				log_error("Could not reserve file\n");
-			}
-			return er;
-		}
-		if (type != FS_DIR_TYPE_REL) {
-			// RW is currently only supported for REL files
-			return CBM_ERROR_DRIVE_NOT_READY;
-		}
-	}
-	if (type != FS_DIR_TYPE_REL) {
-		// no record length without relative file
-		recordlen = 0;
-	}
-	*reclen = recordlen;
-
-	if (type == FS_DIR_TYPE_REL) {
-		if (recordlen == 0) {
-			// not specifying record length means reading it from the file
-			// which we don't support. So let's give 62 FILE NOT FOUND as if
-			// the file weren't there
-			return CBM_ERROR_FILE_NOT_FOUND;
-		}
-	}
-
-
-	char *fullname = malloc_path(fsep->curpath, buf);
-	os_patch_dir_separator(fullname);
-	if(path_under_base(fullname, fsep->basepath)) {
-		mem_free(fullname);
-		return CBM_ERROR_NO_PERMISSION;
-	}
-
-	char *path     = safe_dirname(fullname);
-	char *filename = safe_basename(fullname);
-	char *name     = NULL;
-
-	char *options;
-	int file_required = false;
-	int file_must_not_exist = false;
-
-	switch(fs_cmd) {
-		case FS_OPEN_RD:
-			options = "rb";
-			file_required = true;
-			break;
-		case FS_OPEN_WR:
-			options = "wb";
-			file_must_not_exist = true;
-			break;
-		case FS_OPEN_AP:
-			options = "ab";
-			file_required = true;
-			break;
-		case FS_OPEN_OW:
-			options = "wb";
-			break;
-		case FS_OPEN_RW:
-			options = "rb+";
-			break;
-		default:
-			log_error("Internal error: open_file with fs_cmd %d\n", fs_cmd);
-			goto exit;
-	}
-
-	name = find_first_match(path, filename, os_path_is_file);
-	if(!name) {
-		// something with that name exists that isn't a file
-		log_error("Unable to open '%s': not a file\n", filename);
-		er = CBM_ERROR_FILE_TYPE_MISMATCH;
-		goto exit;
-	}
-	int file_exists = !access(name, F_OK);
-	if(file_required && !file_exists) {
-		log_error("Unable to open '%s': file not found\n", name);
-		er = CBM_ERROR_FILE_NOT_FOUND;
-		goto exit;
-	}
-	if(file_must_not_exist && file_exists) {
-		log_error("Unable to open '%s': file exists\n", name);
-		er = CBM_ERROR_FILE_EXISTS;
-		goto exit;
-	}
-	if (fs_cmd == FS_OPEN_RW && !file_exists) {
-		options = "w+";
-	}
-
-	FILE *fp = fopen(name, options);
-	if(fp) {
-
-		if (recordlen > 0) {
-			if (fseek(fp, 0, SEEK_SET) < 0) {
-				log_errno("Could not seek a rel file!");
-				er = errno_to_error(errno);
-				fclose(fp);
-				goto exit;
-			}
-		}
-
-		file = reserve_file(fsep, tfd);
-
-		if (file) {
-			file->fp = fp;
-			file->dp = NULL;
-			if (recordlen == 0) {
-				er = CBM_ERROR_OK;
-			} else {
-				er = CBM_ERROR_OPEN_REL;
-				file->recordlen = recordlen;
-			}
-		} else {
-			fclose(fp);
-			log_error("Could not reserve file\n");
-			er = CBM_ERROR_FAULT;
-		}
-		if (recordlen > 0) {
-			// allocate first block
-			long cursize = file_get_size(fp);
-			expand_relfile(file, cursize, 254);
-		}
-	} else {
-
-		log_errno("Error opening file '%s/%s'", path, filename);
-		er = errno_to_error(errno);
-	}
-
-	log_debug("OPEN_RD/AP/WR(%s: %s (@ %p))=%p (fp=%p)\n", options, filename, filename, (void*)file, (void*)fp);
-
-exit:
-	mem_free(name); 
-	mem_free(path); 
-	mem_free(filename);
-	return er;
-}
-*/
 
 /**
  * return a malloc'd string containing the concatenated contents of the
@@ -1113,6 +926,7 @@ static size_t file_get_size(FILE *fp) {
 //
 // returns the number of bytes read (>= 0), or a negative error number
 //
+#if 0
 static int read_dir(File *f, char *retbuf, int len, charset_t outcset, int *readflag) {
 
 	int rv = CBM_ERROR_OK;
@@ -1150,6 +964,7 @@ static int read_dir(File *f, char *retbuf, int len, charset_t outcset, int *read
 	log_exitr(rv);
 	return rv;
 }
+#endif
 
 /**
  * return a malloc'd string with the full path of the file,
@@ -1188,8 +1003,6 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	  char *ospath = NULL;
 	  char *path = NULL;
 
-	  file_t *wrapfile = NULL;
-
 	  if (readflag) {
 		  *readflag = READFLAG_DENTRY;
 	  }
@@ -1224,7 +1037,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
-		dirent->name = fp->searchpattern[0];
+		dirent->name = (uint8_t*)fp->searchpattern[0];
 		dirent->cset = CHARSET_ASCII;
 		dirent->mode = FS_DIR_MOD_NAM;
 
@@ -1267,14 +1080,12 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 						break;
 					}
         		    	} else {
-		    			dirent->name = file->de->d_name;
+		    			dirent->name = (uint8_t*) file->de->d_name;
 
 			  	  	dirent->mode = FS_DIR_MOD_FIL;
 					// we don't know the type yet for sure
 			    		dirent->type = FS_DIR_TYPE_PRG;
 			    		dirent->attr = 0;
-
-			    		bool seekable = 0;
 
 					if (S_ISREG(sbuf.st_mode)) {
 				    		dirent->attr |= FS_DIR_ATTR_SEEK;
@@ -1326,193 +1137,6 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 }
 
 
-/**
- * get the next directory entry in the directory given as fp.
- * If isresolve is set, then the disk header and blocks free entries are skipped
- *
- * outpattern then points into fp->pattern
- */
-static int fs_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
-	  File *file = (File*) fp;
-	  File *retfile = NULL;
-	  int rv = CBM_ERROR_FAULT;
-	  struct stat sbuf;
-	  char *ospath = NULL;
-	  char *path = NULL;
-	  fs_endpoint_t *fsep = (fs_endpoint_t*) fp->endpoint;
-
-	  file_t *wrapfile = NULL;
-	
-	  *readflag = READFLAG_DENTRY;
-	  *outentry = NULL;
-
-	  log_debug("ENTER: fs_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
-
-	  if (fp->handler != &fs_file_handler) {
-		return CBM_ERROR_FAULT;
-	  }
-
-          // make sure we do not
-          // escape the parent container, i.e. basepath
-          if (strstr(file->ospath, fsep->basepath) != file->ospath) {
-          	// the parent base path is not at the start of the new base path
-          	// so we throw an error
-          	log_error("DIR broke out of container (%s), was trying %s\n",
-                                fsep->basepath, file->ospath);
-          	return CBM_ERROR_FAULT;
-          }
-
-	  if (file->dp == NULL) {
-		rv = open_dir(file);
-		if (rv != CBM_ERROR_OK) {
-			return rv;
-		}
-	  }
-
-	  // do we have to send the disk header?
-	  if ((!isresolve) && (fp->dirstate == DIRSTATE_FIRST)) {
-		    // not first anymore
-		    fp->dirstate = DIRSTATE_ENTRIES;
-
-  		    // alloc directory entry struct
- 		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
-  		    retfile->file.parent = fp;
-
-#if 0
-		    // convert filename to external charset
-		    retfile->file.filename = conv_name_alloc(
-				(fp->pattern == NULL)?"(nil)":fp->pattern, 
-				CHARSET_ASCII, outcset);
-#endif
-		    // do not convert filename to external charset, as pattern is already ext cset
-		    retfile->file.filename = mem_alloc_str(
-				(fp->pattern == NULL)?"(nil)":fp->pattern); 
-
-		    path = get_path(file, retfile->file.filename);
-		    retfile->ospath = os_realpath(path);
-		    mem_free(path);
-		    retfile->file.mode = FS_DIR_MOD_NAM;
-
-		    rv = CBM_ERROR_OK;
-		    *outentry = (file_t*) retfile;
-		    return rv;
-	  } 
-
-	  // check if we have to send a file entry
-	  if(isresolve || (fp->dirstate == DIRSTATE_ENTRIES)) {
-
-	            // read entry from underlying dir
-		    do {
-	            	file->de = readdir(file->dp);
-
-	    	        if (file->de == NULL) {
-				log_debug("Got NULL next dir entry\n");
-				if (isresolve) {
-					rv = CBM_ERROR_OK;
-				} else {
-					fp->dirstate = DIRSTATE_END;
-				}
-				// done with search
-				break;
-			} else {
-				log_debug("Got next dir entry for: %s\n", file->de->d_name);
-
-			    	path = get_path(file, file->de->d_name);
-				ospath = os_realpath(path);
-				mem_free(path);
-				path = NULL;
-					
-		            	int rvx = stat(ospath, &sbuf);
-        		    	if (rvx < 0) {
-                			log_errno("Problem stat'ing dir entry (%s)", file->de->d_name);
-					if (errno != EOVERFLOW) {
-						rv = errno_to_error(errno);
-						break;
-					}
-        		    	} else {
-	 	  			// alloc directory entry struct
-		  			retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
-		  			retfile->file.parent = fp;
-
-		    			// convert filename to external charset
-		    			retfile->file.filename = conv_name_alloc(
-								file->de->d_name, 
-								CHARSET_ASCII, outcset);
-
-			    		retfile->ospath = ospath;
-			  	  	retfile->file.mode = FS_DIR_MOD_FIL;
-					// we don't know the type yet for sure
-			    		retfile->file.type = FS_DIR_TYPE_UNKNOWN;
-			    		retfile->file.attr = 0;
-
-			    		retfile->file.seekable = 0;
-					if (S_ISREG(sbuf.st_mode)) {
-						retfile->file.seekable = 1;
-					}
-					retfile->file.isdir = 0;
-					if (S_ISDIR(sbuf.st_mode)) {
-						retfile->file.isdir = 1;
-					}
-
-			        	// TODO: error handling
-                			int writecheck = access(retfile->ospath, W_OK);
-                			if ((writecheck < 0) && (errno != EACCES)) {
-                            			writecheck = -errno;
-	                            		log_error("Could not get write access to %s\n", file->de->d_name);
-        	                    		log_errno("Reason");
-                			}
-					log_debug("WRITE Check: %s -> %d\n", retfile->ospath, writecheck);
-					if (writecheck >= 0) {
-				    		retfile->file.writable = 1;
-					} else {
-				    		retfile->file.attr |= FS_DIR_ATTR_LOCKED;
-				    		retfile->file.writable = 0;
-					}
-					retfile->file.lastmod = sbuf.st_mtime;
-					retfile->file.filesize = sbuf.st_size;
-					if (S_ISDIR(sbuf.st_mode)) {
-						retfile->file.mode = FS_DIR_MOD_DIR;
-					}
-
-					// wrap and/or match name
-					if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
-						== CBM_ERROR_OK) {
-	  	    				*outentry = wrapfile;
-						rv = CBM_ERROR_OK;
-						break;
-					}
-					// cleanup, to read next dir entry
-					retfile->file.handler->fclose((file_t*)retfile, NULL, NULL);
-					retfile = NULL;
-				}
-			}
-			// read next entry
-		    } while (1);
-	  }
-	
-	  // end of dir entry - blocks free
-	  if ((!isresolve) && (fp->dirstate == DIRSTATE_END)) {
-  		    // alloc directory entry struct
- 		    retfile = reserve_file((fs_endpoint_t*)fp->endpoint);
-  		    retfile->file.parent = fp;
-
-		    retfile->file.filename = NULL;
-		    // ospath is malloc'd
-		    retfile->ospath = os_realpath(file->ospath);
-		    retfile->file.mode = FS_DIR_MOD_FRE;
-		    unsigned long long total = os_free_disk_space(file->ospath);
-		    if (total > SSIZE_MAX) {
-			total = SSIZE_MAX;
-		    }
-		    retfile->file.filesize = total;
-		    *readflag = READFLAG_EOF;
-		    rv = CBM_ERROR_OK;
-	  	    *outentry = (file_t*) retfile;
-	  	    return rv;
-	  }
-
-	  return rv;
-}
 
 // read file data
 //
@@ -1681,53 +1305,6 @@ static int write_file(File *file, const char *buf, int len, int is_eof) {
 	return -CBM_ERROR_FAULT;
 }
 
-/*
-// position to record
-static int fs_position(endpoint_t *ep, int tfd, int recordno) {
-
-	int rv = CBM_ERROR_OK;
-
-	File *file = find_file(ep, tfd);
-	if (file != NULL) {
-		// because we do fread/fwrite, we can just fseek 
-
-		size_t newpos = recordno * file->recordlen;
-		size_t oldlen = 0;
-		
-		struct stat fdstat;
-		fflush(file->fp);
-		if(fstat(fileno(file->fp), &fdstat) < 0) {
-			log_error("Could not stat file\n");
-			return CBM_ERROR_DRIVE_NOT_READY;
-		}
-		oldlen = fdstat.st_size;
-		if (oldlen > file->recordlen) {
-			oldlen -= file->recordlen;
-		} else {
-			oldlen = 0;
-		}
-		log_debug("file size=%ld, reclen=%d, oldlen=%ld, newpos=%ld\n", fdstat.st_size,
-					file->recordlen, oldlen, newpos);
-
-		if (oldlen < newpos) {
-			rv = CBM_ERROR_RECORD_NOT_PRESENT;
-		}
-
-		if (file->recordlen > 0) {
-			// we seek anyway, so file may or may not be expanded
-			// depending on the implementation of the underlying OS.
-			// Which may be different from the CBM. Ah, well...
-			if (fseek(file->fp, newpos, SEEK_SET) < 0) {
-				log_errno("Could not fseek()");
-				return CBM_ERROR_DRIVE_NOT_READY;
-			}
-			return rv;
-		}
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-	return CBM_ERROR_DRIVE_NOT_READY;
-}
-*/
 
 // ----------------------------------------------------------------------------------
 // command channel
@@ -1738,7 +1315,7 @@ static int fs_delete2(direntry_t *dirent) {
 
 	File *parent = (File*) dirent->parent;
 
-	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), (const char*) dirent->name);
 
 	log_debug("fs_delete2 '%s'\n", newospath);
 
@@ -1753,27 +1330,12 @@ static int fs_delete2(direntry_t *dirent) {
 	return rv;
 }
 
-static int fs_delete(file_t *file) {
-
-	log_debug("fs_delete '%s' (%p -> %s)\n", file->filename, file, ((File*)file)->ospath);
- 
-	File *fp = (File*) file;
-
-	if (unlink(fp->ospath) < 0) {
-		// error handling
-		log_errno("While trying to unlink %s", fp->ospath);
-
-		return errno_to_error(errno);
-	}
-	return CBM_ERROR_OK;
-}
-
 
 static int fs_move2(direntry_t *dirent, file_t *todir, const char *toname, charset_t cset) {
 	int er = CBM_ERROR_FAULT;
 
 	File *parent = (File*) dirent->parent;
-	const char *frompath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+	char *frompath = str_concat_os(parent->ospath, dir_separator_string(), (const char*) dirent->name);
 
 #ifdef DEBUG_CMD
 	log_debug("fs_rename: '%s' -> '%s%s'\n", frompath, todir->filename, toname);
@@ -1871,7 +1433,7 @@ static int fs_rmdir2(direntry_t *dirent) {
 
 	File *parent = (File*) dirent->parent;
 
-	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), (const char*) dirent->name);
 
 	log_debug("fs_rmdir2 '%s'\n", newospath);
 
@@ -1885,27 +1447,6 @@ static int fs_rmdir2(direntry_t *dirent) {
 	mem_free(newospath);
 	return rv;
 }
-
-
-static int fs_rmdir(file_t *dir) {
-
-	int er = CBM_ERROR_FAULT;
-
-	File *fp = (File*) dir;
-
-	int rv = rmdir(fp->ospath);
-
-	if (rv < 0) {
-		er = errno_to_error(errno);
-		log_errno("Error trying to remove a directory");
-	} else {
-		// ok
-		er = CBM_ERROR_OK;
-	}
-	dir->handler->fclose(dir, NULL, NULL);
-	return er;
-}
-
 
 
 // ----------------------------------------------------------------------------------
@@ -1930,6 +1471,8 @@ static int fs_open_temp(File *file) {
 
 static int readfile(file_t *fp, char *retbuf, int len, int *readflag, charset_t outcset) {
 
+	(void) outcset;
+
 	File *f = (File*) fp;
 #ifdef DEBUG_READ
 	log_debug("fs_readfile file=%p (fp=%p, dp=%p, block=%p, len=%d, *readflag=%d)\n",
@@ -1942,7 +1485,7 @@ static int readfile(file_t *fp, char *retbuf, int len, int *readflag, charset_t 
 
 	if (f->dp) {
 		// read a directory entry
-		rv = read_dir(f, retbuf, len, outcset, readflag);
+		rv = CBM_ERROR_FAULT; //read_dir(f, retbuf, len, outcset, readflag);
 	} else
 	if (f->fp) {
 		// read a file
@@ -2090,7 +1633,7 @@ static File* create_file(direntry_t *dirent) {
 
 	File *parent = (File*) dirent->parent;
 
-	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), dirent->name);
+	const char *newospath = str_concat_os(parent->ospath, dir_separator_string(), (const char*)dirent->name);
 
 	File *newfp = reserve_file((fs_endpoint_t*)parent->file.endpoint);
 	newfp->ospath = newospath;
@@ -2101,12 +1644,10 @@ static File* create_file(direntry_t *dirent) {
 
 static int fs_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **outfile) {
 
-	cbm_errno_t rv = CBM_ERROR_OK;
-
 	File *file = create_file(dirent);
-	*outfile = file;
+	*outfile = (file_t*) file;
 
-	return fs_open(file, pars, type);
+	return fs_open((file_t*) file, pars, type);
 }
 
 
@@ -2134,28 +1675,13 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset
 			*outentry = (file_t*)retfile;	
 		} else {
 			log_debug("close on failing open (%p)", retfile);
-			close_fd(retfile, 0);
+			close_fd(retfile);
 		}
 	}
 
 	mem_free(tmpname);
 
 	return rv;
-}
-
-static int fs_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
-	(void) outbuf;
-
-	log_debug("fs_fclose(%p '%s')\n", fp, ((File*)fp)->ospath);
-
-	//fs_dump_file(fp, 0, 1);
-
-	close_fd((File*)fp, recurse);
-
-	if (outlen != NULL) {
-		*outlen = 0;
-	}
-	return CBM_ERROR_OK;
 }
 
 static int fs_fclose(file_t *fp, char *outbuf, int *outlen) {
@@ -2165,7 +1691,7 @@ static int fs_fclose(file_t *fp, char *outbuf, int *outlen) {
 
 	//fs_dump_file(fp, 0, 1);
 
-	close_fd((File*)fp, false);
+	close_fd((File*)fp);
 
 	if (outlen != NULL) {
 		*outlen = 0;
@@ -2186,8 +1712,6 @@ static int fs_declose(direntry_t *de) {
 
 static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) {
 	
-	cbm_errno_t rv = CBM_ERROR_OK;
-
 	if (*inoutdir == NULL) {
 		return CBM_ERROR_FAULT;
 	}
@@ -2224,7 +1748,7 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 
 		const char *tmpname = mem_alloc_strn(pt, (p - pt));
 
-		const char *newospath = str_concat_os(fp->ospath, dir_separator_string(), tmpname);
+		char *newospath = str_concat_os(fp->ospath, dir_separator_string(), tmpname);
 
 		log_debug("check path-part '%s' as new os path:'%s'\n", tmpname, newospath);
 
@@ -2242,7 +1766,7 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 		newfp->ospath = newospath;
 	
 		// close old
-		close_fd(fp, 0);
+		close_fd(fp);
 	
 		fp = newfp;
 		pt = p;
@@ -2356,11 +1880,6 @@ static void fs_dump(int indent) {
 	log_debug("%s}\n", prefix);
 }
 
-static size_t fs_realsize(file_t *file) {
-
-	return file->filesize;
-}
-
 static size_t fs_realsize2(direntry_t *file) {
 
 	// our direntry has the correct size already
@@ -2372,12 +1891,9 @@ static size_t fs_realsize2(direntry_t *file) {
 handler_t fs_file_handler = {
 	"fs_file_handler",
 	fs_resolve2,		// resolve2
-	NULL,			// resolve
 	NULL,			// wrap
-	fs_close,		// close
 	fs_fclose,		// close
 	fs_declose,		// close
-	fs_open,		// open
 	fs_open2,		// open2
 	handler_parent,		// default parent() implementation
 	fs_seek,		// seek
@@ -2385,18 +1901,13 @@ handler_t fs_file_handler = {
 	writefile,		// writefile
 	NULL,			// truncate
 	fs_direntry2,		// direntry2
-	fs_direntry,		// direntry
 	fs_create,		// create
 	fs_flush,		// flush data out to disk
         fs_equals,		// check if two files (e.g. d64 files are the same)
-	fs_realsize,		// real size of file (same as file->filesize here)
 	fs_realsize2,		// real size of file (same as file->filesize here)
-	NULL,			// delete file
 	fs_delete2,		// delete2 file
 	fs_mkdir,		// create a directory
-	NULL,			// remove a directory
 	fs_rmdir2,		// rmdir2 remove a directory
-	NULL,			// move a file or directory
 	fs_move2,		// move2 a file or directory
 	fs_dump_file		// dump file
 };

@@ -32,6 +32,7 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <strings.h>
 
 // TODO: how about DIR ?
 

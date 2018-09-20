@@ -38,6 +38,7 @@
 #include "mem.h"
 #include "handler.h"
 #include "endpoints.h"
+#include "resolver.h"
 
 #include "charconvert.h"
 
@@ -139,23 +140,23 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	endpoint_t *target = NULL;
 	endpoint_t *newep = NULL;
 
-	if (to_addr->name == NULL || strlen(to_addr->name) == 0) {
+	if (to_addr->name == NULL || strlen((char*)to_addr->name) == 0) {
 		endpoints_unassign(drive);
 		return CBM_ERROR_OK;
 	}
 
 	if (to_addr->drive == NAMEINFO_UNUSED_DRIVE) { // || to_addr->drivename == NULL || strlen(to_addr->drivename) == 0) {
-		to_addr->drivename = "fs";
+		to_addr->drivename = (uint8_t*) "fs";
 		to_addr->drive = NAMEINFO_UNDEF_DRIVE;
 	}
 
 	err = resolve_endpoint(to_addr, cset, from_cmdline, &target);
 	if (err == CBM_ERROR_OK) {
 
-	    if (strlen(to_addr->name) > 0) {
+	    if (strlen((char*)to_addr->name) > 0) {
 		file_t *parentdir = target->ptype->root(target);
 
-		err = resolve_dir(&to_addr->name, cset, &parentdir);
+		err = resolve_dir((const char**)&to_addr->name, cset, &parentdir);
 		if (err == CBM_ERROR_OK) {
 
 			file_t *dir = NULL;
@@ -163,7 +164,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 			openpars_t pars;
 			openpars_init_options(&pars);
 			// got the enclosing directory, now get the dir itself
-			err = resolve_open(parentdir, to_addr->name, cset, &pars, FS_OPEN_DR, &dir);
+			err = resolve_open(parentdir, (char*)to_addr->name, cset, &pars, FS_OPEN_DR, &dir);
 
 			if (err == CBM_ERROR_OK) {
 
@@ -197,260 +198,6 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	}
 
 	return err;
-#if 0
-	endpoint_t *parent = NULL;
-	provider_t *provider = NULL;
-	endpoint_t *newep = NULL;
-
-	if (assign_to == NULL) {
-		return endpoints_unassign(drive);
-	}
-
-	int len = strlen(wirename);
-
-	if (len == 0) {
-		char *assign_to_rooted = NULL;
-		// we don't actually have a provider name - use the default provider
-		parent = fs_root_endpoint(assign_to, &assign_to_rooted, from_cmdline);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got default provider %p ('%s')\n", provider, provider->name);
-
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		}
-		if (assign_to_rooted != NULL) {
-			mem_free(assign_to_rooted);
-		}
-		if (newep != NULL) {
-			if (from_cmdline) {
-				newep->is_temporary = 0;
-			}
-		}
-		// if not found, something's clearly wrong, as the default provider "fs"
-		// should be there. So return FAULT...
-	} else
-	if ((isdigit(wirename[0])) && (len == 1)) {
-		// check if it is a drive
-		// (works as long as isdigit() is the same for all available char sets)
-		// we have a drive number
-		int drv = wirename[0] & 0x0f;
-		char drvname[2];
-		drvname[0] = drv;
-		drvname[1] = 0;
-		parent = provider_lookup(drvname, len, 0, NULL, NAMEINFO_UNDEF_DRIVE);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
-
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		} else {
-			// did not find drive number on lookup
-			err = CBM_ERROR_DRIVE_NOT_READY;
-		}
-	} else {
-
-		char *ascname = conv_name_alloc(wirename, cset, CHARSET_ASCII);
-
-		log_debug("Provider=%p\n", provider);
-
-		if (provider == NULL) {
-			// check each of the providers in turn
-			// TODO provider_t *p = provider_find(ascname);
-			for (int i = 0; ; i++) {
-				providers_t *p = reg_get(&providers, i);
-				if (p != NULL) {
-					log_debug("Compare to provider '%s'\n", p->provider->name);
-					const char *pname = p->provider->name;
-					if (!strcmp(pname, ascname)) {
-						// got one
-						provider = p->provider;
-						if (p->provider->newep != NULL) {
-							log_debug("Found provider named '%s'\n", 
-									provider->name);
-						} else {
-							log_warn("Ignoring assign to a non-root "
-									"provider '%s'\n", provider->name);
-						}
-						break;
-					}
-				} else {
-					break;
-				}
-			}
-		}
-
-		mem_free(ascname);
-	
-		if (provider != NULL) {
-			if (provider->newep == NULL) {
-				log_error("Tried to assign an indirect provider %s directly\n",wirename);
-				return CBM_ERROR_FAULT;
-			}
-
-			// get new endpoint
-			newep = provider->newep(parent, assign_to, cset, from_cmdline);
-			if (newep) {
-				newep->is_temporary = 0;
-			} else {
-				return CBM_ERROR_FAULT;
-			}
-		}
-	}
-
-	if (newep != NULL) {
-		// check if the drive is already in use and free it if necessary
-		// NOTE: a Map construct would be nice here...
-
-		endpoints_unassign(drive);
-
-		endpoints_assign(drive, newep);
-
-		return CBM_ERROR_OK;
-	}
-	return CBM_ERROR_FAULT;
-#endif
-}
-
-//------------------------------------------------------------------------------------
-/**
- * drive is the endpoint number to assign the new provider to.
- * name denotes the actual provider for the given drive/endpoint
- * 
- * of the "A0:fs=foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
- * and "foo/bar" becomes the assign_to.
- */
-int provider_assign_old(int drive, const char *wirename, const char *assign_to, charset_t cset, int from_cmdline) {
-
-	int err = CBM_ERROR_FAULT;
-
-	log_info("Assign provider '%s' with '%s' to drive %d\n", wirename, assign_to, drive);
-
-	endpoint_t *parent = NULL;
-	provider_t *provider = NULL;
-	endpoint_t *newep = NULL;
-
-	if (assign_to == NULL) {
-		return endpoints_unassign(drive);
-	}
-
-	int len = strlen(wirename);
-
-	if (len == 0) {
-		char *assign_to_rooted = NULL;
-		// we don't actually have a provider name - use the default provider
-		parent = fs_root_endpoint(assign_to, &assign_to_rooted, from_cmdline);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got default provider %p ('%s')\n", provider, provider->name);
-
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		}
-		if (assign_to_rooted != NULL) {
-			mem_free(assign_to_rooted);
-		}
-		if (newep != NULL) {
-			if (from_cmdline) {
-				newep->is_temporary = 0;
-			}
-		}
-		// if not found, something's clearly wrong, as the default provider "fs"
-		// should be there. So return FAULT...
-	} else
-	if ((isdigit(wirename[0])) && (len == 1)) {
-		// check if it is a drive
-		// (works as long as isdigit() is the same for all available char sets)
-		// we have a drive number
-		int drv = wirename[0] & 0x0f;
-		char drvname[2];
-		drvname[0] = drv;
-		drvname[1] = 0;
-		parent = provider_lookup(drvname, len, 0, NULL, NAMEINFO_UNDEF_DRIVE);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
-
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		} else {
-			// did not find drive number on lookup
-			err = CBM_ERROR_DRIVE_NOT_READY;
-		}
-	} else {
-
-		char *ascname = conv_name_alloc(wirename, cset, CHARSET_ASCII);
-
-		log_debug("Provider=%p\n", provider);
-
-		if (provider == NULL) {
-			// check each of the providers in turn
-			// TODO provider_t *p = provider_find(ascname);
-			for (int i = 0; ; i++) {
-				providers_t *p = reg_get(&providers, i);
-				if (p != NULL) {
-					log_debug("Compare to provider '%s'\n", p->provider->name);
-					const char *pname = p->provider->name;
-					if (!strcmp(pname, ascname)) {
-						// got one
-						provider = p->provider;
-						if (p->provider->newep != NULL) {
-							log_debug("Found provider named '%s'\n", 
-									provider->name);
-						} else {
-							log_warn("Ignoring assign to a non-root "
-									"provider '%s'\n", provider->name);
-						}
-						break;
-					}
-				} else {
-					break;
-				}
-			}
-		}
-
-		mem_free(ascname);
-	
-		if (provider != NULL) {
-			if (provider->newep == NULL) {
-				log_error("Tried to assign an indirect provider %s directly\n",wirename);
-				return CBM_ERROR_FAULT;
-			}
-
-			// get new endpoint
-			newep = provider->newep(parent, assign_to, cset, from_cmdline);
-			if (newep) {
-				newep->is_temporary = 0;
-			} else {
-				return CBM_ERROR_FAULT;
-			}
-		}
-	}
-
-	if (newep != NULL) {
-		// check if the drive is already in use and free it if necessary
-		// NOTE: a Map construct would be nice here...
-
-		endpoints_unassign(drive);
-
-		endpoints_assign(drive, newep);
-
-		return CBM_ERROR_OK;
-	}
-	return CBM_ERROR_FAULT;
 }
 
 void provider_cleanup(endpoint_t *ep) {
@@ -606,6 +353,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset, con
  * It then identifies the drive, puts the CD path before the name if it
  * is not absolute, and allocates the new name that it returns
  */
+#if 0
 int provider_chdir(const char *inname, int namelen, charset_t cset) {
 
 	int drive = inname[0];
@@ -640,6 +388,7 @@ int provider_chdir(const char *inname, int namelen, charset_t cset) {
 	}
 	return rv;
 }
+#endif
 
 /*
  * dump the in-memory structures (for analysis / debug)

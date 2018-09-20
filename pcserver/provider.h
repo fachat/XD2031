@@ -191,10 +191,6 @@ struct _handler {
 	int (*resolve2) (const char **pattern, charset_t cset, file_t **inoutdir);
 
 	// wrap files like P00 or D64 files 	
-	int (*resolve) (file_t * infile, file_t ** outfile,
-			const char *name, charset_t cset, const char **outname);
-
-	// wrap files like P00 or D64 files 	
 	int (*wrap) (direntry_t *dirent, direntry_t **wrapped);
 
 	// close the file; do so recursively by closing
@@ -202,13 +198,9 @@ struct _handler {
 	// to called. Currently used to send t/s on error messages
 	// rvlen is i/o - in is the buffer len, out is the actual data len
 
-	// deprecated
-	int (*close) (file_t * fp, int recurse, char *rvbuf, int *rvlen);
 	// new	
 	int (*fclose) (file_t *fp, char *rvbuf, int *rvlen);
 	int (*declose) (direntry_t *de);
-
-	int (*open) (file_t * fp, openpars_t * pars, int opentype);	// open a file
 
 	int (*open2) (direntry_t * fp, openpars_t * pars, int opentype, file_t **outfp);	// open a file
 
@@ -243,8 +235,6 @@ struct _handler {
 	// (e.g. in curl or tcp, to only return a single matching direntry)
 	int (*direntry2) (file_t * dirfp, direntry_t **entry, int isdirscan, int *readflag, const char *preview, charset_t cset);
 
-	int (*direntry) (file_t * dirfp, file_t ** outentry, int isresolve,
-			 int *readflag, const char **outpattern, charset_t outcset);
 	// create a new file in the directory
 	int (*create) (file_t * dirfp, file_t ** outentry, const char *name,
 			charset_t cset, openpars_t * pars, int opentype);
@@ -259,20 +249,13 @@ struct _handler {
 	// returns 0 on equal, 1 on different
 	int (*equals) (file_t * thisfile, file_t * otherfile);
 
-	 size_t(*realsize) (file_t * file);	// returns the real (correct) size of the file
-	 size_t(*realsize2) (direntry_t * de);	// returns the real (correct) size of the file
-
-	int (*scratch) (file_t * file);	// delete file
+	size_t(*realsize2) (direntry_t * de);	// returns the real (correct) size of the file
 
 	int (*scratch2) (direntry_t * dirent);	// delete file
 
 	int (*mkdir) (file_t * dir, const char *name, charset_t cset, openpars_t * pars);	// make directory
 
-	int (*rmdir) (file_t * dir);	// remove directory
-
 	int (*rmdir2) (direntry_t * dirent);	// remove directory
-
-	int (*move) (file_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
 
 	int (*move2) (direntry_t * fromfile, file_t * todir, const char *toname, charset_t cset);	// move file
 

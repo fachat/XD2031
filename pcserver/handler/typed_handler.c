@@ -68,19 +68,6 @@ static type_t typed_dirent_type = {
         NULL
 };
 
-static void typed_file_init(const type_t *t, void *p) {
-	(void) t; // silence unused warning
-
-	typed_file_t *x = (typed_file_t*) p;
-
-	x->file.type = FS_DIR_TYPE_UNKNOWN;
-}
-
-static type_t typed_file_type = {
-	"typed_file",
-	sizeof(typed_file_t),
-	typed_file_init
-};
 
 /*
  * identify whether a given file is a typed file type
@@ -266,132 +253,6 @@ static int typed_scratch2(direntry_t *dirent) {
 }
 
 
-/*
- * identify whether a given file is a typed file type
- *
- * returns CBM_ERROR_OK even if no match found,
- * except in case of an error
- *
- * name is the current file name
- */
-static int typed_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
-
-	log_debug("typed_resolve: infile=%s\n", infile->filename);
-
-	// check the file name of the given file_t, if it actually is a ,P file.
-
-	// must be at least one character, plus "," plus "P" ending
-	if (infile->filename == NULL || strlen(infile->filename) < 3) {
-		// not found, but no error
-		return CBM_ERROR_OK;
-	}
-
-	//char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
-	char *name = mem_alloc_str(infile->filename);
-
-	//log_debug("typed_resolve: infile converted to=%s\n", name);
-
-	char typechar = 0;
-	uint8_t ftype = 0;
-	char *p = strrchr(name, ',');
-	int recordlen = 0;
-
-	if (p == NULL) {
-		mem_free((char*)name);
-		return CBM_ERROR_OK;
-	}
-	// cut off type
-	*p = 0;
-
-	// which type is it?
-	p++;
-	typechar = *p;
-
-	switch(typechar) {
-	case 'P':
-	case 'P'+128:
-	case 'p':
-		ftype = FS_DIR_TYPE_PRG;
-		break;
-	case 'S':
-	case 'S'+128:
-	case 's':
-		ftype = FS_DIR_TYPE_SEQ;
-		break;
-	case 'U':
-	case 'U'+128:
-	case 'u':
-		ftype = FS_DIR_TYPE_USR;
-		break;
-	case 'R':
-	case 'R'+128:
-	case 'r':
-	case 'L':
-	case 'L'+128:
-	case 'l':
-		ftype = FS_DIR_TYPE_REL;
-		break;
-	default:
-		mem_free((char*)name);
-		return CBM_ERROR_OK;
-		break;
-	}
-
-	p++;
-	if (ftype != FS_DIR_TYPE_REL) {
-		if (*p) {
-			// does not end with the type
-			mem_free((char*)name);
-			return CBM_ERROR_OK;
-		}
-	} else {
-		// REL file record size
-		if (*p) {
-			int n = sscanf(p, "%d", &recordlen);
-			if (n < 1) {
-				mem_free((char*)name);
-				return CBM_ERROR_OK;
-			}
-		}
-	}
-			
-	// ok, we found a real typed file
-	log_info("Found %c typed file '%s' addressed as '%s'\n", typechar, name, infile->filename);
-
-	// check with the open options
-
-	// TODO: still true?
-	// we don't care if write, overwrite, or read etc,
-	// so there is no need to check for type
-
-	// now compare the original file name with the search pattern
-	if (!compare_dirpattern(name, inname, outname)) {
-		return CBM_ERROR_FILE_NOT_FOUND;
-	}
-
-	// done, alloc typed_file and prepare for operation
-	// no seek necessary, read pointer is already at start of payload
-
-	typed_file_t *file = mem_alloc(&typed_file_type);
-
-	file->file.isdir = 0;
-	file->file.handler = &typed_handler;
-	file->file.parent = infile;
-
-	file->file.filename = name;
-
-	file->file.recordlen = recordlen;
-	file->file.type = ftype;
-
-	file->file.attr = infile->attr;
-	file->file.filesize = infile->filesize;
-
-	*outfile = (file_t*)file;
-
-	return CBM_ERROR_OK;
-}
-
-
 static void typed_dump(file_t *file, int recurse, int indent) {
 
 	const char *prefix = dump_indent(indent);
@@ -418,70 +279,24 @@ static int typed_equals(file_t *thisfile, file_t *otherfile) {
 
 static handler_t typed_handler = {
 	"typed", 	//const char	*name;			// handler name, for debugging
-
 	NULL,		// resolve2
-
-	typed_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
-			//		uint8_t type, const char *name, const char *opts); 
 	typed_wrap,		// wrap
-
-	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
-
 	NULL,		// fclose
 	typed_declose,	// declose
-
-	default_open,	//int		(*open)(file_t *fp); 	// open a file
-
 	typed_open2,	//int		(*open2)(direntry_t *fp); 	// open a file
-
-	// -------------------------
-			// get converter for DIR entries
-//	NULL,
-
-	NULL,	// file_t* parent(file_t*)
-
-	// -------------------------
-	
-	NULL,	// position the file
-			//int		(*seek)(file_t *fp, long abs_position);
-
-	NULL,	// read file data
-			//int		(*readfile)(file_t *fp, char *retbuf, int len, int *readflag);	
-
-	NULL,	// write file data
-			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
-
-	NULL,	// truncate	(file_t *fp, long size);
-
-	// -------------------------
-
+	NULL,		// file_t* parent(file_t*)
+	NULL,		// seek position the file
+	NULL,		// readfile data
+	NULL,		// writefile data
+	NULL,		// truncate	(file_t *fp, long size);
 	NULL,		// int direntry2(file_t *fp, file_t **outentry);
-
-	NULL,		// int direntry(file_t *fp, file_t **outentry);
-
 	NULL,		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
-
-	// -------------------------
-
-	NULL,
-
+	NULL,		// flush
 	typed_equals,
-
-	NULL,		// realsize
 	NULL,		// realsize2
-
-	default_scratch,
-
 	typed_scratch2,	// delete2
-
 	NULL,		// mkdir not supported
-
-	NULL,		// rmdir not supported
-
 	NULL,		// rmdir2 not supported
-
-	NULL,		// move not supported
-
 	NULL,		// move2 not supported
 
 	// -------------------------

@@ -157,7 +157,7 @@ static File *reserve_file(tn_endpoint_t *fsep) {
 
 static void tnp_free_file(registry_t *reg, void *en) {
 	(void)reg;
-        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+        ((file_t*)en)->handler->fclose((file_t*)en, NULL, NULL);
 }
 
 static void tnp_free_ep(registry_t *reg, void *en) {
@@ -179,21 +179,6 @@ static void tnp_init(void) {
 	reg_init(&endpoints, "tcp_endpoints", 5);
 }
 
-static int tn_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
-	(void) outbuf;
-
-	close_fd((File*)fp);
-
-	if (recurse) {
-		if (fp->parent != NULL) {
-			fp->parent->handler->close(fp->parent, 1, NULL, NULL);
-		}
-	}
-
-	*outlen = 0;
-
-	return CBM_ERROR_OK;
-}
 
 // free the endpoint descriptor
 static void tnp_do_free(endpoint_t *ep) {
@@ -264,6 +249,7 @@ static endpoint_t *tnp_new(endpoint_t *parent, const char *path, charset_t cset,
 //
 static endpoint_t *tnp_temp(char **name, charset_t cset, int priv) {
 
+	(void) priv;
 
 	char *end = strchr(*name, '/');
 	
@@ -326,7 +312,7 @@ static int errno_to_error(int err) {
 
 
 // open a socket for reading, writing, or appending
-static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
+static int open_file(File *file, openpars_t *pars, const char *mode) {
 	int ern;
 	int er = CBM_ERROR_FAULT;
 	struct addrinfo *addr, *ap;
@@ -335,10 +321,9 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 
 	(void) pars;	// silence
 
-	File *file=(File*)fp;
-	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
+	tn_endpoint_t *tnep = (tn_endpoint_t*) file->file.endpoint;
 
-	const char *filename = mem_alloc_str(fp->filename);
+	const char *filename = mem_alloc_str(file->file.filename);
 
 	log_info("open file on host %s with service/port %s\n", tnep->hostname, filename);
 
@@ -396,7 +381,7 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 	}
 
         if (ap == NULL) {               /* No address succeeded */
-            	log_error("Could not connect to %s:%s\n", tnep->hostname, fp->filename);
+            	log_error("Could not connect to %s:%s\n", tnep->hostname, file->file.filename);
         } else {
 
 		log_debug("Connected with fd=%d\n", sockfd);
@@ -405,9 +390,9 @@ static int open_file(file_t *fp, openpars_t *pars, const char *mode) {
 		er = CBM_ERROR_OK;
 	}
 
-	log_info("OPEN_RD/AP/WR(%s: %s:%s =%p (fd=%d)\n",mode, tnep->hostname, fp->filename, (void*)file, sockfd);
+	log_info("OPEN_RD/AP/WR(%s: %s:%s =%p (fd=%d)\n",mode, tnep->hostname, file->file.filename, (void*)file, sockfd);
 
-	fp->writable = 1;
+	file->file.writable = 1;
 	return er;
 }
 
@@ -515,7 +500,6 @@ static int tn_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
                 return CBM_ERROR_FAULT;
         }
 
-	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
 	*outentry = NULL;
 
 	if (isdirscan) {
@@ -533,7 +517,7 @@ static int tn_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	de->de.mode = FS_DIR_MOD_FIL;
 	de->de.type = 0;
 	de->de.attr = 0;
-	de->de.name = name;
+	de->de.name = (uint8_t*)name;
 
 	*outentry = (direntry_t*) de;
 
@@ -542,39 +526,10 @@ static int tn_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 	return CBM_ERROR_OK;
 }
 
-static void tn_declose(direntry_t *dirent) {
+static int tn_declose(direntry_t *dirent) {
 
 	mem_free(dirent->name);
 	mem_free(dirent);
-}
-
-static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
-
-	(void)readflag; // silence warning unused parameter;
-
-        log_debug("ENTER: tcp_provider.direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
-
-        if (fp->handler != &tcp_file_handler) {
-                return CBM_ERROR_FAULT;
-        }
-
-	tn_endpoint_t *tnep = (tn_endpoint_t*) fp->endpoint;
-	*outentry = NULL;
-
-	if (!isresolve) {
-		// escape, we don't show a dir
-		return CBM_ERROR_OK;
-	}
-
-	char *name = conv_name_alloc((fp->pattern == NULL) ? TELNET_PORT : fp->pattern, CHARSET_ASCII, outcset);
-
-	File *retfile = reserve_file(tnep);
-
-	retfile->file.filename = name;
-	retfile->file.writable = 1;
-
-	*outentry = (file_t*)retfile;
-	*outpattern = fp->pattern + strlen(fp->pattern);
 
 	return CBM_ERROR_OK;
 }
@@ -583,6 +538,10 @@ static int tn_direntry(file_t *fp, file_t **outentry, int isresolve, int *readfl
 
 // resolve directory path when searching a file path
 static int tn_resolve2 (const char **pattern, charset_t cset, file_t **inoutdir) {
+
+	(void) pattern;
+	(void) cset;
+	(void) inoutdir;
 
 	return CBM_ERROR_FILE_EXISTS;
 }
@@ -595,7 +554,7 @@ static int tn_open2 (direntry_t * de, openpars_t * pars, int opentype, file_t **
 	int err = CBM_ERROR_OK;
 
 	File *fp = mem_alloc(&file_type);
-	fp->file.filename = mem_alloc_str(de->name);
+	fp->file.filename = mem_alloc_str((char*)de->name);
 
 	switch (opentype) {
 		case FS_OPEN_RD:
@@ -616,7 +575,7 @@ static int tn_open2 (direntry_t * de, openpars_t * pars, int opentype, file_t **
 	}
 
 	if (err == CBM_ERROR_OK) {
-		*outfp = fp;
+		*outfp = (file_t*)fp;
 	} else {
 		close_fd(fp);
 		*outfp = NULL;
@@ -624,23 +583,6 @@ static int tn_open2 (direntry_t * de, openpars_t * pars, int opentype, file_t **
 	return err;
 }
 
-
-static int tn_open(file_t *fp, openpars_t *pars, int type) {
-
-	switch (type) {
-		case FS_OPEN_RD:
-       			return open_file(fp, pars, "rb");
-		case FS_OPEN_WR:
-		case FS_OPEN_OW:
-       			return open_file(fp, pars, "wb");
-		case FS_OPEN_AP:
-       			return open_file(fp, pars, "ab");
-		case FS_OPEN_RW:
-       			return open_file(fp, pars, "rwb");
-		default:
-			return CBM_ERROR_FAULT;
-	}
-}
 
 static file_t *tnp_root(endpoint_t *ep) {
 	tn_endpoint_t *tep = (tn_endpoint_t*) ep;
@@ -737,12 +679,9 @@ static void tnp_dump(int indent) {
 static handler_t tcp_file_handler = {
         "tcp_file_handler",
         tn_resolve2,            // resolve2
-        NULL,                   // resolve
 	NULL,			// wrap
-        tn_close,               // close
 	NULL,			// fclose
 	tn_declose,		// declose
-        tn_open,                // open
         tn_open2,              	// open2
         handler_parent,         // default parent() implementation
         NULL,			// fs_seek,                // seek
@@ -750,18 +689,13 @@ static handler_t tcp_file_handler = {
         write_file,              // writefile
         NULL,                   // truncate
         tn_direntry2,           // direntry2
-        tn_direntry,            // direntry
         NULL,			// fs_create,              // create
 	NULL,			// fs_flush,               // flush data out to disk
 	NULL,			// fs_equals,              // check if two files (e.g. d64 files are the same)
-        NULL,			// fs_realsize,            // real size of file (same as file->filesize here)
         NULL,			// fs_realsize2,            // real size of file (same as file->filesize here)
-        NULL,			// fs_delete,              // delete file
         NULL,			// fs_delete2,              // delete file
         NULL,			// fs_mkdir,               // create a directory
-        NULL,			// fs_rmdir,               // remove a directory
         NULL,			// fs_rmdir2,               // remove a directory
-        NULL,			// fs_move,                // move a file or directory
         NULL,			// fs_move2,                // move a file or directory
         tn_dump_file            // dump file
 };

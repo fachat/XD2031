@@ -46,6 +46,8 @@ extern void printusage(int isoptions);
 
 
 static err_t cmdusage(int flag, void* extra) {
+	(void) flag;
+
 	if ((*(int*)extra) > 0) {
 		// command line parsing; E_ABORT results in extra printusage(1) from main()
 		return E_ABORT;
@@ -180,7 +182,7 @@ static err_t cmdline_parse_long(char *name, cmdline_t **opt, char **val, int *fl
 	err_t rv = E_OK;
 	*val = NULL;
 	*flag = 1;
-	char *end = index(name, '=');
+	char *end = strchr(name, '=');
 	if (end != NULL) {
 		(*val) = end + 1;
 		end[0] = 0;
@@ -245,7 +247,7 @@ static err_t eval_opt(cmdline_t *opt, char *val, int flag, int phase, int endone
 	err_t rv = CBM_ERROR_OK;
 	
 	int xphase = endonerr ? -phase : phase;
-	void *extra = (opt && opt->extra_param) ? opt->extra_param : xphase;
+	void *extra = (opt && opt->extra_param) ? opt->extra_param : &xphase;
  
 	param_enum_t *values = NULL;
 	if (opt != NULL && opt->phase & phase) {

@@ -45,17 +45,21 @@
 // to determine the various internal switches.
 
 #if !defined(_WIN32)
+
+#ifndef __USE_POSIX
 #define	__USE_POSIX
+#endif
+
 #define __USE_XOPEN		/* SuSE Linux stdlib.h fsync() */
 #define _XOPEN_SOURCE	600	/* XOPEN source version level - features.h included in netdb.h needs this */
 #define _XOPEN_SOURCE_EXTENDED
-#define __USE_XOPEN_EXTENDED
+#define __USE_XOPEN_EXTENDED 
+#include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <limits.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/socket.h>

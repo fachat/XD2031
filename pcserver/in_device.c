@@ -178,7 +178,6 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 	unsigned int len;
 	char retbuf[RET_BUFFER_SIZE];
 	int rv;
-	char *name2;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -230,11 +229,7 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 
 	int readflag = 0;
 	int sendreply = 1;
-	const char *name = buf+FSP_DATA+1;
-	int drive = buf[FSP_DATA]&255;
 	int outlen = 0;
-	int namelen = len - FSP_DATA;
-
 
 	// dispatch to the correct cmd_* routine.
 	// may someday be replaced by an array lookup when the routine calls have been unified...

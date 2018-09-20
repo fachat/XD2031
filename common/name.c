@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <strings.h>
 #include <inttypes.h>
 
 #include "name.h"
@@ -200,6 +201,9 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
 
 
 static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t *result) {
+
+	(void) len;
+
 	uint8_t *p;
 
 	if (load && *filename == '$') { // load directory e.g. '$' '$:' '$d' '$d:' ...
@@ -446,25 +450,25 @@ static cbm_errno_t filename_from_packet(uint8_t *src, uint8_t *len, drive_and_na
 	name->name = NULL;
 	name->drive = *src++;
 
-	p += strnlen(src, l-p);
+	p += strnlen((char*)src, l-p);
 	if(p >= l) {
 		// no terminating zero within buffer
 		return CBM_ERROR_FAULT;
 	}
 
 	if (name->drive == NAMEINFO_UNDEF_DRIVE) {
-		char *cp = strchr(src, ':');
+		char *cp = strchr((char*)src, ':');
 		if (cp) {
 			*cp = 0;
 			name->drivename = src;
 			// after the inserted zero
 			cp++;
-			src = cp;
+			src = (uint8_t*)cp;
 		}
 	}
 
 	name->name = src;
-	name->namelen = strlen(name->name);
+	name->namelen = strlen((char*)name->name);
 
 	// points to the byte after the terminating zero
 	*len = p+1;
@@ -493,7 +497,7 @@ cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, 
 	}
 
 	// parse options
-	l = strnlen(src, len);
+	l = strnlen((char*)src, len);
 	if (l >= len) {
 		return CBM_ERROR_FAULT;
 	}

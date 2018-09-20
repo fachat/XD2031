@@ -105,7 +105,7 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 	nameinfo_t ninfo;
 	nameinfo_init(&ninfo);
 
-	parse_cmd_pars(name, strlen(name), CMD_ASSIGN, &ninfo);
+	parse_cmd_pars(name, strlen((char*)name), CMD_ASSIGN, &ninfo);
 	if (ninfo.cmd != CMD_ASSIGN) {
 		err = CBM_ERROR_SYNTAX_NONAME;
 	} else
@@ -174,11 +174,11 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 		log_debug("Assigning from server: %d:%s=%s\n", names[0].drive, names[0].name, names[1].name);
 
 		int drive = names[0].drive;
-		const char *provider_name = names[1].drivename;
-		char *provider_parameter = names[1].name;
+		uint8_t *provider_name = names[1].drivename;
+		uint8_t *provider_parameter = names[1].name;
 		
 		// check trailing '/' on provider parameter
-		int l = strlen(provider_parameter);
+		int l = strlen((char*)provider_parameter);
 		if (l > 0 && provider_parameter[l-1] == '/') {
 			provider_parameter[l-1] = 0;
 		}
@@ -442,7 +442,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		}
 		if (names[i].drive == NAMEINFO_UNDEF_DRIVE
 			&& names[0].drive == NAMEINFO_UNDEF_DRIVE
-			&& strcmp(names[0].drivename, names[i].drivename)) {
+			&& strcmp((char*)names[0].drivename, (char*)names[i].drivename)) {
 			// ok, drive reused (named)
 			continue;
 		}
@@ -462,7 +462,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		fp = ep->ptype->root(ep);
 
 		// determine name
-		const char **n = &names[0].name;
+		const char **n = (const char**) &names[0].name;
 		const char *nn = "*";
 		if (strlen(*n) == 0) {
 			n = &nn;
@@ -471,10 +471,10 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		if (rv == 0) {
 			fp->searchdrive = driveno;
 			for (int i = 0; i < num_files; i++) {
-				if (names[i].name && strlen(names[i].name) == 0) {
+				if (names[i].name && strlen((char*)names[i].name) == 0) {
 					fp->searchpattern[i] = mem_alloc_str("*");
 				} else {
-					fp->searchpattern[i] = mem_alloc_str(names[i].name);
+					fp->searchpattern[i] = mem_alloc_str((char*)names[i].name);
 				}
 			}
 			fp->numpattern = num_files;
@@ -596,7 +596,6 @@ static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, 
 int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	int outdeleted = 0;
 
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
@@ -640,11 +639,14 @@ int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 
 int cmd_chdir(const char *inname, int namelen, charset_t cset) {
 
+	(void) namelen;
+	(void) cset;
+
 	int rv = CBM_ERROR_FAULT;
 
 	log_info("CHDIR(%s)\n", inname);
 
-	rv = provider_chdir(inname, namelen, cset);
+	//rv = provider_chdir(inname, namelen, cset);
 
 	return rv;
 }
@@ -662,7 +664,6 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
 	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
-	int outln = 0;
 
 	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
@@ -700,7 +701,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 				if (rv == CBM_ERROR_OK) {
 
 				    if (dirent->handler->move2) {
-					rv = dirent->handler->move2(dirent, trgdir, names[0].name, cset);
+					rv = dirent->handler->move2(dirent, trgdir, (const char*) names[0].name, cset);
 				    } else {
 					rv = CBM_ERROR_FAULT;
 				    }
@@ -792,11 +793,11 @@ static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
 
 	    // find the target directory	
 	    srcdir = srcep->ptype->root(srcep);
-	    rv = resolve_dir(&name->name, cset, &srcdir);
+	    rv = resolve_dir((const char**)&name->name, cset, &srcdir);
 
 	    if (rv == CBM_ERROR_OK) {
 			
-		rv = resolve_open(srcdir, name->name, cset, &pars, FS_OPEN_RD, &fromfile);
+		rv = resolve_open(srcdir, (const char*)name->name, cset, &pars, FS_OPEN_RD, &fromfile);
 
 		if (rv == CBM_ERROR_OK) {
 			// read file is open, can do the copy
@@ -845,7 +846,6 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
 	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
-	int outln = 0;
 
 	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
@@ -866,7 +866,7 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
 		if (rv == CBM_ERROR_OK) {
 			
-		    rv = resolve_open(trgdir, names[0].name, cset, &pars, FS_OPEN_WR, &fp);
+		    rv = resolve_open(trgdir, (const char*) names[0].name, cset, &pars, FS_OPEN_WR, &fp);
 
 		    if (rv == CBM_ERROR_OK) {
 
@@ -971,7 +971,7 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 
-	nameinfo_init(&name);
+	drive_and_name_init(&name);
 
 	// not file-related, so no file descriptor (tfd)
 	// we only support mapped drives (thus name is NULL)
@@ -1024,7 +1024,7 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 			return CBM_ERROR_SYNTAX_INVAL;
 		}
 		if (names[1].name == NULL
-			|| strlen(names[1].name) > 2) {
+			|| strlen((char*)names[1].name) > 2) {
 			return CBM_ERROR_SYNTAX_INVAL;
 		}
 	}
@@ -1034,7 +1034,7 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 	if (rv == CBM_ERROR_OK && ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->format != NULL) {
-			rv = prov->format(ep, names[0].name, num_files == 2 ? names[1].name : NULL);
+			rv = prov->format(ep, (char*)names[0].name, num_files == 2 ? (char*)names[1].name : NULL);
 		}
 	}
 	return rv;

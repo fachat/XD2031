@@ -27,6 +27,7 @@
 
 
 #include <stdbool.h>
+#include <ctype.h>
 
 #include "mem.h"
 #include "log.h"
@@ -36,6 +37,7 @@
 #include "resolver.h"
 #include "wireformat.h"
 #include "endpoints.h"
+#include "handler.h"
 
 
 static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
@@ -73,7 +75,7 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
 
 	if (dname->drive == NAMEINFO_UNDEF_DRIVE) {
 		if (dname->drivename != NULL 
-			&& strlen(dname->drivename) == 1
+			&& strlen((char*)dname->drivename) == 1
 			&& isdigit(dname->drivename[0])) {
 			dname->drive = dname->drivename[0] & 0x0f;
 		}
