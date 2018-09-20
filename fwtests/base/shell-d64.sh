@@ -32,7 +32,7 @@ COMPAREFILES="base.d64 shell.d80"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=shell.d80/inner.d64"
+SERVEROPTS="-v -A0:=fs:shell.d80/inner.d64"
 
 #firmware options
 #FWOPTS=""
