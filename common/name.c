@@ -231,9 +231,16 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 		switch(*p) {
 		// file type options
 		case 'L':
+			if (p[1] != ',') {
+				result->cmd = CMD_SYNTAX;
+				return;
+			}
 			// CBM is single byte format, but we "integrate" the closing null-byte
 			// to allow two byte record lengths
-			result->pars.recordlen = p[1] + (p[2] << 8);
+			result->pars.recordlen = p[2];
+			if (result->pars.recordlen != 0) {
+				result->pars.recordlen += (p[3] << 8);
+			}
 			// falls through
 		case 'P':
 			// falls through
@@ -311,8 +318,10 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 	// (because we may need to insert bytes at some places, which would
 	// be difficult)
 	// Note that assembling takes place in assemble_filename_packet below.
-	uint8_t diff = inlen - len;
+	// In that process make sure we end with a null byte.
+	uint8_t diff = inlen - len - 1;
 	memmove(in + diff, in, len);
+	in[diff+len] = 0;
 
 	// runtime vars (uint e.g. to avoid sign extension on REL file record len)
 	uint8_t *p = in + diff;
