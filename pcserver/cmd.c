@@ -447,7 +447,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
 		return CBM_ERROR_SYNTAX_PATTERN;
 	}
 
-	log_info("Open directory for drive: %d(%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
+	log_info("Open directory for drive: %d (%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
 
         if (rv == CBM_ERROR_OK) {
             // TODO: default endpoint? 

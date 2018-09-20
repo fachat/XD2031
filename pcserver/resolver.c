@@ -146,7 +146,7 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 		if (dir->handler->resolve2) {
 			rv = dir->handler->resolve2(pattern, cset, &dir);
 		} else {
-			if (strlen(pattern) == 0 || strchr(pattern, '/') == NULL) {
+			if (strlen(*pattern) == 0 || strchr(*pattern, '/') == NULL) {
 				rv = CBM_ERROR_FILE_EXISTS;
 			} else {
 				rv = CBM_ERROR_DIR_NOT_FOUND;

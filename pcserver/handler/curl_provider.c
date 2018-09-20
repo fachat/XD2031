@@ -429,6 +429,7 @@ static void close_fd(curl_file *fp) {
 	}
 
 	mem_free(fp->file.filename);
+	mem_free(fp->path);
 	mem_free(fp);
 }
 
@@ -926,7 +927,7 @@ static int open_file(file_t *file, openpars_t *pars, int type) {
 			"/",
 			cep->path_buffer);
 
-		cep->name_buffer = add_parent_path(cep->name_buffer, (file_t*)fp);
+		mem_append_str2(&cep->name_buffer, "/", fp->path);
 
 		if (type == FS_OPEN_DR) {
 			// end with a slash "/" to indicate a dir list
@@ -1112,7 +1113,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 		//
 		// NLST is the "name list" without other data
 		char *cmd = NULL;
-		mem_append_str2(&cmd, "NLST ", file->filename);
+		mem_append_str2(&cmd, "NLST ", "" /*file->filename*/);
 		// custom FTP command to make info more grokable
 		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, cmd);
 		mem_free(cmd);
@@ -1223,6 +1224,14 @@ static int curl_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **o
 
 	curl_file *cfp = reserve_file(dirent->parent->endpoint);
 	cfp->file.filename = mem_alloc_str(dirent->name);
+
+	const char *p = ((curl_file*)dirent->parent)->path;
+	if (p) {
+		cfp->path = p;
+		mem_append_str2(&cfp->path, "/", dirent->name);
+	} else {
+		cfp->path = mem_alloc_str(dirent->name);
+	}
 
         switch (type) {
                 case FS_OPEN_RD:
