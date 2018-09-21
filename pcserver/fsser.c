@@ -36,16 +36,6 @@
 
 #include "os.h"
 
-/*
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <stdbool.h>
-*/
-
 #include <stdbool.h>
 
 #include "charconvert.h"
@@ -137,8 +127,8 @@ static cmdline_t main_options[] = {
 	{ "tools",	"T",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &tsocket_name,
 		"Set name of tools socket to use instead of ~/.xdtools", NULL },
 #endif
-        { "wildcards", 	"w",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
-		"Use advanced wildcards", NULL },
+//        { "wildcards", 	"w",	CMDL_PARAM,	PARTYPE_FLAG,   NULL, cmdline_set_flag, &advanced_wildcards,
+//		"Use advanced wildcards", NULL },
         { "assign", 	"A",	CMDL_CMD,	PARTYPE_PARAM,  main_assign, NULL, NULL,
 		"Assign a provider to a drive\n"
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"

@@ -412,7 +412,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 	return parentep;
 }
 
-static endpoint_t *fsp_temp2(const char **path, charset_t cset, int privileged) {
+static endpoint_t *fsp_temp2(char **path, charset_t cset, int privileged) {
 
 	(void) cset;
 
@@ -918,53 +918,6 @@ static size_t file_get_size(FILE *fp) {
 	return fdstat.st_size;
 }
 
-// read directory
-//
-// Note: there is a race condition, as we do not save the current directory path
-// on directory open, so if it is changed "in the middle" of the operation,
-// we run into trouble here. Hope noone will do that...
-//
-// returns the number of bytes read (>= 0), or a negative error number
-//
-#if 0
-static int read_dir(File *f, char *retbuf, int len, charset_t outcset, int *readflag) {
-
-	int rv = CBM_ERROR_OK;
-	log_entry("fs_provider.read_dir");
-
-	const char *outpattern;
-	file_t *entry = NULL;
-
-	rv = -f->file.handler->direntry((file_t*)f, &entry, 0, readflag, &outpattern, outcset);
-
-	log_debug("read_dir: process entry %p (parent=%p) for %s\n", entry, 
-		(entry == NULL)?NULL:entry->parent,
-		(entry == NULL)?"-":entry->filename);
-
-	if (rv == CBM_ERROR_OK && entry != NULL) {
-
-		if (entry->mode == FS_DIR_MOD_NAM) {
-			// TODO: drive number
-			rv = dir_fill_header(retbuf, 0, entry->filename);
-		} else {
-			// replace unknown type with PRG
-			if (entry->type == FS_DIR_TYPE_UNKNOWN) {
-				entry->type = FS_DIR_TYPE_PRG;
-			}
-			rv = dir_fill_entry_from_file(retbuf, entry, len);
-		}
-/*
-		provider_convfrom(entry->endpoint->ptype)(retbuf + FS_DIR_NAME, len - FS_DIR_NAME,
-				retbuf + FS_DIR_NAME, len - FS_DIR_NAME);
-*/
-		// just close the entry
-		entry->handler->fclose(entry, NULL, NULL);
-	}
-
-	log_exitr(rv);
-	return rv;
-}
-#endif
 
 /**
  * return a malloc'd string with the full path of the file,

@@ -38,37 +38,6 @@
 #define min(a,b)        (((a)<(b))?(a):(b))
 #endif
 
-int advanced_wildcards = false;
-
-
-/**
- * fill the buffer with a header entry, using the driveno as line number
- * and dirpattern as file name
- *
- * returns the length of the buffer
- */
-int dir_fill_header(char *dest, int driveno, const char *dirpattern) {
-        dest[FS_DIR_LEN+0] = driveno & 255;
-        dest[FS_DIR_LEN+1] = 0;
-        dest[FS_DIR_LEN+2] = 0;
-        dest[FS_DIR_LEN+3] = 0;
-        // don't set date for now
-        dest[FS_DIR_MODE]  = FS_DIR_MOD_NAM;
-	if (*dirpattern == 0) {
-		// no pattern given
-	        // simple default
-	        strncpy(dest+FS_DIR_NAME, ".               ", 16);
-	} else {
-		strncpy(dest+FS_DIR_NAME, dirpattern, 16);
-		int l = strlen(dest+FS_DIR_NAME);
-		// fill up with spaces
-		while (l < 16) (dest+FS_DIR_NAME)[l++] = ' ';
-	}
-        dest[FS_DIR_NAME + 16] = 0;
-	return FS_DIR_NAME + 17;
-}
-
-
 /**
  * fill in the buffer with a directory entry from a direntry_t struct
  */

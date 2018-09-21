@@ -904,122 +904,6 @@ static int open_rd(curl_file_t *file, openpars_t *pars, int type) {
 	return rv;
 }
 
-/**
- * converts the list of file names from an FTP NLST command
- * to a wireformat dir entry.
- *
- * Because of the FS_DIR_* macros used here, the wireformat.h include
- * is required, which I would like to have avoided...
- */
-int dir_nlst_read_converter(struct curl_endpoint_t *cep, curl_file_t *fp, char *retbuf, int len, int *readflag) {
-
-	if (len < FS_DIR_NAME + 1) {
-		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
-				len, FS_DIR_NAME+1);
-		return -CBM_ERROR_FAULT;
-	}
-
-	// prepare dir entry
-	memset(retbuf, 0, FS_DIR_NAME+1);	
-
-	*readflag = READFLAG_DENTRY;
-
-	int eof = 0;	
-	int l = 0;
-	char *namep = retbuf + FS_DIR_NAME;
-	switch(fp->read_state) {
-	case 0:		// disk name
-		l = dir_fill_header(retbuf, 0, cep->path_buffer);
-		fp->read_state++;
-		break;
-	case 1:
-		// file names
-#ifdef DEBUG_CURL
-		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
-			fp->rdbufdatalen, fp->bufrp, *readflag);
-#endif
-
-		l = FS_DIR_NAME;
-		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FIL;
-		do {
-			while ((fp->rdbufdatalen <= fp->bufrp) && (eof == 0)) {
-
-				//log_debug("Trying to pull...\n");
-
-				CURLMcode rv = pull_data((curl_endpoint_t*)cep, fp, &eof);
-
-				if (rv != CURLM_OK) {
-					log_error("Error retrieving directory data (%d)\n", rv);
-					return -CBM_ERROR_DIR_ERROR;
-				}
-			}
-			// find length of name
-			
-			while (fp->bufrp < fp->rdbufdatalen) {
-				char c = fp->rdbuffer[fp->bufrp];
-				fp->bufrp ++;
-				if (c == 13) {
-					// ignore
-				} else
-				if (c != 10) {
-					*namep = c;
-					namep++;
-					l++;
-				} else {
-					// end of name
-					*namep = 0;
-					l++;
-#ifdef DEBUG_CURL
-					log_debug("bufrp=%d, datalen=%d\n", fp->bufrp, fp->rdbufdatalen);
-#endif
-					break;
-				}
-				if ((l + 2) >= len) {
-					log_error("read buffer too small for dir name (is %d, need at least %d, concatenating)\n",
-						len, l+2);
-					*namep = 0;
-					l++;
-					break;
-				}
-			}
-
-
-			if (eof != 0) {
-				log_debug("end of dir read\n");
-				fp->read_state++;
-				*namep = 0;
-			}
-		}
-		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
-		eof = 0;
-		if (l > FS_DIR_NAME) {
-			// Check if filename has a known extension, e.g. PRG USR SEQ
-			// Default to PRG for files that have no extension
-			// Default to SEQ to prevent LOADing unknown extensions
-			retbuf[FS_DIR_ATTR] |= extension_to_filetype(retbuf + FS_DIR_NAME,
-					FS_DIR_TYPE_PRG, FS_DIR_TYPE_SEQ);
-			break;
-		}
-		// falls through
-	case 2:
-		log_debug("final dir entry\n");
-		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FRE;
-		retbuf[FS_DIR_NAME] = 0;
-		l = FS_DIR_NAME + 1;
-		*readflag |= READFLAG_EOF;
-		fp->read_state++;
-		break;
-	}
-#ifdef DEBUG_CURL
-	printf("Got some dir data : datalen=%d\n", l);
-        for (int i = 0; i < FS_DIR_NAME; i++) {
-	        printf("%02x ", retbuf[i]);
-        }
-        printf(": %s\n", retbuf+FS_DIR_NAME);
-#endif
-	return l;
-}
-
 
 static int open_dr(curl_file_t *file, openpars_t *pars) {
 
@@ -1029,8 +913,6 @@ static int open_dr(curl_file_t *file, openpars_t *pars) {
 	int rv = open_file(fp, pars, FS_OPEN_DR);
 	if (rv == CBM_ERROR_OK) {
 
-		fp->read_converter = &dir_nlst_read_converter;	// do DIR conversion
-	
 		// set for receiving
 		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
 
