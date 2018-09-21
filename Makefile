@@ -33,7 +33,7 @@ clean:
 install:
 	make -C pcserver install
 	make -C imgtool install
-	#make -C cmds install
+	make -C cmds install
 
 uninstall:
 	make -C pcserver uninstall

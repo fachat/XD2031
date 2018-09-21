@@ -15,7 +15,7 @@ FIRMWARE=${BASEDIR}/firmware/${THISBINDIR}/${BINNAME}
 
 RUNNER="$THISDIR"/../../testrunner/fwrunner
 
-SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+SERVER="$THISDIR"/${BASEDIR}/pcserver/xdserver
 
 # make sure we have a firmware
 #(cd ${BASEDIR}/firmware; DEVICE=sockserv make)

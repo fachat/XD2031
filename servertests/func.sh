@@ -4,7 +4,7 @@ BASEDIR="../.."
 
 RUNNER="$THISDIR"/${BASEDIR}/testrunner/pcrunner
 
-SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+SERVER="$THISDIR"/${BASEDIR}/pcserver/xdserver
 
 #(cd ${BASEDIR}/testrunner; make pcrunner)
 
