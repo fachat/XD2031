@@ -33,6 +33,36 @@
 
 #if DEBUG
 
+
+void debug_putc(char c) {
+        term_putc(c);
+}
+
+void debug_putcrlf() {
+        term_putcrlf();
+        term_flush();
+}
+
+static char hexnibs[] =
+    { '0', '1', '2', '3', '4', '5', '6', '7', 
+        '8', '9', 'a', 'b', 'c', 'd',
+        'e', 'f'
+};
+
+
+ 
+void debug_putnib(char c)
+{
+        debug_putc(hexnibs[c & 15]);
+} 
+
+void debug_puthex(char c)
+{
+        debug_putnib(c >> 4);
+        debug_putnib(c);
+} 
+ 
+
 // This string is intentionally not in FLASH space on AVR
 const char nullstring[7] = "<NULL>";
 

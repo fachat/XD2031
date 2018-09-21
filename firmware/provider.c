@@ -97,11 +97,11 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 		uint8_t drv = assign_to[0] & 0x0f;
 		endpoint_t *ep = provider_lookup(drv, NULL);
 		if (ep == NULL) {
-			debug_printf("Drive %d not used, cannot do relative assign!\n", drv);
+			//debug_printf("Drive %d not used, cannot do relative assign!\n", drv);
 			return -1;
 		}
 		if (ep == &default_provider) {
-			debug_puts("Default is not registered, forwarding to server\n");
+			//debug_puts("Default is not registered, forwarding to server\n");
 			return -1;
 		}
 		newprov = ep->provider;
@@ -113,10 +113,10 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 	    // now check each provider in turn, if the name fits
 	    for (int8_t i = MAX_PROV-1; i >= 0; i--) {
 		if (provs[i].name != NULL) {
-			debug_printf("Compare with %s\n",provs[i].name);	
+			//debug_printf("Compare with %s\n",provs[i].name);	
 			if (!strcmp(provs[i].name, name)) {
 				// found it
-				debug_printf("Found new provider: %s in slot %d\n", name, i);
+				//debug_printf("Found new provider: %s in slot %d\n", name, i);
 				newprov = provs[i].provider;
 				// new get the runtime data
 				provdata = newprov->prov_assign(drive, assign_to);
@@ -168,7 +168,7 @@ endpoint_t* provider_lookup(uint8_t drive, const char *name) {
 
 	if (drive == NAMEINFO_UNDEF_DRIVE) {
 		if (name == NULL) {
-			debug_puts("ERROR PROVIDER LOOKUP: NAME IS NULL\n");
+			//debug_puts("ERROR PROVIDER LOOKUP: NAME IS NULL\n");
 			return &default_provider;
 		}
 		char *p = strchr(name, ':');
@@ -178,7 +178,7 @@ endpoint_t* provider_lookup(uint8_t drive, const char *name) {
 				if ((strlen(provs[i].name) == l) 
 					&& (strncmp(provs[i].name, name, l) == 0)) {
 					// ok, we got a provider, but not an endpoint yet
-					debug_printf("GOT A PROVIDER FOR NAME=%s\n", name);
+					//debug_printf("GOT A PROVIDER FOR NAME=%s\n", name);
 					// create a temporary provider with NULL endpoint-specific
 					// provdata. The provider must, in such cases, interpret
 					// a command or open filename as if containing the provdata

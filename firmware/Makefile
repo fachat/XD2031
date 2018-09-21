@@ -90,6 +90,8 @@ ifneq ($(V),1)
 CFLAGS+=-Wno-unused-parameter
 endif
 
+#LIBS+=-nodefaultlibs -lm -lgcc -lc -lgcc
+
 ASFLAGS=$(MCU_CC) $(sort -I$(ARCH) -I$(DEVICE))
 
 # OBJDIR contains temporary object and dependency files
@@ -142,7 +144,7 @@ $(OBJDIR)%.o: %.S
 # Link object files
 $(TARGET): $(OBJDIR) $(DEPDIR) $(THISBINDIR) $(OBJ)
 	$(V2) LD $(notdir $@)
-	$(V1) $(LD) -o $@ $(LDFLAGS) $(OBJ)
+	$(V1) $(LD) -o $@ $(LDFLAGS) $(OBJ) $(LIBS)
 
 # Make sure, the arch/Makefile has properly set a MCU switch
 MCU_CC?=$(error Undefined or unsupported MCU $(MCU))
