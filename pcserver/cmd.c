@@ -105,41 +105,6 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 
 	mem_free(name);
 	return err;
-#if 0
-	int drive = -1;
-	const char *provider_name = NULL;
-	char *provider_parameter = NULL;
-		
-	char *c = strchr(inname, ':');
-	if (c == NULL) {
-		return CBM_ERROR_FAULT;
-	}
-	// zero-terminate
-	*c = 0;
-	c++;
-	
-	drive = strtol(inname, NULL, 10);
-	
-	provider_name = c;
-
-	char *e = strchr(c, '=');
-	if (e == NULL) {
-		return CBM_ERROR_FAULT;
-	}
-	
-	*e = 0;
-	e++;
-
-	provider_parameter = e;
-
-	drive_and_name_t dnt;
-	drive_and_name_init(&dnt);
-	dnt.drive = NAMEINFO_UNDEF_DRIVE;
-	dnt.drivename = provider_name;
-	dnt.name = provider_parameter;
-
-	return provider_assign(drive, &dnt, cset, true);
-#endif	
 }
 
 int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
@@ -155,11 +120,12 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 
 	    if (num_files == 2) {
 
-		log_debug("Assigning from server: %d:%s=%s\n", names[0].drive, names[0].name, names[1].name);
 
 		int drive = names[0].drive;
 		uint8_t *provider_name = names[1].drivename;
 		uint8_t *provider_parameter = names[1].name;
+
+		log_debug("Assigning from server: %d:=%s(%d):%s\n", drive, provider_name, names[1].drive, provider_parameter);
 		
 		// check trailing '/' on provider parameter
 		int l = strlen((char*)provider_parameter);
@@ -168,11 +134,12 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 		}
 
 		log_debug("cmdline_assign '%s' = '%s'\n", provider_name, provider_parameter);
-	drive_and_name_t dnt;
-	drive_and_name_init(&dnt);
-	dnt.drive = NAMEINFO_UNDEF_DRIVE;
-	dnt.drivename = provider_name;
-	dnt.name = provider_parameter;
+
+		drive_and_name_t dnt;
+		drive_and_name_init(&dnt);
+		dnt.drive = NAMEINFO_UNDEF_DRIVE;
+		dnt.drivename = provider_name;
+		dnt.name = provider_parameter;
 
 		rv = provider_assign(drive, &dnt, cset, false);
 	    } else {

@@ -83,7 +83,7 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
         if (dname->drive == NAMEINFO_UNDEF_DRIVE) {
                 if (dname->drivename == NULL || dname->drivename[0] == 0) {
                         // no name specified, so return NULL (no provider found)
-                        return CBM_ERROR_OK;
+                        return CBM_ERROR_DRIVE_NOT_READY;
                 }
                 // the drive is not specified by number, but by provider name
 		// TODO: charset-aware strchr, only works for provider with ASCII names right now
