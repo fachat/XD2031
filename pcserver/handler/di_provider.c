@@ -2787,6 +2787,7 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 
 	//int file_required = false;
 	//int file_must_not_exist = false;
+	int file_must_be_writable = false;
 
 	file->access_mode = 0;
 
@@ -2799,6 +2800,7 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		//file_must_not_exist = true;
 		break;
 	case FS_OPEN_OW:
+		file_must_be_writable = true;
 		break;
 	case FS_OPEN_RW:
 		// we defer the test until after we find the file and check its file type
@@ -2806,10 +2808,15 @@ static int di_open_file(File * file, openpars_t * pars, int di_cmd)
 		//     log_error("Read/Write currently only supported for REL files on disk images\n");
 		//     return CBM_ERROR_FAULT;
 		//}
+		file_must_be_writable = true;
 		break;
 	default:
 		log_error("Internal error: OpenFile with di_cmd %d\n", di_cmd);
 		return CBM_ERROR_FAULT;
+	}
+
+	if (file_must_be_writable && !file->file.writable) {
+		return CBM_ERROR_WRITE_PROTECT;
 	}
 
 	if (filename && *filename == '$' && di_cmd == FS_OPEN_RD) {
@@ -3516,6 +3523,8 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 
 	File *file = di_reserve_file(de->ep);
 	file->Slot = parent->Slot;
+
+	file->file.writable = (de->de.attr & FS_DIR_ATTR_LOCKED) ? 0 : 1;
 
 	if (type == FS_OPEN_DR) {
 		rv = di_open_dir(file);
