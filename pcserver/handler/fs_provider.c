@@ -990,7 +990,15 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
-		dirent->name = (uint8_t*)fp->searchpattern[0];
+		char *hdr = mem_alloc_c(17, "fs direntry header name");
+		strncpy(hdr, fp->searchpattern[0], 16);
+		hdr[16] = 0;
+		int l = strlen(hdr);
+		for (; l < 16; l++) {
+			hdr[l] = 0x20;
+		}
+		
+		dirent->name = (uint8_t*)hdr;
 		dirent->cset = CHARSET_ASCII;
 		dirent->mode = FS_DIR_MOD_NAM;
 
@@ -1655,6 +1663,10 @@ static int fs_fclose(file_t *fp, char *outbuf, int *outlen) {
 static int fs_declose(direntry_t *de) {
 
 	log_debug("fs_declose(%p '%s')\n", de, de->name);
+
+	if (de->mode == FS_DIR_MOD_NAM) {
+		mem_free(de->name);
+	}
 
 	// do nothing, as our direntry is part of the directory's File struct
 	
