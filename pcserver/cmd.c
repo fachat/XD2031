@@ -163,7 +163,6 @@ const char *get_options(const char *name, int len) {
 
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd) {
 
-	log_info("Open file for drive: %d, path='%s'\n", 0xff & *inname, inname+1);
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *fp = NULL;
@@ -174,6 +173,8 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 	int outln = 0;
 
 	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	log_info("Open file for drive: %d(%s), path='%s' -> rv=%d\n", 0xff & names[0].drive, names[0].drivename, names[0].name, rv);
 
 	if (rv == CBM_ERROR_OK) {
 	    // TODO: default endpoint? 
