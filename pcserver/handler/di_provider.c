@@ -4084,11 +4084,12 @@ static int di_img_fclose(file_t *file, char *rvbuf, int *rvlen)
 	(void) rvbuf;
 	(void) rvlen;
 
-	int rv = CBM_ERROR_FAULT;
+	int rv = CBM_ERROR_OK;
 
 	//File *fp = (File*) file;
 
-	// TODO?	
+	mem_free(file->filename);
+	mem_free(file);
 	
 	return rv;
 }
@@ -4109,6 +4110,8 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 	file_t *dirfp = NULL;
 	openpars_t imgpars;
 	openpars_init_options(&imgpars);
+
+	// TODO: write protect handling. parent_de should have writable set, so we can propagate this
 
 	int rv = de->parent_de->handler->open2(de->parent_de, &imgpars, FS_OPEN_RW, &imgfp);
 	if (rv != CBM_ERROR_OK) {
