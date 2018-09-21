@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <strings.h>
 #include <inttypes.h>
 
 #include "name.h"

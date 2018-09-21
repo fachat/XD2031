@@ -24,14 +24,15 @@
 #include <strings.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
 
-#include "hashmap.h"
-#include "array_list.h"
-#include "cmdline.h"
+#include "log.h"
+#include "errors.h"
 #include "err.h"
 #include "mem.h"
-#include "os.h"
-
+#include "array_list.h"
+#include "hashmap.h"
+#include "cmdline.h"
 
 // hash from param name to cmdline_t sruct for quick find
 static hash_t *params = NULL;

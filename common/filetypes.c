@@ -32,7 +32,9 @@
 
 #include <inttypes.h>
 #include <string.h>
+#ifdef SERVER
 #include <strings.h>
+#endif
 
 // TODO: how about DIR ?
 

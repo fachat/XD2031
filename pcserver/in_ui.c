@@ -35,12 +35,10 @@
 
 #include <stdbool.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include "provider.h"
-#include "dir.h"
-#include "list.h"
 #include "cmd.h"
-#include "errors.h"
 #include "cmdline.h"
 
 static int user_interface_enabled = true;

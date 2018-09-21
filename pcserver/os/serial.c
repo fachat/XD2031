@@ -39,6 +39,8 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <sys/dir.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fnmatch.h>
 #include <string.h>
 

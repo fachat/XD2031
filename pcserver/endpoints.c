@@ -24,22 +24,12 @@
 
 ****************************************************************************/
 
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
 
 #include "log.h"
-#include "provider.h"
 #include "errors.h"
-#include "wireformat.h"
-#include "types.h"
-#include "registry.h"
-#include "hashmap.h"
 #include "mem.h"
-#include "handler.h"
+#include "provider.h"
 #include "endpoints.h"
-
-#include "charconvert.h"
 
 
 // -----------------------------------------------------------------

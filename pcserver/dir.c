@@ -26,22 +26,13 @@
 
 #include "os.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <strings.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <time.h>
-#include <errno.h>
 #include <stdbool.h>
+#include <string.h>
+#include <time.h>
 
 #include "provider.h"
-#include "dir.h"
-#include "wildcard.h"
+#include "charconvert.h"
 #include "wireformat.h"
-#include "log.h"
 
 #ifndef min
 #define min(a,b)        (((a)<(b))?(a):(b))

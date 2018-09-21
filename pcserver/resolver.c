@@ -26,19 +26,18 @@
 ****************************************************************************/
 
 
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <inttypes.h>
 
-#include "mem.h"
 #include "log.h"
-#include "errors.h"
-#include "charconvert.h"
 #include "provider.h"
-#include "resolver.h"
-#include "wireformat.h"
 #include "endpoints.h"
 #include "handler.h"
-
 
 static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
 		charset_t outcset, bool isdirscan, direntry_t **outde, int *rdflag);

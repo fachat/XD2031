@@ -33,33 +33,17 @@
 
 #include "os.h"
 
+#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
 #include <unistd.h>
-#include <string.h>
-#include <strings.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <string.h>
 
-#include "charconvert.h"
-#include "wireformat.h"
-#include "list.h"
-#include "cmd.h"
-#include "charconvert.h"
-#include "petscii.h"
 #include "provider.h"
+#include "charconvert.h"
 #include "dir.h"
-#include "handler.h"
-#include "log.h"
-#include "xcmd.h"
 #include "channel.h"
-#include "serial.h"
-#include "handler.h"
-#include "provider.h"
+#include "xcmd.h"
 #include "resolver.h"
-#include "types.h"
 
 #define	MAX_BUFFER_SIZE			64
 

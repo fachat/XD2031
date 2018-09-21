@@ -21,16 +21,14 @@
 
 #include "os.h"
 
-#include <sys/types.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "registry.h"
+#include "provider.h"
 #include "handler.h"
 #include "errors.h"
 #include "log.h"
 #include "mem.h"
-#include "provider.h"
 #include "wireformat.h"
 #include "wildcard.h"
 #include "openpars.h"

@@ -28,14 +28,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifndef __APPLE__
 #include <malloc.h>
 #endif
 
-#include "types.h"
-#include "log.h"
 #include "mem.h"
+#include "log.h"
 
 
 #define	DEBUG_MEM

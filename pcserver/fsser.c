@@ -36,6 +36,7 @@
 
 #include "os.h"
 
+/*
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -43,26 +44,29 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stdbool.h>
+*/
+
+#include <stdbool.h>
 
 #include "charconvert.h"
-#include "in_device.h"
-#include "in_ui.h"
-#include "list.h"
-#include "cmd.h"
-#include "xcmd.h"
-#include "privs.h"
-#include "log.h"
-#include "provider.h"
+#include "types.h"
 #include "mem.h"
 #include "serial.h"
 #ifndef _WIN32
 #  include "socket.h"
 #endif
+#include "cmd.h"
+#include "xcmd.h"
+#include "privs.h"
 #include "terminal.h"
-#include "dir.h"
+#include "in_device.h"
+#include "in_ui.h"
 #include "loop.h"
 #include "cmdline.h"
-#include "array_list.h"
+
+#include "provider.h"
+#include "dir.h"
+
 
 // --------------------------------------------------------------------------------------
 

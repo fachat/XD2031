@@ -20,15 +20,14 @@
 ****************************************************************************/
 
 
-#include <stdio.h>
 #include <string.h>
 
 // controls the log.h definitions
 #undef DEBUG
 
+#include "mem.h"
 #include "log.h"
 #include "array_list.h"
-#include "mem.h"
 
 /*
 

@@ -20,12 +20,10 @@
 ****************************************************************************/
 
 
-#include <stdio.h>
 #include <string.h>
 
-#include "types.h"
-#include "log.h"
 #include "mem.h"
+#include "log.h"
 #include "registry.h"
 
 

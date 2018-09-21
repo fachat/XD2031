@@ -23,10 +23,6 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include <stdio.h>
-
-#include "log.h"
-#include "types.h"
 
 typedef struct _list_type list_type_t;
 
