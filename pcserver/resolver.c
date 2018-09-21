@@ -350,6 +350,10 @@ int resolve_open(file_t *dir,
                                         rv = CBM_ERROR_FILE_NOT_FOUND;
                                         break;
                                 }
+				if (strlen(inname) == 0) {
+					rv = CBM_ERROR_SYNTAX_NONAME;
+					break;
+				}
                                 rv = dir->handler->create(dir, &file, inname, cset, pars, type);
                                 if (rv != CBM_ERROR_OK) {
                                         break;
