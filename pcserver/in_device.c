@@ -47,7 +47,7 @@
 
 #define DEBUG_CMD
 #undef DEBUG_CMD_TERM
-#define DEBUG_READ
+#undef DEBUG_READ
 #undef DEBUG_WRITE
 
 

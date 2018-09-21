@@ -315,11 +315,6 @@ static int close_fd(File *file) {
 		mem_free(file->block);
 		file->block = NULL;
 	}
-#if 0
-	if (recurse && file->file.parent != NULL) {
-		file->file.parent->handler->close(file->file.parent, recurse, NULL, NULL);
-	}
-#endif
 
 	endpoint_t *ep = file->file.endpoint;
 
@@ -532,20 +527,6 @@ static char *safe_dirname (const char *path) {
 	return mem_dirname;
 }
 
-#if 0	// unused
-static char *safe_basename (const char *path) {
-/* a basename that leaves it's parameter unchanged and doesn't
- * overwrite it's result at subsequent calls. Allocates memory
- * that should be free()ed later */
-	char *pathc, *basename_result, *mem_basename;
-
-	pathc = mem_alloc_str(path);
-	basename_result = basename(pathc);
-	mem_basename = mem_alloc_str(basename_result);
-	mem_free(pathc);
-	return mem_basename;
-}
-#endif
 
 static int path_under_base(const char *path, const char *base) {
 /*

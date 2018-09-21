@@ -210,44 +210,6 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char
 
 	*outlen = outln;
 	return rv;
-#if 0	
-	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	const char *name = NULL;
-	file_t *fp = NULL;
-	int outln = 0;
-
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		provider_t *prov = (provider_t*) ep->ptype;
-		//provider_convto(prov)(name, convlen, name, convlen);
-		const char *options = get_options(inname + 1, namelen - 1);
-		log_info("OPEN %d (%d->%s:%s,%s)\n", cmd, tfd,
-			prov->name, name, options);
-		rv = handler_resolve_file(ep, &fp, name, cset, options, cmd);
-		if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
-			int record = fp->recordlen;
-			outbuf[0] = record & 0xff;
-			outbuf[1] = (record >> 8) & 0xff;
-			outln = 2;
-			rv = CBM_ERROR_OPEN_REL;
-		}
-		if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-			fp->openmode = cmd;
-			channel_set(tfd, fp);
-		} else {
-			if (fp != NULL) {
-				fp->handler->close(fp, 1, outbuf, &outln);
-				fp = NULL;
-			}
-			log_rv(rv);
-		}
-		// cleanup when not needed anymore
-		provider_cleanup(ep);
-		mem_free(name);
-	}
-	*outlen = outln;
-	return rv;
-#endif
 }
 
 // ----------------------------------------------------------------------------------
@@ -567,23 +529,6 @@ int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 	    	}
 	}
 	return rv;
-#if 0
-	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	file_t *newdir = NULL;
-	const char *name = NULL;
-
-	(void) namelen;	// silence unused warning
-
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		log_info("MKDIR(%s)\n", name);
-		rv = handler_resolve_file(ep, &newdir, name, cset, NULL, FS_MKDIR);
-
-		provider_cleanup(ep);
-		mem_free(name);
-	}
-	return rv;
-#endif
 }
 
 // ----------------------------------------------------------------------------------
@@ -671,58 +616,6 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 	    }
 	}
 	return rv;
-
-#if 0
-	int err = CBM_ERROR_DRIVE_NOT_READY;
-
-	int todrive = inname[0];
-	const char *fromname = NULL;
-	const char *toname = NULL;
-	endpoint_t *epto = provider_lookup(inname, namelen, cset, &toname, NAMEINFO_UNDEF_DRIVE);
-	if (epto != NULL) {
-		const char *name2 = strchr(inname+1, 0);	// points to null byte after name
-		name2++;					// first byte of second name
-		endpoint_t *epfrom = provider_lookup(name2, namelen, cset, &fromname, todrive);
-
-		if (epfrom != NULL) {
-			file_t *fromfile = NULL;
-			
-			err = handler_resolve_file(epfrom, &fromfile, fromname, cset, NULL, FS_MOVE);
-			
-			if (err == CBM_ERROR_OK) {
-				file_t *todir = NULL;
-				const char *topattern = NULL;
-	
-				err = handler_resolve_dir(epto, &todir, toname, cset, &topattern, NULL);
-
-				if (err == CBM_ERROR_OK && todir != NULL) {
-
-					// TODO check if that is really working (with those temp provs...)
-					if (fromfile->endpoint == todir->endpoint) {
-						// we can just forward it to the provider proper
-
-						if (fromfile->handler->move != NULL) {
-							err = fromfile->handler->move(fromfile, todir, topattern, cset);
-						} else {
-							// e.g. x00 does not support it now
-							log_warn("File type spec not supported\n");
-							err = CBM_ERROR_DRIVE_NOT_READY;
-						}	
-					} else {
-						// TODO some kind of copy/remove stuff...
-						log_warn("Drive spec combination not supported\n");
-						err = CBM_ERROR_DRIVE_NOT_READY;
-					}
-					todir->handler->close(todir, 1, NULL, NULL);
-				}
-				fromfile->handler->close(fromfile, 1, NULL, NULL);
-			}
-			provider_cleanup(epfrom);
-		}
-		provider_cleanup(epto);
-	}
-	return err;
-#endif
 }
 
 // ----------------------------------------------------------------------------------
@@ -840,76 +733,6 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 	
 	return rv;
 }
-
-#if 0
-	int err = CBM_ERROR_DRIVE_NOT_READY;
-
-	int todrive = inname[0];
-	const char *fromname = NULL;
-	const char *toname = NULL;
-	const char *p = inname+1;
-	endpoint_t *epto = provider_lookup(inname, namelen, cset, &toname, NAMEINFO_UNDEF_DRIVE);
-	if (epto != NULL) {
-		file_t *tofile = NULL;
-		err = handler_resolve_file(epto, &tofile, toname, cset, NULL, FS_OPEN_WR);
-		if (err == CBM_ERROR_OK) {
-			// file is opened for writing...
-			// now iterate over the source files
-
-			file_t *fromfile = NULL;
-
-			// find next name
-			fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
-			int thislen = namelen - (fromname - inname);
-			while ((err == CBM_ERROR_OK) && (thislen > 0)) {
-				p = fromname + 1;
-				endpoint_t *fromep = provider_lookup(fromname, thislen, cset, &fromname, todrive);
-				if (fromep != NULL) {
-					err = handler_resolve_file(fromep, &fromfile, fromname, cset,
-										NULL, FS_OPEN_RD);
-					if (err == CBM_ERROR_OK) {
-						// read file is open, can do the copy
-						char buffer[8192];
-						int readflag = 0;
-						int rlen = 0;
-						int wlen = 0;
-						int nwritten = 0;
-
-						do {
-							rlen = fromfile->handler->readfile(fromfile, 
-									buffer, 8192, &readflag, cset);
-							if (rlen < 0) {
-								err = -rlen;
-								break;
-							}
-							nwritten = 0;
-							while (rlen > nwritten) {
-								wlen = tofile->handler->writefile(tofile,
-									buffer + nwritten, rlen - nwritten, 
-									readflag & READFLAG_EOF);
-								if (wlen < 0) {
-									err = -wlen;
-									break;
-								}
-								nwritten += wlen;
-							}
-						} while ((err == CBM_ERROR_OK) 
-								&& ((readflag & READFLAG_EOF) == 0));	
-						
-						fromfile->handler->close(fromfile, 1, NULL, NULL);
-					}
-					provider_cleanup(fromep);
-				}
-				fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
-				thislen = namelen - (fromname - inname);
-			}				
-			tofile->handler->close(tofile, 1, NULL, NULL);
-		}
-		provider_cleanup(epto);
-	}
-	return err;
-}
-#endif
 
 // ----------------------------------------------------------------------------------
 

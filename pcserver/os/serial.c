@@ -277,25 +277,4 @@ int device_still_present(void) {
 }
 #endif
 
-#if 0
-int main(void)
-{
-	char *devicename;
-	serial_port_t serial_port;
 
-	guess_device(&devicename);
-
-	serial_port = device_open(devicename);
-	if(os_open_failed(serial_port)) {
-		log_error("Unable to open serial device: %s\n", os_strerror(os_errno()));
-		exit(EXIT_FAILURE);
-	}
-	if(config_ser(serial_port)) {
-		log_error("Unable to configure serial port: %s\n", os_strerror(os_errno()));
-		exit(EXIT_RESPAWN_NEVER);
-	}
-	device_close(serial_port);
-
-	return 0;
-}
-#endif
