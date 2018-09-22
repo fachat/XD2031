@@ -1,13 +1,13 @@
 # First target, invoked by "make" without parameters
-code:	pcserver/fsser firmware imgtool testrunner
+code:	pcserver cmds firmware imgtool testrunner
 
-all:	pcserver/fsser testrunner firmware doc samples imgtool cmds unittests
+all:	pcserver testrunner firmware doc samples imgtool cmds unittests
 
-local:	pcserver/fsser testrunner sockserv samples imgtool cmds unittests
+local:	pcserver testrunner sockserv samples imgtool cmds unittests
 
 samples: sample/telnet sample/u1test sample/webcat
 
-pcserver/fsser:
+pcserver:
 	make -C pcserver
 
 imgtool:
@@ -48,7 +48,7 @@ unittests:
 sockserv:
 	DEVICE=sockserv make -C firmware
 
-tests: pcserver/fsser testrunner sockserv
+tests: pcserver testrunner sockserv
 	make -C servertests tests
 	make -C fwtests tests
 	make -C unittests tests
@@ -61,4 +61,4 @@ sample/telnet: doc/telnet.lst
 sample/u1test: doc/u1test.lst
 	petcat -l 0401 -w4 doc/u1test.lst > sample/u1test
 
-.PHONY:	pcserver/fsser install uninstall firmware doc imgtool testrunner cmds unittests
+.PHONY:	pcserver install uninstall firmware doc imgtool testrunner cmds unittests
