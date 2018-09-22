@@ -272,14 +272,18 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 		if (has_eof) {
 			log_info("WRITE_WITH_EOF(%d)\n", tfd);
 		}
-		rv = fp->handler->writefile(fp, indata, datalen, has_eof);
-		if (rv < 0) {
-			// if negative, then it's an error
-			rv = -rv;
-			log_rv(rv);
+		if (fp->handler->writefile) {
+			rv = fp->handler->writefile(fp, indata, datalen, has_eof);
+			if (rv < 0) {
+				// if negative, then it's an error
+				rv = -rv;
+				log_rv(rv);
+			} else {
+				// returns the number of bytes written when positive
+				rv = CBM_ERROR_OK;
+			}
 		} else {
-			// returns the number of bytes written when positive
-			rv = CBM_ERROR_OK;
+			rv = CBM_ERROR_FAULT;
 		}
 	}
 	return rv;
