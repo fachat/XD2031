@@ -337,7 +337,7 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 	}
 	result->cmd    = CMD_NONE;	// no command
 
-	if (parsehint & PARSEHINT_COMMAND) {
+	if (parsehint & PARSEHINT_COMMAND || *p == '$') {
 		uint8_t cmdlen = 0;
 		result->cmd = command_find(p, &cmdlen);
 		if (result->cmd == CMD_SYNTAX) {
