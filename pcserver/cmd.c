@@ -135,13 +135,7 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 
 		log_debug("cmdline_assign '%s' = '%s'\n", provider_name, provider_parameter);
 
-		drive_and_name_t dnt;
-		drive_and_name_init(&dnt);
-		dnt.drive = NAMEINFO_UNDEF_DRIVE;
-		dnt.drivename = provider_name;
-		dnt.name = provider_parameter;
-
-		rv = provider_assign(drive, &dnt, cset, false);
+		rv = provider_assign(drive, &names[1], cset, false);
 	    } else {
 		log_error("Illegal number of parameters (%d)\n", num_files);
 		rv = CBM_ERROR_FAULT;
