@@ -163,7 +163,12 @@ static int dir_single(int sockfd, int type, const char *name) {
 	dirinfo_t dir;
 
 	nameinfo_init(&ninfo);
-	parse_cmd_pars((uint8_t*)name, strlen((const char*)name), FS_OPEN_DR, &ninfo);
+
+	// do as the firmware does
+	strncpy((char*)buf+1, name, 254);
+	buf[255] = 0;
+	buf[0] = '$';
+	parse_filename(buf, strlen((char*)buf), 256, &ninfo, PARSEHINT_LOAD);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 
@@ -230,11 +235,8 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 	int rv = CBM_ERROR_OK;
 
 	for (int i = 0; rv == CBM_ERROR_OK && i < argc; i++) {
-		// note that parse_filename parses in-place, nameinfo then points to name buffer
-		strncpy(name, argv[i], 255);
-		name[255] = 0;
 
-		rv = dir_single(sockfd, type, name);
+		rv = dir_single(sockfd, type, argv[i]);
 	}
 
 	mem_free(name);

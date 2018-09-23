@@ -39,7 +39,7 @@
 #include "led.h"
 #include "assert.h"
 
-#undef DEBUG_FILE
+#define DEBUG_FILE
 
 #define	MAX_ACTIVE_OPEN		2
 #define	OPEN_RX_DATA_LEN	3	// error code, plus optional 8 bit scratched or 16 bit record length

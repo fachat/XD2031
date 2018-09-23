@@ -7,7 +7,7 @@ COMMON=../pcserver/os/os.c ../pcserver/os/terminal.c ../pcserver/util/log.c ../p
 
 SRC=$(CMDSRC) $(COMMON)
 
-INCPATHS=../pcserver ../common ../pcserver/util ../pcserver/os ../testrunner/
+INCPATHS=. ../pcserver ../common ../pcserver/util ../pcserver/os ../testrunner/
 
 LIBS=-lncurses 
 

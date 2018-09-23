@@ -122,7 +122,7 @@ static void dev_write_packet(serial_port_t fd, char *retbuf) {
 	if (e < 0) {
 		log_error("Error on write: %d\n", errno);
 	}
-#if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
+#if defined(DEBUG_WRITE) //|| defined(DEBUG_CMD)
 	log_debug("write %02x %02x %02x (%s):\n", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], command_to_name(255&retbuf[FSP_CMD]) );
 	log_hexdump(retbuf + 3, retbuf[FSP_LEN] - 3, 0);

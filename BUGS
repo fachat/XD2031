@@ -1,0 +1,33 @@
+
+- Fort apocalype disk. File on image has "/" in name
+  LOAD "foo/bar",8
+  
+- xdcmd dir 
+  no default drive -> 0:?
+  
+- xdcmd assign
+    "1=fs:..." statt "1:=fs:..."
+
+- xdcmd assign
+    "fs" must be given as provider instead of being guessed
+    cmd_assign_packet
+    
+- PET DIR D1
+  dann DLOAD -> drive 0 (or at least not found)
+  (DIR geht)
+  
+- D64 file on FTP server
+  -> realsize2 -> segfault
+  
+- shutdown (device lost?) 
+  -> di_free_file from registry for $ (di_img file?)
+  -> segfault
+
+- xdcmd put /path/path/file 0:
+  -> sends full path to drive 0
+  
+FEATURES:
+
+- T64 files
+- TAP files
+

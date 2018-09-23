@@ -46,7 +46,6 @@
 
 #if defined(DEBUG_NAME)
 
-
 static void dump_result(nameinfo_t *result) {
 	printf("CMD      =%s\n", command_to_name(result->cmd));
 	printf("DRIVE    =%c\n", result->trg.drive == NAMEINFO_UNUSED_DRIVE ? '-' :
@@ -58,6 +57,7 @@ static void dump_result(nameinfo_t *result) {
 	printf("ACCESS   =%c\n", result->access ? result->access : '-');
 	printf("TYPE     =%c\n", result->pars.filetype ? result->pars.filetype : '-'); 
 	printf("RECLEN   =%d\n", result->pars.recordlen);
+	printf("NUM_FILES=%d\n", result->num_files);
 	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
 		printf("%d.DRIVE    =%c\n", i, result->file[i].drive == NAMEINFO_UNUSED_DRIVE ? '-' :
 				(result->file[i].drive == NAMEINFO_UNDEF_DRIVE ? '*' :
@@ -123,7 +123,7 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
  *
  * - Some commands parse the raw string on their own
  * - Some commands expect every parameter in result.name
- * - Some commands use result.name and result.file[0].name (ASSIGN, RENAME)
+ * - Some commands use result.trg.name and result.file[0].name (ASSIGN, RENAME)
  * - COPY may use 1 target file name and up to 4 source file names
  *
  * @param[in]  cmdstr Raw command string
@@ -132,7 +132,7 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
  */
 void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *result) {
 	uint8_t cmdlen = 0;
-
+	
 	int driveno = NAMEINFO_UNUSED_DRIVE;
 
 	result->num_files = 0; // Initialize # of secondary files
@@ -147,6 +147,15 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
 		result->trg.namelen = len - cmdlen;
 		return;
 	}
+	// check for disk directory $0
+	if ((cmd == CMD_DIR || cmd == CMD_COPY) &&
+			cmdstr[cmdlen+1] == 0 &&
+			isdigit(cmdstr[cmdlen]) ) {
+		result->file[0].drive = cmdstr[cmdlen  ] & 15; 	// target drive
+		result->num_files = 1;
+		return;
+	}
+
 	// check for disk copy "Dt=s" or "Ct=s"
 	if ((cmd == CMD_DUPLICATE || cmd == CMD_COPY) &&
 			cmdstr[cmdlen+1] == '='  && cmdstr[cmdlen+3] == 0 &&
@@ -159,7 +168,7 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
 
 	uint8_t *sep = cmdstr + cmdlen;
 	if (cmd == CMD_ASSIGN || cmd == CMD_RENAME || cmd == CMD_COPY) {
-		// Split cmdstr at '=' for file[0].name
+		// Split cmdstr at '=' for trg.name
 		// and at ',' for more file names
 		sep = (uint8_t*) strchr((char*) cmdstr, '=');
 		if (sep) {
@@ -204,18 +213,22 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 	(void) len;
 
 	uint8_t *p;
-
+#if 0
 	if (load && *filename == '$') { // load directory e.g. '$' '$:' '$d' '$d:' ...
+/*
         	if (isdigit(filename[1]) && !filename[2]) {
 			strcat((char *)filename,":*");
 		}
+*/
 		result->cmd  = CMD_DIR;
-		uint8_t *c = parse_drive (filename+1, &result->trg);
-		if (c) {
+//		uint8_t *c = parse_drive (filename+1, &result->trg);
+		parse_cmd_pars (filename+1, len-1, result->cmd, result);
+		//if (c) {
 			// here we could add parsing of options, e.g. filtering a directory for file types
-		}
+		//}
 		return;
 	}
+#endif
 
 	if (filename[0] == '@') {			// SAVE with replace
 		result->cmd = CMD_OVERWRITE;
@@ -337,7 +350,11 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 	}
 	result->cmd    = CMD_NONE;	// no command
 
-	if (parsehint & PARSEHINT_COMMAND || *p == '$') {
+#ifdef FIRMWARE
+	debug_printf("parse_filename: %s\n", p);
+#endif
+
+	if (parsehint & PARSEHINT_COMMAND) {
 		uint8_t cmdlen = 0;
 		result->cmd = command_find(p, &cmdlen);
 		if (result->cmd == CMD_SYNTAX) {
@@ -345,9 +362,15 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 		}
 		parse_cmd_pars(p+cmdlen, len-cmdlen, result->cmd, result);
 	} else {
-		result->trg.name = p;	// full name
-		result->trg.namelen = len;	// default
-		parse_open(p, parsehint & PARSEHINT_LOAD, len, result);
+		if (parsehint & PARSEHINT_LOAD && *p == '$') {
+			// parse directory
+			result->cmd = CMD_DIR;
+			parse_cmd_pars(p+1, len-1, result->cmd, result);
+		} else {
+			result->trg.name = p;	// full name
+			result->trg.namelen = len;	// default
+			parse_open(p, parsehint & PARSEHINT_LOAD, len, result);
+		}
 		dump_result(result);
 	}
 }

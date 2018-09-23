@@ -64,9 +64,7 @@
 #undef	BUG_NEW_SIDE_SECTOR
 
 
-#define DEBUG_READ
-#define DEBUG_CMD
-#define	DEBUG_DATA
+#undef	DEBUG_DATA
 
 // structure for directory slot handling
 

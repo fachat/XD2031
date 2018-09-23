@@ -84,7 +84,7 @@ SDEFS=$(sort $(DEFS))
 
 # CFLAGS/ASFLAGS common to all devices/platforms
 #CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-Wall -Wextra 
+CFLAGS+=-Wall -Wextra -DFIRMWARE
 CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
 ifneq ($(V),1)
 CFLAGS+=-Wno-unused-parameter
