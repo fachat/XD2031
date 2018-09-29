@@ -68,12 +68,6 @@ typedef struct {
 	void (*init) (void);	// initialization routine
 	void (*free) (void);	// free routine
 
-	// create a new endpoint instance
-	// this is used on ASSIGN calls
-	endpoint_t *(*newep) (endpoint_t * parent, const char *par, 
-			      charset_t cset,
-			      int from_cmdline);
-
 	// create a new temporary endpoint instance;
 	// this happens when a file with direct provider
 	// name is opened, like "ftp:host/dir"
@@ -86,14 +80,6 @@ typedef struct {
 
 	// start directory for the endpoint 
 	file_t *(*root) (endpoint_t * ep);
-
-	// check if the given file is for 
-	// the provider 
-	// (e.g. a d64 file for the di_provider)
-	// and wrap it into a container file_t
-	// (pointing to a new temp. endpoint created
-	// for it)
-	int (*wrap) (file_t * file, file_t ** wrapped);
 
 	// command channel
 	// B-A/B-F

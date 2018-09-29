@@ -257,23 +257,6 @@ static cbm_errno_t di_load_image2(direntry_t * dirent, Disk_Image_t *di) {
 }
 	
 
-static cbm_errno_t di_load_image(di_endpoint_t * diep, file_t * file)
-{
-
-	log_debug("image size = %d\n", diep->Ip->filesize);
-
-	size_t filelen = 0;//file->handler->realsize(file);
-
-	if (diskimg_identify(&(diep->DI), filelen)) {
-	} else {
-		log_error("Invalid/unsupported disk image\n");
-		return CBM_ERROR_FILE_TYPE_MISMATCH;	// not an image file
-	}
-
-	log_debug("di_load_image(%s) as d%d\n", file->filename, diep->DI.ID);
-	return CBM_ERROR_OK;	// success
-}
-
 // ********
 // di_newep
 // ********
@@ -4177,103 +4160,6 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 
 }
 
-// *********
-// di_wrap
-// *********
-//
-// wrap a file_t that represents a Dxx file into a temporary endpoint, 
-// and return the root file_t of it to access the directory of the 
-// Dxx image.
-//
-// This is called when traversing a path, so Dxx files can be "seen" as 
-// subdirectories e.g. in another container (larger Dxx file, zip file etc).
-
-static int di_wrap(file_t * file, file_t ** wrapped)
-{
-	cbm_errno_t err = CBM_ERROR_FILE_NOT_FOUND;
-
-	log_debug("di_wrap:\n");
-
-	// first check name
-	const char *name = file->filename;
-	int l = 0;
-	if (name == NULL || (l = strlen(name)) < 4) {
-		return err;
-	}
-
-	if (name[l - 4] != '.' || (name[l - 3] != 'd' && name[l - 3] != 'D')) {
-		return err;
-	}
-	// check existing endpoints (so we re-use them and do not confuse
-	// underlying data structures by parallel access paths
-
-	for (int i = 0;; i++) {
-		di_endpoint_t *diep = reg_get(&di_endpoint_registry, i);
-
-		if (diep == NULL) {
-			// no more endpoint
-			break;
-		}
-
-		log_debug("checking ep %p for reuse (root=%p)\n", diep,
-			  diep->Ip);
-
-		if (!diep->Ip->handler->equals(diep->Ip, file)) {
-			// root of endpoint equals the given parent file
-			// so we reuse the endpoint
-
-			log_debug("Found ep %p to reuse with file %p\n", diep,
-				  file);
-
-			*wrapped = di_root((endpoint_t *) diep);
-
-			// closing original path
-			log_debug("Closing original file %p (recursive)\n",
-				  diep, file);
-			file->handler->fclose(file, NULL, NULL);
-
-			return CBM_ERROR_OK;
-		}
-	}
-
-	// allocate a new endpoint
-	di_endpoint_t *newep = (di_endpoint_t *) di_newep(name);
-	newep->Ip = file;
-	newep->base.is_temporary = 1;
-
-	if ((err = di_load_image(newep, file)) == CBM_ERROR_OK) {
-		// image identified correctly
-		*wrapped = di_root((endpoint_t *) newep);
-
-		log_debug("di_wrap (%p: %s w/ pattern %s) -> %p\n",
-			  file, file->filename, file->pattern, *wrapped);
-
-		(*wrapped)->pattern =
-		    file->pattern == NULL ? NULL : mem_alloc_str(file->pattern);
-
-		file_t *parent = file->handler->parent(file);
-		if (parent != NULL) {
-			// loose parent reference
-			while (file != NULL) {
-				if (file->parent == parent) {
-					file->parent = NULL;
-					break;
-				}
-				file = file->parent;
-			}
-			parent->handler->fclose(parent, NULL, NULL);
-		}
-
-		err = CBM_ERROR_OK;
-	} else {
-		// we don't need to close file, so clear it here
-		newep->Ip = NULL;
-		di_freeep((endpoint_t *) newep);
-	}
-
-	return err;
-}
-
 // ----------------------------------------------------------------------------------
 
 // handler for the image direntry in the outer directory
@@ -4331,12 +4217,10 @@ provider_t di_provider = {
 	"PETSCII",
 	di_init,
 	di_free,
-	NULL,			// newep - not needed as only via wrap
 	NULL,			// tempep - not needed as only via wrap
 	di_to_endpoint,		// to_endpoint
 	di_ep_free,		// unassign
 	di_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
-	di_wrap,		// wrap while CDing into D64 file
 	di_direct,
 	di_format,		// format
 	di_dump			// dump

@@ -1863,12 +1863,10 @@ provider_t fs_provider = {
 	CHARSET_ASCII_NAME,
 	fsp_init,
 	fsp_end,
-	fsp_new,
 	fsp_temp2,
 	fsp_to_endpoint,	// to_endpoint
 	fsp_ep_free,
 	fsp_root,		// file_t* (*root)(endpoint_t *ep);  // root directory for the endpoint
-	NULL,			// wrap not needed on fs_provider
 	fs_direct,
 	NULL,			// format
 	fs_dump			// dump

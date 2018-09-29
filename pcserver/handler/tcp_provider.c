@@ -221,25 +221,6 @@ static tn_endpoint_t *create_ep() {
 	return tnep;
 }
 
-// allocate a new endpoint, where the path is giving the 
-// hostname for the connections. Not much to do here, as the
-// port comes with the file name in the open, so we can get
-// the address on the open only.
-static endpoint_t *tnp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
-
-	(void) parent;	// silence unused parameter warning
-	(void) from_cmdline;	// silence unused parameter warning
-
-	tn_endpoint_t *tnep = create_ep();
-
-	char *hostname = conv_name_alloc(path, cset, CHARSET_ASCII);
-	tnep->hostname = hostname;
-	
-	log_info("Telnet provider set to hostname '%s'\n", tnep->hostname);
-
-	return (endpoint_t*) tnep;
-}
-
 // allocate a new endpoint, where the name parameter is giving the 
 // hostname for the connections, plus the port name. The name parameter
 // is modified such that it points to the port name after this endpoint
@@ -706,12 +687,10 @@ provider_t tcp_provider = {
 	CHARSET_ASCII_NAME,		// not used as we don't do directories, but still
 	tnp_init,
 	tnp_end,
-	tnp_new,
 	tnp_temp,
 	NULL,				// to_endpoint
 	tnp_free,
 	tnp_root,			// root - basically only a handle to open files (ports)
-	NULL,				// wrap
 	NULL,				// block
 	NULL,				// format
 	tnp_dump			// dump

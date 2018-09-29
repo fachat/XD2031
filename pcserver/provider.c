@@ -92,28 +92,6 @@ static const char* name_from_provider(const void *entry) {
 
 
 //------------------------------------------------------------------------------------
-// wrap a given (raw) file into a container file_t (i.e. a directory), when
-// it can be identified by one of the providers - like a d64 file, or a ZIP file
-file_t *provider_wrap(file_t *file) {
-
-	for (int i = 0; ; i++) {
-		providers_t *p = reg_get(&providers, i);
-		if (p == NULL) {
-			return NULL;
-		}
-		if (p->provider->wrap != NULL) {
-			file_t *outfile = NULL;
-			int err = p->provider->wrap(file, &outfile);
-			if (err == CBM_ERROR_OK) {
-				return outfile;
-			}
-		}
-	}
-	return NULL;
-}
-
-
-//------------------------------------------------------------------------------------
 /**
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint

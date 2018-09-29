@@ -332,36 +332,6 @@ static endpoint_t *http_temp(char **name, charset_t cset, int priv) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *ftp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
-
-	(void) parent; // silence warning unused parameter
-        (void) from_cmdline;    // silence unused parameter warning
-
-	curl_endpoint_t *fsep = new_endpoint(path, cset);
-
-	// not sure if this is needed...
-	fsep->protocol = PROTO_FTP;
-
-	fsep->base.ptype = &ftp_provider;
-	
-	return (endpoint_t*) fsep;
-}
-
-static endpoint_t *http_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
-
-	(void) parent; // silence warning unused parameter
-        (void) from_cmdline;    // silence unused parameter warning
-
-	curl_endpoint_t *fsep = new_endpoint(path, cset);
-
-	// not sure if this is needed...
-	fsep->protocol = PROTO_HTTP;
-
-	fsep->base.ptype = &http_provider;
-	
-	return (endpoint_t*) fsep;
-}
-
 static char* add_parent_path(char *buffer, file_t *file) {
 
 	if (file->parent != NULL) {
@@ -1135,12 +1105,10 @@ provider_t ftp_provider = {
 	CHARSET_ASCII_NAME,
 	curl_init,
 	curl_end,
-	ftp_new,
 	ftp_temp,
 	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
-	NULL,	// wrap
 	NULL, 	// direct
 	NULL,	// format
 	curl_dump 	// dump
@@ -1151,12 +1119,10 @@ provider_t http_provider = {
 	CHARSET_ASCII_NAME,
 	curl_init,
 	curl_end,
-	http_new,
 	http_temp,
 	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
-	NULL,	// wrap
 	NULL, 	// direct
 	NULL,	// format
 	curl_dump 	// dump
