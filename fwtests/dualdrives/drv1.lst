@@ -1,0 +1,11 @@
+
+
+;drv1.prg ==0401==
+   10 rem load a dual disk drive directory multiple times
+   20 rem to see the first drive switch each time
+ 3230 directory
+ 3240 directory
+ 3250 directory
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+
