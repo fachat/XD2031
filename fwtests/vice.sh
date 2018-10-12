@@ -3,6 +3,7 @@
 #warp="-warp"
 #drivetype=1001
 #imgname=blk.d82
+#imgname2=blk2.d82 (optional)
 
 if [ "x$MODEL" = "x" ]; then
 	MODEL="xpet -model 4032"
@@ -23,11 +24,13 @@ else
 fi
 
 diskname=${imgname}-${testname}-${drivetype}
+diskname2=${imgname2}-${testname}-${drivetype}
 outfilename=${testname}-${drivetype}
 prgname=${testname}
 
 if [ "x${variant}" != "x" ]; then
 	diskname=${diskname}-${variant}
+	diskname2=${diskname2}-${variant}
 	outfilename=${outfilename}-${variant}
 	prgname=${testname}-${variant}
 fi
@@ -70,6 +73,8 @@ if [ ! -f ${prgname}${POST}.prg ]; then
 	exit 1;
 fi
 	
+attach8=""
+attach9=""
 echo "Trying to use image ${imgname} as ${diskname}"	
 if [ -f ${imgname}.gz ]; then 
 	echo "unzipping ${imgname}.gz"
@@ -77,12 +82,23 @@ if [ -f ${imgname}.gz ]; then
 else 
 	cp ${imgname} ${diskname}
 fi;
+attach8="-8 ${diskname}"
+if [ "x$imgname2" != "x" ]; then
+  echo "Trying to use image ${imgname2} as ${diskname2}"	
+  if [ -f ${imgname2}.gz ]; then 
+	echo "unzipping ${imgname2}.gz"
+	gunzip -c ${imgname2}.gz > ${diskname2}
+  else 
+	cp ${imgname2} ${diskname2}
+  fi;
+  attach9="-9 ${diskname2}"
+fi
 
 
-echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${prgname}${POST}.prg"
-${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} -8 ${diskname} -autostartprgmode 1 ./${prgname}${POST}.prg
+echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
+${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
 
-echo "find resulting image in ${diskname} - you may need to gzip it with"
+echo "find resulting image in ${diskname} (or ${diskname2}) - you may need to gzip it with"
 echo "    gzip ${diskname}"
 echo "find runner script in ${SOCKLOG} - you may need to move it with"
 echo "    mv ${SOCKLOG} ${outfilename}.frs"
