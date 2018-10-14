@@ -98,8 +98,11 @@ fi
 echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
 ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
 
-echo "find resulting image in ${diskname} (or ${diskname2}) - you may need to gzip it with"
+echo "find resulting image in ${diskname} (or similar) - you may need to gzip it with"
 echo "    gzip ${diskname}"
+if [ "x" != "x${imgname2}" ]; then
+    echo "    gzip ${diskname2}"
+fi
 echo "find runner script in ${SOCKLOG} - you may need to move it with"
 echo "    mv ${SOCKLOG} ${outfilename}.frs"
 echo "or edit the ${prgname}.lst file if it exists and run again."
