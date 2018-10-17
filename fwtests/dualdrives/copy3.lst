@@ -1,0 +1,17 @@
+
+
+;drv1.prg ==0401==
+   10 rem copy files
+   20 a$="c1:ddd=0:aaa,:bbb,ccc"
+   30 print a$
+ 3230 directory d0
+ 3240 directory d1
+ 3250 open 1,8,15,a$
+ 3260 gosub 9000
+ 3300 directory 
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 print a ", " b$ ", " c ", " d
+ 9020 return
+
