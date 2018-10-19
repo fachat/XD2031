@@ -144,11 +144,11 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 	file_t *dir = *inoutdir;
 
 	do {
-		if (dir->handler->resolve2) {
-			rv = dir->handler->resolve2(pattern, cset, &dir);
+		if (strlen(*pattern) == 0 || strchr(*pattern, '/') == NULL) {
+			rv = CBM_ERROR_FILE_EXISTS;
 		} else {
-			if (strlen(*pattern) == 0 || strchr(*pattern, '/') == NULL) {
-				rv = CBM_ERROR_FILE_EXISTS;
+			if (dir->handler->resolve2) {
+				rv = dir->handler->resolve2(pattern, cset, &dir);
 			} else {
 				rv = CBM_ERROR_DIR_NOT_FOUND;
 			}

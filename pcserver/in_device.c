@@ -36,6 +36,7 @@
 #include "charconvert.h"
 #include "types.h"
 #include "mem.h"
+#include "name.h"
 #include "in_device.h"
 #include "provider.h"
 #include "wireformat.h"
@@ -61,6 +62,9 @@ static void in_device_constructor(const type_t *t, void *o) {
 
 	d->wrp = 0;
 	d->rdp = 0;
+
+	// inits with drive 0
+	drive_and_name_init(&d->lastdrv);
 
 	d->charset = cconv_getcharset(CHARSET_ASCII_NAME);
 }
@@ -240,12 +244,12 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, retbuf+FSP_DATA+1, &outlen, cmd);
+		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, &dt->lastdrv, retbuf+FSP_DATA+1, &outlen, cmd);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_OPEN_DR:
-		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset);
+		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, &dt->lastdrv);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;

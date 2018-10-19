@@ -33,9 +33,24 @@
 // Mapping from channel number for open files to endpoint providers
 // These are set when the channel is opened
 
+typedef struct {
+       int              channo;
+       file_t           *fp;
+       // directory traversal info
+       int              searchdrv;
+       int		num_pattern;
+       drive_and_name_t *searchpattern;
+} chan_t;
+
 void channel_init();
-file_t *channel_to_file(int chan);
 void channel_free(int channo);
 void channel_set(int channo, file_t * fp);
+chan_t *channel_get(int chan);
+
+file_t *channel_to_file(int chan) {
+	chan_t *channel = channel_get(chan);
+	return channel ? channel->fp : NULL;
+}
+
 
 #endif

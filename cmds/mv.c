@@ -38,8 +38,6 @@
 
 int cmd_move(int sockfd, int argc, const char *argv[]) {
 
-	// TODO: unify with get
-        int force = 0;
         int rv = CBM_ERROR_OK;
 
         // check filenames

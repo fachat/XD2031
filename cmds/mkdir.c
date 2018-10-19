@@ -79,8 +79,6 @@ static int cmd_mkdir_single(int sockfd, const char *trgname) {
 
 int cmd_mkdir(int sockfd, int argc, const char *argv[]) {
 
-	// TODO: unify with get
-        int force = 0;
         int rv = CBM_ERROR_OK;
 
         int p = 0;

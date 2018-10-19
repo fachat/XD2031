@@ -234,9 +234,13 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 	char *name = mem_alloc_c(256, "parse buffer");
 	int rv = CBM_ERROR_OK;
 
-	for (int i = 0; rv == CBM_ERROR_OK && i < argc; i++) {
+	if (argc == 0) {
+		rv = dir_single(sockfd, type, "");
+	} else {
+		for (int i = 0; rv == CBM_ERROR_OK && i < argc; i++) {
 
-		rv = dir_single(sockfd, type, argv[i]);
+			rv = dir_single(sockfd, type, argv[i]);
+		}
 	}
 
 	mem_free(name);

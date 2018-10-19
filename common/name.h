@@ -75,9 +75,23 @@ static inline void nameinfo_init(nameinfo_t *ninfo) {
 	ninfo->cmd = CMD_NONE;
 }
 
+// init drive and name with drive 0, without name (or drivename)
 static inline void drive_and_name_init(drive_and_name_t *dnt) {
 	memset(dnt, 0, sizeof(drive_and_name_t));
-	dnt->drive = -1;
+}
+
+static inline void drive_and_name_lastdrv(drive_and_name_t *dnt, int num_files, int *lastdrv) {
+
+	int i = 0;
+	while (i < num_files) {
+		if (dnt[i].drive == NAMEINFO_LAST_DRIVE) {
+			dnt[i].drive = *lastdrv;
+		} else
+		if (dnt[i].drive != NAMEINFO_UNUSED_DRIVE && dnt[i].drive != NAMEINFO_UNDEF_DRIVE) {
+			*lastdrv = dnt[i].drive;
+		}
+		i++;
+	}
 }
 
 // nameinfo option bits
@@ -156,6 +170,20 @@ uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
  * cannot be parsed.
  */
 cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, drive_and_name_t * names, int *num_files);
+
+/*
+ * frees all the memory from a drive_and_name_t (must have been allocated separately)
+ */
+static inline void drive_and_name_free(drive_and_name_t *dnt, int num_dnt) {
+	
+	if (dnt == NULL) {
+		return;
+	}
+	for (int i = 0; i < num_dnt; i++) {
+		mem_free(dnt[i].drivename);
+		mem_free(dnt[i].name);
+	}
+}
 
 #endif
 

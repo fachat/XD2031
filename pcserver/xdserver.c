@@ -45,6 +45,7 @@
 #ifndef _WIN32
 #  include "socket.h"
 #endif
+#include "name.h"
 #include "cmd.h"
 #include "xcmd.h"
 #include "privs.h"

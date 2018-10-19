@@ -119,10 +119,7 @@ struct _file {
 	int isdir;		// when set, is directory
 	// for traversing a directory
 	int dirstate;		// 0 = first line, 1 = file matches, 2 = end line
-	const char *pattern;	// pattern for dir matching
-	const char *searchpattern[MAX_NAMEINFO_FILES];	// pattern for dir matching
-	int numpattern;		// number of entries in searchpattern
-	int searchdrive;	// drive for searches (same for all searchpattern)
+
 	uint8_t writable;	// is file writable?
 	uint8_t seekable;	// is file seekable?    
 	uint8_t openmode;	// FS_OPEN_*

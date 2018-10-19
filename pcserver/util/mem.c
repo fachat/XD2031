@@ -168,6 +168,10 @@ void mem_exit (void) {
 //#define mem_alloc_strn(s,n) mem_alloc_str_(s, n, __FILE__, __LINE__)
 char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 
+	if (orig == NULL) {
+		return NULL;
+	}
+
 	size_t len = strlen(orig);
 	if (len > n) {
 		len = n;
@@ -192,6 +196,10 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 // allocate memory and copy given string
 //#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
 char *mem_alloc_str_(const char *orig, char *file, int line) {
+
+	if (orig == NULL) {
+		return NULL;
+	}
 
 	int len = strlen(orig);
 	len+=MEM_OFFSET;

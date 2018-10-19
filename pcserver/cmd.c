@@ -155,7 +155,7 @@ const char *get_options(const char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd) {
+int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv, char *outbuf, int *outlen, int cmd) {
 
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
@@ -226,14 +226,44 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 	
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
 
-	file_t *fp = channel_to_file(tfd);
+	file_t *fp = NULL;
+	chan_t *chan = channel_get(tfd);
+	if (chan != NULL) {
+		fp = chan->fp;
+		if (fp == NULL) {
+			// start of new directory scan
+	       	    	endpoint_t *ep = NULL;
+	    		// note: may modify names.trg.name in-place
+       	    		rv = resolve_endpoint(chan->searchpattern, outcset, 0, &ep);
+	    		if (rv == 0) {
+				file_t *fp = ep->ptype->root(ep);
+
+				rv = resolve_dir(chan->searchpattern, outcset, &fp);
+				if (rv == 0) {
+					for (int i = 0; i < num_files; i++) {
+						if ((!names[i].name) || strlen((char*)names[i].name) == 0) {
+							fp->searchpattern[i] = mem_alloc_str("*");
+						} else {
+							fp->searchpattern[i] = mem_alloc_str((char*)names[i].name);
+						}
+					}
+					fp->numpattern = num_files;
+					fp->openmode = FS_OPEN_DR;
+					chan->fp = fp;
+				}
+			}
+		} else {
+			log_rv(rv);
+		}
+	    }
+
 	if (fp != NULL) {
 		direntry_t *direntry;
 		*readflag = 0;	// default just in case
 		if (fp->openmode == FS_OPEN_DR) {
-			rv = resolve_scan(fp, fp->searchpattern, fp->numpattern, outcset, true, &direntry, readflag);
+			rv = resolve_scan(fp, chan->searchpattern, chan->num_pattern, outcset, true, &direntry, readflag);
 			if (!rv) {
-				rv = dir_fill_entry_from_direntry(outbuf, outcset, fp->searchdrive, direntry, 
+				rv = dir_fill_entry_from_direntry(outbuf, outcset, chan->lastdrv, direntry, 
 						MAX_BUFFER_SIZE-FSP_DATA);
 				direntry->handler->declose(direntry);
 			}
@@ -329,73 +359,159 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
+static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int num_files, 
+		drive_and_name_t *lastdrv) {
 
+	drive_and_name_t *dnt = NULL;
+
+	if (num_files == 0) {
+		return NULL;
+	}
+
+	size_t len = num_files * sizeof(drive_and_name_t*);
+	dnt = mem_alloc_c(len, "dir_pattern");
+
+	for (int i = 0; i < num_files; i++) {
+		
+		drive_and_name_init(&dnt[i]);
+
+		if (pattern[i].drive == NAMEINFO_LAST_DRIVE) {
+			if (i == 0) {
+				dnt[i].drive = lastdrv->drive;
+				dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) lastdrv->drivename);
+			} else {
+				dnt[i].drive = dnt[i-1].drive;
+				dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) dnt[i-1].drivename);
+			}
+		} else {
+			dnt[i].drive = pattern[i].drive;
+			dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) pattern[i].drivename);
+		}
+		dnt[i].name = (uint8_t*) mem_alloc_str((const char*) pattern[i].name);
+	}
+
+	if (lastdrv->drivename) {
+		mem_free(lastdrv->drivename);
+	}
+	return dnt;
+}
+
+/*
+ * Identify and open the next drive directory in a directory listing.
+ *
+ * The algorithm of the CBM DOS is to first scan the drive used last, then the
+ * second drive. The second drive then becomes the last drive, and is shown first
+ * on the next directory. 
+ * During a drive scan, all search patterns are then matched against drive and
+ * pattern. 
+ * 
+ * So in a drive search pattern list (each directory command can have multiple pattern)
+ * each pattern could apply to one drive, or both. A drive is only included in the
+ * directory listing, if any one of the pattern applies to it.
+ *
+ * So here we first scan the last drive, then go through the list of assigned
+ * drives (with the exception of the last drive). Last we go through the non-assigned
+ * drives (like "ftp:"). 
+ * 
+ * In our system we have the complication that each pattern can potentially contain
+ * a directory path before the actual pattern. This pattern will only be evaluated
+ * for the first pattern that matches a drive. The other pattern then will apply
+ * to this directory directly.
+ */
+static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cset, 
+			channel_t *chan, int last_drv) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	int idx = -1;
+
+	while (rv == CBM_ERROR_DRIVE_NOT_READY) {
+		if (chan->searchdrv < 0) {
+			// initial drive
+			*cur_drv = last_drv;
+		} else 
+		if (chan->searchdrv == last_drv) {
+			// done with the last drive, start from 0 (or 1 if last_drv is 0)
+			chan->searchdrv = last_drv ? 0 : 1;
+		} else
+		if (chan->searchdrv < 10) {
+			// up to 10 numeric drives
+			chan->searchdrv++;
+			if (chan->searchdrv == last_drv) {
+				chan->searchdrv++;
+			}
+		}
+
+		if (chan->searchdrv < 10) {
+			// numeric drive
+			ept_t *ep = endpoints_find(chan->searchdrv);
+			if (ep != NULL) {
+				// drive is assigned
+				for (int idx = 0; idx < num_files; idx++) {
+					if (dnt[idx].drive == chan->searchdrv
+						|| dnt[idx].drive == NAMEINFO_UNUSED_DRIVE) {
+						// found a matching search pattern
+						rv = CBM_ERROR_OK;
+						break;
+					}
+				}
+			}
+		} else {
+			// scan search pattern for named drive
+			int idx = chan->searchdrv - 10;
+			if (idx >= num_files) {
+				// went over the last drive
+				return CBM_ERROR_DRIVE_NOT_READY;
+			}
+			if (dnt[idx].drive == NAMEINFO_UNDEF_DRIVE) {
+				// found a named drive
+				rv = CBM_ERROR_OK;
+			}
+		}
+	}
+
+	// idx contains a matching drive
+
+       	endpoint_t *ep = NULL;
+       	rv = resolve_endpoint(&dnt[idx], cset, 0, &ep);
+	if (rv == CBM_ERROR_OK) {
+		file_t *fp = ep->ptype->root(ep);
+
+		rv = resolve_dir(n, cset, &fp);
+		if (rv == CBM_ERROR_OK) {
+			fp->openmode = FS_OPEN_DR;
+			chan->fp = fp;
+		}
+	}
+	if (rv != CBM_ERROR_OK) {
+		log_rv(rv);
+	}
+	return rv;
+}
+
+int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *fp = NULL;
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
 	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
-	int driveno = -1;
+	drive_and_name_t *dnt = NULL;
 
         rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
-	// determine driveno, and ensure all patterns use the same drive
-	// (this is a current limitation compared to CBM DOS, where multiple pattern
-	// in a single LOAD could utilize patterns of multiple drives)
-	driveno = names[0].drive;
-	for (int i = 1; i < num_files; i++) {
-		if (names[i].drive == NAMEINFO_UNUSED_DRIVE
-			|| names[i].drive == NAMEINFO_LAST_DRIVE
-			|| names[i].drive == driveno) {
-			// ok, drive reused (numeric)
-			continue;
-		}
-		if (names[i].drive == NAMEINFO_UNDEF_DRIVE
-			&& names[0].drive == NAMEINFO_UNDEF_DRIVE
-			&& strcmp((char*)names[0].drivename, (char*)names[i].drivename)) {
-			// ok, drive reused (named)
-			continue;
-		}
-		// here drives [i] and [0] do not match
-		return CBM_ERROR_SYNTAX_PATTERN;
-	}
-
-	log_info("Open directory for drive: %d (%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
-
-        if (rv == CBM_ERROR_OK) {
-            // TODO: default endpoint? 
-            endpoint_t *ep = NULL;
-	    // note: may modify names.trg.name in-place
-            rv = resolve_endpoint(&names[0], cset, 0, &ep);
+	if (rv == 0) {
+	    	dnt = alloc_fixup_dirpattern(names, num_files, lastdrv);
 	
-	    if (rv == 0) {
-		fp = ep->ptype->root(ep);
+	    	log_info("Open directory for drive: %d (%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
 
-		// determine name
-		const char **n = (const char**) &names[0].name;
-		const char *nn = "*";
-		if (strlen(*n) == 0) {
-			n = &nn;
-		}
-		rv = resolve_dir(n, cset, &fp);
-		if (rv == 0) {
-			fp->searchdrive = driveno;
-			for (int i = 0; i < num_files; i++) {
-				if (names[i].name && strlen((char*)names[i].name) == 0) {
-					fp->searchpattern[i] = mem_alloc_str("*");
-				} else {
-					fp->searchpattern[i] = mem_alloc_str((char*)names[i].name);
-				}
-			}
-			fp->numpattern = num_files;
-			fp->openmode = FS_OPEN_DR;
-			channel_set(tfd, fp);
-		} else {
-			log_rv(rv);
-		}
-	    }
+	    	channel_set(tfd, NULL);
+		channel_t *chan = channel_get(tfd);
+
+		chan->seachpattern = dnt;
+		chan->num_pattern = num_files;
+		chan->searchdrv = lastdrv;
+
+		rv = drive_scan_next(dnt, num_files, cset, chan, lastdrv->drive);
 	}
 	if (rv != CBM_ERROR_OK) {
 		log_rv(rv);

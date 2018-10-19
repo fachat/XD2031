@@ -32,6 +32,8 @@
 #include "endpoints.h"
 
 
+// TODO: need a map and/or iterator 
+
 // -----------------------------------------------------------------
 
 static void ept_init(const type_t *type, void *obj) {

@@ -27,6 +27,7 @@ typedef struct {
 	serial_port_t writefd;
 	int wrp;
 	int rdp;
+	drive_and_name_t lastdrv;
 	charset_t charset;
 	char buf[8192];
 } in_device_t;
