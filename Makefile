@@ -27,7 +27,7 @@ clean:
 	make -C imgtool clean
 	make -C firmware veryclean
 	make -C testrunner clean
-	make -C cmds clean
+	make -C cmds veryclean
 	make -C unittests clean
 
 install:
