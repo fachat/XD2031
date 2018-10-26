@@ -42,11 +42,21 @@
 #undef	DEBUG_MEM_VERBOSE
 
 #ifdef DEBUG_MEM
-#define	MEM_MAGIC	0xbadc0de
+// establish place for a MAGIC value before each payload
+#define	MEM_MAGIC	0xafafafaf
+#define	MEM_ERR		0x0badc0de
 #define	MEM_OFFSET	(sizeof(int))
 #else
 #define	MEM_OFFSET	0
 #endif
+
+// --------------------------------------------------------------------------------
+// min alloc size to allow for setting of int value on free
+
+static const size_t MIN_LEN = sizeof(int);
+static inline size_t min_alloc(size_t size) {
+	return (size > MIN_LEN ? size : MIN_LEN) + MEM_OFFSET;
+}
 
 // --------------------------------------------------------------------------------
 // memory allocation checker
@@ -177,7 +187,7 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 		len = n;
 	}
 
-	char *ptr = malloc(len+MEM_OFFSET+1);
+	char *ptr = malloc(min_alloc(len+1));
 
 	check_alloc(ptr, file, line);		
 
@@ -202,9 +212,8 @@ char *mem_alloc_str_(const char *orig, char *file, int line) {
 	}
 
 	int len = strlen(orig);
-	len+=MEM_OFFSET;
 
-	char *ptr = malloc(len+1);
+	char *ptr = malloc(min_alloc(len+1));
 
 	check_alloc(ptr, file, line);		
 #ifdef DEBUG_MEM
@@ -221,12 +230,12 @@ char *mem_alloc_str_(const char *orig, char *file, int line) {
 void *mem_alloc_(const type_t *type, char *file, int line) {
 	// for now just malloc()
 
-	void *ptr = malloc(type->sizeoftype + MEM_OFFSET);
+	void *ptr = malloc(min_alloc(type->sizeoftype));
 
 	check_alloc(ptr, file, line);
 
 	// malloc returns "non-initialized" memory! 
-	memset(ptr, 0, type->sizeoftype);
+	memset(ptr, 0, type->sizeoftype + MEM_OFFSET);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
@@ -246,7 +255,7 @@ void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
 
 	//(void) name; // name not used at the moment, silence warning
 
-	void *ptr = malloc(n + MEM_OFFSET);
+	void *ptr = malloc(min_alloc(n));
 
 	check_alloc2(ptr, name, file, line);
 
@@ -296,17 +305,22 @@ void mem_free_(const void* ptr) {
 
 #ifdef DEBUG_MEM
 	if (ptr != NULL) {
-		ptr = ((char*)ptr) - MEM_OFFSET;
-		if ( ((int*)ptr)[0] != MEM_MAGIC ) {
+
+		void *ptr1 = ((char*)ptr) - MEM_OFFSET;
+		if ( ((unsigned int*)ptr1)[0] != MEM_MAGIC ) {
 			log_error("Trying to free memory at %p that is not allocated\n", ptr);
 			return;
 		}
-		((int*)ptr)[0] = 0;
-		check_free(ptr);
+		// overwrite magic
+		((int*)ptr1)[0] = 0;
+
+		// overwrite first bytes
+		((int*)ptr)[0] = MEM_ERR;
+
+		ptr = ptr1;
 	}
-#else
-	check_free(ptr);
 #endif
+	check_free(ptr);
 	free((void*)ptr);
 
 }
