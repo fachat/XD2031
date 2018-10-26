@@ -44,6 +44,7 @@
 #include "channel.h"
 #include "xcmd.h"
 #include "resolver.h"
+#include "endpoints.h"
 
 #define	MAX_BUFFER_SIZE			64
 
@@ -157,7 +158,7 @@ const char *get_options(const char *name, int len) {
 
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv, char *outbuf, int *outlen, int cmd) {
 
-
+	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	file_t *fp = NULL;
 	file_t *dir = NULL;
@@ -180,7 +181,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, driv
 		rv = resolve_dir((const char**)&names[0].name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
 			// now resolve the actual filename
-			rv = resolve_open(dir, (const char*)names[0].name, cset, &pars, cmd, &fp);
+			rv = resolve_open(dir, names, cset, &pars, cmd, &fp);
 			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
 				// ok, we have the directory entry
 				if (fp->recordlen > 0) {
@@ -222,7 +223,7 @@ int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset) {
+int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset, drive_and_name_t *lastdrv) {
 	
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
 
@@ -238,32 +239,22 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 	    		if (rv == 0) {
 				file_t *fp = ep->ptype->root(ep);
 
-				rv = resolve_dir(chan->searchpattern, outcset, &fp);
+				rv = resolve_dir((const char **)&chan->searchpattern->name, outcset, &fp);
 				if (rv == 0) {
-					for (int i = 0; i < num_files; i++) {
-						if ((!names[i].name) || strlen((char*)names[i].name) == 0) {
-							fp->searchpattern[i] = mem_alloc_str("*");
-						} else {
-							fp->searchpattern[i] = mem_alloc_str((char*)names[i].name);
-						}
-					}
-					fp->numpattern = num_files;
 					fp->openmode = FS_OPEN_DR;
 					chan->fp = fp;
 				}
 			}
-		} else {
-			log_rv(rv);
 		}
-	    }
+	}
 
 	if (fp != NULL) {
-		direntry_t *direntry;
 		*readflag = 0;	// default just in case
 		if (fp->openmode == FS_OPEN_DR) {
+			direntry_t *direntry;
 			rv = resolve_scan(fp, chan->searchpattern, chan->num_pattern, outcset, true, &direntry, readflag);
 			if (!rv) {
-				rv = dir_fill_entry_from_direntry(outbuf, outcset, chan->lastdrv, direntry, 
+				rv = dir_fill_entry_from_direntry(outbuf, outcset, lastdrv->drive, direntry, 
 						MAX_BUFFER_SIZE-FSP_DATA);
 				direntry->handler->declose(direntry);
 			}
@@ -279,7 +270,10 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 			*outlen = rv;
 			rv = CBM_ERROR_OK;
 		}
+	} else {
+		log_rv(rv);
 	}
+
 	return rv;
 }
 
@@ -368,7 +362,7 @@ static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int n
 		return NULL;
 	}
 
-	size_t len = num_files * sizeof(drive_and_name_t*);
+	size_t len = num_files * sizeof(drive_and_name_t);
 	dnt = mem_alloc_c(len, "dir_pattern");
 
 	for (int i = 0; i < num_files; i++) {
@@ -388,10 +382,14 @@ static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int n
 			dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) pattern[i].drivename);
 		}
 		dnt[i].name = (uint8_t*) mem_alloc_str((const char*) pattern[i].name);
+
+		dnt[i].drivename_m = dnt[i].drivename;
+		dnt[i].name_m = dnt[i].name;
 	}
 
 	if (lastdrv->drivename) {
 		mem_free(lastdrv->drivename);
+		lastdrv->drivename = NULL;
 	}
 	return dnt;
 }
@@ -418,25 +416,27 @@ static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int n
  * for the first pattern that matches a drive. The other pattern then will apply
  * to this directory directly.
  */
-static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cset, 
-			channel_t *chan, int last_drv) {
+static int drive_scan_next(drive_and_name_t *dnt, int num_pattern, charset_t cset, 
+			chan_t *chan, int last_drv) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	int idx = -1;
+	int num_files = chan->num_pattern;
 
 	while (rv == CBM_ERROR_DRIVE_NOT_READY) {
 		if (chan->searchdrv < 0) {
 			// initial drive
-			*cur_drv = last_drv;
+			chan->searchdrv = last_drv;
 		} else 
 		if (chan->searchdrv == last_drv) {
 			// done with the last drive, start from 0 (or 1 if last_drv is 0)
 			chan->searchdrv = last_drv ? 0 : 1;
 		} else
-		if (chan->searchdrv < 10) {
+		if (chan->searchdrv < 10+num_files) {
 			// up to 10 numeric drives
 			chan->searchdrv++;
 			if (chan->searchdrv == last_drv) {
+				// skip last drive, we did this first
 				chan->searchdrv++;
 			}
 		}
@@ -446,7 +446,7 @@ static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cs
 			ept_t *ep = endpoints_find(chan->searchdrv);
 			if (ep != NULL) {
 				// drive is assigned
-				for (int idx = 0; idx < num_files; idx++) {
+				for (idx = 0; idx < num_files; idx++) {
 					if (dnt[idx].drive == chan->searchdrv
 						|| dnt[idx].drive == NAMEINFO_UNUSED_DRIVE) {
 						// found a matching search pattern
@@ -457,7 +457,7 @@ static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cs
 			}
 		} else {
 			// scan search pattern for named drive
-			int idx = chan->searchdrv - 10;
+			idx = chan->searchdrv - 10;
 			if (idx >= num_files) {
 				// went over the last drive
 				return CBM_ERROR_DRIVE_NOT_READY;
@@ -476,7 +476,7 @@ static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cs
 	if (rv == CBM_ERROR_OK) {
 		file_t *fp = ep->ptype->root(ep);
 
-		rv = resolve_dir(n, cset, &fp);
+		rv = resolve_dir((const char **)&dnt[idx].name, cset, &fp);
 		if (rv == CBM_ERROR_OK) {
 			fp->openmode = FS_OPEN_DR;
 			chan->fp = fp;
@@ -491,7 +491,6 @@ static int drive_scan_next(drive_name_name_t *dnt, int num_pattern, charset_t cs
 int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	file_t *fp = NULL;
 	openpars_t pars;
 	int num_files = MAX_NAMEINFO_FILES+1;
 	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
@@ -505,11 +504,11 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive
 	    	log_info("Open directory for drive: %d (%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
 
 	    	channel_set(tfd, NULL);
-		channel_t *chan = channel_get(tfd);
+		chan_t *chan = channel_get(tfd);
 
-		chan->seachpattern = dnt;
+		chan->searchpattern = dnt;
 		chan->num_pattern = num_files;
-		chan->searchdrv = lastdrv;
+		chan->searchdrv = -1;
 
 		rv = drive_scan_next(dnt, num_files, cset, chan, lastdrv->drive);
 	}
@@ -533,9 +532,8 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		while (rv == CBM_ERROR_OK) {
 			// now resolve the actual filenames
-			const char *pattern = (const char*) name->name;
 			direntry_t *dirent = NULL;
-			rv = resolve_scan(dir, &pattern, 1, cset, false, 
+			rv = resolve_scan(dir, name, 1, cset, false, 
 					&dirent, NULL);
 			if (dirent) {
 				log_info("DELETE(%s / %s)\n", dir->filename, dirent->name);
@@ -612,7 +610,7 @@ static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, 
 		dir = ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
-			rv = resolve_open(dir, (const char*)name->name, cset, pars, FS_MKDIR, NULL);
+			rv = resolve_open(dir, name, cset, pars, FS_MKDIR, NULL);
 		}
 	}
 	if (dir) {
@@ -701,7 +699,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 
 			if (rv == CBM_ERROR_OK) {
 			    // now resolve the actual source filename into dirent
-			    rv = resolve_scan(srcdir, (const char**)&names[1].name, 1, cset, 
+			    rv = resolve_scan(srcdir, &names[1], 1, cset, 
 					    false, &dirent, NULL);
 			    if (rv == CBM_ERROR_OK && dirent) {
 		
@@ -756,7 +754,7 @@ static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
 
 	    if (rv == CBM_ERROR_OK) {
 			
-		rv = resolve_open(srcdir, (const char*)name->name, cset, &pars, FS_OPEN_RD, &fromfile);
+		rv = resolve_open(srcdir, name, cset, &pars, FS_OPEN_RD, &fromfile);
 
 		if (rv == CBM_ERROR_OK) {
 			// read file is open, can do the copy
@@ -825,7 +823,7 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
 		if (rv == CBM_ERROR_OK) {
 			
-		    rv = resolve_open(trgdir, (const char*) names[0].name, cset, &pars, FS_OPEN_WR, &fp);
+		    rv = resolve_open(trgdir, names, cset, &pars, FS_OPEN_WR, &fp);
 
 		    if (rv == CBM_ERROR_OK) {
 

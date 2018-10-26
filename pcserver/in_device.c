@@ -255,7 +255,7 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 		break;
 	case FS_READ:
 		// note that on the server side, we do not need to handle FS_DATA*, as we only send those
-		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag, dt->charset);
+		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag, dt->charset, &dt->lastdrv);
 		if (rv != CBM_ERROR_OK) {
 			retbuf[FSP_DATA] = rv;
 			retbuf[FSP_LEN] = FSP_DATA + 1;

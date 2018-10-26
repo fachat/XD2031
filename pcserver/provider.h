@@ -33,9 +33,9 @@
 
 #include "mem.h"
 #include "charconvert.h"
-#include "openpars.h"
 #include "registry.h"
 #include "name.h"
+#include "openpars.h"
 
 // constant for provider tables (deprecated)
 #define MAXFILES        16

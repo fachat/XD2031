@@ -1039,7 +1039,7 @@ static void curl_dump_file(file_t *fp, int recurse, int indent) {
         }
         log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
         log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
-        log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+        //log_debug("%spattern='%s';\n", prefix, file->file.pattern);
         log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
         log_debug("%sfilename='%s';\n", prefix, file->file.filename);
         log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);

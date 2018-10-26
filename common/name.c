@@ -32,6 +32,10 @@
 #include <string.h>
 #include <inttypes.h>
 
+#ifdef SERVER
+#include "mem.h"
+#endif
+
 #include "name.h"
 #include "cmdnames.h"
 #include "archcompat.h"
@@ -43,6 +47,7 @@
 #ifdef SERVER
 #include "openpars.h"
 #endif
+
 
 #if defined(DEBUG_NAME)
 
@@ -86,6 +91,10 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
 	uint8_t *p = (uint8_t *)strchr((char*) in, ':');
 	uint8_t *c = (uint8_t *)strchr((char*) in, ',');
 	uint8_t   r = NAMEINFO_UNUSED_DRIVE;    // default if no colon found
+#ifdef SERVER
+	out->drivename_m = NULL;
+	out->name_m = NULL;
+#endif
 	out->drivename = NULL;
 	out->name  = in;
 	uint8_t len;
@@ -116,6 +125,17 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
 	}
 	out->drive = r;
 	out->namelen  = len;
+#ifdef SERVER
+	if (out->drivename) {
+		out->drivename_m = mem_alloc_str(out->drivename);
+		out->drivename = out->drivename_m;
+	}
+	if (out->name) {
+		out->name_m = mem_alloc_str(out->name);
+		out->name = out->name_m;
+	}
+#endif
+		
 	return c;
 }
 
@@ -153,6 +173,7 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
 			isdigit(cmdstr[cmdlen]) ) {
 		result->file[0].drive = cmdstr[cmdlen  ] & 15; 	// target drive
 		result->num_files = 1;
+		result->trg.name = cmdstr + cmdlen + 1;
 		return;
 	}
 
@@ -213,22 +234,6 @@ static void parse_open (uint8_t *filename, uint8_t load, uint8_t len, nameinfo_t
 	(void) len;
 
 	uint8_t *p;
-#if 0
-	if (load && *filename == '$') { // load directory e.g. '$' '$:' '$d' '$d:' ...
-/*
-        	if (isdigit(filename[1]) && !filename[2]) {
-			strcat((char *)filename,":*");
-		}
-*/
-		result->cmd  = CMD_DIR;
-//		uint8_t *c = parse_drive (filename+1, &result->trg);
-		parse_cmd_pars (filename+1, len-1, result->cmd, result);
-		//if (c) {
-			// here we could add parsing of options, e.g. filtering a directory for file types
-		//}
-		return;
-	}
-#endif
 
 	if (filename[0] == '@') {			// SAVE with replace
 		result->cmd = CMD_OVERWRITE;
@@ -367,8 +372,6 @@ void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result
 			result->cmd = CMD_DIR;
 			parse_cmd_pars(p+1, len-1, result->cmd, result);
 		} else {
-			result->trg.name = p;	// full name
-			result->trg.namelen = len;	// default
 			parse_open(p, parsehint & PARSEHINT_LOAD, len, result);
 		}
 		dump_result(result);
@@ -388,8 +391,13 @@ static void* assemble_filename(uint8_t *p, drive_and_name_t *name) {
 		*p++ = ':';	// ':' instead of \0, so parseable
 	}
 	// copy filename including terminating null
-	memmove (p, name->name, name->namelen + 1);
-	p += name->namelen + 1;
+	if (name->name != NULL) {
+		memmove (p, name->name, name->namelen + 1);
+		p += name->namelen + 1;
+	} else {
+		*p = 0;
+		p++;
+	}
 
 	return p;
 }
@@ -513,8 +521,7 @@ cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, 
 	openpars_init_options(pars);
 
 	for (int i = 0; i < *num_files; i++) {
-		names[i].name = NULL;
-		names[i].drivename = NULL;
+		drive_and_name_init(&names[i]);
 		names[i].drive = NAMEINFO_UNDEF_DRIVE;
 	}
 

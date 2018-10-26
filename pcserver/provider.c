@@ -132,7 +132,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 			openpars_t pars;
 			openpars_init_options(&pars);
 			// got the enclosing directory, now get the dir itself
-			err = resolve_open(parentdir, (char*)to_addr->name, cset, &pars, FS_OPEN_DR, &dir);
+			err = resolve_open(parentdir, to_addr, cset, &pars, FS_OPEN_DR, &dir);
 
 			if (err == CBM_ERROR_OK) {
 

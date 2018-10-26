@@ -200,7 +200,7 @@ int8_t match_pattern(const char **pattern, unic_t (*pconv)(const char **p),
 			match = true;
 			// now tomatch and pattern point after wildcard area
 		}
-		if (0 == **pattern) {
+		if (*pattern == NULL || 0 == **pattern) {
 			// pattern at end but name isn't
 			return false;
 		}

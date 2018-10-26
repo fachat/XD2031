@@ -95,10 +95,10 @@ static void file_init(const type_t *t, void *obj) {
 
 	//log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
-	fp->file.pattern = NULL;
-	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
-		fp->file.searchpattern[i] = NULL;
-	}
+	//fp->file.pattern = NULL;
+	//for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+	//	fp->file.searchpattern[i] = NULL;
+	//}
 	fp->file.handler = &fs_file_handler;
 	fp->file.recordlen = 0;
 
@@ -284,14 +284,14 @@ static int close_fd(File *file) {
 		free((void*)file->ospath);
 	}
 
-	for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
-		if (file->file.searchpattern[i] != NULL) {
-			mem_free((void*) file->file.searchpattern[i]);
-		}
-	}
-	if (file->file.pattern != NULL) {
-		mem_free((void*)file->file.pattern);
-	}
+	//for (int i = 0; i < MAX_NAMEINFO_FILES; i++) {
+	//	if (file->file.searchpattern[i] != NULL) {
+	//		mem_free((void*) file->file.searchpattern[i]);
+	//	}
+	//}
+	//if (file->file.pattern != NULL) {
+	//	mem_free((void*)file->file.pattern);
+	//}
 	if (file->file.filename != NULL) {
 		mem_free((void*)file->file.filename);
 	}
@@ -850,7 +850,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File *
 
 	File *file = reserve_file((fs_endpoint_t*)fsep);
 
-	file->file.pattern = NULL;
+	//file->file.pattern = NULL;
 	// convert filename to external charset
 	//tmpnamep = mem_alloc_str(name);
 	tmpnamep = conv_name_alloc(name, cset, CHARSET_ASCII);
@@ -972,7 +972,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		fp->dirstate = DIRSTATE_ENTRIES;
 
 		char *hdr = mem_alloc_c(17, "fs direntry header name");
-		strncpy(hdr, fp->searchpattern[0], 16);
+		strncpy(hdr, preview, 16);
 		hdr[16] = 0;
 		int l = strlen(hdr);
 		for (; l < 16; l++) {
@@ -1762,7 +1762,7 @@ static void fs_dump_file(file_t *fp, int recurse, int indent) {
         }
 	log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
 	log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
-	log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+	//log_debug("%spattern='%s';\n", prefix, file->file.pattern);
 	log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
 	log_debug("%sfilename='%s';\n", prefix, file->file.filename);
 	log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);

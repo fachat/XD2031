@@ -49,6 +49,10 @@ typedef struct {
 	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")
 	uint8_t *drivename;	// name of drive ("FTP", ...)
 	uint8_t *name;		// pointer to the actual name
+#ifdef SERVER
+	char *drivename_m;	// malloc'd string pointers for drivename 
+	char *name_m;		// and name that can be freed after use
+#endif
 	uint8_t namelen;	// length of file name - needed for RELfiles, as zero can be included in "name"
 } drive_and_name_t;
 

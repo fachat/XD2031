@@ -83,7 +83,7 @@ int resolve_scan(file_t *dir, drive_and_name_t *pattern, int num_pattern, charse
  * to open multiple files matching the same pattern.
  */
 int resolve_open(file_t *dir,
-                const char *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile);
+                drive_and_name_t *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile);
 
 
 #endif

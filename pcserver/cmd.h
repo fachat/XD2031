@@ -39,7 +39,7 @@ void cmd_free();
 int cmd_assign_cmdline(const char *inname, charset_t cset);
 int cmd_assign_packet(const char *inname, int inlen, charset_t cset);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv, char *outbuf, int *outlen, int cmd);
-int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset);
+int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset, drive_and_name_t *lastdrv);
 int cmd_info(char *outbuf, int *outlen, charset_t outcset);
 int cmd_write(int tfd, int cmd, const char *indata, int datalen);
 int cmd_position(int tfd, const char *indata, int datalen);

@@ -39,7 +39,7 @@
 #include "endpoints.h"
 #include "handler.h"
 
-static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
+static int resolve_scan_int(file_t *dir, drive_and_name_t *pattern, int num_pattern, bool fixpattern, 
 		charset_t outcset, bool isdirscan, direntry_t **outde, int *rdflag);
 
 /** 
@@ -140,8 +140,10 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
 int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 
 	int rv = CBM_ERROR_OK;
-
+	drive_and_name_t dnt;
 	file_t *dir = *inoutdir;
+
+	drive_and_name_init(&dnt);
 
 	do {
 		if (strlen(*pattern) == 0 || strchr(*pattern, '/') == NULL) {
@@ -161,8 +163,8 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
 			int rdflag = 0;
 			file_t *fp = NULL;
 
-			
-			rv = resolve_scan_int(dir, &p, 1, true, cset, false, &de, &rdflag);
+			dnt.name = p;
+			rv = resolve_scan_int(dir, &dnt, 1, true, cset, false, &de, &rdflag);
 
 			if (rv == CBM_ERROR_OK) {
 				// open the found dir entry
@@ -221,7 +223,7 @@ int resolve_dir(const char **pattern, charset_t cset, file_t **inoutdir) {
  * values.
  * 	READFLAG_EOF	-> next read will not return further data, so set EOF
  */
-static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, bool fixpattern, 
+static int resolve_scan_int(file_t *dir, drive_and_name_t *pattern, int num_pattern, bool fixpattern, 
 		charset_t outcset, bool isdirscan, direntry_t **outde, int *rdflag) {
 
 	log_debug("resolve_scan: pattern='%s'\n", *pattern);
@@ -235,7 +237,8 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 	bool found = false;
 
         do {
-        	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag, *pattern, outcset);
+		// Note: the pattern name is there so we can put it in directory headers in fs_provider
+        	rv = dir->handler->direntry2(dir, &direntry, isdirscan, rdflag, (const char*)pattern->name, outcset);
 
 		if (rv != CBM_ERROR_OK 
 			|| !direntry
@@ -248,7 +251,7 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 		// match unwrapped entry (to enable unwrapped "foo.d64" addressing)
 		found = false;
 		for (int i = 0; i < num_pattern; i++) {
-                	scanpattern = pattern[i];
+                	scanpattern = (char*) pattern[i].name;
                 	name = (const char*)direntry->name;
 			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
 			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
@@ -266,7 +269,7 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 
 		// match wrapped entry (to enable match as in directory entry)
 		for (int i = 0; i < num_pattern; i++) {
-                	scanpattern = pattern[i];
+                	scanpattern = (char*) pattern[i].name;
                 	name = (const char*)direntry->name;
 			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
 			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
@@ -284,14 +287,14 @@ static int resolve_scan_int(file_t *dir, const char **pattern, int num_pattern, 
 		if (*scanpattern == '/') {
 			scanpattern++;
 		}
-		pattern[0] = scanpattern;
+		pattern[0].name = scanpattern;
 	}
 	*outde = direntry;
 
 	return rv;
 }
 
-int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t outcset, bool isdirscan,
+int resolve_scan(file_t *dir, drive_and_name_t *pattern, int num_pattern, charset_t outcset, bool isdirscan,
 	direntry_t **outde, int *rdflag) {
 
 	return resolve_scan_int(dir, pattern, num_pattern, false, outcset, isdirscan, outde, rdflag);
@@ -304,14 +307,14 @@ int resolve_scan(file_t *dir, const char **pattern, int num_pattern, charset_t o
  * to open multiple files matching the same pattern.
  */
 int resolve_open(file_t *dir,
-                const char *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile) {
+                drive_and_name_t *inname, charset_t cset, openpars_t *pars, uint8_t type, file_t **outfile) {
 
         file_t *file = NULL;
         int rdflag = 0;
         direntry_t *dirent;
 
         // now resolve the actual filename
-        int rv = resolve_scan_int(dir, &inname, 1, true, cset, false, &dirent, &rdflag);
+        int rv = resolve_scan_int(dir, inname, 1, true, cset, false, &dirent, &rdflag);
 
 	if (rv == CBM_ERROR_OK && dirent && pars->filetype != FS_DIR_TYPE_UNKNOWN) {
 		// we have a direntry and must check file types
@@ -350,11 +353,11 @@ int resolve_open(file_t *dir,
                                         rv = CBM_ERROR_FILE_NOT_FOUND;
                                         break;
                                 }
-				if (strlen(inname) == 0) {
+				if (inname->name == NULL || strlen((char*)inname->name) == 0) {
 					rv = CBM_ERROR_SYNTAX_NONAME;
 					break;
 				}
-                                rv = dir->handler->create(dir, &file, inname, cset, pars, type);
+                                rv = dir->handler->create(dir, &file, (char*)inname->name, cset, pars, type);
                                 if (rv != CBM_ERROR_OK) {
                                         break;
                                 }
@@ -379,7 +382,7 @@ int resolve_open(file_t *dir,
                                 rv = CBM_ERROR_FILE_EXISTS;
                         } else  {
                                 if (dir->handler->mkdir != NULL) {
-                                        rv = dir->handler->mkdir(dir, inname, cset, pars);
+                                        rv = dir->handler->mkdir(dir, (char*)inname->name, cset, pars);
                                 } else {
                                         rv = CBM_ERROR_DIR_NOT_SUPPORTED;
                                 }

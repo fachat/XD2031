@@ -26,6 +26,8 @@
 #include "errors.h"
 #include "wireformat.h"
 #include "log.h"
+#include "mem.h"
+#include "name.h"
 #include "openpars.h"
 
 // ************

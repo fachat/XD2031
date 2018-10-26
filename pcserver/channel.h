@@ -47,7 +47,7 @@ void channel_free(int channo);
 void channel_set(int channo, file_t * fp);
 chan_t *channel_get(int chan);
 
-file_t *channel_to_file(int chan) {
+static inline file_t *channel_to_file(int chan) {
 	chan_t *channel = channel_get(chan);
 	return channel ? channel->fp : NULL;
 }
