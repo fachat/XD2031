@@ -82,7 +82,7 @@ static err_t main_assign(const char *param, void *extra, int ival) {
 static err_t main_set_param(const char *param, void *extra, int ival) {
 	(void) ival;
 	char **x = (char**)extra;
-	*x = mem_alloc_str(param);
+	*x = mem_alloc_str2(param, "param");
 
 	return E_OK;
 }
@@ -155,7 +155,7 @@ static err_t cfg_load(void) {
 		const char *home = os_get_home_dir();
 		filename = malloc_path(home, ".xdconfig");
 	} else {
-		filename = mem_alloc_str(cfg_name);
+		filename = mem_alloc_str2(cfg_name, "cfg_name");
 		// default when not found
 		rv = E_ABORT;
 	}

@@ -372,19 +372,19 @@ static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int n
 		if (pattern[i].drive == NAMEINFO_LAST_DRIVE) {
 			if (i == 0) {
 				dnt[i].drive = lastdrv->drive;
-				dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) lastdrv->drivename);
+				dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) lastdrv->drivename, "drivename");
 			} else {
 				dnt[i].drive = dnt[i-1].drive;
-				dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) dnt[i-1].drivename);
+				dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) dnt[i-1].drivename, "drivename");
 			}
 		} else {
 			dnt[i].drive = pattern[i].drive;
-			dnt[i].drivename = (uint8_t*) mem_alloc_str((const char*) pattern[i].drivename);
+			dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) pattern[i].drivename, "drivename");
 		}
-		dnt[i].name = (uint8_t*) mem_alloc_str((const char*) pattern[i].name);
+		dnt[i].name = (uint8_t*) mem_alloc_str2((const char*) pattern[i].name, "fname");
 
-		dnt[i].drivename_m = dnt[i].drivename;
-		dnt[i].name_m = dnt[i].name;
+		dnt[i].drivename_m = (char*) dnt[i].drivename;
+		dnt[i].name_m = (char*) dnt[i].name;
 	}
 
 	if (lastdrv->drivename) {
@@ -416,7 +416,7 @@ static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int n
  * for the first pattern that matches a drive. The other pattern then will apply
  * to this directory directly.
  */
-static int drive_scan_next(drive_and_name_t *dnt, int num_pattern, charset_t cset, 
+static int drive_scan_next(drive_and_name_t *dnt, charset_t cset, 
 			chan_t *chan, int last_drv) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
@@ -510,7 +510,7 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive
 		chan->num_pattern = num_files;
 		chan->searchdrv = -1;
 
-		rv = drive_scan_next(dnt, num_files, cset, chan, lastdrv->drive);
+		rv = drive_scan_next(dnt, cset, chan, lastdrv->drive);
 	}
 	if (rv != CBM_ERROR_OK) {
 		log_rv(rv);

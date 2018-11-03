@@ -267,7 +267,7 @@ endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset, con
 						endpoint_t *ep = prov->tempep(&p, cset, 0);
 						if (ep != NULL) {
 							if (outname != NULL) {
-								*outname = mem_alloc_str(p);
+								*outname = mem_alloc_str2(p, "provider_outname");
 							}
 							log_debug("Created temporary endpoint %p\n", ep);
 							ep->is_temporary = 1;

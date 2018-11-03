@@ -182,7 +182,7 @@ static fs_endpoint_t *create_home_ep() {
 	fsep->basepath = getcwd(NULL, 0);
 
 	// copy into current path
-	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_home_ep_path");
 	fsep->base.is_assigned++;
 
 	return fsep;
@@ -199,7 +199,7 @@ static fs_endpoint_t *create_root_ep() {
 	fsep->basepath = strdup(dir_separator_string());
 
 	// copy into current path
-	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_root_ep_path");
 	fsep->base.is_assigned++;
 
 	return fsep;
@@ -251,13 +251,13 @@ endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, in
 	if (from_cmdline) {
 		if (assign_path[0] == dir_separator_char()) {
 			// is root path
-			*new_assign_path = mem_alloc_str(assign_path);
+			*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
 		} else {
 			*new_assign_path = malloc_path(home_endpoint->basepath, assign_path);
 		}
 		return (endpoint_t*) root_endpoint;
 	} else {
-		*new_assign_path = mem_alloc_str(assign_path);
+		*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
 		return (endpoint_t*) home_endpoint;
 	}
 }
@@ -469,7 +469,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	}
 
 	// copy into current path
-	fsep->curpath = mem_alloc_str(fsep->basepath);
+	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_curpath");
 
 	// free resources
 	close_fd(fp);
@@ -520,9 +520,9 @@ static char *safe_dirname (const char *path) {
  * that should be free()ed later */
 	char *pathc, *dirname_result, *mem_dirname;
 
-	pathc = mem_alloc_str(path);
+	pathc = mem_alloc_str2(path, "fs_safe_path");
 	dirname_result = dirname(pathc);
-	mem_dirname = mem_alloc_str(dirname_result);
+	mem_dirname = mem_alloc_str2(dirname_result, "fs_safe_dirname");
 	mem_free(pathc);
 	return mem_dirname;
 }
@@ -912,7 +912,7 @@ static char *get_path(File *parent, const char *child) {
 	if (child != NULL) {
 		path = str_concat(parent->ospath, dir_separator_string(), child);
 	} else {
-		path = mem_alloc_str(parent->ospath);
+		path = mem_alloc_str2(parent->ospath, "fs_os_path");
 	}
 
 	return path;

@@ -111,7 +111,7 @@ void endpoints_assign(int drive, endpoint_t *newep) {
 	ept_t *ept = mem_alloc(&endpoints_type);
 	ept->drive = drive;
 	ept->ep = newep;
-	ept->cdpath = mem_alloc_str("/");
+	ept->cdpath = mem_alloc_str2("/", "root_cd_path");
 
 	// register new endpoint
 	reg_append(&endpoints, ept);

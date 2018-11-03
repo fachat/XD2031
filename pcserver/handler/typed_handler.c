@@ -189,7 +189,7 @@ static int typed_wrap(direntry_t *dirent, direntry_t **outde) {
         de->de.type = ftype;
         de->de.cset = dirent->cset;
 
-        de->de.name = (uint8_t*) mem_alloc_str((char*)dirent->name);
+        de->de.name = (uint8_t*) mem_alloc_str2((char*)dirent->name, "typed_name");
 	p = strrchr((char*)de->de.name, ',');
 	*p = 0;
 

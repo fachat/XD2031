@@ -57,7 +57,7 @@ static char *serial_device_path = NULL;
 int device_open(char *device) {
 	int fdesc = open(device, O_RDWR | O_NOCTTY); // | O_NDELAY);
 	mem_free(serial_device_path);
-	serial_device_path = mem_alloc_str(device);
+	serial_device_path = mem_alloc_str2(device, "devicename");
 	return fdesc;
 }
 

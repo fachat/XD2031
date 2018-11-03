@@ -251,7 +251,7 @@ static int x00_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **ou
 	file->file.isdir = 0;
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
-	file->file.filename = mem_alloc_str((char*)dirent->name);
+	file->file.filename = mem_alloc_str2((char*)dirent->name, "x00_filename");
 	file->file.recordlen = dirent->de.recordlen;
 	file->file.attr = dirent->de.attr;
 	file->file.type = dirent->de.type;

@@ -304,7 +304,7 @@ static int open_file(File *file, openpars_t *pars, const char *mode) {
 
 	tn_endpoint_t *tnep = (tn_endpoint_t*) file->file.endpoint;
 
-	const char *filename = mem_alloc_str(file->file.filename);
+	const char *filename = mem_alloc_str2(file->file.filename, "tcp_filename");
 
 	log_info("open file on host %s with service/port %s\n", tnep->hostname, filename);
 
@@ -535,7 +535,7 @@ static int tn_open2 (direntry_t * de, openpars_t * pars, int opentype, file_t **
 	int err = CBM_ERROR_OK;
 
 	File *fp = mem_alloc(&file_type);
-	fp->file.filename = mem_alloc_str((char*)de->name);
+	fp->file.filename = mem_alloc_str2((char*)de->name, "tn_filename");
 
 	switch (opentype) {
 		case FS_OPEN_RD:

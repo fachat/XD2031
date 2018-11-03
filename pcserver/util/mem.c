@@ -205,7 +205,7 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 
 // allocate memory and copy given string
 //#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
-char *mem_alloc_str_(const char *orig, char *file, int line) {
+char *mem_alloc_str_(const char *orig, char *name, char *file, int line) {
 
 	if (orig == NULL) {
 		return NULL;
@@ -215,7 +215,7 @@ char *mem_alloc_str_(const char *orig, char *file, int line) {
 
 	char *ptr = malloc(min_alloc(len+1));
 
-	check_alloc(ptr, file, line);		
+	check_alloc2(ptr, name, file, line);		
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
 #endif
@@ -232,7 +232,7 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 
 	void *ptr = malloc(min_alloc(type->sizeoftype));
 
-	check_alloc(ptr, file, line);
+	check_alloc2(ptr, type->name, file, line);
 
 	// malloc returns "non-initialized" memory! 
 	memset(ptr, 0, type->sizeoftype + MEM_OFFSET);
@@ -273,7 +273,7 @@ void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 
 	void *ptr = calloc(n + ((MEM_OFFSET == 0) ? 0 : 1), type->sizeoftype);
 
-	check_alloc(ptr, file, line);
+	check_alloc2(ptr, type->name, file, line);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;

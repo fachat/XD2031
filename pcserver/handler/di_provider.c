@@ -229,8 +229,6 @@ static File *di_reserve_file(di_endpoint_t * diep)
 
 	log_debug("di_reserve_file %p\n", file);
 
-	reg_append(&diep->base.files, file);
-
 	return file;
 }
 
@@ -3412,10 +3410,12 @@ di_create(file_t * dirp, file_t ** newfile, const char *pattern, charset_t cset,
 	}
 
 	File *file = di_reserve_file(diep);
+	reg_append(&diep->base.files, file);
+
 	file->access_mode = di_cmd;
 	file->file.writable = (di_cmd == FS_OPEN_RD) ? 0 : 1;
 	file->file.seekable = 1;
-	file->file.filename = mem_alloc_str(pattern);
+	file->file.filename = mem_alloc_str2(pattern, "di_create_filename");
 
 	const char *dosname = conv_name_alloc(pattern, cset, CHARSET_PETSCII);
 
@@ -3503,6 +3503,8 @@ static int di_open2(direntry_t * dirent, openpars_t * pars, int type, file_t **o
 	File *parent = (File*) dirent->parent;
 
 	File *file = di_reserve_file(de->ep);
+	reg_append(&de->ep->base.files, file);
+
 	file->Slot = parent->Slot;
 
 	file->file.writable = (de->de.attr & FS_DIR_ATTR_LOCKED) ? 0 : 1;
@@ -3941,7 +3943,7 @@ static file_t *di_root(endpoint_t * ep)
 
 	file->file.handler = &di_img_file_handler;
 	file->file.endpoint = ep;
-	file->file.filename = mem_alloc_str("$");
+	file->file.filename = mem_alloc_str2("$", "di_root_dir");
 	file->file.writable = diep->Ip->writable;
 	file->file.isdir = 1;
 	file->file.dirstate = DIRSTATE_FIRST;
@@ -3950,7 +3952,7 @@ static file_t *di_root(endpoint_t * ep)
 	//di_first_slot(diep, &diep->Slot);
 	file->Slot.dir_track = 0;
 
-	log_debug("di_root: diep=%p -> root=%p\n", file);
+	log_debug("di_root: diep=%p -> root=%p\n", ep, file);
 
 	return (file_t *) file;
 }
@@ -4023,7 +4025,7 @@ static int di_wrap2(direntry_t * dirent, direntry_t ** outde)
         de->de.type = FS_DIR_TYPE_UNKNOWN & FS_DIR_ATTR_TYPEMASK;
         de->de.cset = dirent->cset;
 
-        de->de.name = (uint8_t*) mem_alloc_str((char*)dirent->name);
+        de->de.name = (uint8_t*) mem_alloc_str2((char*)dirent->name, "di_wrap_dename");
 	// cut off extension
         de->de.name[l-4] = 0;
 
