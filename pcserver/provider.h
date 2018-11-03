@@ -258,33 +258,6 @@ struct _handler {
 
 int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset,
 		    int from_cmdline);
-int provider_assign_old(int drive, const char *name, const char *assign_to, charset_t cset,
-		    int from_cmdline);
-
-/**
- * looks up a provider like "tcp:" for "fs:" by drive number.
- * Iff the drive number is NAMEINFO_UNDEF_DRIVE then the name is used
- * to identify the provider and ad hoc create a new endpoint from the name.
- * The name pointer is then changed to point after the endpoint information
- * included in the name. For example:
- *
- * drive=NAMEINFO_UNDEF_DRIVE
- * name=tcp:localhost:telnet
- *
- * ends up with the "tcp:" provider, creates a temporary endpoint with
- * "localhost" as host name, and 
- *
- * name=telnet
- * 
- * as the rest of the filename.
- * The endpoint will be closed once the operation is done or the opened file
- * is closed.
- *
- * If a default drive is given, and no named provider could be found, the default drive
- * is used instead.
- */
-endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset,
-			    const char **outname, int default_drive);
 
 provider_t *provider_find(const char *pname);
 
@@ -319,10 +292,6 @@ void provider_free(void);
  * dump the in-memory structures (for analysis / debug)
  */
 void provider_dump();
-
-// wrap a given (raw) file into a container file_t (i.e. a directory), when
-// it can be identified by one of the providers - like a d64 file, or a ZIP file
-file_t *provider_wrap(file_t * file);
 
 // default endpoint if none given in assign. Assign path may be adapted in case
 // we are from comand line and have relative path, in which case the root path is
