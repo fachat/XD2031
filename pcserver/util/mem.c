@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Serial line filesystem server - memory handling
+    Copyright (C) 2012,2018 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -135,6 +135,11 @@ static void check_alloc_(void *ptr, const char *name, char *file, int line) {
 
 static void check_free_(const void *ptr) {
 
+	if (!ptr) {
+		// ignore NULL
+		return;
+	}
+
 	for (int i = 0; i < mem_last; i++) {
 		if (mem_records[i].ptr == ptr) {
 #ifdef DEBUG_MEM_VERBOSE
@@ -152,7 +157,9 @@ static void check_free_(const void *ptr) {
 			return;
 		}
 	}
-	log_error("check_free: Trying to free memory at %p that is not allocated\n", ptr);
+	log_error("check_free: Trying to free memory at %p that is not allocated (not in list)\n", ptr);
+	// fail fast
+	exit(-1);
 }
 
 // --------------------------------------------------------------------------------
@@ -308,8 +315,9 @@ void mem_free_(const void* ptr) {
 
 		void *ptr1 = ((char*)ptr) - MEM_OFFSET;
 		if ( ((unsigned int*)ptr1)[0] != MEM_MAGIC ) {
-			log_error("Trying to free memory at %p that is not allocated\n", ptr);
-			return;
+			log_error("Trying to free memory at %p that is not allocated (no MAGIC)\n", ptr);
+			// fail fast
+			exit(-1);
 		}
 		// overwrite magic
 		((int*)ptr1)[0] = 0;
