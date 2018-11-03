@@ -341,7 +341,7 @@ static char* add_parent_path(char *buffer, file_t *file) {
 
 		//strcat(buffer, file->filename);
 
-		char *p = mem_alloc_str(file->filename);
+		char *p = mem_alloc_str2(file->filename, "curl_parent_path");
 		char *newbuf = malloc_path(buffer, p);
 		mem_free(p);
 		mem_free(buffer);
@@ -371,9 +371,9 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
         curl_endpoint_t *newep = mem_alloc(&endpoint_type);
 
 
-	newep->host_buffer = mem_alloc_str(parentep->host_buffer);
+	newep->host_buffer = mem_alloc_str2(parentep->host_buffer, "curl_dirname_to_endpoint");
 	if (parentep->path_buffer != NULL) {
-		newep->path_buffer = mem_alloc_str(parentep->path_buffer);
+		newep->path_buffer = mem_alloc_str2(parentep->path_buffer, "curl_to_endpoint_name");
 	}
 	
 	newep->path_buffer = add_parent_path(newep->path_buffer, file);
@@ -687,7 +687,7 @@ static int curl_direntry2(file_t *dirfp, direntry_t **outentry, int isdirscan, i
 	case 0:		// disk name
 		if (isdirscan) {
 			de->de.mode = FS_DIR_MOD_NAM;
-			de->de.name = (uint8_t*)mem_alloc_str(cep->path_buffer);
+			de->de.name = (uint8_t*)mem_alloc_str2(cep->path_buffer, "curl_de_diskname");
 			de->de.cset = CHARSET_ASCII;
 			fp->read_state++;
 			break;
@@ -753,7 +753,7 @@ static int curl_direntry2(file_t *dirfp, direntry_t **outentry, int isdirscan, i
 		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
 		eof = 0;
 
-		de->de.name = (uint8_t*)mem_alloc_str(name);
+		de->de.name = (uint8_t*)mem_alloc_str2(name, "curl_direntry");
 
 		de->de.attr |= extension_to_filetype(name,
 					FS_DIR_TYPE_PRG, FS_DIR_TYPE_SEQ);
@@ -989,14 +989,14 @@ static int curl_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **o
 	int err = CBM_ERROR_OK;
 
 	curl_file_t *cfp = reserve_file(dirent->parent->endpoint);
-	cfp->file.filename = mem_alloc_str((char*)dirent->name);
+	cfp->file.filename = mem_alloc_str2((char*)dirent->name, "curl_open_filename");
 
 	char *p = ((curl_file_t*)dirent->parent)->path;
 	if (p) {
 		cfp->path = p;
 		mem_append_str2(&cfp->path, "/", (char*)dirent->name);
 	} else {
-		cfp->path = mem_alloc_str((char*)dirent->name);
+		cfp->path = mem_alloc_str2((char*)dirent->name, "curl_open_path");
 	}
 
         switch (type) {
