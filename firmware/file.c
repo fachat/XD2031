@@ -176,7 +176,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		type = FS_OPEN_RW;
 	}
 
-	if (nameinfo.trg.name[0] == '#') {
+	if (nameinfo.trg.name && nameinfo.trg.name[0] == '#') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
 		// Note: '#' is still blocking on read!
@@ -260,9 +260,11 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// currently only up to the first zero byte is converted, options like file type
 	// are still ASCII only
 	// in the future the bus may have an own conversion option...
-	cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
-		((char*)nameinfo->trg.name, nameinfo->trg.namelen, 
-		(char*)nameinfo->trg.name, nameinfo->trg.namelen);
+	if (nameinfo->trg.name) {
+		cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
+			((char*)nameinfo->trg.name, nameinfo->trg.namelen, 
+			(char*)nameinfo->trg.name, nameinfo->trg.namelen);
+	}
 	for (uint8_t i=0 ; i < nameinfo->num_files ; ++i) {
 		if (nameinfo->file[i].name != NULL) {
 			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))

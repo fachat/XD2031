@@ -169,7 +169,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 }
 
 void provider_cleanup(endpoint_t *ep) {
-	if (ep->is_temporary) {
+	if (ep->is_temporary && !ep->is_assigned) {
 		log_debug("Freeing temporary endpoint %p\n", ep);
 		provider_t *prevprov = ep->ptype;
 		prevprov->freeep(ep);

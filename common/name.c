@@ -127,12 +127,12 @@ static uint8_t* parse_drive (uint8_t *in, drive_and_name_t *out) {
 	out->namelen  = len;
 #ifdef SERVER
 	if (out->drivename) {
-		out->drivename_m = mem_alloc_str(out->drivename);
-		out->drivename = out->drivename_m;
+		out->drivename_m = mem_alloc_str2((const char *) out->drivename, "drivename_m");
+		out->drivename = (uint8_t*) out->drivename_m;
 	}
 	if (out->name) {
-		out->name_m = mem_alloc_str(out->name);
-		out->name = out->name_m;
+		out->name_m = mem_alloc_str2((const char *) out->name, "name_m");
+		out->name = (uint8_t*) out->name_m;
 	}
 #endif
 		
@@ -168,13 +168,20 @@ void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *re
 		return;
 	}
 	// check for disk directory $0
-	if ((cmd == CMD_DIR || cmd == CMD_COPY) &&
-			cmdstr[cmdlen+1] == 0 &&
+	if (cmd == CMD_DIR) {
+		if (cmdstr[cmdlen] == 0) {
+			result->file[0].drive = NAMEINFO_UNUSED_DRIVE; 	// target drive
+			result->file[0].name = cmdstr + cmdlen;
+			result->num_files = 1;
+			return;
+		}
+		if (cmdstr[cmdlen+1] == 0 &&
 			isdigit(cmdstr[cmdlen]) ) {
-		result->file[0].drive = cmdstr[cmdlen  ] & 15; 	// target drive
-		result->num_files = 1;
-		result->trg.name = cmdstr + cmdlen + 1;
-		return;
+			result->file[0].drive = cmdstr[cmdlen  ] & 15; 	// target drive
+			result->file[0].name = cmdstr + cmdlen + 1;
+			result->num_files = 1;
+			return;
+		}
 	}
 
 	// check for disk copy "Dt=s" or "Ct=s"

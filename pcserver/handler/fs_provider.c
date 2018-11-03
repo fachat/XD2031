@@ -322,9 +322,9 @@ static int close_fd(File *file) {
 	reg_remove(&(ep->files), file);
 
 	// CHECK: only do this if endpoint is temporary?
-	if (reg_size(&(ep->files)) == 0) {
-		fsp_free(ep);
-	}
+	//if (ep->is_temporary && reg_size(&(ep->files)) == 0) {
+	//	fsp_free(ep);
+	//}
 
 	mem_free(file);
 
