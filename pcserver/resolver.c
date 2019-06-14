@@ -252,6 +252,11 @@ static int resolve_scan_int(file_t *dir, drive_and_name_t *pattern, int num_patt
 		found = false;
 		for (int i = 0; i < num_pattern; i++) {
                 	scanpattern = (char*) pattern[i].name;
+			// empty name matches
+			if (scanpattern[0] == 0) {
+				found = true;
+				break;
+			}
                 	name = (const char*)direntry->name;
 			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
 			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
@@ -267,16 +272,19 @@ static int resolve_scan_int(file_t *dir, drive_and_name_t *pattern, int num_patt
 			direntry = wrapped;
 		}
 
-		// match wrapped entry (to enable match as in directory entry)
-		for (int i = 0; i < num_pattern; i++) {
-                	scanpattern = (char*) pattern[i].name;
-                	name = (const char*)direntry->name;
-			log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
-			if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
-				found = true;
-				break;
+		if (!found) {
+			// match wrapped entry (to enable match as in directory entry)
+			for (int i = 0; i < num_pattern; i++) {
+                		scanpattern = (char*) pattern[i].name;
+                		name = (const char*)direntry->name;
+				log_debug("match: pattern '%s' with name '%s'\n", scanpattern, name);
+				if (cconv_matcher(outcset, direntry->cset) (&scanpattern, &name, false )) {
+					found = true;
+					break;
+				}
 			}
 		}
+
 		if (!found) {
 			direntry->handler->declose(direntry);
 		}

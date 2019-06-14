@@ -268,7 +268,7 @@ static void fd_hup(int fd, void *data) {
 
 static void fd_read(int fd, void *data) {
 
-	log_debug("fd_read for fd=%d (%p)\n", fd, data);
+	//log_debug("fd_read for fd=%d (%p)\n", fd, data);
 
 	in_device_t *fddata = (in_device_t*) data;
 

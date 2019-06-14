@@ -50,6 +50,12 @@
 
 
 //------------------------------------------------------------------------------------
+
+static int drive_scan_next(drive_and_name_t *dnt, charset_t cset, 
+			chan_t *chan, int last_drv);
+
+
+//------------------------------------------------------------------------------------
 //
 
 
@@ -231,6 +237,7 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 	chan_t *chan = channel_get(tfd);
 	if (chan != NULL) {
 		fp = chan->fp;
+/*
 		if (fp == NULL) {
 			// start of new directory scan
 	       	    	endpoint_t *ep = NULL;
@@ -246,6 +253,7 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 				}
 			}
 		}
+*/
 	}
 
 	if (fp != NULL) {
@@ -257,6 +265,16 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 				rv = dir_fill_entry_from_direntry(outbuf, outcset, lastdrv->drive, direntry, 
 						MAX_BUFFER_SIZE-FSP_DATA);
 				direntry->handler->declose(direntry);
+	
+				if (READFLAG_EOF & *readflag) {
+					// end of dir - do we need another scan?
+					int rvx = drive_scan_next(chan->searchpattern, outcset, chan, lastdrv->drive);
+
+					if (rvx == CBM_ERROR_OK) {
+						*readflag &= ~READFLAG_EOF;
+					}
+				}
+
 			}
 		} else {
 		    	rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
