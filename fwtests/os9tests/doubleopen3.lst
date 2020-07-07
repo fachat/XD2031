@@ -5,16 +5,16 @@
   100 u=8
  1000 open1,u,15,"i0"
  1010 gosub 9000
- 1020 open2,u,1,"file"
+ 1020 open2,u,4,"file,w"
  1030 for i = 0 to 2
  1040 print#2,"0123456789abcde_";
  1050 next
  1070 close2
  2050 gosub9000
- 2100 open 2,u,0,"file"
+ 2100 open 2,u,5,"file,s"
  2110 gosub 9000
  2120 get#2,b$
- 2200 open 3,u,0,"file"
+ 2200 open 3,u,5,"file,s"
  2210 gosub 9000
  2220 get#3,b$
  2230 get#2,b$
