@@ -95,8 +95,8 @@ if [ "x$imgname2" != "x" ]; then
 fi
 
 
-echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
-${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
+echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp -jamaction 5 +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
+${VICEPETBIN} ${VICEPAR} $warp -jamaction 5 +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
 
 echo "find resulting image in ${diskname} (or similar) - you may need to gzip it with"
 echo "    gzip ${diskname}"
