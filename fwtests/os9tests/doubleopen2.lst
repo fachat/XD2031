@@ -1,0 +1,29 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create a file, then open it twice
+  100 u=8
+ 1000 open1,u,15,"i0"
+ 1010 gosub 9000
+ 1020 open2,u,1,"file"
+ 1030 for i = 0 to 2
+ 1040 print#2,"0123456789abcde_";
+ 1050 next
+ 1070 close2
+ 2050 gosub9000
+ 2100 open 2,u,0,"file"
+ 2110 gosub 9000
+ 2120 get#2,b$
+ 2200 open 3,u,0,"file"
+ 2210 gosub 9000
+ 2220 get#3,b$
+ 3210 close1
+ 3220 close2
+ 3230 close3
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

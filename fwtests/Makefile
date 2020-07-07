@@ -6,3 +6,4 @@ tests:
 	make -C relfiles
 	make -C cmds
 	make -C blockcmd
+	make -C os9tests
