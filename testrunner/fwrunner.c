@@ -243,7 +243,7 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 			outcmd = S488_REQ;
 		}
 
-	} while((wrp < buflen) && (!eof));
+	} while((wrp < buflen) && (!eof) && (!tout));
 
 	if (n > 0) {
 		outcmd = S488_ACK;
