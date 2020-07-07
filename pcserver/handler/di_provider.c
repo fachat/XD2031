@@ -2867,7 +2867,7 @@ static int
 di_read_seq(File * file, char *retbuf, int len, int *eof)
 {
 	int i;
-	log_debug("di_read_seq(fp %d, len=%d)\n", file, len);
+	log_debug("di_read_seq(fp=%p, len=%d)\n", file, len);
 
 	buf_t *datap = NULL;
 	di_GETBUF_data(&datap, file);
