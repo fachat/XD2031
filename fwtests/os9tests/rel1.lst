@@ -1,0 +1,38 @@
+
+
+;blkaf2.prg ==0401==
+   10 rem create a rel file of specific size and try to write to specific sect
+  100 u=8
+  110 s$="0123456789abcdef"
+  112 t$=s$+s$
+  114 v$=t$+t$
+  120 h$=v$+v$
+ 1000 open 1,u,15,"i0"
+ 1010 gosub 9000
+ 1015 open 2,u,4,"file,l"
+ 1020 rem open 2,u,4,"file,l,"+chr$(129): rem record size 129
+ 1030 rem make file large enough
+ 1035 rem print#1,"p" chr$(4) chr$(190) chr$(4) chr$(0)
+ 1036 rem gosub 9000
+ 1040 rem print#2,"thequickbrownfoxjumpsoverthelazydog";
+ 2110 rem gosub 9000
+ 2115 print#1,"pd" chr$(185) chr$(3) chr$(1)
+ 2116 gosub 9000
+ 2120 print#2,v$: rem one half block of 128 byte
+ 2130 print#2,v$: rem second half block
+ 2210 gosub 9000
+ 2215 print#1,"pd" chr$(185) chr$(3) chr$(1)
+ 2216 gosub 9000
+ 2220 for i = 1 to 10
+ 2230 get#2,b$
+ 2240 next
+ 3210 close 1
+ 3220 close 2
+ 8899 print "press key to end"
+ 8900 get a$:if a$="" then 8900
+ 8910 poke 2,2:sys2:rem jam
+ 8999 end
+ 9000 input#1,a,b$,c,d
+ 9010 printa","b$","c","d
+ 9020 return
+

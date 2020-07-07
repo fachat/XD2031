@@ -20,17 +20,17 @@ THISDIR=`dirname $0`
 
 # necessary files to copy to temp
 #TESTFILES="rel1.d64"
-TESTFILES="base.d80"
+TESTFILES="rel.d80"
 
 # files to compare after test iff files like <file>-<test> exist
 # e.g. if there is a file "rel1.d64" and a test "position2.frs",
 # then after the test rel1.d64 is compared to "rel1.d64-position2" iff it exists
 #COMPAREFILES="rel1.d64"
-COMPAREFILES="base.d80"
+COMPAREFILES="rel.d80"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=base.d80"
+SERVEROPTS="-v -A0:fs=rel.d80"
 
 #firmware options
 # switch off drive in error messages; also restricts track/sector to two chars
@@ -43,10 +43,10 @@ FWOPTS=
 # > 100 being handled correctly in the error message. So as reference we only use the 4040 
 # tests
 #EXCLUDE="position1.frs"
-EXCLUDE="*rel*"
+EXCLUDE=""
 #shopt -s extglob
 #FILTER='+(2031|4040)'
-FILTER='8050'
+FILTER='rel*8050'
 
 ########################
 # source and execute actual functionality
