@@ -392,8 +392,12 @@ for script in $TESTSCRIPTS; do
 			while [ ! -S $TMPDIR/$CSOCKET ]; do sleep 0.1; done
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+			#$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script 2>&1 | sed -u -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script 2>&1 | tee $TMPDIR/$RUNNERLOG.1;
 			RESULT=${PIPESTATUS[0]}
+			# remove tempdir from log, so it can be compared
+			cat $TMPDIR/$RUNNERLOG.1 | sed -e "s%$TMPDIR%%g" | tail -n +3 > $TMPDIR/$RUNNERLOG
+
 			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
 			#RESULT=$?
 			

@@ -6,10 +6,10 @@
 #imgname2=blk2.d82 (optional)
 
 if [ "x$MODEL" = "x" ]; then
-	MODEL="xpet -model 4032"
+	MODEL="xpet -model 4032 -virtualdev "
 	SOCKLOG="sock488.trace"
 	POST=""
-	PETCAT_OPTS="-w4 -l 0401"
+	PETCAT_OPTS="-w40 -l 0401"
 	FILTER="_______"
 	DIR="PET"
 else
