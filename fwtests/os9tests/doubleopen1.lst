@@ -18,6 +18,7 @@
  3210 close1
  3220 close2
  3230 close3
+ 8899 print "press key to end"
  8900 get a$:if a$="" then 8900
  8910 poke 2,2:sys2:rem jam
  8999 end

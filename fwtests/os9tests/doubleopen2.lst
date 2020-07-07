@@ -17,9 +17,11 @@
  2200 open 3,u,0,"file"
  2210 gosub 9000
  2220 get#3,b$
+ 2230 get#2,b$
  3210 close1
  3220 close2
  3230 close3
+ 8899 print "press key to end"
  8900 get a$:if a$="" then 8900
  8910 poke 2,2:sys2:rem jam
  8999 end
