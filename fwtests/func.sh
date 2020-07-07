@@ -397,6 +397,7 @@ for script in $TESTSCRIPTS; do
 			RESULT=${PIPESTATUS[0]}
 			# remove tempdir from log, so it can be compared
 			cat $TMPDIR/$RUNNERLOG.1 | sed -e "s%$TMPDIR%%g" | tail -n +3 > $TMPDIR/$RUNNERLOG
+			rm $TMPDIR/$RUNNERLOG.1 
 
 			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
 			#RESULT=$?
