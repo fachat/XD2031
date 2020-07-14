@@ -1,6 +1,6 @@
-diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+sock488/src/parallel/parallel.c
---- vice-2.4+jamexit/src/parallel/parallel.c	2012-03-19 22:01:46.000000000 +0100
-+++ vice-2.4-jamexit+sock488/src/parallel/parallel.c	2014-07-08 14:54:43.994849203 +0200
+diff -urb vice-3.4/src/parallel/parallel.c vice-3.4+sock488/src/parallel/parallel.c
+--- vice-3.4/src/parallel/parallel.c	2019-11-21 01:03:29.000000000 +0100
++++ vice-3.4+sock488/src/parallel/parallel.c	2020-06-30 22:49:36.700921780 +0200
 @@ -120,7 +120,7 @@
   */
  
@@ -18,19 +18,19 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+so
  
  /* Transitions */
  
-@@ -161,9 +162,10 @@
+@@ -157,9 +158,10 @@
  
  static int state = WaitATN;
  
--#define Go(a)           state=(a);return
+-#define Go(a)           state = (a); return
 +#define Go(a)           state=(a);parallel_debug?log_warning(LOG_DEFAULT,"Go->%d\n",(a)):0;return
- #define isListening()   ((par_status&0xf000)==0x2000)
- #define isTalking()     ((par_status&0xf000)==0x4000)
-+#define isMonitoring()  ((par_status&0xf000)==0x8000)
+ #define isListening()   ((par_status & 0xf000) == 0x2000)
+ #define isTalking()     ((par_status & 0xf000) == 0x4000)
++#define isMonitoring()  ((par_status & 0xf000) == 0x8000)
  
  #ifdef PARALLEL_DEBUG_VERBOSE
- static void DoTrans(int tr) {
-@@ -228,11 +230,15 @@
+ static void DoTrans(int tr)
+@@ -227,6 +229,10 @@
          ResetBus();
          Go(WaitATN);
      } else {
@@ -41,35 +41,11 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+so
          if (isListening()) {
              Go(In1);
          } else {
-             if (isTalking()) {
--                ResetBus();
-+               	ResetBus();
-                 if (!parallel_ndac) {  /* old pet... */
-                     Go(OldPet);
-                 } else {
-@@ -240,12 +246,12 @@
-                     return;
-                 }
-             } else {
--                if (parallel_debug)
--                    log_warning(LOG_DEFAULT,
--                                "IEEE488: Ouch, something weird happened: %s got %s",
-+               	if (parallel_debug)
-+               		log_warning(LOG_DEFAULT,
-+                               "IEEE488: Ouch, something weird happened: %s got %s",
-                                 State[In1].name, Trans[tr]);
--                ResetBus();
--                Go(WaitATN);
-+               	ResetBus();
-+               	Go(WaitATN);
-             }
-         }
-     }
 @@ -254,15 +260,17 @@
  static void In1_davlo(int tr)
  {
-     static BYTE b;
-+    static BYTE eof;
+     static uint8_t b;
++    static uint8_t eof;
  
      parallel_emu_set_nrfd(1);
      b = parallel_bus;
@@ -79,19 +55,19 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+so
      if (parallel_atn) {
          par_status = parallel_trap_attention(b ^ 0xff);
      } else {
--        par_status = parallel_trap_sendbyte((BYTE)(b ^ 0xff));
-+      	par_status = parallel_trap_sendbyte((BYTE)(b ^ 0xff), eof);
+-        par_status = parallel_trap_sendbyte((uint8_t)(b ^ 0xff));
++        par_status = parallel_trap_sendbyte((uint8_t)(b ^ 0xff), eof);
      }
-     if (parallel_debug)
-         log_warning(LOG_DEFAULT,
-@@ -312,6 +320,26 @@
-         unexpected(tr);
+     if (parallel_debug) {
+         log_warning(LOG_DEFAULT, "IEEE488: sendbyte returns %04x",
+@@ -317,6 +325,26 @@
+     }
  }
  
 +#define Mon_atnlo       WATN_atnlo
 +
-+static BYTE mon_data;
-+static BYTE mon_eoi;
++static uint8_t mon_data;
++static uint8_t mon_eoi;
 +
 +
 +static void Mon_davlo(int tr) {
@@ -111,49 +87,37 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel.c vice-2.4-jamexit+so
  /* OldPET fixed PET2*** and PET3*** IEEE, as well as CBM610 */
  
  #define OPet_atnlo      WATN_atnlo
-@@ -341,17 +369,20 @@
+@@ -347,6 +375,8 @@
  {
-     static BYTE b;
+     static uint8_t b;
  
--    par_status = parallel_trap_receivebyte(&b, 1);
--    parallel_emu_set_bus((BYTE)(b ^ 0xff));
 +    if (isTalking()) {
-+	    // alternative is Monitoring
-+	    par_status = parallel_trap_receivebyte(&b, 1);
-+	    parallel_emu_set_bus((BYTE)(b ^ 0xff));
-+
-+	    if (par_status & 0x40) {
-+	        parallel_emu_set_eoi(1);
-+	    } else {
-+	        parallel_emu_set_eoi(0);
-+	    }
++	// alternative is bus monitoring
+     par_status = parallel_trap_receivebyte(&b, 1);
+     parallel_emu_set_bus((uint8_t)(b ^ 0xff));
  
--    if (par_status & 0x40) {
--        parallel_emu_set_eoi(1);
--    } else {
--        parallel_emu_set_eoi(0);
-+	    parallel_emu_set_dav(1);
+@@ -357,6 +387,7 @@
      }
  
--    parallel_emu_set_dav(1);
--
+     parallel_emu_set_dav(1);
++    }
+ 
      Go(Out1a);
  }
- 
-@@ -407,7 +438,9 @@
-     { "Out1a",   { Out1a_atnlo,  unexpected,   unexpected, unexpected,
-       unexpected,  Out1a_ndachi, Out1a_nrfdlo, unexpected } },
-     { "Out2",    { Out2_atnlo,   unexpected,   unexpected, ignoreown,
--      unexpected,  Out2_ndachi,  unexpected,   unexpected } }
-+      unexpected,  Out2_ndachi,  unexpected,   unexpected } },
-+    { "Monitor", { Mon_atnlo,    ignore,       Mon_davlo,  ignore,
-+      Mon_ndaclo,  ignore,       ignore,       ignore } }
+@@ -413,7 +444,9 @@
+     { "Out1a", { Out1a_atnlo, unexpected, unexpected, unexpected,
+                  unexpected, Out1a_ndachi, Out1a_nrfdlo, unexpected } },
+     { "Out2", { Out2_atnlo, unexpected, unexpected, ignoreown,
+-                unexpected, Out2_ndachi, unexpected, unexpected } }
++                unexpected, Out2_ndachi, unexpected, unexpected } },
++    { "Monitoring", { Mon_atnlo, ignore, Mon_davlo, ignore,
++                Mon_ndaclo, ignore, ignore, ignore } },
  };
  
  /**************************************************************************
-diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamexit+sock488/src/parallel/parallel-trap.c
---- vice-2.4+jamexit/src/parallel/parallel-trap.c	2010-12-13 15:14:20.000000000 +0100
-+++ vice-2.4-jamexit+sock488/src/parallel/parallel-trap.c	2014-07-08 20:33:20.631450637 +0200
+diff -urb vice-3.4/src/parallel/parallel-trap.c vice-3.4+sock488/src/parallel/parallel-trap.c
+--- vice-3.4/src/parallel/parallel-trap.c	2019-11-21 01:03:29.000000000 +0100
++++ vice-3.4+sock488/src/parallel/parallel-trap.c	2020-06-30 22:49:19.212494539 +0200
 @@ -28,6 +28,7 @@
  #include "vice.h"
  
@@ -169,10 +133,10 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
 +
 +
  /* On which channel did listen happen to?  */
- static BYTE TrapDevice;
- static BYTE TrapSecondary;
+ static uint8_t TrapDevice;
+ static uint8_t TrapSecondary;
 @@ -58,6 +61,150 @@
- static BYTE SerialBuffer[SERIAL_NAMELENGTH + 1];
+ static uint8_t SerialBuffer[SERIAL_NAMELENGTH + 1];
  static int SerialPtr;
  
 +// --------------------------------------------------------------------------------
@@ -248,7 +212,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
 +			if (isPrint) {
 +				fprintf(getTraceFile(), "%c", c);
 +			} else {
-+				fprintf(getTraceFile(), " %02x", 255&trace488Buf[i]);
++				fprintf(getTraceFile(), " %02x", (unsigned int)255&trace488Buf[i]);
 +			}
 +		}
 +		if (isPrint) {
@@ -269,7 +233,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
 +		s488_close(((trace488State == TR488_RECV) || (trace488State == TR488_SEND)) ? trace488eof : 0);
 +	}
 +
-+	log_warning(parallel_log, "s488_attention(%x)", b);
++	log_warning(parallel_log, "s488_attention(%x)", (unsigned int)b);
 +
 +	trace488State = TR488_ATN;
 +	trace488Buf[trace488Buflen++] = b;
@@ -279,7 +243,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
 +	}
 +}
 +
-+static void s488_send(BYTE b, int eof) {
++static void s488_send(uint8_t b, int eof) {
 +
 +
 +	if (trace488State != 0 && trace488State != TR488_SEND) {
@@ -293,7 +257,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
 +	trace488eof = eof;
 +}
 +
-+static void s488_recv(BYTE b, int fake, int iseof) {
++static void s488_recv(uint8_t b, int fake, int iseof) {
 +
 +
 +	if (trace488State != 0 && trace488State != TR488_RECV) {
@@ -322,33 +286,33 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
  /*
     On a real system an opened channel is affected only after having
     received and parsed the complete next open command.
-@@ -171,6 +318,8 @@
+@@ -173,6 +320,8 @@
      serial_t *p;
      void *vdrive;
  
 +    s488_attention(b);
 +
      if (parallel_debug) {
-         log_message(parallel_log, "ParallelAttention(%02x).", b);
+         log_message(parallel_log, "ParallelAttention(%02x).", (unsigned int)b);
      }
-@@ -234,16 +383,27 @@
+@@ -236,16 +385,27 @@
          attention_callback_func();
      }
  
 +    if (st & 0xff) {
-+    	if ((st & 0xff00) == 0x4800) {
-+		// error - start monitoring instead (only on device 8 for now...)
-+		st = 0x8800;
-+	} else
-+	if ((st & 0xff00) == 0x2800) {
-+		st = 0x2800;
-+	}	
++       if ((st & 0xff00) == 0x4800) {
++               // error - start monitoring instead (only on device 8 for now...)
++               st = 0x8800;
++       } else
++       if ((st & 0xff00) == 0x2800) {
++               st = 0x2800;
++       }       
 +    }
      return st;
  }
  
--int parallel_trap_sendbyte(BYTE data)
-+int parallel_trap_sendbyte(BYTE data, int eof)
+-int parallel_trap_sendbyte(uint8_t data)
++int parallel_trap_sendbyte(uint8_t data, int eof)
  {
      int st = 0;
      serial_t *p;
@@ -360,7 +324,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
      for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
          if ((unsigned int)(TrapDevice & 0x0f) == dnr + 8
              && drive_context[dnr]->drive->enable) {
-@@ -283,6 +443,12 @@
+@@ -285,6 +445,12 @@
      void *vdrive;
      unsigned int dnr;
  
@@ -373,7 +337,7 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
      for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
          if ((unsigned int)(TrapDevice & 0x0f) == dnr + 8
              && drive_context[dnr]->drive->enable) {
-@@ -343,6 +509,9 @@
+@@ -349,6 +515,9 @@
      if ((st & 0x40) && eof_callback_func != NULL) {
          eof_callback_func();
      }
@@ -383,15 +347,16 @@ diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.c vice-2.4-jamex
      return st;
  }
  
-diff -ur --new-file vice-2.4+jamexit/src/parallel/parallel-trap.h vice-2.4-jamexit+sock488/src/parallel/parallel-trap.h
---- vice-2.4+jamexit/src/parallel/parallel-trap.h	2009-01-28 10:39:53.000000000 +0100
-+++ vice-2.4-jamexit+sock488/src/parallel/parallel-trap.h	2014-07-08 14:55:11.490601963 +0200
+diff -urb vice-3.4/src/parallel/parallel-trap.h vice-3.4+sock488/src/parallel/parallel-trap.h
+--- vice-3.4/src/parallel/parallel-trap.h	2019-11-21 01:03:29.000000000 +0100
++++ vice-3.4+sock488/src/parallel/parallel-trap.h	2020-06-30 22:46:15.567985427 +0200
 @@ -30,7 +30,7 @@
  #include "types.h"
  
  extern int parallel_trap_attention(int b);
--extern int parallel_trap_sendbyte(BYTE data);
-+extern int parallel_trap_sendbyte(BYTE data, int eof);
- extern int parallel_trap_receivebyte(BYTE *data, int fake);
+-extern int parallel_trap_sendbyte(uint8_t data);
++extern int parallel_trap_sendbyte(uint8_t data, int eof);
+ extern int parallel_trap_receivebyte(uint8_t *data, int fake);
  
  #endif
+

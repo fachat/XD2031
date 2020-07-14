@@ -84,11 +84,11 @@ static int16_t liecin(int *c)
         ndachi();
 
         do {
-            if(atnislo()) {
-		// ATN got low, exit
-                //break;
-                goto atn;
-            }
+//            if(atnislo()) {
+//		// ATN got low, exit
+//                //break;
+//                goto atn;
+//            }
         } while( davislo() );
 
         ndaclo();

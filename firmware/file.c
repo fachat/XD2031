@@ -350,12 +350,14 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			channel_close(channel_no, NULL);
 			// Note: it seems possible to open the same channel multiple times
 			// on a direct file
+/*
 			if (type != FS_OPEN_DIRECT) {
 				debug_puts("FILE OPEN ERROR");
 				debug_putcrlf();
 				set_error_tsd(errormsg, CBM_ERROR_NO_CHANNEL, 0, 0, nameinfo->trg.drive);
 				return -1;
 			}
+*/
 		}
 		int8_t e = channel_open(channel_no, writetype, endpoint, converter, nameinfo->trg.drive);
 		if (e < 0) {

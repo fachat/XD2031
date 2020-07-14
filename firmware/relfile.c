@@ -89,7 +89,8 @@ static int8_t relfile_rw_record(cmdbuf_t *buffer, uint8_t is_write) {
 	int8_t rv = CBM_ERROR_FAULT;
 
 #ifdef DEBUG_RELFILE
-	debug_printf("rw_record: chan=%d, iswrite=%d\n", channel, is_write);
+	debug_printf("rw_record: chan=%d, iswrite=%d, pos_of_rec=%d, reclen=%d\n", channel, is_write,
+		buffer->pos_of_record, buffer->recordlen);
 	debug_flush();
 #endif
 
@@ -250,6 +251,7 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 #endif
 
 		if (buffer->pflag & PFLAG_ISREAD) {
+			// write to rel file after reading a record
 			// we need to skip to the beginning of the next record
 			// and as we overwrite it, there is no need to read it first
 			buffer->buf_recordno++;
@@ -349,7 +351,10 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		// this send_position is only done to get the NO RECORD error.
 		// wouldn't be necessary otherwise
 		rv = relfile_send_position(buffer, channel);
+		buffer->rptr = 0;
+		buffer->wptr = 0;
 	} else {
+		// read the record
 		rv = relfile_rw_record(buffer, 0);
 		buffer->rptr += position;
 		buffer->wptr += position;

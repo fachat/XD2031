@@ -1,0 +1,49 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f4
+send "FILE,W"
+atn 3f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 e4 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f5
+send "FILE,S"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 65
+expect "0"
+atn 5f
+atn 28 f5
+send "FILE,S"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 65
+expect "0"
+atn 5f
+atn 48 65
+expect "1"
+atn 5f
+atn 48 65
+expect "2"
+atn 5f
+atn 28 ef 3f
+atn 28 e5 3f
+atn 28 e5 3f

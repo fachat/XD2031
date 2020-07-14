@@ -203,6 +203,10 @@ void log_hexdump2(const char *p, int len, int petscii, const char *prefix) {
 
 	}
 	color_default();
+
+	if (fflush(stdout) < 0) {
+		fprintf(stderr, "flushing error: %d (%s)\n", errno, strerror(errno));
+	}
 }
 
 void log_hexdump(const char *p, int len, int petscii) {

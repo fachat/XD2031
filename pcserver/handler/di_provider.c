@@ -544,8 +544,10 @@ static cbm_errno_t di_FLUSH(buf_t * bufp)
  */
 static inline void di_DIRTY(buf_t * bufp)
 {
-	if (bufp != NULL)
+	if (bufp != NULL) {
 		bufp->dirty = 1;
+		//log_debug("DIRTY: set %p (%d/%d) to dirty\n", bufp, bufp->track, bufp->sector);
+	}
 }
 
 /* 
@@ -558,6 +560,8 @@ static cbm_errno_t di_REUSEFLUSHMAP(buf_t * bufp, uint8_t track, uint8_t sector)
 
 	if (bufp->track != track || bufp->sector != sector) {
 
+		log_debug("REUSEFM(%d,%d -> %d/%d, (%p),d=%d)\n", bufp->track, bufp->sector, track, sector, bufp, bufp->dirty);
+
 		if (bufp->dirty) {
 			err = di_WRBUF(bufp);
 		}
@@ -569,8 +573,7 @@ static cbm_errno_t di_REUSEFLUSHMAP(buf_t * bufp, uint8_t track, uint8_t sector)
 			err = di_RDBUF(bufp);
 		}
 	} else {
-		log_debug("REUSE(%d,%d (%p))\n", bufp == NULL ? 0 : bufp->track,
-			  bufp == NULL ? 0 : bufp->sector, bufp);
+		log_debug("REUSEFM(%d,%d (%p),d=%d)\n", bufp->track, bufp->sector, bufp, bufp->dirty);
 	}
 		
 	return err;
@@ -1445,6 +1448,7 @@ static int di_rel_navigate(di_endpoint_t * diep, File *f,
 	data_track = sidep->buf[o];
 	data_sector = sidep->buf[o + 1];
 
+	log_debug("di_navigate datap: %p -> dirty=%d\n", datap, datap->dirty);
 	// read the last sector of the file
 	di_REUSEFLUSHMAP(datap, data_track, data_sector);
 
@@ -2084,6 +2088,7 @@ static int di_position(File * f, int recordno)
         di_GETBUF_data(&datap, f);
 
 	log_debug("di_position: set position to record no %d\n", recordno);
+	log_debug("di_position: superp=%p, sidep=%p, datap=%p\n", superp, sidep, datap);
 
 	// store position for write in case we exit with error.
 	// (will be cleared on success, so also used as flag; note: recordno 0 is treated as 1)
@@ -2867,7 +2872,7 @@ static int
 di_read_seq(File * file, char *retbuf, int len, int *eof)
 {
 	int i;
-	log_debug("di_read_seq(fp %d, len=%d)\n", file, len);
+	log_debug("di_read_seq(fp=%p, len=%d)\n", file, len);
 
 	buf_t *datap = NULL;
 	di_GETBUF_data(&datap, file);
@@ -2963,10 +2968,14 @@ static int di_writefile(file_t * fp, const char *buf, int len, int is_eof)
 					goto end;
 			}
 		}
+		log_debug("  writefile: bufp=%p/%p, chp=%d <- %02x (%c)\n", data, data->buf, file->chp, buf[i], isprint(buf[i])?buf[i]:'.');
 		data->buf[file->chp + 2] = buf[i];
 		++file->chp;
 		di_DIRTY(data);
 	}
+
+	log_debug("di_writefile: datap=%p, dirty=%d\n", data, data->dirty);
+
 	// flush last data just in case
 	//di_FLUSH(data);
 

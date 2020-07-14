@@ -6,10 +6,10 @@
 #imgname2=blk2.d82 (optional)
 
 if [ "x$MODEL" = "x" ]; then
-	MODEL="xpet -model 4032"
+	MODEL="xpet -model 4032 -virtualdev "
 	SOCKLOG="sock488.trace"
 	POST=""
-	PETCAT_OPTS="-w4 -l 0401"
+	PETCAT_OPTS="-w40 -l 0401"
 	FILTER="_______"
 	DIR="PET"
 else
@@ -95,8 +95,8 @@ if [ "x$imgname2" != "x" ]; then
 fi
 
 
-echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
-${VICEPETBIN} ${VICEPAR} $warp +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
+echo "Running VICE as: ${VICEPETBIN} ${VICEPAR} $warp -jamaction 5 +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg"
+${VICEPETBIN} ${VICEPAR} $warp -jamaction 5 +sound -truedrive -drive8type ${drivetype} ${attach8} ${attach9} -autostartprgmode 1 ./${prgname}${POST}.prg
 
 echo "find resulting image in ${diskname} (or similar) - you may need to gzip it with"
 echo "    gzip ${diskname}"
