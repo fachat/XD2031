@@ -316,6 +316,11 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
 
+	// cut off final CR
+	if (cmdpars[namelen-1] == 0x0d) {
+		cmdpars[namelen-1] = 0;
+	}
+
 	uint8_t channel = (uint8_t)cmdpars[0];
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
 	uint8_t position = (namelen == 3) ? 0 : ((uint8_t)(cmdpars[3]));
