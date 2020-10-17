@@ -333,6 +333,10 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		return CBM_ERROR_NO_CHANNEL;
 	}
 
+	if (position > buffer->recordlen) {
+		return CBM_ERROR_OVERFLOW_IN_RECORD;
+	}
+
         channel_flush(channel);
 
 	buffer->buf_recordno = recordno;
