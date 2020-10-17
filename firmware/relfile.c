@@ -316,10 +316,6 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
 
-	// cut off final CR
-	if (cmdpars[namelen-1] == 0x0d) {
-		cmdpars[namelen-1] = 0;
-	}
 
 	uint8_t channel = (uint8_t)cmdpars[0];
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
@@ -360,6 +356,9 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 	} else {
 		// read the record
 		rv = relfile_rw_record(buffer, 0);
+		if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
+			position = 0;
+		}
 		buffer->rptr += position;
 		buffer->wptr += position;
 	}
