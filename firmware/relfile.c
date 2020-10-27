@@ -398,7 +398,7 @@ int8_t relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t rec
 		buffer->real_endpoint = real_endpoint;
 
 		buffer->recordlen = reclen & 0xff;
-		buffer->buf_recordno = 0;	// not loaded
+		buffer->buf_recordno = 1;	// not loaded
 		buffer->cur_pos_in_record = 0;	// not loaded
                 buf[0] = CBM_ERROR_OK;
 		buffer->pflag = 0;

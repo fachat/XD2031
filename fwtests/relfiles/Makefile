@@ -18,4 +18,5 @@ tests:
 	./tests-8250.sh -qq
 	./tests-8250-relbug1.sh -qq
 	./tests-8250-relpos.sh -qq
+	./tests-8250-relrw.sh -qq
 
