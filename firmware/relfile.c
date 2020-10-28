@@ -29,7 +29,7 @@
 #include "relfile.h"
 #include "debug.h"
 
-#define	DEBUG_RELFILE
+#undef	DEBUG_RELFILE
 
 
                	
