@@ -90,6 +90,12 @@ IEEE_ATN_HANDLER {
  */
 
 void ieeehw_setup() {
+
+	IEEE_PORT_EOI &= (uint8_t) ~ _BV(IEEE_PIN_EOI);	
+	IEEE_PORT_DAV &= (uint8_t) ~ _BV(IEEE_PIN_DAV);	
+	IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	
+	IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	
+
 	// clear IEEE lines
 	atnahi();
 	clrd();

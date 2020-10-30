@@ -65,6 +65,9 @@ static int16_t liecin(int *c)
 {
         int er = 0;
 
+        ndaclo();
+
+	// PET4 @ F11E checks NRFD and waits for hi
         nrfdhi();
 
 	// do...while to make sure to at least test ATN once
@@ -81,17 +84,11 @@ static int16_t liecin(int *c)
                 er|=E_EOI;
         *c=rdd();
 
+	// PET4 @ F12D checks NDAC and waits for hi
         ndachi();
 
-        do {
-//            if(atnislo()) {
-//		// ATN got low, exit
-//                //break;
-//                goto atn;
-//            }
-        } while( davislo() );
-
-        ndaclo();
+       	// wait DAV hi 
+        while( davislo() );
 
         return(er);
 
@@ -261,13 +258,16 @@ void ieee_mainloop_iteration(void)
 
         par_status=0;
 
+	// acknowledge ATN
+        atnalo();
+
         /* Loop to get commands during ATN lo ----------------------------*/
 
         while(1)
         {
             ndaclo();
-	    // acknowledge ATN
-            atnalo();
+
+	    // PET @ F11E waits for NRFD hi
             nrfdhi();
 
             /* wait for DAV lo */
@@ -282,6 +282,8 @@ void ieee_mainloop_iteration(void)
 
 	    // read data
             cmd=rdd();
+
+	    // PET @ F12D waits for NDAC hi
 	    // ack with ndac hi
             ndachi();
 
@@ -291,12 +293,6 @@ void ieee_mainloop_iteration(void)
             par_status = bus_attention(&bus, cmd);
 
 	    // wait until DAV goes up
-//	    do {
-//		if (atnishi()) {
-//		    // ATN hi, end loop
-//		    goto cmd;
-//		}
-//	    }
             while(davislo());
         }
 

@@ -67,16 +67,20 @@ static inline uint8_t atnishi()
 // NDAC & NRFD handling
 // Note the order of method definition in this file depends on dependencies
 
+// Note: DAV, NDAC and NRFD are always kept as low, either
+// tri-state input (for high) or 0 output (for low).
+// So, PORTx is always 0. Only the direction is changed
+
 static inline void ndaclo()
 {
-	IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC low
+	//IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC low
 	IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC as output
 	is_ndacout = 0;
 }
 
 static inline void nrfdlo()
 {
-	IEEE_PORT_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD low
+	//IEEE_PORT_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD low
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output
 	is_nrfdout = 0;
 }
@@ -87,9 +91,18 @@ static inline void ndachi()
 	// of ATN irq between the atnishi() check and
 	// setting NDAC lo
 	cli();
-	if (atnishi() || is_atna) {
-		IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC as input
-		IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);	// Enable pull-up
+	if (atnishi()) {
+		// ATN is high - are we still in ATN mode? then not
+		if (!is_atna) {
+			// NDAC as input to set hi
+			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
+		}
+	} else {
+		// ATN is lo - are we already in ATN mode? then ok
+		if (is_atna) {
+			// NDAC as input to set hi
+			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
+		}
 	}
 	// allow interrupt again
 	sei();
@@ -102,15 +115,25 @@ static inline void nrfdhi()
 	// of ATN irq between the atnishi() check and
 	// setting NDAC lo
 	cli();
-	if (atnishi() || is_atna) {
-		IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD as input
-		IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);	// Enable pull-up
+	if (atnishi()) {
+		// ATN is high - are we still in ATN mode? then not
+		if (!is_atna) {
+			// NRFD as input
+			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
+		}
+	} else {
+		// ATN is lo - are we already in ATN mode? then ok
+		if (is_atna) {
+			// NRFD as input
+			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
+		}
 	}
 	// allow interrupt again
 	sei();
 	is_nrfdout = 1;
 }
 
+// for init only
 static inline void atnhi()
 {
 	IEEE_DDR_ATN &= (uint8_t) ~ _BV(IEEE_PIN_ATN);	// ATN as input
@@ -141,14 +164,14 @@ static inline uint8_t nrfdishi()
 
 static inline void davlo()
 {
-	IEEE_PORT_DAV &= (uint8_t) ~ _BV(IEEE_PIN_DAV);	// DAV low
+	// IEEE_PORT_DAV &= (uint8_t) ~ _BV(IEEE_PIN_DAV);	// DAV low
 	IEEE_DDR_DAV |= _BV(IEEE_PIN_DAV);	// DAV as output
 }
 
 static inline void davhi()
 {
 	IEEE_DDR_DAV &= (uint8_t) ~ _BV(IEEE_PIN_DAV);	// DAV as input
-	IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);	// Enable pull-up
+	// IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);	// Enable pull-up
 }
 
 static inline uint8_t davislo()
@@ -165,14 +188,14 @@ static inline uint8_t davishi()
 
 static inline void eoilo()
 {
-	IEEE_PORT_EOI &= (uint8_t) ~ _BV(IEEE_PIN_EOI);	// EOI low
+	// IEEE_PORT_EOI &= (uint8_t) ~ _BV(IEEE_PIN_EOI);	// EOI low
 	IEEE_DDR_EOI |= (uint8_t) _BV(IEEE_PIN_EOI);	// EOI as output
 }
 
 static inline void eoihi()
 {
 	IEEE_DDR_EOI &= (uint8_t) ~ _BV(IEEE_PIN_EOI);	// EOI as input
-	IEEE_PORT_EOI |= (uint8_t) _BV(IEEE_PIN_EOI);	// Enable pull-up
+	// IEEE_PORT_EOI |= (uint8_t) _BV(IEEE_PIN_EOI);	// Enable pull-up
 }
 
 static inline uint8_t eoiislo()
@@ -197,12 +220,6 @@ static inline void atnahi()
 // disarm ATN acknowledge handling
 static inline void atnalo()
 {
-	if (!is_nrfdout) {
-		nrfdlo();
-	}
-	if (!is_ndacout) {
-		ndaclo();
-	}
 	is_atna = 1;
 }
 

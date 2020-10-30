@@ -59,9 +59,9 @@ checkieee:
 	brne	noatn		;	set, then ATN is not active, end	; 1/2
 
 	; ATN acknowledge
-	lds	r16, PORTC	;	clear port output			; 2
-	andi	r16, 255 -_BV(PC4) | _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
-	sts	PORTC, r16							; 2
+;	lds	r16, PORTC	;	clear port output			; 2
+;	andi	r16, 255 - _BV(PC4) - _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
+;	sts	PORTC, r16							; 2
 	
 	lds 	r16, DDRC	;	set lines to output			; 2
 	ori	r16, _BV(PC4) | _BV(PC5)					; 1
