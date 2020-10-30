@@ -162,7 +162,7 @@ int guess_device(char** device) {
 		    (!strcmp("ttyAMA0", entry->d_name))) {
 			log_info("Serial device /dev/%s auto-detected\n", entry->d_name);
 			if (*device) {
-				fprintf(stderr, "Unable to decide which serial device it is. "
+				log_error("Unable to decide which serial device it is. "
 				                "Please pick one.\n");
 				exit(EXIT_RESPAWN_NEVER);
 			}
@@ -173,7 +173,7 @@ int guess_device(char** device) {
 	}
 	closedir(dirptr); // free ressources claimed by opendir
 	if(*device == NULL) {
-		fprintf(stderr, "Could not auto-detect device: none found\n");
+		log_error("Could not auto-detect device: none found\n");
 		return(EXIT_FAILURE);
 	}
 	return EXIT_SUCCESS;
