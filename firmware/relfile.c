@@ -219,6 +219,8 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 				// read it when needed on the next read
 				buffer->pflag &= ~PFLAG_ISREAD;
 				buffer->pflag &= ~PFLAG_PRELOAD;
+				// ... and read it in advance to avoid timeouts
+				relfile_rw_record(buffer, 0);
 			}
 		}
 #ifdef DEBUG_RELFILE
