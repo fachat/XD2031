@@ -1,0 +1,180 @@
+
+	*=$f0d2
+; talk	Send TALK Command on IEEE Bus
+
+ F0D2	iF0D2	LDA #$40
+ F0D4		.byt $2c	; skip next opcode
+; listn	Send LISTEN Command on IEEE Bus
+ F0D5	iF0D5	LDA #$20
+ F0D7	iF0D7	PHA
+ F0D8		LDA $E840
+ F0DB		ORA #$02	; NRFD clear
+ F0DD		STA $E840
+ F0E0		LDA #$3C
+ F0E2		STA $E821	; NDAC clear
+
+ F0E5		BIT $A0		; do we have a byte in the buffer?
+ F0E7		BEQ $F0FA	; no then skip
+
+ F0E9		LDA #$34	; EOI out
+ F0EB		STA $E811
+ F0EE		JSR $F109	; Send Data On IEEE Bus
+ F0F1		LDA #$00	; clear buffer flag
+ F0F3		STA $A0		; 
+ F0F5		LDA #$3C	; EOI clear
+ F0F7		STA $E811
+
+ F0FA	iF0FA	PLA
+ F0FB		ORA $D4		; Current Device Number
+ F0FD		STA $A5		; Buffered Character for IEEE Bus
+ F0FF	iF0FF	LDA $E840
+ F102		BPL $F0FF	; wait for DAV clear
+ F104		AND #$FB
+ F106		STA $E840	; ATN out
+
+
+; -	Send Data On IEEE Bus
+
+;	-	Flag Errors
+
+ F109	iF109	LDA #$3C
+ F10B		STA $E823	; DAV clear
+ F10E		LDA $E840	
+ F111		AND #$41	; check NDAC & NRFD in
+ F113		CMP #$41	; both still clear?
+ F115		BEQ $F16C	; yes, then Status #80 - device not present
+
+ F117		LDA $A5		; Buffered Character for IEEE Bus
+ F119		EOR #$FF
+ F11B		STA $E822	; data output to bus
+ F11E	iF11E	BIT $E840
+ F121		BVC $F11E	; wait for NRFD clear
+ F123		LDA #$34
+ F125		STA $E823	; DAV out
+	
+ F128	iF128	LDA #$FF
+ F12A		STA $E845	; Timer 1 HI
+ F12D	iF12D	LDA $E840	; read NDAC,NRFD,DAV in 
+ F130		BIT $E84D	; check timer
+ F133		BVS $F151	; timer underflow - error
+ F135		LSR		; NDAC into carry
+ F136		BCC $F12D	; wait for NDAC clear
+
+ F138	iF138	LDA #$3C
+ F13A		STA $E823	; DAV clear
+ F13D		LDA #$FF	; clear bus data
+ F13F		STA $E822
+ F142		RTS
+
+ F143	iF143	STA $A5		; Buffered Character for IEEE Bus
+ F145		JSR $F109	; -	Send Data On IEEE Bus
+ F148	iF148	LDA $E840	; VIA						CHIP
+ F14B		ORA #$04
+ F14D		STA $E840	; VIA						CHIP
+ F150		RTS
+ F151	iF151	LDA $03FC	; 4: Flag: Kernal Variable for IEEE Timeout
+ F154		BPL $F165	; -	Status #01 - ??
+ F156		JSR $F343	; stop	Check STOP Key
+ F159		BNE $F128
+ F15B	iF15B	LDA $03FC	; 4: Flag: Kernal Variable for IEEE Timeout
+ F15E		BPL $F170	; -	Status #02 - read timeout
+ F160		JSR $F343	; stop	Check STOP Key
+ F163		BNE $F1CD
+
+
+; -	Status #01 - ??
+
+ F165	iF165	LDA #$01
+ F167	iF167	JSR $FBC4	; -	Set Status Bit
+ F16A		BNE $F138
+
+
+; -	Status #80 - device not present
+
+ F16C	iF16C	LDA #$80
+ F16E		BMI $F167
+
+
+; -	Status #02 - read timeout
+
+ F170	iF170	LDA #$02
+ F172		JSR $FBC4	; -	Set Status Bit
+ F175	iF175	LDA $E840	; VIA						CHIP
+ F178		AND #$FD
+ F17A		STA $E840	; VIA						CHIP
+ F17D		LDA #$34
+ F17F		STA $E821
+ F182		LDA #$0D
+ F184		RTS
+
+
+; -	Print Message
+
+ F185	iF185	LDA $F000,Y	; -	Table of Kernal I/O Messages		DATA
+ F188		PHP
+ F189		AND #$7F
+ F18B		JSR $E202	; -	Output to Screen
+ F18E		INY
+ F18F		PLP
+ F190		BPL $F185	; -	Print Message
+ F192		RTS
+ F193	iF193	STA $A5		; Buffered Character for IEEE Bus
+ F195		JSR $F109	; -	Send Data On IEEE Bus
+ F198	iF198	JSR $F175
+ F19B		JMP $F148
+ F19E	iF19E	BIT $A0
+ F1A0		BMI $F1A6
+ F1A2		DEC $A0		; Flag: IEEE Bus-Output Char. Buffered
+ F1A4		BNE $F1AB
+ F1A6	iF1A6	PHA
+ F1A7		JSR $F109	; -	Send Data On IEEE Bus
+ F1AA		PLA
+ F1AB	iF1AB	STA $A5		; Buffered Character for IEEE Bus
+ F1AD		RTS
+
+
+; untlk	Send UNTALK
+
+ F1AE	iF1AE	LDA $E840	; VIA						CHIP
+ F1B1		AND #$FB
+ F1B3		STA $E840	; VIA						CHIP
+ F1B6		LDA #$5F
+ F1B8		BIT $3FA9
+
+; *** Resyncing ***
+
+; untlk	Send UNLISTEN
+
+ F1B9	iF1B9	LDA #$3F
+ F1BB		JSR $F0D7
+ F1BE		BNE $F148
+ F1C0	iF1C0	LDA #$34
+ F1C2		STA $E821
+ F1C5		LDA $E840	; VIA						CHIP
+ F1C8		ORA #$02
+ F1CA		STA $E840	; VIA						CHIP
+ F1CD	iF1CD	LDA #$FF
+ F1CF		STA $E845
+ F1D2	iF1D2	BIT $E84D
+ F1D5		BVS $F15B
+ F1D7		BIT $E840
+ F1DA		BMI $F1D2
+ F1DC		LDA $E840	; VIA						CHIP
+ F1DF		AND #$FD
+ F1E1		STA $E840	; VIA						CHIP
+ F1E4		BIT $E810
+ F1E7		BVS $F1EE
+ F1E9		LDA #$40
+ F1EB		JSR $FBC4	; -	Set Status Bit
+ F1EE	iF1EE	LDA $E820	; PIA 2						CHIP
+ F1F1		EOR #$FF
+ F1F3		PHA
+ F1F4		LDA #$3C
+ F1F6		STA $E821
+ F1F9	iF1F9	BIT $E840
+ F1FC		BPL $F1F9
+ F1FE		LDA #$34
+ F200		STA $E821
+ F203		PLA
+ F204		RTS
+
