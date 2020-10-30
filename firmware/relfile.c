@@ -29,7 +29,7 @@
 #include "relfile.h"
 #include "debug.h"
 
-#define	DEBUG_RELFILE
+#undef	DEBUG_RELFILE
 
 
                	
@@ -143,13 +143,6 @@ debug_flush();
 		if (buffer != NULL && buffer->real_endpoint != NULL) {
 			// close proxied file
 			buf_call(buffer->real_endpoint, buffer->real_endpoint->provdata, channelno, txbuf, rxbuf);
-/*
-			cbstat = 0;
-			buffer->real_endpoint->provider->submit_call(
-				buffer->real_endpoint->provdata, channelno,
-				txbuf, rxbuf, &cmd_callback);
-			cmd_wait_cb();
-*/
 			// ignore error here?
 			buf_free(channelno);
 		}
@@ -169,6 +162,8 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 		if ((buffer->pflag & PFLAG_PRELOAD) == 0) {
 			// this should only happen on GET_PRELOAD, otherwise
 			// it may cause a timeout error
+			// Note: preload may be insufficient, as P command needs to
+			// read the record, and the following GET cannot block
 			if ((preload & GET_PRELOAD) == 0) {
 				debug_puts("NEEDED TO LOAD BUFFER DURING FETCH");
 			}
@@ -212,21 +207,23 @@ int8_t relfile_get(void *pdata, int8_t channelno,
 			// defaults to EOF
 			// go to next record (read it when used)
 			buffer->buf_recordno++;
-			buffer->pflag &= ~PFLAG_ISREAD;
-			if ((buffer->lastvalid - buffer->rptr) > buffer->recordlen) {
-				// the following record is still in the buffer
-				buffer->cur_pos_in_record = 0;
-				buffer->pos_of_record += buffer->recordlen;
-				buffer->rptr = buffer->pos_of_record;
-				buffer->wptr = buffer->pos_of_record;
-			} else {
+			buffer->pos_of_record += buffer->recordlen;
+			buffer->rptr = buffer->pos_of_record;
+			buffer->wptr = buffer->pos_of_record;
+			buffer->cur_pos_in_record = 0;
+			debug_printf("check next lastvalid=%d, rptr=%d, diff=%d, reclen=%d\n", 
+				buffer->lastvalid, buffer->rptr, buffer->lastvalid - buffer->rptr, 
+				buffer->recordlen);
+			if ((buffer->lastvalid - buffer->rptr) <= buffer->recordlen) {
+				// the following record is not yet in the buffer
 				// read it when needed on the next read
+				buffer->pflag &= ~PFLAG_ISREAD;
 				buffer->pflag &= ~PFLAG_PRELOAD;
 			}
 		}
 #ifdef DEBUG_RELFILE
 debug_printf("read -> %s (pload=%d, data=%d, err=%d)(ptr=%d, rec pos=%d, reclen=%d, lastvalid=%d)\n", 
-		(*iseof) ? "EOF" : "WRITE", preload, *data, *err, buffer->rptr, buffer->cur_pos_in_record,
+		(*iseof) ? "EOF" : "DATA", preload, *data, *err, buffer->rptr, buffer->cur_pos_in_record,
 		buffer->recordlen, buffer->lastvalid);
 #endif
 	}
@@ -254,7 +251,6 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 			// write to rel file after reading a record
 			// we need to skip to the beginning of the next record
 			// and as we overwrite it, there is no need to read it first
-			buffer->buf_recordno++;
 			buffer->cur_pos_in_record = 0;
 			buffer->pos_of_record = 0;
 			buffer->rptr = 0;
@@ -309,17 +305,13 @@ int8_t relfile_put(void *pdata, int8_t channelno,
 
 // execute a P command
 int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *errormsg) {
-	int8_t rv;
+	int8_t rv = CBM_ERROR_OK;
 
 	// NOP for now
 	if (namelen < 3) {
 		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
 
-	// cut off final CR
-	if (cmdpars[namelen-1] == 0x0d) {
-		cmdpars[namelen-1] = 0;
-	}
 
 	uint8_t channel = (uint8_t)cmdpars[0];
 	uint16_t recordno = ((uint8_t)(cmdpars[1]) & 0xff) | (((uint8_t)(cmdpars[2]) & 0xff) << 8);
@@ -338,6 +330,10 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 		return CBM_ERROR_NO_CHANNEL;
 	}
 
+	if (position > buffer->recordlen) {
+		return CBM_ERROR_OVERFLOW_IN_RECORD;
+	}
+
         channel_flush(channel);
 
 	buffer->buf_recordno = recordno;
@@ -348,17 +344,16 @@ int8_t relfile_position(bus_t *bus, char *cmdpars, uint8_t namelen, errormsg_t *
 	if (position == 0) {
 		buffer->pflag &= ~PFLAG_ISREAD;
 		buffer->pflag &= ~PFLAG_PRELOAD;
-		// this send_position is only done to get the NO RECORD error.
-		// wouldn't be necessary otherwise
-		rv = relfile_send_position(buffer, channel);
-		buffer->rptr = 0;
-		buffer->wptr = 0;
-	} else {
-		// read the record
-		rv = relfile_rw_record(buffer, 0);
-		buffer->rptr += position;
-		buffer->wptr += position;
+	} 
+
+	// read the record
+	rv = relfile_rw_record(buffer, 0);
+	if (rv == CBM_ERROR_RECORD_NOT_PRESENT) {
+		position = 0;
 	}
+	buffer->rptr += position;
+	buffer->wptr += position;
+
 	buffer->cur_pos_in_record = position;
 	
 	return rv;
@@ -403,7 +398,7 @@ int8_t relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t rec
 		buffer->real_endpoint = real_endpoint;
 
 		buffer->recordlen = reclen & 0xff;
-		buffer->buf_recordno = 0;	// not loaded
+		buffer->buf_recordno = 1;	// not loaded
 		buffer->cur_pos_in_record = 0;	// not loaded
                 buf[0] = CBM_ERROR_OK;
 		buffer->pflag = 0;

@@ -1,0 +1,558 @@
+atn 28 f2
+send "0:REL6.2,L,?"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "P" 02 "<" 00
+atn 3f
+atn 48 6f
+expect "50, RECORD NOT PR"
+recv "ESENT,00,00,0" 0d
+atn 5f
+atn 28 62
+send "FOO" 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "P" 02 01 00
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  1 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  2 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  3 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  4 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  5 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  6 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  7 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  8 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  9 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  10 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  11 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  12 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  13 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  14 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  15 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  16 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  17 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  18 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  19 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  20 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  21 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  22 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  23 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  24 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  25 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  26 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  27 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  28 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  29 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  30 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  31 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  32 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  33 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  34 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  35 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  36 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  37 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  38 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  39 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  40 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  41 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  42 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  43 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  44 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  45 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  46 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  47 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  48 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  49 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  50 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  51 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  52 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  53 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  54 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  55 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  56 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  57 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 62
+send "ABCD  58 " 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e2 3f
+atn 28 f2
+send "0:REL6.2,L,?"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 62
+recv "ABCD  1 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  2 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  3 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  4 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  5 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  6 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  7 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  8 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  9 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  10 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  11 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  12 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  13 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  14 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  15 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  16 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  17 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  18 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  19 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  20 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  21 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  22 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  23 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  24 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  25 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  26 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  27 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  28 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  29 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  30 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  31 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  32 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  33 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  34 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  35 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  36 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  37 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  38 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  39 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  40 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  41 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  42 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  43 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  44 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  45 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  46 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  47 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  48 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  49 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  50 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  51 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  52 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  53 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  54 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  55 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  56 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  57 " 0d
+atn 5f
+atn 48 62
+recv "ABCD  58 " 0d
+atn 5f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 e2 3f

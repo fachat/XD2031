@@ -11,8 +11,12 @@ tests:
 	./tests-1581-relbug1.sh -qq
 	./tests-4040.sh -qq
 	./tests-4040-relbug1.sh -qq
+	./tests-4040-relpos.sh -qq
+	./tests-4040-relopen.sh -qq
 	./tests-8050.sh -qq
 	./tests-8050-relbug1.sh -qq
 	./tests-8250.sh -qq
 	./tests-8250-relbug1.sh -qq
+	./tests-8250-relpos.sh -qq
+	./tests-8250-relrw.sh -qq
 
