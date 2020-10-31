@@ -73,15 +73,19 @@ static inline uint8_t atnishi()
 
 static inline void ndaclo()
 {
+	cli();
 	//IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC low
 	IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC as output
+	sei();
 	is_ndacout = 0;
 }
 
 static inline void nrfdlo()
 {
+	cli();
 	//IEEE_PORT_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD low
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output
+	sei();
 	is_nrfdout = 0;
 }
 
@@ -118,13 +122,13 @@ static inline void nrfdhi()
 	if (atnishi()) {
 		// ATN is high - are we still in ATN mode? then not
 		if (!is_atna) {
-			// NRFD as input
+			// NRFD as input (no pulldown)
 			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
 		}
 	} else {
 		// ATN is lo - are we already in ATN mode? then ok
 		if (is_atna) {
-			// NRFD as input
+			// NRFD as input (no pulldown)
 			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
 		}
 	}
@@ -132,6 +136,13 @@ static inline void nrfdhi()
 	sei();
 	is_nrfdout = 1;
 }
+
+#define	DEBOUNCE(a)				\
+	uint8_t d;				\
+	do {					\
+		d = (a);			\
+	} while (d != (a));			\
+	return d;
 
 // for init only
 static inline void atnhi()
@@ -142,22 +153,26 @@ static inline void atnhi()
 
 static inline uint8_t ndacislo()
 {
-	return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
+	DEBOUNCE(!(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)));
+	//return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t ndacishi()
 {
-	return (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
+	DEBOUNCE( (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)) );
+	//return (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t nrfdislo()
 {
-	return !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
+	DEBOUNCE( !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
+	//return !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 static inline uint8_t nrfdishi()
 {
-	return (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
+	DEBOUNCE( (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
+	//return (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 // DAV handling
@@ -237,9 +252,14 @@ static inline void wrd(uint8_t data)
 	IEEE_D_PORT = (uint8_t) ~ data;
 }
 
+// debounce
 static inline uint8_t rdd(void)
 {
-	return (uint8_t) ~ IEEE_D_PIN;
+	uint8_t d;
+	do {
+		d = IEEE_D_PIN;
+	} while (d != IEEE_D_PIN);
+	return ~ d;
 }
 
 // general functions
