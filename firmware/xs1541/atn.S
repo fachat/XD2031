@@ -27,6 +27,8 @@
  * ATN interrupt handler
  */
 
+.extern is_atna
+
 ;---------------------------------------------------------------------------
 ; ATN change interrupt
 
@@ -35,6 +37,7 @@ PCINT3_vect:
 	push	r2		;	make place for status register		; 2
 	in	r2, _SFR_IO_ADDR(SREG)	; 	save status register		; 1
 	push	r16		;	save working register			; 2
+	push	r17		;	save working register			; 2
 
 	; first check if we're being called for a serial IEC ATN
 	lds 	r16, PIND	;	load ATN in port			; 1
@@ -50,27 +53,40 @@ PCINT3_vect:
 	ori	r16, _BV(PD4)
 	sts 	DDRD, r16
 
-	; done with IEC, check IEEE via fall through
+;	; done with IEC, check IEEE via fall through
 
 checkieee:
 	lds	r16, PIND	; 	load ATN in port			; 1
+	lds	r17, is_atna
+	eor	r16, r17	;	check difference to atna		; 1
 	andi	r16, _BV(PD3)	; 	mask out ATN bit			; 1
 	
-	brne	noatn		;	set, then ATN is not active, end	; 1/2
+	breq	noatn		;	equal, then no action needed		; 1/2
 
 	; ATN acknowledge
-;	lds	r16, PORTC	;	clear port output			; 2
-;	andi	r16, 255 - _BV(PC4) - _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
-;	sts	PORTC, r16							; 2
+	lds	r16, PORTC	;	clear port output			; 2
+	andi	r16, 255 - _BV(PC4) - _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
+	sts	PORTC, r16							; 2
 	
 	lds 	r16, DDRC	;	set lines to output			; 2
 	ori	r16, _BV(PC4) | _BV(PC5)					; 1
 	sts	DDRC, r16							; 2
 										;===
+; debug signal
+;	ldi	r17, _BV(PD7)
+;	lds	r16, PORTD	;	clear port output			; 2
+;	eor	r16, r17	; 	toggle IEC CLK for analysis		; 1
+;	sts	PORTD, r16							; 2
+;	andi	r16, _BV(PD7)	; 	toggle IEC CLK for analysis		; 1
+;	lds	r16, DDRD	;	port direction
+;	eor	r16, r17	; 	toggle IEC CLK for analysis		; 1
+;	sts	DDRD, r16							; 2
+	
 										;
 noatn:	
 	; end of interrupt routine
 
+	pop	r17
 	pop	r16
 	out	_SFR_IO_ADDR(SREG), r2
 	pop	r2
