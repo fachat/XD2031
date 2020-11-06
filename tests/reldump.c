@@ -462,7 +462,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// fixed for now
-	set_verbose();
+	set_verbose(1);
 
 	char *imgname = argv[1];
 	char *filename = argv[2];
