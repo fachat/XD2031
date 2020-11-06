@@ -27,8 +27,8 @@
  * local variables
  */
 
-// when set, disable ATN acknowledgement
-uint8_t is_atna = 0;
+// follow ATN; if different, keep nrfd/ndac lo
+volatile uint8_t is_atna = _BV(IEEE_PIN_ATN);
 uint8_t is_ndacout = 0;
 uint8_t is_nrfdout = 0;
 
@@ -90,10 +90,12 @@ IEEE_ATN_HANDLER {
  */
 
 void ieeehw_setup() {
+
 	// clear IEEE lines
 	atnahi();
 	clrd();
 	davhi();
+	srqhi();
 	nrfdhi();
 	ndachi();
 	eoihi();

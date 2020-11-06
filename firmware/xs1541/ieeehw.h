@@ -45,11 +45,7 @@
 static void nrfdlo();
 
 // output of ATNA
-extern uint8_t is_atna;
-// last output of NRFD before ATNA handling
-extern uint8_t is_nrfdout;
-// last output of NDAC before ATNA handling
-extern uint8_t is_ndacout;
+extern volatile uint8_t is_atna;
 
 // ATN handling
 // (input only)
@@ -71,70 +67,105 @@ static inline void ndaclo()
 {
 	IEEE_PORT_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC low
 	IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC as output
-	is_ndacout = 0;
 }
 
 static inline void nrfdlo()
 {
 	IEEE_PORT_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD low
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output
-	is_nrfdout = 0;
 }
 
 static inline void ndachi()
 {
-	// disable interrupt to avoid race condition
+	// must have interrupt disabled to avoid race condition
 	// of ATN irq between the atnishi() check and
 	// setting NDAC lo
 	cli();
-	if (atnishi() || is_atna) {
-		IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);	// NDAC as input
-		IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);	// Enable pull-up
+	if (atnishi()) {
+		// ATN is high - are we still in ATN mode? then not
+		if (is_atna) {
+			// NDAC as input to set hi
+			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
+			IEEE_PORT_NDAC |= (uint8_t) _BV(IEEE_PIN_NDAC);	// Enable pull-up
+		}
+	} else {
+		// ATN is lo - are we already in ATN mode? then ok
+		if (!is_atna) {
+			// NDAC as input to set hi
+			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
+			IEEE_PORT_NDAC |= (uint8_t) _BV(IEEE_PIN_NDAC);	// Enable pull-up
+		}
 	}
-	// allow interrupt again
 	sei();
-	is_ndacout = 1;
 }
 
 static inline void nrfdhi()
 {
-	// disable interrupt to avoid race condition
+	// must have interrupt disabled to avoid race condition
 	// of ATN irq between the atnishi() check and
-	// setting NDAC lo
+	// setting NRFD lo
 	cli();
-	if (atnishi() || is_atna) {
-		IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);	// NRFD as input
-		IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);	// Enable pull-up
+	if (atnishi()) {
+		// ATN is high - are we still in ATN mode? then not
+		if (is_atna) {
+			// NRFD as input (no pulldown)
+			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
+			IEEE_PORT_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// Enable pull-up
+		}
+	} else {
+		// ATN is lo - are we already in ATN mode? then ok
+		if (!is_atna) {
+			// NRFD as input (no pulldown)
+			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
+			IEEE_PORT_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// Enable pull-up
+		}
 	}
-	// allow interrupt again
 	sei();
-	is_nrfdout = 1;
 }
 
+#define	DEBOUNCE(a)				\
+	uint8_t d;				\
+	do {					\
+		d = (a);			\
+	} while (d != (a));			\
+	return d;
+
+// for init only
 static inline void atnhi()
 {
 	IEEE_DDR_ATN &= (uint8_t) ~ _BV(IEEE_PIN_ATN);	// ATN as input
 	IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);	// Enable pull-up
 }
 
+// for init only
+static inline void srqhi()
+{
+	IEEE_DDR_SRQ |= (uint8_t) _BV(IEEE_PIN_SRQ);	// SRQ as output
+	IEEE_PORT_SRQ |= _BV(IEEE_PIN_SRQ);	// high output
+}
+
 static inline uint8_t ndacislo()
 {
-	return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
+	DEBOUNCE(!(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)));
+	//return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t ndacishi()
 {
-	return (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
+	DEBOUNCE( (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)) );
+	//return (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t nrfdislo()
 {
-	return !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
+	DEBOUNCE( !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
+	//return !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 static inline uint8_t nrfdishi()
 {
-	return (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
+	DEBOUNCE( (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
+	//return (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 // DAV handling
@@ -191,19 +222,13 @@ static inline uint8_t eoiishi()
 // acknowledge ATN
 static inline void atnahi()
 {
-	is_atna = 0;
+	is_atna = _BV(IEEE_PIN_ATN);
 }
 
 // disarm ATN acknowledge handling
 static inline void atnalo()
 {
-	if (!is_nrfdout) {
-		nrfdlo();
-	}
-	if (!is_ndacout) {
-		ndaclo();
-	}
-	is_atna = 1;
+	is_atna = 0;
 }
 
 // data handling
@@ -220,9 +245,14 @@ static inline void wrd(uint8_t data)
 	IEEE_D_PORT = (uint8_t) ~ data;
 }
 
+// debounce
 static inline uint8_t rdd(void)
 {
-	return (uint8_t) ~ IEEE_D_PIN;
+	uint8_t d;
+	do {
+		d = IEEE_D_PIN;
+	} while (d != IEEE_D_PIN);
+	return ~ d;
 }
 
 // general functions
@@ -257,6 +287,7 @@ static inline void setrx(void)
 {
 	davhi();
 	eoihi();
+	clrd();
 }
 
 #endif
