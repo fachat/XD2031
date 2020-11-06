@@ -46,9 +46,9 @@
 #include "serial.h"
 #include "cmdnames.h"
 
-#define DEBUG_CMD
+#undef DEBUG_CMD
 #undef DEBUG_CMD_TERM
-#undef DEBUG_READ
+#undef DEBUG_READ	/* low level reads from line data */
 #undef DEBUG_WRITE
 
 

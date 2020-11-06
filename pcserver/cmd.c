@@ -48,6 +48,8 @@
 
 #define	MAX_BUFFER_SIZE			64
 
+#undef	DEBUG_CMD
+
 
 //------------------------------------------------------------------------------------
 
@@ -305,9 +307,11 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 	//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 	if (fp != NULL) {
 		bool_t has_eof = (cmd == FS_WRITE_EOF);
+#ifdef DEBUG_CMD
 		if (has_eof) {
 			log_info("WRITE_WITH_EOF(%d)\n", tfd);
 		}
+#endif
 		if (fp->handler->writefile) {
 			rv = fp->handler->writefile(fp, indata, datalen, has_eof);
 			if (rv < 0) {
