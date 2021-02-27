@@ -93,7 +93,7 @@ static int16_t liecin(int *c)
 
 
 	// PET4 @ F11E checks NRFD and waits for hi
-        nrfdhi();
+        nrfdhi_raw();
 
 	// with or without, no effect
         //if (nrfdislo()) {
@@ -142,9 +142,10 @@ static int16_t liecin(int *c)
 
 	// PET4 @ F12D checks NDAC and waits for hi
 	// disable interrupts
-        ndachi();
+        ndachi_raw();
 
        	// wait DAV hi 
+
         while( davislo() );
 
 	ndaclo();
@@ -170,7 +171,7 @@ static void listenloop() {
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
 	if (er != E_ATN) {
-	    setidle();
+	    setidle_listen();
 	}
         return;
 }
@@ -322,7 +323,7 @@ void ieee_mainloop_iteration(void)
         while(1)
         {
 	    // PET @ F11E waits for NRFD hi
-            nrfdhi();
+            nrfdhi_raw();
 
             /* wait for DAV lo */
             do {
@@ -331,7 +332,7 @@ void ieee_mainloop_iteration(void)
                     goto cmd;
                 }
             } while(davishi());
-	
+
             nrfdlo();
 
 	    // read data
@@ -340,7 +341,7 @@ void ieee_mainloop_iteration(void)
 	    // PET @ F12D waits for NDAC hi
 	    // ack with ndac hi
 	    // disable interrupts
-            ndachi();
+            ndachi_raw();
 
 	    // wait until DAV goes up
             while(davislo());

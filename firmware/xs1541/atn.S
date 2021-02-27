@@ -60,17 +60,19 @@ checkieee:
 	lds	r17, is_atna
 	eor	r16, r17	;	check difference to atna		; 1
 	andi	r16, _BV(PD3)	; 	mask out ATN bit			; 1
-	
+
 	breq	noatn		;	equal, then no action needed		; 1/2
 
 	; ATN acknowledge
-	lds	r16, PORTC	;	clear port output			; 2
-	andi	r16, 255 - _BV(PC4) - _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
-	sts	PORTC, r16							; 2
+	lds	r17, PORTC	;	clear port output			; 2
+	andi	r17, 255 - _BV(PC4) - _BV(PC5)	; PC4 is NDAC, PC5 is NRFD	; 1
+	sts	PORTC, r17							; 2
 	
-	lds 	r16, DDRC	;	set lines to output			; 2
-	ori	r16, _BV(PC4) | _BV(PC5)					; 1
-	sts	DDRC, r16							; 2
+	lds 	r17, DDRC	;	set lines to output			; 2
+	ori	r17, _BV(PC4) | _BV(PC5)					; 1
+	sts	DDRC, r17							; 2
+
+	;sts	is_atna, r16	; 	note atna value
 										;===
 ; debug signal
 ;	ldi	r17, _BV(PD7)

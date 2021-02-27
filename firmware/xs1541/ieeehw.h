@@ -40,6 +40,13 @@
 #define         E_BRK           5
 #define         E_NODEV         6
 
+#define	DEBOUNCE(a)				\
+	uint8_t d;				\
+	do {					\
+		d = (a);			\
+	} while (d != (a));			\
+	return d;
+
 // Prototypes
 
 static void nrfdlo();
@@ -52,13 +59,19 @@ extern volatile uint8_t is_atna;
 
 static inline uint8_t atnislo()
 {
-	return !(IEEE_INPUT_ATN & _BV(IEEE_PIN_ATN));
+	DEBOUNCE( !(IEEE_INPUT_ATN & _BV(IEEE_PIN_ATN)) );
 }
 
 static inline uint8_t atnishi()
 {
-	return (IEEE_INPUT_ATN & _BV(IEEE_PIN_ATN));
+	DEBOUNCE( (IEEE_INPUT_ATN & _BV(IEEE_PIN_ATN)) );
 }
+
+static inline uint8_t davishi()
+{
+	DEBOUNCE (IEEE_INPUT_DAV & _BV(IEEE_PIN_DAV));
+}
+
 
 // NDAC & NRFD handling
 // Note the order of method definition in this file depends on dependencies
@@ -75,25 +88,38 @@ static inline void nrfdlo()
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output
 }
 
+static inline void ndachi_raw()
+{
+	// NDAC as input to set hi
+	IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
+	IEEE_PORT_NDAC |= (uint8_t) _BV(IEEE_PIN_NDAC);	// Enable pull-up
+}
+
+static inline void nrfdhi_raw()
+{
+	IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
+	IEEE_PORT_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// Enable pull-up
+}
+
 static inline void ndachi()
 {
 	// must have interrupt disabled to avoid race condition
 	// of ATN irq between the atnishi() check and
 	// setting NDAC lo
 	cli();
+	if (davishi()) {
+		sei();
+		return;
+	}
 	if (atnishi()) {
 		// ATN is high - are we still in ATN mode? then not
 		if (is_atna) {
-			// NDAC as input to set hi
-			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
-			IEEE_PORT_NDAC |= (uint8_t) _BV(IEEE_PIN_NDAC);	// Enable pull-up
+			ndachi_raw();
 		}
 	} else {
 		// ATN is lo - are we already in ATN mode? then ok
 		if (!is_atna) {
-			// NDAC as input to set hi
-			IEEE_DDR_NDAC &= (uint8_t) ~ _BV(IEEE_PIN_NDAC);
-			IEEE_PORT_NDAC |= (uint8_t) _BV(IEEE_PIN_NDAC);	// Enable pull-up
+			ndachi_raw();
 		}
 	}
 	sei();
@@ -109,26 +135,18 @@ static inline void nrfdhi()
 		// ATN is high - are we still in ATN mode? then not
 		if (is_atna) {
 			// NRFD as input (no pulldown)
-			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
-			IEEE_PORT_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// Enable pull-up
+			nrfdhi_raw();
 		}
 	} else {
 		// ATN is lo - are we already in ATN mode? then ok
 		if (!is_atna) {
 			// NRFD as input (no pulldown)
-			IEEE_DDR_NRFD &= (uint8_t) ~ _BV(IEEE_PIN_NRFD);
-			IEEE_PORT_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// Enable pull-up
+			nrfdhi_raw();
 		}
 	}
 	sei();
 }
 
-#define	DEBOUNCE(a)				\
-	uint8_t d;				\
-	do {					\
-		d = (a);			\
-	} while (d != (a));			\
-	return d;
 
 // for init only
 static inline void atnhi()
@@ -140,32 +158,28 @@ static inline void atnhi()
 // for init only
 static inline void srqhi()
 {
-	IEEE_DDR_SRQ |= (uint8_t) _BV(IEEE_PIN_SRQ);	// SRQ as output
-	IEEE_PORT_SRQ |= _BV(IEEE_PIN_SRQ);	// high output
+	IEEE_DDR_SRQ &= (uint8_t) ~ _BV(IEEE_PIN_SRQ);	// SRQ as input
+	IEEE_PORT_SRQ |= _BV(IEEE_PIN_SRQ);	// pull up
 }
 
 static inline uint8_t ndacislo()
 {
 	DEBOUNCE(!(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)));
-	//return !(IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t ndacishi()
 {
 	DEBOUNCE( (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC)) );
-	//return (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC));
 }
 
 static inline uint8_t nrfdislo()
 {
 	DEBOUNCE( !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
-	//return !(IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 static inline uint8_t nrfdishi()
 {
 	DEBOUNCE( (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD)) );
-	//return (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD));
 }
 
 // DAV handling
@@ -184,12 +198,7 @@ static inline void davhi()
 
 static inline uint8_t davislo()
 {
-	return !(IEEE_INPUT_DAV & _BV(IEEE_PIN_DAV));
-}
-
-static inline uint8_t davishi()
-{
-	return (IEEE_INPUT_DAV & _BV(IEEE_PIN_DAV));
+	DEBOUNCE( !(IEEE_INPUT_DAV & _BV(IEEE_PIN_DAV)) );
 }
 
 // EOI handling
@@ -222,7 +231,14 @@ static inline uint8_t eoiishi()
 // acknowledge ATN
 static inline void atnahi()
 {
+	//cli();
 	is_atna = _BV(IEEE_PIN_ATN);
+	//if (is_atna == 0) {
+		// ATN has unexpectedly gone low again
+//		ndaclo();
+//		nrfdlo();
+//	}
+//	sei();
 }
 
 // disarm ATN acknowledge handling
@@ -266,7 +282,7 @@ void ieeehw_setup();
 static inline void settx(void)
 {
 	nrfdhi();
-	ndachi();
+	ndachi_raw();
 	davhi();
 	eoihi();
 }
@@ -276,7 +292,17 @@ static inline void settx(void)
 static inline void setidle(void)
 {
 	nrfdhi();
-	ndachi();
+	ndachi_raw();
+	davhi();
+	eoihi();
+}
+
+// switch hardware to idle (same as settx here, but maybe different
+// with different hardware
+static inline void setidle_listen(void)
+{
+	nrfdhi();
+	//ndachi();
 	davhi();
 	eoihi();
 }
