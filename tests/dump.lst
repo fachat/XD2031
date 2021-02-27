@@ -1,0 +1,23 @@
+
+
+;dumprom2 ==0401==
+  99 rem poke 1020,128
+  100 print"ROM file name is test"
+  101 a$="test"
+  105 open 1,8,15,"s:"+a$
+  107 close 1
+  109 t1=ti
+  110 open 1,8,1,a$
+  120 for j=12*16 to 14*16-1
+  121 print "page: ";j
+  125 p=j*256
+  130 for i=0 to 255
+  140 a=peek(p+i)
+  150 print#1,chr$(a);
+  155 if st <> 0 then print"st=";st
+  160 next i
+  170 next j
+  180 close 1
+  190 t2=ti
+  200 print "time=" t2-t1
+

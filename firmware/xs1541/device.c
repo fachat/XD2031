@@ -50,11 +50,26 @@ static void enable_ints(void) {
   	*   PCMSK3 |= _BV(PCINT27) 
   	* which is ok for PD3
   	*/
+
+	// disable interrupts
+  	XS1541_PCMSK = 0;
+
+	// both edges trigger an interrupt
+	//EICRA |= (1 << ISC11);
+	//EICRA &= ~(1 << ISC10);
+	// falling edge on ATN
+	//EICRA |= (1 << ISC10);
+	//EICRA &= ~(1 << ISC11);
+
 #ifdef HAS_IEEE
+	// PD3
   	XS1541_PCMSK |= _BV(IEEE_PCINT);
 #endif
 #ifdef HAS_IEC
-  	XS1541_PCMSK |= _BV(IEC_PCINT);
+	// PD2
+// PD2 and PD3 end up in the same change flag interrupt, without any
+// easy way to determine which one has changed ...
+//  	XS1541_PCMSK |= _BV(IEC_PCINT);
 #endif
 
   	/* Enable pin change interrupt 3 (PCINT31..24) */

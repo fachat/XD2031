@@ -1,0 +1,22 @@
+
+This folder contains misc test cases.
+
+
+1) reldump.c
+	This allows dumping REL files. TO use it:
+
+		1) make reldump
+		2) run "reldump <diskimagename> <filename>" to dump "filename" from "diskimagename"
+
+2) dump.lst
+	This is a small test case that saves an 8k ROM dump to a file using BASIC PRINT# with a 
+	single character in each print.
+	This exposes the case where LISTEN timing is not good enough, where character have been 
+	lost.
+	To use this test:
+
+		1) make dump
+		2) load the resulting "dump" into the PET and run it
+		3) check the resulting "test" 8k ROM dump against the expected size and value
+
+

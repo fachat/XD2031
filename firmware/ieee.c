@@ -65,14 +65,73 @@ static int16_t liecin(int *c)
 {
         int er = 0;
 
-        nrfdhi();
+	static int cnt = 0;
+
+	cnt ++;
+
+        //if (nrfdishi()) {
+	//	// does not trigger
+	//	debug_printf("%d: NRFD already hi! atna=%u, atn=%u, nrfd=%u\n", 
+	//		cnt, is_atna, atnishi(), nrfdishi());
+	//}
+
+        ndaclo();
+
+        //if (ndacishi()) {
+	//	// does not trigger
+	//	debug_printf("%d: NDAC already hi! atna=%u, atn=%u, ndac=%u\n", 
+	//		cnt, is_atna, atnishi(), ndacishi());
+	//}
+
+	// this delay here seems to fix everything (either print or delay)
+	// even  without double-sided ATN interrupt (i.e. setting NRFD/NDAC
+	// low only on ATN going low)
+
+	//debug_printf("atnishi=%u, nrfdishi==%u, ndacishi==%u, dav=%u", atnishi(), nrfdishi(), ndacishi(), davishi()); debug_putcrlf();
+
+	//delayus(1000);
+
+
+	// PET4 @ F11E checks NRFD and waits for hi
+        nrfdhi_raw();
+
+	// with or without, no effect
+        //if (nrfdislo()) {
+		// This happens at end of listen
+		// as ATN is assigned and the interrupt kicks in
+		// atna is low and atn is hi, so nrfd is not set hi
+		//
+		// this is actually sometimes missing, 
+		// obviously without effect (no missing bytes)
+		//
+		//debug_printf("%d: NRFD lo, atna=%u, atn=%u, nrfd=%u\n", 
+		//	cnt, is_atna, atnishi(), nrfdishi());
+		//return E_ATN;
+	//}
+
+	// somehow here the interrupt (lo->hi) gets triggered
+	// to do NRFD lo and therefore would lock because DAV would
+	// never go lo.
+	// confirmed, as double-sided ATN triggers this (i.e. enabling
+	// nrfd->lo on atn going hi), ATN int on going low only is ok,
+	// but looses chars except with the delay above
 
 	// do...while to make sure to at least test ATN once
         do {
+	    // this IRQ protection is only there to fix the 
+	    // unexpected ATN lo->hi
+	    //cli();
             if(atnislo()) {
+		//sei();
 		// ATN got low, exit
                 goto atn;
             }
+	    //if (nrfdislo()) {
+	    //	nrfdhi();
+	//	debug_printf("%d: Bummer: NRFD unexpectedly lo, while ATN hi: atn=%u, atna=%u\n", cnt, atnishi(), is_atna);
+	    //}
+	    //nrfdhi();
+	    //sei();
         } while( davishi() );
 
         nrfdlo();
@@ -81,17 +140,15 @@ static int16_t liecin(int *c)
                 er|=E_EOI;
         *c=rdd();
 
-        ndachi();
+	// PET4 @ F12D checks NDAC and waits for hi
+	// disable interrupts
+        ndachi_raw();
 
-        do {
-//            if(atnislo()) {
-//		// ATN got low, exit
-//                //break;
-//                goto atn;
-//            }
-        } while( davislo() );
+       	// wait DAV hi 
 
-        ndaclo();
+        while( davislo() );
+
+	ndaclo();
 
         return(er);
 
@@ -114,7 +171,7 @@ static void listenloop() {
 	// if did not stop due to ATN, set to idle,
 	// otherwise stay in rx mode
 	if (er != E_ATN) {
-	    setidle();
+	    setidle_listen();
 	}
         return;
 }
@@ -237,9 +294,6 @@ void ieee_mainloop_iteration(void)
 {
         int cmd = 0;
 
-//if (1) return;
-
-
 	// only do something on ATN low
 	if (atnishi()) {
 		if (bus.active == 0) {
@@ -261,14 +315,15 @@ void ieee_mainloop_iteration(void)
 
         par_status=0;
 
+	// acknowledge ATN
+        atnalo();
+
         /* Loop to get commands during ATN lo ----------------------------*/
 
         while(1)
         {
-            ndaclo();
-	    // acknowledge ATN
-            atnalo();
-            nrfdhi();
+	    // PET @ F11E waits for NRFD hi
+            nrfdhi_raw();
 
             /* wait for DAV lo */
             do {
@@ -277,27 +332,23 @@ void ieee_mainloop_iteration(void)
                     goto cmd;
                 }
             } while(davishi());
-	
+
             nrfdlo();
 
 	    // read data
             cmd=rdd();
-	    // ack with ndac hi
-            ndachi();
 
-#ifdef DEBUG_BUS
-	    debug_putc('A'); debug_flush();
-#endif	
-            par_status = bus_attention(&bus, cmd);
+	    // PET @ F12D waits for NDAC hi
+	    // ack with ndac hi
+	    // disable interrupts
+            ndachi_raw();
 
 	    // wait until DAV goes up
-//	    do {
-//		if (atnishi()) {
-//		    // ATN hi, end loop
-//		    goto cmd;
-//		}
-//	    }
             while(davislo());
+
+	    ndaclo();
+
+            par_status = bus_attention(&bus, cmd);
         }
 
         /* ---------------------------------------------------------------*/
@@ -311,11 +362,20 @@ cmd:
 
 	if(isListening(par_status))
         {
+		// adding this seems to cure the hang from double-sided ATN int
+		//debug_printf("nrfdishi==%u, ndacishi==%u, dav=%u", nrfdishi(), ndacishi(), davishi()); debug_putcrlf();
+
 		// make sure nrfd stays lo...
 		nrfdlo();
+		ndaclo();
 		// ... when we un-acknowlege the ATN
 		// (which is already hi anyway)
                 atnahi();
+
+		if (atnislo()) {
+			debug_printf("Bummer: listen - ATN is lo (nrfd=%u, atna=%u)\n", nrfdishi(), is_atna);
+		}
+
                 listenloop();
         } else
         {

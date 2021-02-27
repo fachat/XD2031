@@ -1,0 +1,264 @@
+
+; disassembly from the 8250 ROM 
+; Initial comments (all caps, also labels) from the 4040.zip/IEEE source file
+
+ 
+C611          sysirq:
+            ATNIRQ:
+C611 A2 FF      LDX #$FF                ; CLEAR STACK
+C613 8E 3B 43   STX cmdnum
+C616 9A         TXS
+C617 AD 87 02   LDA io_ifr?             ; CLEAR IRQ FLAG
+C61A A9 18      LDA #$18                ; DAVO+EOIO
+C61C 0D 80 02   ORA io_ieee_ctl         ; FREE CONTROL LINES
+C61F 8D 80 02   STA io_ieee_ctl
+C622 A9 FF      LDA #$FF
+C624 8D 02 02   STA io_ieee_data_out    ; FREE DATA LINES
+C627          LC627:
+            ATN10:
+C627 A9 07      LDA #$7                 ; DACO+RFDO+ATNA
+C629 0D 80 02   ORA io_ieee_ctl
+C62C 8D 80 02   STA io_ieee_ctl
+C62F          LC62F:
+            ATN20:
+C62F 2C 80 02   BIT io_ieee_ctl
+C632 50 04      BVC LC638               ; DAV LO -> ATN30
+C634 30 F9      BMI LC62F               ; ATN LO ATNI HI -> ATN20
+C636 10 7B      BPL atns20              ; ATN HI -> ATN50
+C638          LC638:
+            ATN30:
+C638 A9 FB      LDA #$FB                ; NRFD LO
+C63A 2D 80 02   AND io_ieee_ctl
+C63D 8D 80 02   STA io_ieee_ctl
+C640 29 20      AND #$20                ; EOIFLG
+C642 85 AA      STA eoiflg              ; SAVE EOI
+C644 AD 00 02   LDA io_ieee_data_in
+C647 49 FF      EOR #$FF
+C649 85 18      STA data                ; SAVE COMMAND
+C64B A9 FD      LDA #$FD                ; NDAC HI
+C64D 2D 80 02   AND io_ieee_ctl
+C650 8D 80 02   STA io_ieee_ctl
+            DCDE:
+C653 A0 00      LDY #$0
+C655 A5 18      LDA data
+C657 29 60      AND #$60
+C659 C9 40      CMP #$40                ; TALK?
+C65B F0 29      BEQ LC686               ; DCDE60
+C65D C9 20      CMP #$20                ; LISTEN?
+C65F F0 06      BEQ LC667               ; DCDE20
+C661 C9 60      CMP #$60                ; SECONDARY?
+C663 F0 2F      BEQ LC694               ; DCDE70
+C665 D0 44      BNE LC6AB               ; DCDE80 - OTHER
+C667          LC667:
+            DCDE20:
+C667 A5 18      LDA data
+C669 C5 0C      CMP lsnadr
+C66B F0 0B      BEQ LC678               ; DCDE40 - MY LISTEN ADDRESS
+C66D C9 3F      CMP #$3F                ; UNLSN
+C66F D0 02      BNE LC673               ; DCDE30
+C671 84 0E      STY lsnact
+C673          LC673:
+            DCDE30:
+C673 84 10      STY lsntlk?             ; ADRSED - NOT PRIMARY ADDRSED
+C675 4C AB C6   JMP LC6AB               ; DCDE80
+C678          LC678:
+            DCDE40:
+C678 85 0E      STA lsnact
+C67A 84 0F      STY tlkact
+C67C          LC67C:
+            DCDE50:
+C67C A9 20      LDA #$20
+C67E 85 16      STA sa                  ; DEFAULT SA
+C680 85 17      STA orgsa
+C682 85 10      STA lsntlk?             ; ADRSED - PRIMARY ADDRESSED
+C684 D0 25      BNE LC6AB               ; DCDE80
+C686          LC686:
+            DCDE60:
+C686 84 0F      STY tlkact
+C688 A5 18      LDA data
+C68A C5 0D      CMP tlkadr
+C68C D0 E5      BNE LC673               ; DCDE30
+C68E 85 0F      STA tlkact
+C690 84 0E      STY lsnact
+C692 F0 E8      BEQ LC67C               ; DCDE50
+C694          LC694:
+            DCDE70:
+C694 A5 10      LDA lsntlk?             ; ADRSED
+C696 F0 13      BEQ LC6AB               ; NOT ADDRESSED
+C698 A5 18      LDA data
+C69A 85 17      STA orgsa
+C69C 48         PHA
+C69D 29 0F      AND #$F
+C69F 85 16      STA sa
+C6A1 68         PLA
+C6A2 29 F0      AND #$F0                ; CLOSE?
+C6A4 C9 E0      CMP #$E0
+C6A6 D0 03      BNE LC6AB               ; DCDE80
+C6A8 20 0D E3   JSR close
+C6AB          LC6AB:
+            DCDE80:
+            ATN40:
+C6AB 2C 80 02   BIT io_ieee_ctl
+C6AE 50 FB      BVC LC6AB               ; ATN40
+C6B0 4C 27 C6   JMP LC627               ; ATN10
+
+C6B3          atns20:
+            ATN50:
+C6B3 A5 0E      LDA lsnact
+C6B5 F0 0F      BEQ atn100              ; ATN60
+C6B7 A9 FA      LDA #$FA                ; 255-RFDO-ATNA
+C6B9 2D 80 02   AND io_ieee_ctl
+C6BC 8D 80 02   STA io_ieee_ctl
+C6BF 58         CLI
+C6C0 20 D9 C6   JSR listen?
+C6C3 4C 27 FF   JMP idle
+
+C6C6          atn100:
+            ATN60:
+C6C6 A9 FC      LDA #$FC                ; 255-ANTA-DACO
+C6C8 2D 80 02   AND io_ieee_ctl
+C6CB 8D 80 02   STA io_ieee_ctl
+C6CE A5 0F      LDA tlkact
+C6D0 F0 04      BEQ atn110              ; ATN70
+C6D2 58         CLI
+C6D3 20 69 C7   JSR talk
+C6D6          atn110:
+            ANT70
+C6D6 4C 27 FF   JMP idle
+
+C6D9          listen?:
+            LISTEN:
+C6D9 A9 04      LDA #$4                 ; RFDO
+C6DB 0D 80 02   ORA io_ieee_ctl
+C6DE 8D 80 02   STA io_ieee_ctl
+C6E1          LC6E1:
+            LSN10:
+C6E1 2C 80 02   BIT io_ieee_ctl         ; DAV: LO
+C6E4 70 FB      BVS LC6E1               ; LSN10
+C6E6 20 56 D8   JSR fndwch              ; WAS LDX SA
+C6E9 B0 05      BCS LC6F0               ; LSN15
+C6EB B5 A2      LDA chnrdy,X
+C6ED 6A         ROR A                   ; OK, OPEN FOR LISTEN
+C6EE B0 49      BCS LC739               ; LSN30
+C6F0          LC6F0:
+            LSN15:
+C6F0 A5 17      LDA orgsa               ; WAS TXA
+C6F2 29 F0      AND #$F0                ; SA=OPEN?
+C6F4 C9 F0      CMP #$F0
+C6F6 F0 41      BEQ LC739               ; LSN30
+C6F8          LC6F8:
+            LSN20:
+C6F8 A5 16      LDA sa
+C6FA C9 01      CMP #$1
+C6FC F0 0E      BEQ LC70C               ; LSN25
+C6FE          LC6FE:
+            LSN21:
+C6FE 2C 80 02   BIT io_ieee_ctl
+C701 50 FB      BVC LC6FE               ; LSN21
+C703 A9 FD      LDA #$FD                ; 255-DACO
+C705 2D 80 02   AND io_ieee_ctl
+C708 8D 80 02   STA io_ieee_ctl
+C70B 60         RTS
+
+C70C          LC70C:
+            LSN25:
+C70C A9 FB      LDA #$FB                ; 255-RDFO - ACCEPT ALL DATA
+C70E 2D 80 02   AND io_ieee_ctl
+C711 8D 80 02   STA io_ieee_ctl
+C714 A9 FD      LDA #$FD                ; 255-DACO
+C716 2D 80 02   AND io_ieee_ctl
+C719 8D 80 02   STA io_ieee_ctl
+C71C          LC71C:
+            LSN26:
+C71C 2C 80 02   BIT io_ieee_ctl         ; DAV HI
+C71F 50 FB      BVC LC71C               ; LSN26
+C721 A9 02      LDA #$2                 ; DACO
+C723 0D 80 02   ORA io_ieee_ctl         ; DAC LO
+C726 8D 80 02   STA io_ieee_ctl
+C729 A9 04      LDA #$4                 ; RFD HI
+C72B 0D 80 02   ORA io_ieee_ctl
+C72E 8D 80 02   STA io_ieee_ctl
+C731          LC731:
+            LSN28:
+C733          lsn30 = * + 2
+C731 2C 80 02   BIT io_ieee_ctl         ; WAIT DAV LO
+C734 50 FB      BVC LC731               ; LSN28
+C736 4C 0C C7   JMP LC70C               ; LSN25 - DO UNTIL ATN PULLED
+C739          LC739:
+            LSN30:
+C739 A9 FB      LDA #$FB                ; 255-RFDO
+C73B 2D 80 02   AND io_ieee_ctl
+C73E 8D 80 02   STA io_ieee_ctl
+C741 29 20      AND #$20                ; EOI
+C743 85 AA      STA eoiflg
+C745 AD 00 02   LDA io_ieee_data_in
+C748 49 FF      EOR #$FF
+C74A 85 18      STA data
+C74C 78         SEI
+C74D A9 FD      LDA #$FD                ; 255-DACO
+C74F 2D 80 02   AND io_ieee_ctl
+C752 8D 80 02   STA io_ieee_ctl
+C755          LC755:
+            LSN40:
+C755 2C 80 02   BIT io_ieee_ctl
+C758 50 FB      BVC LC755               ; LSN40
+C75A A9 02      LDA #$2                 ; DACO
+C75C 0D 80 02   ORA io_ieee_ctl
+C75F 8D 80 02   STA io_ieee_ctl
+C762 20 10 D7   JSR put
+            LSTRTN:
+C765 58         CLI
+C766 4C D9 C6   JMP listen?             ; LISTEN
+
+C769          talk:
+            TALK:
+C769 20 3B D8   JSR fndrch
+C76C B0 06      BCS notlk               ; NOTLK - TEST IF CHANNEL READY
+C76E          LC76E:
+            TALK1:
+C76E A6 15      LDX lindx
+C770 B5 A2      LDA chnrdy,X
+C772 30 01      BMI tlk05               ; TLK10
+C774          notlk:
+            NOTLK:
+C774 60         RTS
+
+C775          tlk05:
+            TLK10:
+C775 2C 82 02   BIT io_dskcnt           ; RFD: HI
+C778 10 FB      BPL tlk05               ; TLK10
+C77A B5 BF      LDA chndat,X
+C77C 49 FF      EOR #$FF
+C77E 8D 02 02   STA io_ieee_data_out
+C781 B5 A2      LDA chnrdy,X
+C783 09 E7      ORA #$E7                ; 255-EOIO-DAVO
+C785 2D 80 02   AND io_ieee_ctl
+C788 8D 80 02   STA io_ieee_ctl
+C78B          LC78B:
+            TLK20:
+C78B 2C 82 02   BIT io_dskcnt
+C78E 10 0D      BPL LC79D               ; TLK30
+C790 50 F9      BVC LC78B               ; TLK20
+C792 A9 18      LDA #$18                ; DAVO+EOIO
+C794 0D 80 02   ORA io_ieee_ctl
+C797 8D 80 02   STA io_ieee_ctl
+C79A 4C 27 FF   JMP idle
+
+C79D          LC79D:
+            TLK30:
+C79D 20 84 DA   JSR LDA84               ; GET
+C7A0          LC7A0:
+            TLK35:
+C7A0 2C 82 02   BIT io_dskcnt
+C7A3 50 FB      BVC LC7A0               ; TLK35
+C7A5 A9 FF      LDA #$FF
+C7A7 8D 02 02   STA io_ieee_data_out
+C7AA A9 18      LDA #$18                ; DAVO+EOIO
+C7AC 0D 80 02   ORA io_ieee_ctl
+C7AF 8D 80 02   STA io_ieee_ctl
+C7B2          LC7B2:
+            TLK40:
+C7B2 2C 82 02   BIT io_dskcnt
+C7B5 70 FB      BVS LC7B2               ; TLK40
+C7B7 50 B5      BVC LC76E               ; TALK1
+
