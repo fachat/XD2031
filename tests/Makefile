@@ -1,4 +1,6 @@
 
+all: reldump seq dump
+
 CFLAGS=-W -Wall -pedantic -ansi -std=c99 -g
 
 CFILES=../pcserver/handler/diskimgs.c ../pcserver/util/log.c ../pcserver/os/terminal.c
@@ -10,6 +12,9 @@ reldump: reldump.c ${CFILES} ${HFILES}
 dump: dump.lst
 	petcat -w40 -o dump dump.lst
 
+seq: seq.lst
+	petcat -w40 -o seq seq.lst
+
 clean:
-	rm -f reldump dump
+	rm -f reldump dump seq
 

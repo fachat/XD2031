@@ -19,4 +19,7 @@ This folder contains misc test cases.
 		2) load the resulting "dump" into the PET and run it
 		3) check the resulting "test" 8k ROM dump against the expected size and value
 
+3) seq.lst
+	A simplified version of dump - it just writes out the bytes 00, 01, 02, .. one by one,
+	until it has written a full 8k. This makes it easier to find missing bytes in a hexdump
 
