@@ -1,5 +1,5 @@
 
-BASFILES=i179_rel i180_mkrel i180_lsrel
+BASFILES=i179_rel i180_mkrel i180_lsrel i180_mkrel2
 
 all: reldump seq dump $(BASFILES)
 
