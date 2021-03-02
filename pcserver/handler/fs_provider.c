@@ -153,11 +153,13 @@ static type_t endpoint_type = {
 	endpoint_init
 };
 
+#if 0
 static type_t block_type = {
 	"direct_buffer",
 	sizeof(char[256]),
 	NULL
 };
+#endif
 
 static type_t record_type = {
 	"record_buffer",
@@ -365,6 +367,7 @@ static void fsp_ep_free(endpoint_t *ep) {
 	}
 }
 
+#if 0
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	(void) cset;
@@ -406,6 +409,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 
 	return parentep;
 }
+#endif
 
 static endpoint_t *fsp_temp2(char **path, charset_t cset, int privileged) {
 
@@ -598,6 +602,7 @@ exit:
 // ----------------------------------------------------------------------------------
 // block command handling
 
+#if 0
 static int open_block_channel(File *fp) {
 
 	log_debug("Opening block channel %p\n", fp);
@@ -616,7 +621,7 @@ static int open_block_channel(File *fp) {
 
 	return CBM_ERROR_OK;
 }
-
+#endif
 
 // in Firmware currently used for:
 // B-A/B-F/U1/U2
@@ -1268,7 +1273,7 @@ static int fs_delete2(direntry_t *dirent) {
 		rv = errno_to_error(errno);
 	}
 
-	mem_free(newospath);
+	free((void*)newospath);
 	return rv;
 }
 
