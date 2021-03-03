@@ -15,7 +15,7 @@ USE_RTC?=y                       # Enable optional real time clock?
 MCU?=m1284p
 
 # specific switches for this device
-DEFS=-DHAS_IEEE -DHAS_EEPROM
+DEFS+=-DHAS_IEEE -DHAS_EEPROM
 
 # AVR fuses settings
 LFUSE = f7
@@ -25,7 +25,8 @@ EFUSE = ff
 # SCK period
 DUDE_SPEED=-B 1.3
 
-SRC+=petSD2/ieeehw.c petSD2/device.c
+SRC+=ieeehw.c
+SRC+=device.c
 SRC+=atn.S
 
 # SD card low level routines

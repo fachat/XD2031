@@ -25,9 +25,9 @@ EFUSE = ff
 # SCK period
 DUDE_SPEED=-B 1.0
 
-SRC+=petSD/ieeehw.c
-SRC+=petSD/device.c
-SRC+=petSD/atn.S
+SRC+=ieeehw.c
+SRC+=device.c
+SRC+=atn.S
 
 # SD card low level routines
 ifeq ($(strip $(USE_FAT)),y)

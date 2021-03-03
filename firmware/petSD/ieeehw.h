@@ -32,7 +32,6 @@
 #include <avr/interrupt.h>
 
 #include "hwdefines.h"
-//#include "hwdevice.h"
 
 // IEEE hw code error codes
 

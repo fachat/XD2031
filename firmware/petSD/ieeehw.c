@@ -4,8 +4,8 @@
 
     This file is part of XD-2031 -- Serial line filesystem server for CBMs
 
-    Copyright (C) 2012 Andre Fachat <afachat@gmx.de>
-    Copyrifht (C) 2012 Nils Eilers  <nils.eilers@gmx.de>
+    Copyright (C) 2013 Andre Fachat <afachat@gmx.de>
+    Copyright (C) 2013 Nils Eilers  <nils.eilers@gmx.de>
 
     XD-2031 is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -27,8 +27,8 @@
 
 #include "ieeehw.h"
 
-/* ------------------------------------------------------------------------- 
- * local variables
+/* ----------------------------------------------------------------------- 
+ * Local variables
  */
 
 // when set, disable ATN acknowledgement
@@ -36,44 +36,47 @@ uint8_t is_atna = 0;
 uint8_t is_ndacout = 0;
 uint8_t is_nrfdout = 0;
 
-/* ------------------------------------------------------------------------- */
-/*  Interrupt handling                                                       */
-/* ------------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------
+ * Interrupt handling
+ */
 
 static void ieee_interrupts_init(void)  {
-  DDRD &= ~_BV(PD2);        // define ATN as input
-  PORTD |= _BV(PD2);        // enable pull-up
+    DDRD &= ~_BV(PD2);        // define ATN as input
+    PORTD |= _BV(PD2);        // enable pull-up
 
-  EIMSK &= (uint8_t) ~_BV(INT0);	// disable interrupt
-  EICRA &= (uint8_t) ~_BV(ISC00);	// configure interrupt on falling
-  EICRA |= _BV(ISC01);      		// edge of ATN
-  EIMSK |= _BV(INT0);       // enable interrupt
-  //debug_putps("Done init ieee ints"); debug_putcrlf();
+    EIMSK &= (uint8_t) ~_BV(INT0);         // disable interrupt
+    EICRA &= (uint8_t) ~_BV(ISC00);        // configure interrupt on
+    EICRA |= _BV(ISC01);                   // falling edge of ATN
+    EIMSK |= _BV(INT0);                    // enable interrupt
+    //debug_putps("Done init ieee ints"); debug_putcrlf();
 }
 
-/* IEEE-488 ATN interrupt using INT0 */
+
+// IEEE-488 ATN interrupt using INT0
 static void set_atn_irq(uint8_t x) {
 #if DEBUG
-  debug_putps("ATN_IRQ:"); debug_puthex(x); debug_putcrlf();
+    debug_putps("ATN_IRQ:"); debug_puthex(x); debug_putcrlf();
 #endif
-  if (x)
-    EIMSK |= _BV(IEEE_ATN_INT);
-  else
-    EIMSK &= (uint8_t) ~_BV(IEEE_ATN_INT);
+    if (x)
+        EIMSK |= _BV(IEEE_ATN_INT);
+    else
+        EIMSK &= (uint8_t) ~_BV(IEEE_ATN_INT);
 }
 
-/* ------------------------------------------------------------------------- 
- *  General functions
+
+/* ----------------------------------------------------------------------- 
+ * General functions
  */
 
 void ieeehw_setup() {
-	// clear IEEE lines
-	atnahi();
-	clrd();
-	davhi();
-	nrfdhi();
-	ndachi();
-	eoihi();
+    // clear IEEE lines
+    atnahi();
+    clrd();
+    davhi();
+    nrfdhi();
+    ndachi();
+    eoihi();
 }
 
 void ieeehw_init() {

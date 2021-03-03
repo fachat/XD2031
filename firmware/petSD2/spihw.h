@@ -5,7 +5,7 @@
     This file is part of XD-2031 -- Serial line filesystem server for CBMs
 
     Copyright (C) 2012 Andre Fachat <afachat@gmx.de>
-    Copyrifht (C) 2012 Nils Eilers  <nils.eilers@gmx.de>
+    Copyright (C) 2012 Nils Eilers  <nils.eilers@gmx.de>
 
     XD-2031 is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -26,7 +26,6 @@
 
 #include <avr/io.h>
 #include "config.h"
-#include "device.h"
 
 static inline __attribute__ ((always_inline))
 void slow_spi_clk(void)

@@ -5,7 +5,7 @@
     This file is part of XD-2031 -- Serial line filesystem server for CBMs
 
     Copyright (C) 2013 Andre Fachat <afachat@gmx.de>
-    Copyrifht (C) 2013 Nils Eilers  <nils.eilers@gmx.de>
+    Copyright (C) 2013 Nils Eilers  <nils.eilers@gmx.de>
 
     XD-2031 is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -24,8 +24,8 @@
 
 **************************************************************************/
 
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef HWDEVICE_H
+#define HWDEVICE_H
 
 #include "hwdefines.h"
 
