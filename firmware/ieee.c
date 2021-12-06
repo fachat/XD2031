@@ -373,7 +373,7 @@ cmd:
                 atnahi();
 
 		if (atnislo()) {
-			debug_printf("Bummer: listen - ATN is lo (nrfd=%u, atna=%u)\n", nrfdishi(), is_atna);
+			//debug_printf("Bummer: listen - ATN is lo (nrfd=%u, atna=%u)\n", nrfdishi(), is_atna);
 		}
 
                 listenloop();

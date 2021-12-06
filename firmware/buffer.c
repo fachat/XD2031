@@ -38,19 +38,16 @@
 #include "debug.h"
 
 
-
-
-char buf[CMD_BUFFER_LENGTH];
-
-// taken from device-specific configuration
-//#define CONFIG_NUM_DIRECT_BUFFERS       1
-
-
-packet_t buf_cmdpack;
-packet_t buf_datapack;
 static uint8_t cbstat;
 static int8_t cberr;
 
+packet_t buf_cmdpack;
+
+char buf[CMD_BUFFER_LENGTH];
+
+#if HAS_BUFFERS
+
+packet_t buf_datapack;
 
 cmdbuf_t buffers[CONFIG_NUM_DIRECT_BUFFERS];
 
@@ -113,6 +110,8 @@ uint8_t buf_free(int8_t channel_no) {
 	return n;	// number of freed buffers
 }
 
+#endif /* HAS_BUFFERS */
+
 // ----------------------------------------------------------------------------------
 /**
  * command callback
@@ -134,6 +133,8 @@ static uint8_t cmd_wait_cb() {
 
 
 // ----------------------------------------------------------------------------------
+
+#ifdef HAS_BUFFERS
 
 uint8_t buf_call(endpoint_t *ep, void *provdata, uint8_t channel_no, packet_t *sendbuf, packet_t *rxbuf) {
 
@@ -263,4 +264,5 @@ uint8_t buffer_read_buffer(uint8_t channel_no, endpoint_t *endpoint, uint16_t re
         return rv;
 }
 
+#endif /* HAS_BUFFERS */
 

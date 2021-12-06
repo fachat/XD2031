@@ -61,6 +61,12 @@ ifeq ($(strip $(MCU)),m644)
    MCU_AVRDUDE=m644
    MCU_SIZE=atmega644
 endif
+# arduino nano
+ifeq ($(strip $(MCU)),m328p)
+   MCU_CC=-mmcu=atmega328p
+   MCU_AVRDUDE=m328p
+   MCU_SIZE=atmega328p
+endif
 
 
 size: $(TARGET)
@@ -96,7 +102,9 @@ endif
 # Do NOT use $(MCU_AVRDUDE) here. The bootloader expects m644 only
 # but flashes m644p as well.
 load: $(HEX)
-	$(DUDE) $(DUDE_VERBOSE) -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
+	#$(DUDE) $(DUDE_VERBOSE) -c avr109 -P $(SERIAL) -b 115200 -p m644 -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
+	#$(DUDE) $(DUDE_VERBOSE) -c arduino -P $(SERIAL) -b 57600 -p m328p -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
+	$(DUDE) $(DUDE_VERBOSE) -c arduino -P $(SERIAL) -b 115200 -p m328p -u -U flash:w:$(THISBINDIR)/$(BINNAME).hex:i
 
 # ISP programming
 flash:	$(HEX)
@@ -107,4 +115,10 @@ flash:	$(HEX)
 fuses:
 	$(DUDE) $(DUDE_VERBOSE) -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) -B 10 \
                 -U lfuse:w:0x$(LFUSE):m -U hfuse:w:0x$(HFUSE):m -U efuse:w:0x$(EFUSE):m
+
+readfuses:
+	$(DUDE) $(DUDE_VERBOSE) -c $(DUDE_PROGRAMMER) -P $(DUDE_PORT) -p $(MCU_AVRDUDE) \
+		-U lfuse:r:low_fuse_val.txt:h \
+		-U hfuse:r:high_fuse_val.txt:h \
+		-U efuse:r:ext_fuse_val.txt:h
 

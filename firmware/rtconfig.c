@@ -21,6 +21,7 @@
 
 ****************************************************************************/
 
+
 /**
  * Runtime configuration per bus
  */
@@ -44,7 +45,11 @@
 #include "term.h"
 #include "led.h"
 
+#if HAS_EEPROM
 #define	MAX_RTCONFIG	3
+#else
+#define	MAX_RTCONFIG	1
+#endif
 
 static void do_charset();
 
@@ -62,7 +67,7 @@ static charset_t current_charset;
 static int num_rtcs = 0;
 
 // can be made smaller?
-#define	OPT_BUFFER_LENGTH	64
+#define	OPT_BUFFER_LENGTH	16
 #define	OUT_BUFFER_LENGTH	8		// place for "PETSCII"
 
 static char buf[OPT_BUFFER_LENGTH];
@@ -89,8 +94,9 @@ void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr) {
 	rtc->last_used_drive = 0;
 	rtc->advanced_wildcards = false;
 	rtc->errmsg_with_drive = true;
-
+#ifdef HAS_EEPROM
 	if(nv_restore_config(rtc)) nv_save_config(rtc);
+#endif
 
 	if (num_rtcs < MAX_RTCONFIG) {
 		rtcs[num_rtcs] = rtc;
@@ -320,16 +326,19 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 		er = CBM_ERROR_OK;
 		debug_puts("RUNTIME CONFIG INITIALIZED\n");
 		break;
+#ifdef HAS_EEPROM
 	case 'W':
 		// write runtime config to EEPROM
 		nv_save_common_config();
 		er = nv_save_config(rtc);
 		break;
+#endif
 	case 'R':
 		if(!strncmp(ptr, "RESET", 5)) {		// ignore CR or whatever follows
 			// reset everything
 			reset_mcu();
 		}
+		break;
 	case 'C':
 		// TEST code
 		// look for "C=<charsetname>"
@@ -350,5 +359,4 @@ cbm_errno_t rtconfig_set(rtconfig_t *rtc, const char *cmd) {
 
 	return er;
 }
-
 

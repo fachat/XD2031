@@ -32,7 +32,8 @@
 #undef	DEBUG_RELFILE
 
 
-               	
+#ifdef HAS_BUFFERS
+ 
 // ----------------------------------------------------------------------------------
 
 void relfile_init() {
@@ -417,4 +418,5 @@ int8_t relfile_proxy(uint8_t channel_no, endpoint_t *real_endpoint, uint16_t rec
 	return err;
 }
 
+#endif /* HAS_BUFFERS */
 

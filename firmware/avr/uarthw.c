@@ -44,8 +44,8 @@
  * UART stuff
  */
 
-#define	BUFFER_SIZE		128
-#define	BUFFER_SIZE_MASK	0x7f
+#define	BUFFER_SIZE		64
+#define	BUFFER_SIZE_MASK	0x3f
 #define	BUFFER_NEXT(p)		((p + 1) & BUFFER_SIZE_MASK)
 
 // prototypes
@@ -177,15 +177,23 @@ void uarthw_init() {
 	rx_wp = 0;
 	rx_rp = 0;
 
+	// set baud rate
+        UBRRL = (uint8_t)(F_CPU/(BAUD*16L))-1;          // Baudrate festlegen
+        UBRRH = (uint8_t)((F_CPU/(BAUD*16L))-1)>>8;     // Baudrate festlegen
+
+	// 8N1
+#ifdef URSEL
+	UCSRC = (1<<URSEL) | (1<<UCSZ01) | (1<<UCSZ00);
+#else
+	UCSRC = (1<<UCSZ01) | (1<<UCSZ00);
+#endif
+
 	// init UART
         UCSRB = _BV(TXEN);              // TX aktiv
         UCSRB |= _BV(RXEN);             // RX aktivieren
 
-        UBRRL = (uint8_t)(F_CPU/(BAUD*16L))-1;          // Baudrate festlegen
-        UBRRH = (uint8_t)((F_CPU/(BAUD*16L))-1)>>8;     // Baudrate festlegen
-
         UCSRB |= _BV(RXCIE);            // UART Interrupt bei Datenempfang komplett
-        //UCSRB |= _BV(UDRIE);          // UART Interrupt bei Senderegister leer
+        UCSRB |= _BV(UDRIE);            // UART Interrupt bei Senderegister leer
         //UCSRB |= _BV(TXCIE);          // UART Interrupt bei Sendevorgang beendet
 }
 

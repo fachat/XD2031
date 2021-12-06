@@ -52,7 +52,7 @@
 #undef DEBUG_WRITE
 
 
-#define	MAX_BUFFER_SIZE			64
+#define	MAX_OPT_BUFFER_SIZE		16
 #define	RET_BUFFER_SIZE			200
 
 
@@ -143,13 +143,13 @@ static void cmd_sendxcmd(serial_port_t writefd, char buf[]) {
 		log_debug("Option %d: %s\n", i, opt);
 
 		int len = strlen(opt);
-		if (len > MAX_BUFFER_SIZE - FSP_DATA) {
+		if (len > MAX_OPT_BUFFER_SIZE - FSP_DATA) {
 			log_error("Option is too long to be sent: '%s'\n", opt);
 		} else {
 			buf[FSP_CMD] = FS_SETOPT;
 			buf[FSP_LEN] = FSP_DATA + len + 1;
 			buf[FSP_FD] = FSFD_SETOPT;
-			strncpy(buf+FSP_DATA, opt, MAX_BUFFER_SIZE);
+			strncpy(buf+FSP_DATA, opt, MAX_OPT_BUFFER_SIZE);
 			buf[FSP_DATA + len] = 0;
 
 			// TODO: error handling

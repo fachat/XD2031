@@ -49,7 +49,7 @@ endif
 
 # If no DEVICE=<yourdevice> is given, default to xs1541
 DEVICE?=xs1541
-DEVICES=xs1541 petSD petSD2
+DEVICES=xs1541 petSD petSD2 nano-ieee488
 # sockserv contains Linux-specific code, so try that on Linux only
 ifeq ($(shell uname -s),Linux)
   DEVICES+=sockserv
@@ -84,8 +84,8 @@ SDEFS=$(sort $(DEFS))
 
 # CFLAGS/ASFLAGS common to all devices/platforms
 #CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-Wall -Wextra -DFIRMWARE
-CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
+CFLAGS+=-Wall -pedantic -Wextra -DFIRMWARE
+CFLAGS+=-std=gnu11 -O2 $(MCU_CC) $(INCLUDE) $(SDEFS)
 ifneq ($(V),1)
 CFLAGS+=-Wno-unused-parameter
 endif

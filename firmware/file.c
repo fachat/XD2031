@@ -175,7 +175,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 		debug_puts("OPENING UP A R/W CHANNEL!"); debug_putcrlf();
 		type = FS_OPEN_RW;
 	}
-
+#ifdef HAS_BUFFERS
 	if (nameinfo.trg.name && nameinfo.trg.name[0] == '#') {
 		// trying to open up a direct channel
 		// Note: needs to be supported for D64 support with U1/U2/...
@@ -184,7 +184,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 		type = FS_OPEN_DIRECT;
 	}
-
+#endif
 	// if ",W" or secondary address is one, i.e. save
 	if (nameinfo.access == 'W') {
 		type = FS_OPEN_WR;
@@ -214,7 +214,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata));
+uint8_t do_submit(const provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata));
 
 
 uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer, 
@@ -249,12 +249,17 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// and managed with the ASSIGN call.
 	//provider_t *provider = &serial_provider;
 	endpoint_t *endpoint = NULL;
+#ifdef HAS_BUFFERS
 	if (type == FS_OPEN_DIRECT) {
 		debug_printf("Getting direct endpoint provider for channel %d\n", channel_no);
 		endpoint = direct_provider();
 	} else {
 		endpoint = provider_lookup(nameinfo->trg.drive, (char*) nameinfo->trg.drivename);
 	}
+#else
+	endpoint = provider_lookup(nameinfo->trg.drive, (char*) nameinfo->trg.drivename);
+	// TODO: what when endpoint is NULL?
+#endif
 
 	// convert from bus' PETSCII to provider
 	// currently only up to the first zero byte is converted, options like file type
@@ -295,7 +300,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		set_error_tsd(errormsg, CBM_ERROR_DRIVE_NOT_READY, 0, 0, nameinfo->trg.drive);
 		return -1;
 	}
-	provider_t *provider = endpoint->provider;
+	const provider_t *provider = endpoint->provider;
 
 	// find open slot
 	//int8_t slot = -1;
@@ -374,7 +379,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	return do_submit(provider, channel_no, type, activeslot, cmd_buffer, endpoint, rtconf, nameinfo, callback);
 }
 
-uint8_t do_submit(provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
+uint8_t do_submit(const provider_t *provider, uint8_t channel_no, uint8_t type,  open_t *activeslot, uint8_t *cmd_buffer, endpoint_t *endpoint, rtconfig_t *rtconf, nameinfo_t *nameinfo, void (*callback)(int8_t errnum, uint8_t *rxdata)) {
 
         uint8_t len = assemble_filename_packet(cmd_buffer, nameinfo);
 #ifdef DEBUG_FILE
@@ -422,7 +427,7 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rx
 				// Note that the reply packet already sends an official errors.h 
 				// error code, so no translation needed
 				uint8_t err = active[i].rxdata[0];
-
+#ifdef HAS_BUFFERS
 				if (err == CBM_ERROR_OPEN_REL) {
 					// when a REL file is opened, we need to proxy the
 					// communication through the bufcmd layer
@@ -435,7 +440,7 @@ static uint8_t _file_open_callback(int8_t channelno, int8_t errnum, packet_t *rx
 					// on error (i.e. err != CBM_ERROR_OK)
 					err = relfile_proxy(channelno, active[i].endpoint, reclen);
 				}	
-
+#endif
 				active[i].callback(err, (uint8_t *) active[i].rxdata);
 			}
 			active[i].channel_no = -1;

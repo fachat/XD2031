@@ -35,8 +35,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/dir.h>
 #include <sys/types.h>
@@ -128,7 +128,9 @@ int config_ser(int fd) {
         // Communication speed (simple version, using the predefined
         // constants)
 
-        if(cfsetispeed(&config, B115200) < 0 || cfsetospeed(&config, B115200) < 0) {
+//        if(cfsetispeed(&config, B115200) < 0 || cfsetospeed(&config, B115200) < 0) {
+        if(cfsetispeed(&config, B38400) < 0 || cfsetospeed(&config, B38400) < 0) {
+//        if(cfsetispeed(&config, B4800) < 0 || cfsetospeed(&config, B4800) < 0) {
 		log_error("Could not set required line speed!");
 		return -1;
         }
@@ -224,7 +226,8 @@ int config_ser(serial_port_t h) {
 		return -1;
 	}
 
-	dcb.BaudRate = CBR_115200;
+	//dcb.BaudRate = CBR_115200;
+	dcb.BaudRate = CBR_76800;
 	dcb.ByteSize = 8;
 	dcb.StopBits = ONESTOPBIT;
 	dcb.Parity   = NOPARITY;

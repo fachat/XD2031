@@ -41,6 +41,7 @@ bool nv_restore_common_config(void);
 
 #else
 
+/*
 static bool nv_save_config(const rtconfig_t * rtc)
 {
 	return true;
@@ -60,7 +61,7 @@ static bool nv_restore_common_config(void)
 {
 	return true;
 }
-
+*/
 #endif				// HAS_EEPROM
 
 #endif				// NVCONFIG_H

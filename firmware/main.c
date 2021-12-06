@@ -116,14 +116,13 @@ int main(int argc, const char *argv[])
 	// first some basic hardware infrastructure
 	
 	timer_init();			// Timer Interrupt initialisieren
-	led_init();
+	led_init();			// this blinks the LED already
 
 	provider_init();		// needs to be in the beginning, as other
 					// modules like serial register here
 
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
-
 
 #ifdef __AVR__
 	stdout = &term_stdout;          // redirect stdout
@@ -133,12 +132,24 @@ int main(int argc, const char *argv[])
 
 	// server communication
 	uarthw_init();			// first hardware
-	provider_t *serial = serial_init();	// then logic layer
+
+	const provider_t *serial = serial_init();	// then logic layer
+
+#if 0
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
+#endif
 
 	// now prepare for terminal etc
 	// (note: in the future the assign parameter could be used
 	// to distinguish different UARTs for example)
-	void *epdata = serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL);
+
+	void *epdata = serial->prov_assign ? serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL) : NULL;
+
 	term_endpoint.provider = serial;
 	term_endpoint.provdata = epdata;
 
@@ -150,12 +161,24 @@ int main(int argc, const char *argv[])
 
 	// init file handling (active open calls)
 	file_init();
+
+#if 0
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
+#endif
+
+#ifdef HAS_BUFFERS
 	// buffer structures
 	buffer_init();
 	// direct buffer handling
 	direct_init();
 	// relfile handling
 	relfile_init();
+#endif
 	// init main channel handling
 	channel_init();
 
@@ -163,25 +186,67 @@ int main(int argc, const char *argv[])
 	// note it gets the provider to register a listener for X command line params
 	rtconfig_init(&term_endpoint);
 
+#if 0
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
+#endif
+
+
 	// bus init	
 	// first the general bus (with bus counter)
 	bus_init();		
 
+#if 0
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
+#endif
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
 	// it also handles the interrupt initialization if necessary
 	device_init();
+
+#if 1
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
+#endif
 
 #ifdef HAS_EEPROM
 	// read bus-independent settings from non volatile memory
 	nv_restore_common_config();
 #endif
 
+
 	// enable interrupts
 	enable_interrupts();
 
+//	for (int i=0; i < 10; i++) {
+//		_delay_ms(200);
+//		led_off();
+//		_delay_ms(200);
+//		led_on();
+//	}
+
 	// sync with the server
 	serial_sync();		
+
+	for (int i=0; i < 10; i++) {
+		_delay_ms(200);
+		led_off();
+		_delay_ms(200);
+		led_on();
+	}
 
 	// pull in command line config options from server
 	// also send directory charset

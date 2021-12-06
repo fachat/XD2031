@@ -40,6 +40,8 @@
 ; UART receive interrupt
 .global USART0_RX_vect								; cycles in IRQ:
 USART0_RX_vect:
+.global USART_RX_vect								; cycles in IRQ:
+USART_RX_vect:
 	push 	r2		; 	make place for status register		; 2
 	in	r2, _SFR_IO_ADDR(SREG)	; save status register			; 1
 	push	r16		; 	save working register			; 2
@@ -62,8 +64,8 @@ USART0_RX_vect:
 	push	YH		;	save working register Y high		; 10
 
 	lds	r17, rx_wp	;	receive write pointer
-	ldi	YL, lo8(rxbuf)	; 	compute address of actual byte
-	ldi	YH, hi8(rxbuf)	;	as txbuf plus read pointer
+	ldi	YL, lo8(rxbuf)	; 	get address of receive buffer
+	ldi	YH, hi8(rxbuf)	;	into Y
 
 	add	YL, r17		;	compute rxbuf[rx_wp] address
 	brcc	rxnocarry
@@ -79,7 +81,7 @@ rxnocarry:
 	; now increment rx_wp, which is also still in r17
 
 	inc	r17
-	andi	r17, 127	;	BUFFER_SIZE_MASK
+	andi	r17, 63		;	BUFFER_SIZE_MASK
 	
 	; compare with rx_wp to check for overflow
 	
@@ -110,6 +112,8 @@ rxend:
 
 .global USART0_UDRE_vect							; cycles in IRQ
 USART0_UDRE_vect:
+.global USART_UDRE_vect							; cycles in IRQ
+USART_UDRE_vect:
 	push	r2		;	make place for status register		; 2
 	in	r2, _SFR_IO_ADDR(SREG)	; 	save status register		; 1
 	push	r16		;	save working register			; 2
@@ -137,7 +141,7 @@ nocarry:
 	sts	UDR0, YL	; 	store data to UDR			; 2
 
 	inc	r16		;	tx_rp next address			; 1
-	andi	r16, 127	;	BUFFER_SIZE_MASK			; 1
+	andi	r16, 63		;	BUFFER_SIZE_MASK			; 1
 
 	sts	tx_rp, r16	;	store new tx_rp				; 2
 

@@ -76,7 +76,7 @@ typedef struct {
 } provider_t;
 
 typedef struct {
-	provider_t *provider;
+	const provider_t *provider;
 	void *provdata;
 } endpoint_t;
 
@@ -84,9 +84,9 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to);
 
 endpoint_t *provider_lookup(uint8_t drive, const char *drivename);
 
-uint8_t provider_register(const char *name, provider_t * provider);
+uint8_t provider_register(const char *name, const provider_t * provider);
 
-void provider_set_default(provider_t * prov, void *epdata);
+void provider_set_default(const provider_t * prov, void *epdata);
 
 void provider_init(void);
 
