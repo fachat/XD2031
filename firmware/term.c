@@ -39,7 +39,6 @@
 #define	TERM_BUFFER_LENGTH	129
 
 static char buf[TERM_BUFFER_LENGTH];
-static char pbuf[TERM_BUFFER_LENGTH];
 static uint8_t nchars;
 
 static endpoint_t *endpoint;
@@ -106,7 +105,6 @@ void term_putcrlf() {
  */
 void term_rom_puts(const char *rom_str) {
 
-
 	packet_wait_done(&termpack);
 
 	uint8_t len = rom_strlen(rom_str);
@@ -121,8 +119,9 @@ void term_rom_puts(const char *rom_str) {
 			return;
 		}
 		send();
+		packet_wait_done(&termpack);
 	}
-	packet_wait_done(&termpack);
+
 	rom_memcpy(buf+nchars, rom_str, len);
 
 	nchars += len;
@@ -148,8 +147,9 @@ void term_puts(const char *str) {
 			return;
 		}
 		send();
+		packet_wait_done(&termpack);
 	}
-	packet_wait_done(&termpack);
+
 	memcpy(buf+nchars, str, len);
 
 	nchars += len;
@@ -160,10 +160,14 @@ void term_printf(const char *format, ...)
     va_list args;
 
     va_start( args, format );
-    vsnprintf(pbuf, TERM_BUFFER_LENGTH, format, args );
-    pbuf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
 
-    term_puts(pbuf);
+    if(nchars > 0) {
+	send();
+	packet_wait_done(&termpack);
+    }
+    vsnprintf(buf, TERM_BUFFER_LENGTH, format, args );
+    buf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
+    nchars = strlen(buf);
 }
 
 void term_rom_printf(const char *rom_format, ...)
@@ -171,10 +175,14 @@ void term_rom_printf(const char *rom_format, ...)
     va_list args;
 
     va_start( args, rom_format );
-    rom_vsnprintf(pbuf, TERM_BUFFER_LENGTH, rom_format, args );
-    pbuf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
 
-    term_puts(pbuf);
+    if (nchars > 0) {
+	send();
+	packet_wait_done(&termpack);
+    }
+    rom_vsnprintf(buf, TERM_BUFFER_LENGTH, rom_format, args );
+    buf[TERM_BUFFER_LENGTH-1] = 0;	// just in case
+    nchars = strlen(buf);
 }
 
 void term_set_endpoint(endpoint_t *_endpoint) {
