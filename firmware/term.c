@@ -161,7 +161,8 @@ void term_printf(const char *format, ...)
 
     va_start( args, format );
 
-    if(nchars > 0) {
+    packet_wait_done(&termpack);
+    if (nchars > 0) {
 	send();
 	packet_wait_done(&termpack);
     }
@@ -176,6 +177,7 @@ void term_rom_printf(const char *rom_format, ...)
 
     va_start( args, rom_format );
 
+    packet_wait_done(&termpack);
     if (nchars > 0) {
 	send();
 	packet_wait_done(&termpack);
