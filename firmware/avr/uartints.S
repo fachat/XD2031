@@ -81,7 +81,7 @@ rxnocarry:
 	; now increment rx_wp, which is also still in r17
 
 	inc	r17
-	andi	r17, 63		;	BUFFER_SIZE_MASK
+	andi	r17, 127	;	BUFFER_SIZE_MASK
 	
 	; compare with rx_wp to check for overflow
 	
@@ -141,7 +141,7 @@ nocarry:
 	sts	UDR0, YL	; 	store data to UDR			; 2
 
 	inc	r16		;	tx_rp next address			; 1
-	andi	r16, 63		;	BUFFER_SIZE_MASK			; 1
+	andi	r16, 127	;	BUFFER_SIZE_MASK			; 1
 
 	sts	tx_rp, r16	;	store new tx_rp				; 2
 

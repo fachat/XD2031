@@ -42,10 +42,18 @@
 
 /***********************************************************************************
  * UART stuff
+ *
+ * Notes: 
+ * 1) the BUFFER_SIZE and BUFFER_SIZE_MASK are also used in uartints.S
+ * 2) If BUFFER_SIZE is significantly smaller than TERM_BUFFER_SIZE, 
+ *    the firmware hangs on boot
+ * 
  */
 
-#define	BUFFER_SIZE		64
-#define	BUFFER_SIZE_MASK	0x3f
+//#define	BUFFER_SIZE		64
+//#define	BUFFER_SIZE_MASK	0x3f
+#define	BUFFER_SIZE		128
+#define	BUFFER_SIZE_MASK	0x7f
 #define	BUFFER_NEXT(p)		((p + 1) & BUFFER_SIZE_MASK)
 
 // prototypes

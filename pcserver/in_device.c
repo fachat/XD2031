@@ -374,6 +374,9 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
       		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
+		int n = buf[FSP_LEN];
+		log_info("cmd %s :%d bytes @%p : \n", command_to_name(255&buf[FSP_CMD]), n, buf);
+		log_hexdump(buf, n, 0);
 	}
 
 	if (sendreply) {

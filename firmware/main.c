@@ -162,15 +162,6 @@ int main(int argc, const char *argv[])
 	// init file handling (active open calls)
 	file_init();
 
-#if 0
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
-#endif
-
 #ifdef HAS_BUFFERS
 	// buffer structures
 	buffer_init();
@@ -186,41 +177,14 @@ int main(int argc, const char *argv[])
 	// note it gets the provider to register a listener for X command line params
 	rtconfig_init(&term_endpoint);
 
-#if 0
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
-#endif
-
-
 	// bus init	
 	// first the general bus (with bus counter)
 	bus_init();		
 
-#if 0
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
-#endif
 	// this call initializes the device-specific hardware
 	// e.g. IEEE488 and IEC busses on xs1541, plus SD card on petSD and so on
 	// it also handles the interrupt initialization if necessary
 	device_init();
-
-#if 1
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
-#endif
 
 #ifdef HAS_EEPROM
 	// read bus-independent settings from non volatile memory
@@ -231,22 +195,8 @@ int main(int argc, const char *argv[])
 	// enable interrupts
 	enable_interrupts();
 
-//	for (int i=0; i < 10; i++) {
-//		_delay_ms(200);
-//		led_off();
-//		_delay_ms(200);
-//		led_on();
-//	}
-
 	// sync with the server
 	serial_sync();		
-
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
 
 	// pull in command line config options from server
 	// also send directory charset
