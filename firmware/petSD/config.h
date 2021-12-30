@@ -23,7 +23,7 @@
     MA  02110-1301, USA.
 
 **************************************************************************/  
-     
+ 
 #ifndef CONFIG_H
 #define CONFIG_H
     
@@ -44,6 +44,9 @@
     
 // number of direct buffers (for U1/U2/B-* commands)
 #define CONFIG_NUM_DIRECT_BUFFERS       4
-     
-#endif	/*  */
+
+// number of maximum open channels
+#define       MAX_CHANNELS              4  
+
+#endif	
     
