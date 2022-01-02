@@ -37,16 +37,16 @@
 #include "buffer.h"
 #include "debug.h"
 
-/*
+#ifdef HAS_BUFFERS
 static uint8_t cbstat;
 static int8_t cberr;
-*/
+#endif
 
 packet_t buf_cmdpack;
 
 char buf[CMD_BUFFER_LENGTH];
 
-#if HAS_BUFFERS
+#ifdef HAS_BUFFERS
 
 packet_t buf_datapack;
 
@@ -111,12 +111,11 @@ uint8_t buf_free(int8_t channel_no) {
 	return n;	// number of freed buffers
 }
 
-#endif /* HAS_BUFFERS */
 
 // ----------------------------------------------------------------------------------
 /**
  * command callback
- *
+ */
 static uint8_t cmd_callback(int8_t channelno, int8_t errnum, packet_t *rxpacket) {
 	cberr = packet_get_buffer(rxpacket)[0];
 	cbstat = 1;
@@ -132,7 +131,8 @@ static uint8_t cmd_wait_cb() {
 	return cberr;	// cberr is set to an FS_REPLY error in the actual callback
 }
 
-*/
+
+#endif /* HAS_BUFFERS */
 
 // ----------------------------------------------------------------------------------
 

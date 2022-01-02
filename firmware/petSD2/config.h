@@ -44,6 +44,9 @@
     
 // number of direct buffers (for U1/U2/B-* commands)
 #define CONFIG_NUM_DIRECT_BUFFERS       4
-     
+  
+// do we allow REL files and random access to Dxx images? 
+#define HAS_BUFFERS
+ 
 #endif	/*  */
     

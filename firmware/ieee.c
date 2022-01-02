@@ -37,8 +37,8 @@
 #include "term.h"
 #include "led.h"
 
-#undef DEBUG_BUS
-#undef DEBUG_BUS_DATA
+#undef DEBUG_IEEE
+#undef DEBUG_IEEE_DATA
 
 // Prototypes
 
@@ -161,7 +161,7 @@ atn:
 }
 
 static void listenloop() {
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 	debug_putc('L');
 #endif
         int er, c = 0; // silence warning maybe uninitialized
@@ -183,7 +183,7 @@ static void talkloop()
         int16_t er /*,sec*/;
         uint8_t c;
 
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 	debug_putc('T'); debug_flush();
 #endif
         settx();            /* enables sending */
@@ -206,7 +206,7 @@ static void talkloop()
             /* write data & eoi */
             par_status = bus_receivebyte(&bus, &c, BUS_PRELOAD);
 
-#ifdef DEBUG_BUS_DATA
+#ifdef DEBUG_IEEE_DATA
 		debug_printf(" %02x, (%04x)", c, par_status);
 #endif
 
@@ -214,7 +214,7 @@ static void talkloop()
 		// we should create a read timeout, by not setting DAV low
 		// in time. This happens on r/w channels, when no data is
 		// available
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 		debug_putc('R');
 #endif
 		break;
@@ -222,7 +222,7 @@ static void talkloop()
 
             if(par_status & STAT_EOF)
             {
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 		debug_putc('E');
 #endif
                 eoilo();
@@ -276,6 +276,8 @@ atn:
 	// sets IEEE488 back to receive mode
 	//debug_puts("setrx()");debug_flush();
         setrx();
+        nrfdhi_raw();
+        ndachi_raw();
         return; //(er&(E_EOI));
 
 idle:
@@ -356,7 +358,7 @@ void ieee_mainloop_iteration(void)
 	// parallelattention has set status what to do
 	// now transfer the data
 cmd:
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 	debug_printf("stat=%04x", par_status); debug_putcrlf();
 #endif
 
@@ -379,8 +381,9 @@ cmd:
                 listenloop();
         } else
         {
-                atnahi();
                 nrfdhi();
+                ndachi();
+                atnahi();
 
                 if(isTalking(par_status) && !isReadTimeout(par_status)) {
                     talkloop();
@@ -388,7 +391,7 @@ cmd:
         }
 
 	ieeehw_setup();
-#ifdef DEBUG_BUS
+#ifdef DEBUG_IEEE
 	debug_putc('X'); debug_flush();
 #endif	
         return;
@@ -408,8 +411,10 @@ void ieee_init(uint8_t deviceno) {
 		bus.active = 1;
         } else {
                 term_rom_puts(IN_ROM_STR("Ignoring IEEE bus as ATN is constantly low\n"));
-		debug_printf("active=%d\n", bus.active);
 	}
+#ifdef DEBUG_IEEE
+	debug_printf("active=%d\n", bus.active);
+#endif
 }
 
 #endif // HAS_IEEE

@@ -42,6 +42,9 @@
 #define FAT_MAX_ASSIGNS                 10
 
 // number of maximum open channels
-#define       MAX_CHANNELS    		4    
+#define	MAX_CHANNELS    		4    
+
+// do we allow REL files and random access to Dxx images? 
+#define	HAS_BUFFERS
     
 #endif	/*  */
