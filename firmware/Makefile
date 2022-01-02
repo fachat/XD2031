@@ -49,7 +49,7 @@ endif
 
 # If no DEVICE=<yourdevice> is given, default to xs1541
 DEVICE?=xs1541
-DEVICES=xs1541 petSD petSD2 nano-ieee488
+DEVICES=xs1541 petSD petSD2 nano488
 # sockserv contains Linux-specific code, so try that on Linux only
 ifeq ($(shell uname -s),Linux)
   DEVICES+=sockserv
