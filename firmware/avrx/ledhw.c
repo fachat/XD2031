@@ -31,13 +31,13 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <inttypes.h>
 
 #include "hwdefines.h"
 #include "hwdevice.h"
 #include "led.h"
 #include "ledhw.h"
+#include "delayhw.h"
 
 // -----------------------------------------------------------------------------
 // communication with timer interrupt routine for led interrupt program
@@ -80,7 +80,7 @@ static void init_prg(uint8_t ptr) {
 	led_bit = 0;
 	led_pattern = 0;
 	led_counter = 0;
-	led_current = ptr+1;
+	led_current = ptr;
 	led_program = ptr+1;
 	sei();
 }
@@ -97,13 +97,13 @@ static uint8_t has_error = 0;
 */
 static inline void led_hello_blinky(void) {
 #ifdef ACTIVE_LED_DDR
-	device_led_on();				_delay_ms(300);
-	device_active_led_on();				_delay_ms(300);
-	device_leds_off(); device_active_led_on(); 	_delay_ms(600);
+	device_led_on();				delayhw_ms(300);
+	device_active_led_on();				delayhw_ms(300);
+	device_leds_off(); device_active_led_on(); 	delayhw_ms(600);
 #else
-	device_led_on();	_delay_ms(500);
-	device_leds_off();	_delay_ms(200);
-	device_led_on();	_delay_ms(500);
+	device_led_on();	delayhw_ms(500);
+	device_leds_off();	delayhw_ms(200);
+	device_led_on();	delayhw_ms(500);
 #endif
 	device_leds_off();
 }
@@ -176,6 +176,8 @@ void led_set(led_t mode) {
 	case ERROR:
 		has_error = 1;
 		_leds_off();
+		init_prg(0);
+		break;
 	default:
 		init_prg(0);
 		break;

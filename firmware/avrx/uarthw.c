@@ -35,9 +35,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-#include <util/delay.h>
 
-//#include "compat.h"
 #include "uarthw.h"
 #include "led.h"
 #include "arch.h"

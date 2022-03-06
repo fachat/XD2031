@@ -115,8 +115,15 @@ int main(int argc, const char *argv[])
 	//
 	// first some basic hardware infrastructure
 	
-	timer_init();			// Timer Interrupt initialisieren
-	led_init();			// this blinks the LED already
+	// initialize Timer Interrupt
+	timer_init();			
+
+	// enable interrupts
+	enable_interrupts();		
+
+	// this blinks the LED already
+	// note: needs interrupts as delayhw uses timerhw
+	led_init();			
 
 	provider_init();		// needs to be in the beginning, as other
 					// modules like serial register here
@@ -135,14 +142,10 @@ int main(int argc, const char *argv[])
 
 	const provider_t *serial = serial_init();	// then logic layer
 
-#if 0
-	for (int i=0; i < 10; i++) {
-		_delay_ms(200);
-		led_off();
-		_delay_ms(200);
-		led_on();
-	}
-#endif
+	term_rom_printf(IN_ROM_STR("Starting...\n"));
+
+	// sync with the server
+	serial_sync();		
 
 	// now prepare for terminal etc
 	// (note: in the future the assign parameter could be used
@@ -191,13 +194,6 @@ int main(int argc, const char *argv[])
 	nv_restore_common_config();
 #endif
 
-
-	// enable interrupts
-	enable_interrupts();
-
-	// sync with the server
-	serial_sync();		
-
 	// pull in command line config options from server
 	// also send directory charset
 	rtconfig_pullconfig(argc, argv);
@@ -209,17 +205,17 @@ int main(int argc, const char *argv[])
 	//provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
 #endif
 
+
 	// show our version...
   	ListVersion();
 	// ... and some system info
-	term_printf((" %u Bytes free"), BytesFree());
-	term_printf((", %d kHz"), FreqKHz());
+	term_rom_printf(IN_ROM_STR(" %u Bytes free"), BytesFree());
+	term_rom_printf(IN_ROM_STR(", %d kHz"), FreqKHz());
 #ifdef __AVR__
 	fuse_info();
 #endif
 	term_putcrlf();
 	term_putcrlf();
-
 
 	while (1)  			// Mainloop-Begin
 	{

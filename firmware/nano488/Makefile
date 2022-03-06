@@ -28,7 +28,8 @@ EFUSE = fd
 # SCK period
 DUDE_SPEED=-B 1.3
 
-SRC+=nano-ieee488/ieeehw.c nano-ieee488/device.c
+# only used to clean dependency directory on clean
+SRC+=ieeehw.c device.c
 
 # include platform specific Makefile
 include avr/Makefile

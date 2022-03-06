@@ -210,6 +210,7 @@ int8_t file_open(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 	debug_flush();
 #endif
 
+
 	return file_submit_call(channel_no, type, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 0);
 
 }
@@ -221,9 +222,11 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		errormsg_t *errormsg, rtconfig_t *rtconf, nameinfo_t *nameinfo,
 		void (*callback)(int8_t errnum, uint8_t *rxdata), uint8_t iscmd) {
 
+
 	assert_not_null(errormsg, "file_submit_call: errormsg is null");
 	assert_not_null(rtconf, "file_submit_call: rtconf is null");
 
+// ok
 	// check for default drive (here is the place to set the last used one)
 	if (nameinfo->trg.drive == NAMEINFO_LAST_DRIVE) {
 		nameinfo->trg.drive = rtconf->last_used_drive;
@@ -261,6 +264,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 	// TODO: what when endpoint is NULL?
 #endif
 
+// ok
 	// convert from bus' PETSCII to provider
 	// currently only up to the first zero byte is converted, options like file type
 	// are still ASCII only
@@ -270,6 +274,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 			((char*)nameinfo->trg.name, nameinfo->trg.namelen, 
 			(char*)nameinfo->trg.name, nameinfo->trg.namelen);
 	}
+// ok //led_set(ERROR); delayms(1000);
 	for (uint8_t i=0 ; i < nameinfo->num_files ; ++i) {
 		if (nameinfo->file[i].name != NULL) {
 			cconv_converter(CHARSET_PETSCII, endpoint->provider->charset(endpoint->provdata))
@@ -278,6 +283,7 @@ uint8_t file_submit_call(uint8_t channel_no, uint8_t type, uint8_t *cmd_buffer,
 		}
 	}
 
+// nok
 	if (type == FS_MOVE 
 		&& nameinfo->file[0].drive != NAMEINFO_UNUSED_DRIVE 	// then use ep from first drive anyway
 		&& nameinfo->file[0].drive != nameinfo->trg.drive) {		// no need to check if the same

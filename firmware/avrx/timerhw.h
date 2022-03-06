@@ -34,6 +34,8 @@
 
 void timerhw_init(void);
 
+void timerhw_delayms(uint16_t);
+
 /*
 static inline void timerhw_set_us(uint16_t us) {
 }

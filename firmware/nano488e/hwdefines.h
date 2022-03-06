@@ -128,8 +128,6 @@
 #define IEEE_DD_SHIFTR         4
 
 
-#define HW_NAME			"NANO488E"
-
 #define	IEEE_SECADDR_OFFSET	0
 
 // LED configuration for single LED HW / red error LED

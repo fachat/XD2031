@@ -29,19 +29,11 @@
 #define DELAYHW_H
 
 #include "config.h"		// F_CPU
-#define __DELAY_BACKWARD_COMPATIBLE__
-#include <util/delay.h>
 
-// note that using the static inline versions below breaks the timing!
-#define	delayhw_ms(a)	_delay_ms(a)
-#define	delayhw_us(a)	_delay_us(a)
+#include "timerhw.h"
 
-//static inline void delayms(uint16_t len) {
-//      _delay_ms(len);
-//}
-
-//static inline void delayus(uint16_t len) {
-//      _delay_us(len);
-//}
+static inline void delayhw_ms(uint16_t len) {
+      timerhw_delayms(len);
+}
 
 #endif

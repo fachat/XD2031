@@ -76,8 +76,6 @@
 
 //#define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
 
-#define HW_NAME			"XS-1541"
-
 // DATA and CLK use the same port
 #define IEC_DDR			DDRD
 #define	IEC_PORT		PORTD

@@ -140,7 +140,9 @@ static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) 
 static void do_charset() {
 
 	// set the communication charset to PETSCII
-	strcpy(outbuf, cconv_charsetname(current_charset));
+	//strcpy(outbuf, cconv_charsetname(current_charset));
+	outbuf[0] = 0;
+	rom_strcat(outbuf, cconv_charsetname(current_charset));
 
         // prepare FS_CHARSET packet
         packet_set_filled(&outpack, FSFD_CMD, FS_CHARSET, strlen(outbuf)+1);

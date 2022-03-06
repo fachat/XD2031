@@ -39,32 +39,50 @@ volatile uint16_t timer10ms = 0;	// decremented by timer 1 if nonzero
 void timerhw_init(void) {
 	// timer configuration derived from
 	// https://github.com/microchip-pic-avr-examples/atmega4809-getting-started-with-tca-studio/blob/master/Using_Periodic_Interrupt_Mode/main.c
-	
+
+	// just make sure timer interrupt does not accidently does stuff
+	led_program = 0;
+		
 	// Timer 1: 100Hz
+	
+	// setup 16 MHz clock clk_per
+	// clk_per source is 16/20mhz osc
+	_PROTECTED_WRITE((CLKCTRL.MCLKCTRLA), CLKCTRL_CLKSEL_OSC20M_gc);
+	// disable pre-scaler
+	_PROTECTED_WRITE((CLKCTRL.MCLKCTRLB), (0 << CLKCTRL_PEN_bp));
+	
+	// reset the timer
+	TCA0.SINGLE.CTRLA = 0;          // stop
+	TCA0.SINGLE.CTRLESET = 0xc0;    // reset
+	
+	/* set Normal mode */
+	TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_NORMAL_gc;
+	
+	/* disable event counting */
+	TCA0.SINGLE.EVCTRL &= ~(TCA_SINGLE_CNTEI_bm);
+	
+	/* set the period */
+	TCA0.SINGLE.PER = PERVAL_FOR_INTSECS_256PRESCALE(0.01);  
+	
+	/* Timer A pre-scaler is 256 */
+	TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV256_gc         /* set clock source (sys_clk/256) */
+		| TCA_SINGLE_ENABLE_bm;                /* start timer */
+	
+	/* enable overflow interrupt */
+	TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
 
-        // setup 16 MHz clock clk_per
-        // clk_per source is 16/20mhz osc
-        _PROTECTED_WRITE((CLKCTRL.MCLKCTRLA), CLKCTRL_CLKSEL_OSC20M_gc);
-        // disable pre-scaler
-        _PROTECTED_WRITE((CLKCTRL.MCLKCTRLB), (0 << CLKCTRL_PEN_bp));
-
-
-    /* set the period */
-    TCA0.SINGLE.PER = PERVAL_FOR_INTSECS_256PRESCALE(0.01);  
-
-    /* disable event counting */
-    TCA0.SINGLE.EVCTRL &= ~(TCA_SINGLE_CNTEI_bm);
-
-    /* Timer A pre-scaler is 256 */
-    TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV256_gc         /* set clock source (sys_clk/256) */
-                      | TCA_SINGLE_ENABLE_bm;                /* start timer */
-
-    /* set Normal mode */
-    TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_NORMAL_gc;
-
-    /* enable overflow interrupt */
-    TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
+#if 0
+	LED_DDR |= LED_BIT_bm;
+#endif
 }
+
+void timerhw_delayms(uint16_t ms) {
+
+	timer10ms = (ms + 9) / 10;
+
+	while (timer10ms);
+}
+
 
 ISR(TCA0_OVF_vect) {
 
@@ -72,6 +90,9 @@ ISR(TCA0_OVF_vect) {
 		timer10ms --;
 	}
 
+#if 0
+	LED_PORT ^= LED_BIT_bm;
+#else
 	if (led_program) {
 	
 		// led:	
@@ -89,7 +110,7 @@ ISR(TCA0_OVF_vect) {
 						led_pattern = led_code[led_current++];
 						break;		
 					} else {
-						led_current = led_program;
+						led_current = led_program - 1;
 						continue;
 					}
 				} while (1);
@@ -116,7 +137,7 @@ ISR(TCA0_OVF_vect) {
 		
 		led_shift >>= 1;
 	}
-
+#endif
 	// disable Interrupt, so it does not trigger again immediately
 	TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
 

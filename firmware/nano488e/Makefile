@@ -17,6 +17,9 @@ MCU?=m4809
 # specific switches for this device
 DEFS=-DHAS_IEEE
 
+# hardware name 
+HW_NAME=NANO488E
+
 # AVR fuses settings
 # arduino clock setting - run at 16 MHz
 FUSE_OSCCFG = 01

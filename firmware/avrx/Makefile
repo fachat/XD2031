@@ -32,7 +32,6 @@ AS=$(SILENT_AS)avr-gcc $(MCU_CC)
 LD=$(SILENT_LD)avr-gcc $(MCU_CC)
 
 SRC+=avrx/uarthw.c avrx/ledhw.c avrx/timerhw.c avrx/avr.c avrx/nvconfighw.c avrx/reset.c
-#SRC+=avrx/timerint.S
 
 CFLAGS+=-g
 CFLAGS+=-Os

@@ -112,8 +112,6 @@
 #define IEEE_D2_PINS          0x30
 #define IEEE_D2_SHIFT_R		2
 
-#define HW_NAME			"NANO488"
-
 #define	IEEE_SECADDR_OFFSET	0
 
 // LED configuration for single LED HW / red error LED
