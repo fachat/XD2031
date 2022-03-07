@@ -210,7 +210,7 @@ int main(int argc, const char *argv[])
   	ListVersion();
 	// ... and some system info
 	term_rom_printf(IN_ROM_STR(" %u Bytes free"), BytesFree());
-	term_rom_printf(IN_ROM_STR(", %d kHz"), FreqKHz());
+	term_rom_printf(IN_ROM_STR(" %d kHz"), FreqKHz());
 #ifdef __AVR__
 	fuse_info();
 #endif
