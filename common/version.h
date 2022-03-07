@@ -29,7 +29,7 @@
 #define SW_NAME_LOWER		"xd2031"
 
 #define	VERSION			"0.9"	/* <--- update here     */
-#define	LONGVERSION		".2"	/* <--- update here     */
+#define	LONGVERSION		".3"	/* <--- update here     */
 
 // BCD encoded version number, last two digits are microsteps to allow
 // introducing new non volatile values without the need to increase the

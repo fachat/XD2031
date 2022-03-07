@@ -1,4 +1,4 @@
-# petSD-II Options
+# Nano488-every Options
 #
 # DO NOT EDIT Makefiles to set your options
 # Your changes would prevent updating with 'git pull'.

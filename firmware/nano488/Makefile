@@ -1,4 +1,4 @@
-# petSD-II Options
+# Nano488 Options
 #
 # DO NOT EDIT Makefiles to set your options
 # Your changes would prevent updating with 'git pull'.
@@ -11,6 +11,8 @@ USE_RTC?=n                       # Enable optional real time clock?
 
 #########################################################################
 # Should not be modified
+
+HW_NAME=NANO488
 
 MCU?=m328p
 
