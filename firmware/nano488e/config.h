@@ -42,11 +42,13 @@
 #define CONFIG_ERROR_BUFFER_SIZE        46
     
 // number of direct buffers (for U1/U2/B-* commands)
-// disables this functionality
-#define CONFIG_NUM_DIRECT_BUFFERS       0
+#define	CONFIG_NUM_DIRECT_BUFFERS	2
 
 // number of maximum open channels
-#define       MAX_CHANNELS    1               
+#define	MAX_CHANNELS  			4 
+
+// do we allow REL files and random access to Dxx images? 
+#define	HAS_BUFFERS
 
 #endif
 
