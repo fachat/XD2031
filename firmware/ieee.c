@@ -276,8 +276,9 @@ atn:
 	// sets IEEE488 back to receive mode
 	//debug_puts("setrx()");debug_flush();
         setrx();
-        nrfdhi_raw();
-        ndachi_raw();
+	// calling the next two breaks DIR on XS-1541
+        //nrfdhi_raw();
+        //ndachi_raw();
         return; //(er&(E_EOI));
 
 idle:
@@ -382,7 +383,7 @@ cmd:
         } else
         {
                 nrfdhi();
-                ndachi();
+		ndachi();
                 atnahi();
 
                 if(isTalking(par_status) && !isReadTimeout(par_status)) {
