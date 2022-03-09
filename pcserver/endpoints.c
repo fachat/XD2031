@@ -75,7 +75,7 @@ ept_t *endpoints_find(int drive) {
                         return ept;
                 }
         }
-	log_warn("Drive %d is not assigned!\n", drive);
+	log_info("Drive %d is not assigned!\n", drive);
 
         return NULL;
 }

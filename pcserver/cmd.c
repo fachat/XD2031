@@ -494,7 +494,10 @@ static int drive_scan_next(drive_and_name_t *dnt, charset_t cset,
 	// idx contains a matching drive
 
        	endpoint_t *ep = NULL;
+	int searchdrv=dnt[idx].drive;
+	dnt[idx].drive = chan->searchdrv;
        	rv = resolve_endpoint(&dnt[idx], cset, 0, &ep);
+	dnt[idx].drive= searchdrv;
 	if (rv == CBM_ERROR_OK) {
 		file_t *fp = ep->ptype->root(ep);
 

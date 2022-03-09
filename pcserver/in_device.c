@@ -435,6 +435,7 @@ int in_device_loop(in_device_t *tp) {
               }
 #endif
 
+#if 0	// this only works for the actual serial device
 	      if(!n) {
 		if(!device_still_present()) {
 			log_error("Device lost.\n");
@@ -442,6 +443,7 @@ int in_device_loop(in_device_t *tp) {
                 }
 		return 1;
 	      }
+#endif
 
               if(n < 0) {
 
