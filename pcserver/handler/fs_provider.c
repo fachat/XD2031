@@ -556,7 +556,7 @@ static int path_under_base(const char *path, const char *base) {
 		log_error("Unable to get real path for '%s'\n", base);
 		goto exit;
 	}
-	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
+	base_dirc = mem_alloc_c_str(strlen(base_realpathc) + 2, "base realpath/");
 	if(!base_dirc) {
 		res = -3;
 		goto exit;
@@ -763,7 +763,7 @@ static char *str_concat(const char *str1, const char *str2, const char *str3) {
 		len += strlen(str3);
 	}
 
-	rv = mem_alloc_c(len + 1, "str_concat");
+	rv = mem_alloc_c_str(len + 1, "str_concat");
 
 	rv[0] = 0;
 	if (str1 != NULL) {
@@ -976,7 +976,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
-		char *hdr = mem_alloc_c(17, "fs direntry header name");
+		char *hdr = mem_alloc_c_str(17, "fs direntry header name");
 		strncpy(hdr, preview, 16);
 		hdr[16] = 0;
 		int l = strlen(hdr);

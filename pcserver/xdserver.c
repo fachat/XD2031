@@ -122,7 +122,8 @@ static cmdline_t main_options[] = {
         { "daemon", 	"D",	CMDL_RUN,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
 	{ "device",	"d",	CMDL_RUN,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
-		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
+		"Set name of device to use. Use 'auto' for autodetection (default)i\n"
+		"Use 'none' if no device should be opened (and no socket either)'", NULL },
 #ifndef _WIN32
 	{ "socket",	"s",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },

@@ -91,7 +91,7 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 	int err = CBM_ERROR_OK;
 	const int BUFLEN = 255;
 
-	uint8_t *name = mem_alloc_c(BUFLEN+1, "assign name buffer");
+	uint8_t *name = mem_alloc_c_str(BUFLEN+1, "assign name buffer");
 	strncpy((char*) name, inname, BUFLEN);
 	name[BUFLEN] = 0;
 
