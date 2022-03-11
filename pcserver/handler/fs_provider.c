@@ -126,9 +126,9 @@ typedef struct {
 } fs_endpoint_t;
 
 // root endpoint ("/" for resolves without parent from command line)
-static fs_endpoint_t *root_endpoint = NULL;
+//static fs_endpoint_t *root_endpoint = NULL;
 // home endpoint (run directory for resolves without parent from server)
-static fs_endpoint_t *home_endpoint = NULL;
+//static fs_endpoint_t *home_endpoint = NULL;
 
 
 static void endpoint_init(const type_t *t, void *obj) {
@@ -239,8 +239,8 @@ static void fsp_init() {
 	// init endpoint registry
 	reg_init(&endpoints, "fs endpoints", 10);
 
-	root_endpoint = create_root_ep();
-	home_endpoint = create_home_ep();
+	//root_endpoint = create_root_ep();
+	//home_endpoint = create_home_ep();
 
 	// ---------------------
 	// register provider
@@ -248,6 +248,7 @@ static void fsp_init() {
 	provider_register(&fs_provider);
 }
 
+#if 0
 // default endpoint if none given in assign
 endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, int from_cmdline) {
 	if (from_cmdline) {
@@ -263,6 +264,7 @@ endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, in
 		return (endpoint_t*) home_endpoint;
 	}
 }
+#endif
 
 static File *reserve_file(fs_endpoint_t *fsep) {
 
