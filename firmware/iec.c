@@ -40,7 +40,7 @@
 #include "led.h"
 #include "system.h"
 
-#define DEBUG_BUS
+#undef DEBUG_BUS
 #undef DEBUG_BUS_DATA
 
 // Prototypes

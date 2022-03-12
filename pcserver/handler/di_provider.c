@@ -2557,7 +2557,7 @@ static int di_open_dir(File * file)
 	di_endpoint_t *diep = (di_endpoint_t *) file->file.endpoint;
 
 	// crude root check
-	if (strcmp(file->file.filename, "$") == 0) {
+	if (file->file.filename != NULL && strcmp(file->file.filename, "$") == 0) {
 		file->file.dirstate = DIRSTATE_FIRST;
 
 		di_first_slot(diep, &file->Slot);
@@ -4171,12 +4171,20 @@ static int di_img_open2(direntry_t *dirent, openpars_t *pars, int opentype, file
 
 }
 
+/*
+ * note that we just return OK, to trick the algorithm ignoring that the filename
+ * contained a "/" - in a Dxx image, files with "/" are completely allowed
+ */
+static int di_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) {
+	return CBM_ERROR_FILE_EXISTS;
+}
+
 // ----------------------------------------------------------------------------------
 
 // handler for the image direntry in the outer directory
 handler_t di_img_file_handler = {
 	"di_img_file_handler",
-	NULL,			// resolve2 - not required
+	di_resolve2,		// resolve2 - not required
 	di_wrap2,		// wrap
 	di_img_fclose,		// fclose
 	di_img_declose,		// declose 

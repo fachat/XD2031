@@ -36,6 +36,8 @@
 void cmd_init();
 void cmd_free();
 
+void cmd_set_privileged();
+
 int cmd_assign_cmdline(const char *inname, charset_t cset);
 int cmd_assign_packet(const char *inname, int inlen, charset_t cset);
 int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv, char *outbuf, int *outlen, int cmd);

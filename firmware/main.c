@@ -115,15 +115,21 @@ int main(int argc, const char *argv[])
 	//
 	// first some basic hardware infrastructure
 	
-	timer_init();			// Timer Interrupt initialisieren
-	led_init();
+	// initialize Timer Interrupt
+	timer_init();			
+
+	// enable interrupts
+	enable_interrupts();		
+
+	// this blinks the LED already
+	// note: needs interrupts as delayhw uses timerhw
+	led_init();			
 
 	provider_init();		// needs to be in the beginning, as other
 					// modules like serial register here
 
 	term_init();			// does not need endpoint/provider yet
 					// but can take up to a buffer of text
-
 
 #ifdef __AVR__
 	stdout = &term_stdout;          // redirect stdout
@@ -133,12 +139,20 @@ int main(int argc, const char *argv[])
 
 	// server communication
 	uarthw_init();			// first hardware
-	provider_t *serial = serial_init();	// then logic layer
+
+	const provider_t *serial = serial_init();	// then logic layer
+
+	term_rom_printf(IN_ROM_STR("Starting...\n"));
+
+	// sync with the server
+	serial_sync();		
 
 	// now prepare for terminal etc
 	// (note: in the future the assign parameter could be used
 	// to distinguish different UARTs for example)
-	void *epdata = serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL);
+
+	void *epdata = serial->prov_assign ? serial->prov_assign(NAMEINFO_UNUSED_DRIVE, NULL) : NULL;
+
 	term_endpoint.provider = serial;
 	term_endpoint.provdata = epdata;
 
@@ -150,12 +164,15 @@ int main(int argc, const char *argv[])
 
 	// init file handling (active open calls)
 	file_init();
+
+#ifdef HAS_BUFFERS
 	// buffer structures
 	buffer_init();
 	// direct buffer handling
 	direct_init();
 	// relfile handling
 	relfile_init();
+#endif
 	// init main channel handling
 	channel_init();
 
@@ -177,12 +194,6 @@ int main(int argc, const char *argv[])
 	nv_restore_common_config();
 #endif
 
-	// enable interrupts
-	enable_interrupts();
-
-	// sync with the server
-	serial_sync();		
-
 	// pull in command line config options from server
 	// also send directory charset
 	rtconfig_pullconfig(argc, argv);
@@ -194,17 +205,17 @@ int main(int argc, const char *argv[])
 	//provider_assign(1, "FAT", "/");		// from the server, but useful for standalone-mode
 #endif
 
+
 	// show our version...
   	ListVersion();
 	// ... and some system info
-	term_printf((" %u Bytes free"), BytesFree());
-	term_printf((", %d kHz"), FreqKHz());
+	term_rom_printf(IN_ROM_STR(" %u Bytes free"), BytesFree());
+	term_rom_printf(IN_ROM_STR(" %d kHz"), FreqKHz());
 #ifdef __AVR__
 	fuse_info();
 #endif
 	term_putcrlf();
 	term_putcrlf();
-
 
 	while (1)  			// Mainloop-Begin
 	{

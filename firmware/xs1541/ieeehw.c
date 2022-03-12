@@ -96,8 +96,10 @@ void ieeehw_setup() {
 	clrd();
 	davhi();
 	srqhi();
-	nrfdhi_raw();
-	ndachi_raw();
+	//nrfdhi_raw();
+	//ndachi_raw();
+	nrfdhi();
+	ndachi();
 	eoihi();
 
 	// enable pull-up resistor

@@ -58,7 +58,16 @@ static int drive_scan_next(drive_and_name_t *dnt, charset_t cset,
 
 
 //------------------------------------------------------------------------------------
-//
+
+static int is_privileged = 0;
+
+void cmd_set_privileged() {
+	log_debug("Set path resolve to privileged\n");
+	is_privileged = 1;
+}
+
+//------------------------------------------------------------------------------------
+
 
 
 void cmd_init() {
@@ -91,7 +100,7 @@ int cmd_assign_cmdline(const char *inname, charset_t cset) {
 	int err = CBM_ERROR_OK;
 	const int BUFLEN = 255;
 
-	uint8_t *name = mem_alloc_c(BUFLEN+1, "assign name buffer");
+	uint8_t *name = mem_alloc_c_str(BUFLEN+1, "assign name buffer");
 	strncpy((char*) name, inname, BUFLEN);
 	name[BUFLEN] = 0;
 
@@ -144,7 +153,7 @@ int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
 
 		log_debug("cmdline_assign '%s' = '%s'\n", provider_name, provider_parameter);
 
-		rv = provider_assign(drive, &names[1], cset, false);
+		rv = provider_assign(drive, &names[1], cset, is_privileged ? true : false);
 	    } else {
 		log_error("Illegal number of parameters (%d)\n", num_files);
 		rv = CBM_ERROR_FAULT;
@@ -183,9 +192,9 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, driv
 	    // TODO: default endpoint? 
 	    endpoint_t *ep = NULL;
 	    // note: may modify names.trg.name in-place
-	    rv = resolve_endpoint(&names[0], cset, 0, &ep);
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &ep);
 	    if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
 			// now resolve the actual filename
@@ -244,9 +253,9 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 			// start of new directory scan
 	       	    	endpoint_t *ep = NULL;
 	    		// note: may modify names.trg.name in-place
-       	    		rv = resolve_endpoint(chan->searchpattern, outcset, 0, &ep);
+       	    		rv = resolve_endpoint(chan->searchpattern, outcset, is_privileged, &ep);
 	    		if (rv == 0) {
-				file_t *fp = ep->ptype->root(ep);
+				file_t *fp = endpoint_root(ep); // ep->ptype->root(ep);
 
 				rv = resolve_dir((const char **)&chan->searchpattern->name, outcset, &fp);
 				if (rv == 0) {
@@ -494,9 +503,12 @@ static int drive_scan_next(drive_and_name_t *dnt, charset_t cset,
 	// idx contains a matching drive
 
        	endpoint_t *ep = NULL;
-       	rv = resolve_endpoint(&dnt[idx], cset, 0, &ep);
+	int searchdrv=dnt[idx].drive;
+	dnt[idx].drive = chan->searchdrv;
+       	rv = resolve_endpoint(&dnt[idx], cset, is_privileged, &ep);
+	dnt[idx].drive= searchdrv;
 	if (rv == CBM_ERROR_OK) {
-		file_t *fp = ep->ptype->root(ep);
+		file_t *fp = endpoint_root(ep); //ep->ptype->root(ep);
 
 		rv = resolve_dir((const char **)&dnt[idx].name, cset, &fp);
 		if (rv == CBM_ERROR_OK) {
@@ -545,12 +557,12 @@ int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive
 
 static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp, int isrmdir, int *outdeleted) {
 
-	int rv = resolve_endpoint(name, cset, 0, epp);
+	int rv = resolve_endpoint(name, cset, is_privileged, epp);
 	endpoint_t *ep = *epp;
 	file_t *dir = NULL;
 
 	if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		while (rv == CBM_ERROR_OK) {
 			// now resolve the actual filenames
@@ -624,12 +636,12 @@ int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, in
 
 static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, endpoint_t **epp) {
 
-	int rv = resolve_endpoint(name, cset, 0, epp);
+	int rv = resolve_endpoint(name, cset, is_privileged, epp);
 	endpoint_t *ep = *epp;
 	file_t *dir = NULL;
 
 	if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
 			rv = resolve_open(dir, name, cset, pars, FS_MKDIR, NULL);
@@ -706,17 +718,17 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 
 	    // TODO: default endpoint? 
 	    // note: may modify names.trg.name in-place
-	    rv = resolve_endpoint(&names[0], cset, 0, &trgep);
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &trgep);
 	    if (rv == CBM_ERROR_OK) {
 
 		srcep = trgep;	// default
-		rv = resolve_endpoint(&names[1], cset, 0, &srcep);
+		rv = resolve_endpoint(&names[1], cset, is_privileged, &srcep);
 		if (rv == CBM_ERROR_OK) {
     	
 		    if (srcep == trgep) {
 
 			// find the source file
-			srcdir = srcep->ptype->root(srcep);
+			srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
 			rv = resolve_dir((const char**)&names[1].name, cset, &srcdir);
 
 			if (rv == CBM_ERROR_OK) {
@@ -726,7 +738,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 			    if (rv == CBM_ERROR_OK && dirent) {
 		
 				// find the target directory	
-				trgdir = trgep->ptype->root(trgep);
+				trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
 				rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
 
 				if (rv == CBM_ERROR_OK) {
@@ -767,11 +779,11 @@ static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
 
 	// TODO: default endpoint? 
 	// note: may modify names.trg.name in-place
-	rv = resolve_endpoint(name, cset, 0, &srcep);
+	rv = resolve_endpoint(name, cset, is_privileged, &srcep);
 	if (rv == CBM_ERROR_OK) {
 
 	    // find the target directory	
-	    srcdir = srcep->ptype->root(srcep);
+	    srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
 	    rv = resolve_dir((const char**)&name->name, cset, &srcdir);
 
 	    if (rv == CBM_ERROR_OK) {
@@ -836,11 +848,11 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
 	    // TODO: default endpoint? 
 	    // note: may modify names.trg.name in-place
-	    rv = resolve_endpoint(&names[0], cset, 0, &trgep);
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &trgep);
 	    if (rv == CBM_ERROR_OK) {
 
 		// find the target directory	
-		trgdir = trgep->ptype->root(trgep);
+		trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
 
 		if (rv == CBM_ERROR_OK) {
@@ -887,7 +899,7 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 	// we only interpret the drive, so namelen for the lookup is 1
 
 	name.drive = *indata;
-	rv = resolve_endpoint(&name, CHARSET_ASCII, 0, &ep);
+	rv = resolve_endpoint(&name, CHARSET_ASCII, is_privileged, &ep);
 	//endpoint_t *ep = provider_lookup(indata, 1, 0, NULL, NAMEINFO_UNDEF_DRIVE);
 	
 	if (ep != NULL) {
@@ -938,7 +950,7 @@ int cmd_format(const char *inname, int namelen, charset_t cset) {
 		}
 	}
 
-	rv = resolve_endpoint(names, cset, 0, &ep);
+	rv = resolve_endpoint(names, cset, is_privileged, &ep);
 
 	if (rv == CBM_ERROR_OK && ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;

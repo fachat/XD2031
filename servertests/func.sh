@@ -307,12 +307,12 @@ for script in $TESTSCRIPTS; do
 
 	# start server
 
-	echo "Start server as:" $SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR 
+	echo "Start server as:" $SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR 
 
         did_print_message=0;
 
 	if test "x$DEBUG" = "x"; then
-		$SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/_$script.log 2>&1 &
+		$SERVER -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR > $TMPDIR/_$script.log 2>&1 &
 		SERVERPID=$!
 		trap "kill -TERM $SERVERPID" INT
 
@@ -382,7 +382,7 @@ for script in $TESTSCRIPTS; do
 		for i in $DEBUG; do
 			echo "break $i" >> $DEBUGFILE
 		done;
-		gdb -x $DEBUGFILE -ex "run -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
+		gdb -x $DEBUGFILE -ex "run -s $SOCKET $TSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR" $SERVER
 	fi;
 
 	#echo "Killing server (pid $SERVERPID)"

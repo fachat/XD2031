@@ -46,13 +46,13 @@
 #include "serial.h"
 #include "cmdnames.h"
 
-#undef DEBUG_CMD
+#define DEBUG_CMD
 #undef DEBUG_CMD_TERM
 #undef DEBUG_READ	/* low level reads from line data */
-#undef DEBUG_WRITE
+#define DEBUG_WRITE
 
 
-#define	MAX_BUFFER_SIZE			64
+#define	MAX_OPT_BUFFER_SIZE		16
 #define	RET_BUFFER_SIZE			200
 
 
@@ -143,13 +143,13 @@ static void cmd_sendxcmd(serial_port_t writefd, char buf[]) {
 		log_debug("Option %d: %s\n", i, opt);
 
 		int len = strlen(opt);
-		if (len > MAX_BUFFER_SIZE - FSP_DATA) {
+		if (len > MAX_OPT_BUFFER_SIZE - FSP_DATA) {
 			log_error("Option is too long to be sent: '%s'\n", opt);
 		} else {
 			buf[FSP_CMD] = FS_SETOPT;
 			buf[FSP_LEN] = FSP_DATA + len + 1;
 			buf[FSP_FD] = FSFD_SETOPT;
-			strncpy(buf+FSP_DATA, opt, MAX_BUFFER_SIZE);
+			strncpy(buf+FSP_DATA, opt, MAX_OPT_BUFFER_SIZE);
 			buf[FSP_DATA + len] = 0;
 
 			// TODO: error handling
@@ -374,6 +374,9 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
       		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
+		int n = buf[FSP_LEN];
+		log_info("cmd %s :%d bytes @%p : \n", command_to_name(255&buf[FSP_CMD]), n, buf);
+		log_hexdump(buf, n, 0);
 	}
 
 	if (sendreply) {
@@ -432,6 +435,7 @@ int in_device_loop(in_device_t *tp) {
               }
 #endif
 
+#if 0	// this only works for the actual serial device
 	      if(!n) {
 		if(!device_still_present()) {
 			log_error("Device lost.\n");
@@ -439,6 +443,7 @@ int in_device_loop(in_device_t *tp) {
                 }
 		return 1;
 	      }
+#endif
 
               if(n < 0) {
 

@@ -261,8 +261,8 @@ static inline void setrx(void)
 	IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);	// Enable DAV pull-up 
 	IEEE_D_PORT = 0xff;	// Enable data pull-ups
 	eoihi();		// Release EOI
-	nrfdhi();		// Release NRFD
-	ndachi();		// Release NDAC
+	nrfdlo();		// Release NRFD
+	ndaclo();		// Release NDAC
 	telo();			// Bus driver => LISTEN
 	IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC as output
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output

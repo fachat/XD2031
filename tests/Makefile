@@ -1,5 +1,7 @@
 
-all: reldump seq dump
+BASFILES=i179_rel i180_mkrel i180_lsrel i180_mkrel2
+
+all: reldump seq dump $(BASFILES)
 
 CFLAGS=-W -Wall -pedantic -ansi -std=c99 -g
 
@@ -15,6 +17,10 @@ dump: dump.lst
 seq: seq.lst
 	petcat -w40 -o seq seq.lst
 
+$(BASFILES): % : %.lst
+	petcat -w40 -o $@ $^
+
 clean:
-	rm -f reldump dump seq
+	rm -f reldump dump seq $(BASFILES)
+
 

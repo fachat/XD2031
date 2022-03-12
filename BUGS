@@ -1,20 +1,13 @@
 
-- Fort apocalype disk. File on image has "/" in name
-  LOAD "foo/bar",8
-  
-- xdcmd dir 
-  no default drive -> 0:?
-  
-- xdcmd assign
-    "1=fs:..." statt "1:=fs:..."
-
-- xdcmd assign
-    "fs" must be given as provider instead of being guessed
-    cmd_assign_packet
-    
+- current disk drive is saved on load, but not on dir
+  @$2 does not switch to drive 2: as last/default drive
+  load"2:...",8 does
 - PET DIR D1
   dann DLOAD -> drive 0 (or at least not found)
   (DIR geht)
+
+- Fort apocalype disk. File on image has "/" in name
+  LOAD "foo/bar",8
   
 - D64 file on FTP server
   -> realsize2 -> segfault

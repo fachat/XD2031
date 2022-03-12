@@ -122,7 +122,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	if (err == CBM_ERROR_OK) {
 
 	    if (strlen((char*)to_addr->name) > 0) {
-		file_t *parentdir = target->ptype->root(target);
+		file_t *parentdir = endpoint_root(target); // target->ptype->root(target);
 
 		err = resolve_dir((const char**)&to_addr->name, cset, &parentdir);
 		if (err == CBM_ERROR_OK) {

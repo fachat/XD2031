@@ -125,11 +125,6 @@ typedef struct {
 	char			*curpath;			// malloc'd current path
 } fs_endpoint_t;
 
-// root endpoint ("/" for resolves without parent from command line)
-static fs_endpoint_t *root_endpoint = NULL;
-// home endpoint (run directory for resolves without parent from server)
-static fs_endpoint_t *home_endpoint = NULL;
-
 
 static void endpoint_init(const type_t *t, void *obj) {
 	(void) t;	// silence unused warning
@@ -153,11 +148,13 @@ static type_t endpoint_type = {
 	endpoint_init
 };
 
+#if 0
 static type_t block_type = {
 	"direct_buffer",
 	sizeof(char[256]),
 	NULL
 };
+#endif
 
 static type_t record_type = {
 	"record_buffer",
@@ -237,8 +234,8 @@ static void fsp_init() {
 	// init endpoint registry
 	reg_init(&endpoints, "fs endpoints", 10);
 
-	root_endpoint = create_root_ep();
-	home_endpoint = create_home_ep();
+	//root_endpoint = create_root_ep();
+	//home_endpoint = create_home_ep();
 
 	// ---------------------
 	// register provider
@@ -246,21 +243,6 @@ static void fsp_init() {
 	provider_register(&fs_provider);
 }
 
-// default endpoint if none given in assign
-endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, int from_cmdline) {
-	if (from_cmdline) {
-		if (assign_path[0] == dir_separator_char()) {
-			// is root path
-			*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
-		} else {
-			*new_assign_path = malloc_path(home_endpoint->basepath, assign_path);
-		}
-		return (endpoint_t*) root_endpoint;
-	} else {
-		*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
-		return (endpoint_t*) home_endpoint;
-	}
-}
 
 static File *reserve_file(fs_endpoint_t *fsep) {
 
@@ -365,6 +347,7 @@ static void fsp_ep_free(endpoint_t *ep) {
 	}
 }
 
+#if 0
 static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
 
 	(void) cset;
@@ -406,6 +389,7 @@ static endpoint_t *fsp_new(endpoint_t *parent, const char *path, charset_t cset,
 
 	return parentep;
 }
+#endif
 
 static endpoint_t *fsp_temp2(char **path, charset_t cset, int privileged) {
 
@@ -552,7 +536,7 @@ static int path_under_base(const char *path, const char *base) {
 		log_error("Unable to get real path for '%s'\n", base);
 		goto exit;
 	}
-	base_dirc = mem_alloc_c(strlen(base_realpathc) + 2, "base realpath/");
+	base_dirc = mem_alloc_c_str(strlen(base_realpathc) + 2, "base realpath/");
 	if(!base_dirc) {
 		res = -3;
 		goto exit;
@@ -598,6 +582,7 @@ exit:
 // ----------------------------------------------------------------------------------
 // block command handling
 
+#if 0
 static int open_block_channel(File *fp) {
 
 	log_debug("Opening block channel %p\n", fp);
@@ -616,7 +601,7 @@ static int open_block_channel(File *fp) {
 
 	return CBM_ERROR_OK;
 }
-
+#endif
 
 // in Firmware currently used for:
 // B-A/B-F/U1/U2
@@ -758,7 +743,7 @@ static char *str_concat(const char *str1, const char *str2, const char *str3) {
 		len += strlen(str3);
 	}
 
-	rv = mem_alloc_c(len + 1, "str_concat");
+	rv = mem_alloc_c_str(len + 1, "str_concat");
 
 	rv[0] = 0;
 	if (str1 != NULL) {
@@ -971,7 +956,7 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 		    // not first anymore
 		fp->dirstate = DIRSTATE_ENTRIES;
 
-		char *hdr = mem_alloc_c(17, "fs direntry header name");
+		char *hdr = mem_alloc_c_str(17, "fs direntry header name");
 		strncpy(hdr, preview, 16);
 		hdr[16] = 0;
 		int l = strlen(hdr);
@@ -1014,20 +999,21 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 				mem_free(path);
 				path = NULL;
 					
+		    		dirent->name = (uint8_t*) file->de->d_name;
+			  	dirent->mode = FS_DIR_MOD_FIL;
+			    	dirent->type = FS_DIR_TYPE_DEL;
+			    	dirent->attr = 0;
+				dirent->size = 0;
+				memset(&dirent->moddate, 0, sizeof(dirent->moddate));
+
 		            	int rvx = stat(ospath, &sbuf);
         		    	if (rvx < 0) {
-                			log_errno("Problem stat'ing dir entry (%s)", file->de->d_name);
-					if (errno != EOVERFLOW) {
-						rv = errno_to_error(errno);
-						break;
-					}
+                			log_errno("Problem stat'ing dir entry (%s) -> %s", file->de->d_name, strerror(errno));
         		    	} else {
-		    			dirent->name = (uint8_t*) file->de->d_name;
 
 			  	  	dirent->mode = FS_DIR_MOD_FIL;
 					// we don't know the type yet for sure
 			    		dirent->type = FS_DIR_TYPE_PRG;
-			    		dirent->attr = 0;
 
 					if (S_ISREG(sbuf.st_mode)) {
 				    		dirent->attr |= FS_DIR_ATTR_SEEK;
@@ -1051,9 +1037,9 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 					if (S_ISDIR(sbuf.st_mode)) {
 						dirent->mode = FS_DIR_MOD_DIR;
 					}
-	  				*outentry = dirent;
-					break;
 				}
+	  			*outentry = dirent;
+				break;
 			}
 			// read next entry
 		    } while (1);
@@ -1268,7 +1254,7 @@ static int fs_delete2(direntry_t *dirent) {
 		rv = errno_to_error(errno);
 	}
 
-	mem_free(newospath);
+	free((void*)newospath);
 	return rv;
 }
 

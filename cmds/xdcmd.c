@@ -273,6 +273,10 @@ static const cmdtab_t cmdtab[] = {
 			{	"<drive:><src_pattern> [<drive:><src_pattern_2> ...]  <drive:><trg_pattern> ",
 				"<drive:><trg_pattern>=<drive:><src_pattern>[,<drive:><src_pattern_2>[,...]]",
 			NULL }},
+	{	"cd", cmd_cd,
+			"Change to a new directory.",
+			{	"<drive:><pattern>",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);

@@ -12,6 +12,8 @@ USE_RTC?=y                       # Enable optional real time clock?
 #########################################################################
 # Should not be modified
 
+HW_NAME=PETSD-II
+
 MCU?=m1284p
 
 # specific switches for this device

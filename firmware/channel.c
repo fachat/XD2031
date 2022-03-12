@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "config.h"
+
 #include "delay.h"
 #include "packet.h"
 #include "channel.h"
@@ -41,7 +43,7 @@
 
 #undef DEBUG_CHANNEL
 
-#define	MAX_CHANNELS	4		// number of maximum open channels
+//#define	MAX_CHANNELS	2		// number of maximum open channels
 
 channel_t channels[MAX_CHANNELS];
 

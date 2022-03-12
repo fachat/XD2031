@@ -7,7 +7,7 @@
     
 #include "integer.h"
 #include "diskio.h"
-volatile uint8_t media_status;
+extern volatile uint8_t media_status;
  
 /* Prototypes for disk control functions */ 
     
