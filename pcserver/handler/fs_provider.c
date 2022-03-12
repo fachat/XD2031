@@ -125,11 +125,6 @@ typedef struct {
 	char			*curpath;			// malloc'd current path
 } fs_endpoint_t;
 
-// root endpoint ("/" for resolves without parent from command line)
-//static fs_endpoint_t *root_endpoint = NULL;
-// home endpoint (run directory for resolves without parent from server)
-//static fs_endpoint_t *home_endpoint = NULL;
-
 
 static void endpoint_init(const type_t *t, void *obj) {
 	(void) t;	// silence unused warning
@@ -248,23 +243,6 @@ static void fsp_init() {
 	provider_register(&fs_provider);
 }
 
-#if 0
-// default endpoint if none given in assign
-endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path, int from_cmdline) {
-	if (from_cmdline) {
-		if (assign_path[0] == dir_separator_char()) {
-			// is root path
-			*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
-		} else {
-			*new_assign_path = malloc_path(home_endpoint->basepath, assign_path);
-		}
-		return (endpoint_t*) root_endpoint;
-	} else {
-		*new_assign_path = mem_alloc_str2(assign_path, "fs_root_ep_assign_path");
-		return (endpoint_t*) home_endpoint;
-	}
-}
-#endif
 
 static File *reserve_file(fs_endpoint_t *fsep) {
 

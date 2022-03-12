@@ -300,6 +300,10 @@ endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path,
 			     int from_cmdline);
 
 
+static inline file_t *endpoint_root(endpoint_t *ep) {
+	return ep->ptype->root(ep);
+}
+
 #define	conv_name_alloc(str,from,to)	conv_name_alloc_(str,from,to,__FILE__,__LINE__)
 static inline char *conv_name_alloc_(const char *str, charset_t from, charset_t to, char *file, int line)
 {

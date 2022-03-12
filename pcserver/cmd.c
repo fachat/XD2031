@@ -194,7 +194,7 @@ int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, driv
 	    // note: may modify names.trg.name in-place
 	    rv = resolve_endpoint(&names[0], cset, is_privileged, &ep);
 	    if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
 			// now resolve the actual filename
@@ -255,7 +255,7 @@ int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcse
 	    		// note: may modify names.trg.name in-place
        	    		rv = resolve_endpoint(chan->searchpattern, outcset, is_privileged, &ep);
 	    		if (rv == 0) {
-				file_t *fp = ep->ptype->root(ep);
+				file_t *fp = endpoint_root(ep); // ep->ptype->root(ep);
 
 				rv = resolve_dir((const char **)&chan->searchpattern->name, outcset, &fp);
 				if (rv == 0) {
@@ -508,7 +508,7 @@ static int drive_scan_next(drive_and_name_t *dnt, charset_t cset,
        	rv = resolve_endpoint(&dnt[idx], cset, is_privileged, &ep);
 	dnt[idx].drive= searchdrv;
 	if (rv == CBM_ERROR_OK) {
-		file_t *fp = ep->ptype->root(ep);
+		file_t *fp = endpoint_root(ep); //ep->ptype->root(ep);
 
 		rv = resolve_dir((const char **)&dnt[idx].name, cset, &fp);
 		if (rv == CBM_ERROR_OK) {
@@ -562,7 +562,7 @@ static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp,
 	file_t *dir = NULL;
 
 	if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		while (rv == CBM_ERROR_OK) {
 			// now resolve the actual filenames
@@ -641,7 +641,7 @@ static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, 
 	file_t *dir = NULL;
 
 	if (rv == CBM_ERROR_OK) {
-		dir = ep->ptype->root(ep);
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
 		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
 			rv = resolve_open(dir, name, cset, pars, FS_MKDIR, NULL);
@@ -728,7 +728,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 		    if (srcep == trgep) {
 
 			// find the source file
-			srcdir = srcep->ptype->root(srcep);
+			srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
 			rv = resolve_dir((const char**)&names[1].name, cset, &srcdir);
 
 			if (rv == CBM_ERROR_OK) {
@@ -738,7 +738,7 @@ int cmd_move(const char *inname, int namelen, charset_t cset) {
 			    if (rv == CBM_ERROR_OK && dirent) {
 		
 				// find the target directory	
-				trgdir = trgep->ptype->root(trgep);
+				trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
 				rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
 
 				if (rv == CBM_ERROR_OK) {
@@ -783,7 +783,7 @@ static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
 	if (rv == CBM_ERROR_OK) {
 
 	    // find the target directory	
-	    srcdir = srcep->ptype->root(srcep);
+	    srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
 	    rv = resolve_dir((const char**)&name->name, cset, &srcdir);
 
 	    if (rv == CBM_ERROR_OK) {
@@ -852,7 +852,7 @@ int cmd_copy(const char *inname, int namelen, charset_t cset) {
 	    if (rv == CBM_ERROR_OK) {
 
 		// find the target directory	
-		trgdir = trgep->ptype->root(trgep);
+		trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
 		rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
 
 		if (rv == CBM_ERROR_OK) {
