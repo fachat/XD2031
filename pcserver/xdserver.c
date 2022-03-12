@@ -351,9 +351,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (rundir_name == NULL) {
-		log_info("No runtime directory given, using current directory\n");
+		log_info("No runtime directory given, using current directory, '/' is host root\n");
+		cmd_set_privileged();
 	} else {
-		log_info("dir=%s\n", rundir_name);
+		log_info("Set and limit runtime directory, '/' is '%s'\n", rundir_name);
 
 		if(chdir(rundir_name)<0) { 
 			log_error("Couldn't change to directory %s, errno=%d (%s)\n",

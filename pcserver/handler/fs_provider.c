@@ -1021,20 +1021,21 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 				mem_free(path);
 				path = NULL;
 					
+		    		dirent->name = (uint8_t*) file->de->d_name;
+			  	dirent->mode = FS_DIR_MOD_FIL;
+			    	dirent->type = FS_DIR_TYPE_DEL;
+			    	dirent->attr = 0;
+				dirent->size = 0;
+				memset(&dirent->moddate, 0, sizeof(dirent->moddate));
+
 		            	int rvx = stat(ospath, &sbuf);
         		    	if (rvx < 0) {
-                			log_errno("Problem stat'ing dir entry (%s)", file->de->d_name);
-					if (errno != EOVERFLOW) {
-						rv = errno_to_error(errno);
-						break;
-					}
+                			log_errno("Problem stat'ing dir entry (%s) -> %s", file->de->d_name, strerror(errno));
         		    	} else {
-		    			dirent->name = (uint8_t*) file->de->d_name;
 
 			  	  	dirent->mode = FS_DIR_MOD_FIL;
 					// we don't know the type yet for sure
 			    		dirent->type = FS_DIR_TYPE_PRG;
-			    		dirent->attr = 0;
 
 					if (S_ISREG(sbuf.st_mode)) {
 				    		dirent->attr |= FS_DIR_ATTR_SEEK;
@@ -1058,9 +1059,9 @@ static int fs_direntry2(file_t *fp, direntry_t **outentry, int isdirscan, int *r
 					if (S_ISDIR(sbuf.st_mode)) {
 						dirent->mode = FS_DIR_MOD_DIR;
 					}
-	  				*outentry = dirent;
-					break;
 				}
+	  			*outentry = dirent;
+				break;
 			}
 			// read next entry
 		    } while (1);

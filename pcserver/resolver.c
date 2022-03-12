@@ -95,8 +95,8 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
                 if (prov != NULL) {
                         // we got a provider, but no endpoint yet
 
-	                log_debug("Found provider '%s', trying to create temporary endpoint for %s\n",
-                                               prov->name, dname->name);
+	                log_debug("Found provider '%s', trying to create temporary endpoint for %s (%sprivileged)\n",
+                                               prov->name, dname->name, privileged ? "" : "un-");
 
                         if (prov->tempep != NULL) {
                                	endpoint_t *ep = prov->tempep((char**)&dname->name, cset, privileged);
