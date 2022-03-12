@@ -1,0 +1,114 @@
+
+= Internals of the Server
+
+The server uses a number of data structs, the purpose of which is not immediately
+understandable. This documentation tries to document some of it.
+
+
+== Data Structures
+
+=== Provider
+
+A provider enables access to a specific type of storage or file system interface.
+So, there are providers for 
+fs:: standard file system
+di:: disk images, 
+ftp/http:: curl (ftp/http), or 
+tcp:: TCP/IP connections
+at the moment.
+
+The provider is represented by a pointer to such a struct:
+
+----
+	provider_t
+----
+
+This struct contains methods to create and remove endppoints for normal files,
+but also for block access.
+
+=== Handler
+
+A file handler manages the contents of specific type of file. For example, there are handlers for
+di:: disk images (as part of the disk image provider)
+x00:: P00 file handler
+typed:: files that contain the file type as ",P" (or similar) extension on the host
+
+One main purpose of the handlers is to have the file show up in the directory under its
+'Commodore' name instead of the host filename. So, for example the P00 files contain
+the original long (up to 16 chars) name inside the file in a header. The handler extracts
+that file name and has it displayed on a directory. It also hides the header from 
+normal read/write operations transparently.
+Also, a disk image file will be shown in the directory not as a file, but as a directory,
+so it can be CD'd into it.
+
+Further plans include a file handler for zip and potentially other archive files.
+
+A handler is represented by a
+
+----
+	handler_t
+----
+struct that contains the necessary methods to handle a file.
+
+=== Endpoint
+
+An endpoint represents a concrete address given from a provider.
+
+For example, when a file "fs:folder/filename" is requested, the endpoint
+represents the base folder for the filesystem access (see also '-R' command line option).
+If a file "http:hostname/path" is requested, the endpoint represents the 
+HTTP connection to the host 'hostname'.
+
+An endpoint is represented by the struct
+
+----
+	endpoint_t
+----
+
+that contains some administrative data, and esp. a registry of open files for 
+that endpoint.
+
+The endpoint can be retrieved from the provider. When doing so, only the necessary
+data is consumed from the address input, for the rest to be consumed by further
+parsing.
+
+=== File
+
+A file or directory is represented by the
+
+----
+	file_t
+----
+
+struct. A file has a link to the endpoint it belongs, and also a pointer to the handler to manage its content.
+A 'file_t' can represent a file, but also a directory.
+
+=== Directory entry
+
+A directory entry as part of a listing is represented by a
+
+----
+	direntry_t
+----
+
+struct.
+ 
+
+== Resolver process
+
+The typical resolver process works as follows:
+
+1. resolve_endpoint() to get an endpoint_t
+2. endpoint_root() to get the root directory (file_t) of that endpoint
+3. resolve_dir() to get the directory (file_t) based on the given path
+4. resolve_open() to get the actual files and/or do appropriate actions ... TODO that should be a loop around resolve_scan to handle multiple files ...
+
+=== Special Effects
+
+The are a number of special features that should be discussed separately.
+
+1. assign a drive
+1. allow "/" in files for di_provider
+2. multiple match patterns
+3. file type wrapping
+
