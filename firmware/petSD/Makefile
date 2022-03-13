@@ -14,6 +14,8 @@ USE_RTC?=y                       # Enable optional real time clock?
 
 MCU?=m1284p
 
+HW_NAME=PETSD
+
 # specific switches for this device
 DEFS+=-DHAS_IEEE -DHAS_EEPROM
 

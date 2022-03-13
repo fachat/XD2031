@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "archcompat.h"
 #include "charconvert.h"
 #include "petscii.h"
 #include "wildcard.h"
@@ -38,12 +39,15 @@
 
 // ------------------------------------------------------------------------------
 
-static char *charsets[] = { 
-	CHARSET_ASCII_NAME, 
-	CHARSET_PETSCII_NAME
+static const char IN_ROM CSET_ASCII_NAME_P[]	= CHARSET_ASCII_NAME;
+static const char IN_ROM CSET_PETSCII_NAME_P[]	= CHARSET_PETSCII_NAME;
+
+static char const* const IN_ROM charsets[] = { 
+	CSET_ASCII_NAME_P, 
+	CSET_PETSCII_NAME_P
 };
 
-static unic_t (*to_unic_funcs[])(const char **ptr) = {
+static unic_t (IN_ROM *to_unic_funcs[])(const char **ptr) = {
 	isolatin1_to_unic,
 	petscii_to_unic
 };
@@ -78,7 +82,7 @@ const char *cconv_charsetname(charset_t cnum) {
 	if (cnum < 0 || cnum >= NUM_OF_CHARSETS) {
 		return NULL;
 	}
-	return charsets[cnum];
+	return (const char *) rom_read_pointer (&charsets[cnum]);
 }
 
 // get the charset number from the character set name
@@ -144,7 +148,7 @@ int cmatch_petsciiascii(const char **pattern, const char **tomatch, const uint8_
 
 // this table is ordered such that the outer index defines where to convert FROM,
 // and the inner index defines where to convert TO 
-static struct {
+static const IN_ROM struct {
 	charconv_t conv;
 	charmatch_t match;
 } convtable[NUM_OF_CHARSETS][NUM_OF_CHARSETS] = {
@@ -164,7 +168,7 @@ charconv_t cconv_converter(charset_t from, charset_t to) {
 	if (to < 0 || to >= NUM_OF_CHARSETS) {
 		return cconv_identity;
 	}
-	return convtable[from][to].conv;
+	return (charconv_t) rom_read_pointer(&convtable[from][to].conv);
 }
 
 // get a comparator between charsets

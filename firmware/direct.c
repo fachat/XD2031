@@ -39,6 +39,8 @@
 //#define CONFIG_NUM_DIRECT_BUFFERS       1
 
 
+#ifdef HAS_BUFFERS
+
 // ----------------------------------------------------------------------------------
 // buffer handling (#-file, U1/U2/B-W/B-R/B-P
 
@@ -518,5 +520,6 @@ endpoint_t *direct_provider(void) {
 	return &direct_endpoint;
 }
 
+#endif /* HAS_BUFFERS */
 
 

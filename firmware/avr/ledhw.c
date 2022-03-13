@@ -110,6 +110,7 @@ static inline void led_hello_blinky(void) {
 void led_init() {
 	// set data direction
 	LED_DDR  |= _BV(LED_BIT);
+
 #	ifdef ACTIVE_LED_DDR
 		ACTIVE_LED_DDR |= _BV(ACTIVE_LED_BIT);
 #	endif

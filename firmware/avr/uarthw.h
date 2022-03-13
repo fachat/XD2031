@@ -34,7 +34,9 @@
  * UART stuff
  */
 
-#define  BAUD    115200
+//#define  BAUD    115200
+#define  BAUD    38400
+//#define  BAUD    4800
 
 /**
  * initialize the UART 

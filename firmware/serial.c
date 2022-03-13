@@ -80,15 +80,6 @@ void serial_submit_call_data(void *epdata, int8_t channelno, packet_t *txbuf, pa
 void serial_submit_call_cmd(void *epdata, int8_t channelno, packet_t *txbuf, packet_t *rxbuf, rtconfig_t *rtc,
                 uint8_t (*callback)(int8_t channelno, int8_t errnum, packet_t *packet));
 
-// dummy
-static void *prov_assign(uint8_t drive, const char *parameter) {
-	return NULL;
-}
-
-// dummy
-static void prov_free(void *epdata) {
-	return;
-}
 
 static charset_t charset(void *epdata) {
 	return current_charset;
@@ -102,9 +93,9 @@ static void set_charset(void *epdata, charset_t new_charset) {
 	current_charset = new_charset;
 }
 
-provider_t serial_provider  = {
-	prov_assign,
-	prov_free,
+static provider_t serial_provider  = {
+	NULL,
+	NULL,
 	charset,
 	set_charset,
         serial_submit,
@@ -115,7 +106,7 @@ provider_t serial_provider  = {
 	NULL
 };
 
-#define	NUMBER_OF_SLOTS		4
+#define	NUMBER_OF_SLOTS		2
 
 // ----------------------------------
 // send variables
@@ -433,7 +424,7 @@ void serial_submit_call_data(void *epdata, int8_t channelno, packet_t *txbuf, pa
 /*****************************************************************************
 * initialize the UART code
 */
-provider_t *serial_init() {
+const provider_t *serial_init() {
 	slots_used = 0;
 	serial_lock = 0;
 
@@ -451,6 +442,8 @@ provider_t *serial_init() {
 
 	// this is the default
 	current_charset = CHARSET_ASCII;
+
+	//serial_provider.prov_assign = prov_assign;
 
 	return &serial_provider;
 }

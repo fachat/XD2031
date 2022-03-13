@@ -1,7 +1,7 @@
 /****************************************************************************
 
     Commodore filesystem server
-    Copyright (C) 2012,2018 Andre Fachat
+    Copyright (C) 2012,2018,2022 Andre Fachat
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -24,8 +24,8 @@
 
 ****************************************************************************/
 
-#ifndef ENDPOINTS_H
-#define ENDPOINTS_H
+#ifndef DRIVES_H
+#define DRIVES_H
 
 // -----------------------------------------------------------------
 
@@ -33,19 +33,19 @@ typedef struct {
         int             drive;
         endpoint_t      *ep;
         const char      *cdpath;
-} ept_t;
+} drive_t;
 
-void endpoints_init();
+void drives_init();
 
-void endpoints_free();
+void drives_free();
 
-ept_t *endpoints_find(int drive);
+drive_t *drive_find(int drive);
 
-int endpoints_unassign(int drive);
+int drive_unassign(int drive);
 
-void endpoints_assign(int drive, endpoint_t *newep);
+void drive_assign(int drive, endpoint_t *newep);
 
-void endpoints_dump(const char *prefix, const char *eppref);
+void drives_dump(const char *prefix, const char *eppref);
 
 #endif
 

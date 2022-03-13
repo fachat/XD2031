@@ -41,7 +41,7 @@ static endpoint_t	temp_provider;
 
 static struct {
 	const char	*name;
-	provider_t	*provider;
+	const provider_t *provider;
 	uint8_t		is_default;
 } provs[MAX_PROV];
 
@@ -89,7 +89,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 		return -1;
 	}
 
-	provider_t *newprov = NULL;
+	const provider_t *newprov = NULL;
 	void *provdata = NULL;
 
 	if ((isdigit(name[0])) && (name[1] == 0)) {
@@ -106,7 +106,7 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 		}
 		newprov = ep->provider;
 		// currently a relative assignment is not supported
-		provdata = newprov->prov_assign(drive, name);
+		provdata = newprov->prov_assign ? newprov->prov_assign(drive, name) : NULL;
 	}
 
 	if (newprov == NULL) {
@@ -131,7 +131,8 @@ int8_t provider_assign(uint8_t drive, const char *name, const char *assign_to) {
 	for (int8_t i = MAX_DRIVES-1; i >= 0; i--) {
 		if (drives[i].drive == drive) {
 			drives[i].drive = -1;
-			drives[i].endpoint.provider->prov_free(drives[i].endpoint.provdata);
+			if (drives[i].endpoint.provider->prov_free)
+				drives[i].endpoint.provider->prov_free(drives[i].endpoint.provdata);
 			drives[i].endpoint.provider = NULL;
 			break;
 		}
@@ -209,7 +210,7 @@ endpoint_t* provider_lookup(uint8_t drive, const char *name) {
 	return &default_provider;
 }
 
-uint8_t provider_register(const char *name, provider_t *provider) {
+uint8_t provider_register(const char *name, const provider_t *provider) {
 
 #ifdef DEBUG_PROVIDER
 	debug_printf("Register provider %p for '%s'\n", provider, name);
@@ -225,7 +226,7 @@ uint8_t provider_register(const char *name, provider_t *provider) {
 	return 0;
 }
 
-void provider_set_default(provider_t *prov, void *epdata) {
+void provider_set_default(const provider_t *prov, void *epdata) {
 	default_provider.provider = prov;
 	default_provider.provdata = epdata;
 }

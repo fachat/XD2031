@@ -65,6 +65,7 @@
 static char *device_name = NULL;	/* device name or NULL if not given */
 static char *socket_name = NULL;	/* socket name or NULL if not given */
 static char *tsocket_name = NULL;	/* tools socket name or NULL if not given */
+static char *rundir_name = NULL;	/* runtime directory name or NULL if not given */
 
 static char *cfg_name = NULL;		/* name of the config file if non-standard */
 
@@ -121,7 +122,8 @@ static cmdline_t main_options[] = {
         { "daemon", 	"D",	CMDL_RUN,	PARTYPE_FLAG,   NULL, main_set_daemon, NULL,
 		"Run as daemon, disable cli user interface.", NULL },
 	{ "device",	"d",	CMDL_RUN,	PARTYPE_PARAM,	cmdline_set_param, NULL, &device_name,
-		"Set name of device to use. Use 'auto' for autodetection (default)", NULL },
+		"Set name of device to use. Use 'auto' for autodetection (default)i\n"
+		"Use 'none' if no device should be opened (and no socket either)'", NULL },
 #ifndef _WIN32
 	{ "socket",	"s",	CMDL_RUN,	PARTYPE_PARAM,	main_set_param, NULL, &socket_name,
 		"Set name of socket to use instead of device", NULL },
@@ -135,12 +137,16 @@ static cmdline_t main_options[] = {
                 "               e.g. use '-A0:fs=.' to assign the current directory\n"
                 "               to drive 0. Dirs are relative to the run_directory param\n"
                 "               Note: do not use a trailing '/' on a path.\n"
+		"               By default, drive 0: is assigned to the runtime directory\n"
+		"               (see below for -R). Use '-A0:=' to un-assign drive 0\n"
 		, NULL },
         { "xcmd", 	"X",	CMDL_CMD,	PARTYPE_PARAM,  main_xcmd, NULL, NULL,
                 "Send an 'X'-command to the specified bus\n"
 		"               e.g. to set the IEC bus to device number 9 use:\n"
                 "               -Xiec:U=9\n"
 		, NULL },
+	{ "rundir",	"R",	CMDL_CFG,	PARTYPE_PARAM,	main_set_param, NULL, &rundir_name,
+		"Set runtime directory, to be used instead of the current directory", NULL },
 };
 
 #define	BUFFER_SIZE	8192
@@ -318,8 +324,6 @@ int main(int argc, char *argv[]) {
 	// stop server when number of registered sockets falls below this
 	int min_num_socks = 0;
 
-	char *dir=NULL;
-
 	char use_stdio = false;
 
 	// -----------------------------
@@ -341,31 +345,29 @@ int main(int argc, char *argv[]) {
 		mainusage(EXIT_RESPAWN_NEVER);
 	}
 	
-	// set working directory before we actually parse any relevant option for it (like assign)
-	if(argc == 1) {
-		// Use default configuration if no parameters were given
-		// Default assigns are made later
-		dir = ".";
-	} else if (p == argc) {
-		log_error("Missing run_directory\n");
+	if (argc > p) {
+		log_error("Extra unhandled parameters given\n");
 		mainusage(EXIT_RESPAWN_NEVER);
-	} else if (argc > p+1) {
-		log_error("Multiple run_directories or missing option sign '-'\n");
-		mainusage(EXIT_RESPAWN_NEVER);
-	} else {
-		dir = argv[p];
 	}
 
-	log_info("dir=%s\n", dir);
+	if (rundir_name == NULL) {
+		log_info("No runtime directory given, using current directory, '/' is host root\n");
+		cmd_set_privileged();
+	} else {
+		log_info("Set and limit runtime directory, '/' is '%s'\n", rundir_name);
 
-	if(chdir(dir)<0) { 
-		log_error("Couldn't change to directory %s, errno=%d (%s)\n",
-			dir, os_errno(), os_strerror(os_errno()));
-	  	end(EXIT_RESPAWN_NEVER);
+		if(chdir(rundir_name)<0) { 
+			log_error("Couldn't change to directory %s, errno=%d (%s)\n",
+				rundir_name, os_errno(), os_strerror(os_errno()));
+		  	end(EXIT_RESPAWN_NEVER);
+		}
 	}
 
 	// only now can we init the cmds, as this reads the cwd()
 	cmd_init();
+
+	// default assign current working directory as 0:
+	cmd_assign_cmdline("0:=.", CHARSET_ASCII);
 
 	// load config file
 	if (cfg_load()) {
@@ -395,8 +397,8 @@ int main(int argc, char *argv[]) {
 	}
 	log_info("main: device = %s\n", use_stdio ? "<stdio>" : device_name);
 
-
-	if (device_name != NULL) {
+	// open a serial device, execpt if it is named "none"
+	if (device_name != NULL && strcmp("none", device_name)) {
 		serial_port_t fdesc;
 		fdesc = device_open(device_name);
 		if (os_open_failed(fdesc)) {

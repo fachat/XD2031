@@ -264,7 +264,8 @@ provider_t *provider_find(const char *pname);
 /**
  * change directory for an endpoint
  */
-int provider_chdir(const char *inname, int namelen, charset_t cset);
+int provider_chdir(int drive, drive_and_name_t *to_addr, charset_t cset);
+
 
 /**
  * cleans up a temporary provider after it has been done with,
@@ -300,6 +301,10 @@ endpoint_t *fs_root_endpoint(const char *assign_path, char **new_assign_path,
 			     int from_cmdline);
 
 
+static inline file_t *endpoint_root(endpoint_t *ep) {
+	return ep->ptype->root(ep);
+}
+
 #define	conv_name_alloc(str,from,to)	conv_name_alloc_(str,from,to,__FILE__,__LINE__)
 static inline char *conv_name_alloc_(const char *str, charset_t from, charset_t to, char *file, int line)
 {
@@ -318,7 +323,7 @@ static inline char *conv_name_alloc_(const char *str, charset_t from, charset_t 
 	(void) file;
 	(void) line;
 #endif
-	char *trg = mem_alloc_c(len + 1, allocname);
+	char *trg = mem_alloc_c_str(len + 1, allocname);
 
 	cconv_converter(from, to) (str, len, trg, len);
 

@@ -31,7 +31,7 @@
 #include <avr/io.h>
 #include <util/atomic.h>
 
-uint16_t timer10ms;
+extern uint16_t timer10ms;
 
 void timerhw_init(void);
 
