@@ -1,6 +1,8 @@
 XD-2031 - Serial line filesystem server for CBMs
 ------------------------------------------------
-V0.9.2, 2. May 2013
+V0.9.x, Feb 2022
+
+NOTE: This software is in the middle of a re-org. Wear your hard hat
 
 This software enables to program an AVR AtMega device to play
 the role of a disk drive to a Commodore PET computer with IEEE488 

@@ -29,7 +29,7 @@
 #include "errors.h"
 #include "mem.h"
 #include "provider.h"
-#include "endpoints.h"
+#include "drives.h"
 
 
 // TODO: need a map and/or iterator 
@@ -39,23 +39,23 @@
 static void ept_init(const type_t *type, void *obj) {
 	(void)type; // silence unused warning
 
-	ept_t *p = (ept_t*) obj;
+	drive_t *p = (drive_t*) obj;
 
 	p->drive = -1;
 	p->ep = NULL;
 	p->cdpath = NULL;	
 }
 
-static type_t endpoints_type = {
-	"endpoints",
-	sizeof(ept_t),
+static type_t drives_type = {
+	"drives",
+	sizeof(drive_t),
 	ept_init
 };
 
-static registry_t endpoints;
+static registry_t drives;
 
-void endpoints_init() {
-	reg_init(&endpoints, "endpoints", 10);
+void drives_init() {
+	reg_init(&drives, "drives", 10);
 }
 
 static void provider_free_ep(registry_t *reg, void *entry) {
@@ -64,30 +64,30 @@ static void provider_free_ep(registry_t *reg, void *entry) {
 }
 
 
-void endpoints_free() {
-	reg_free(&endpoints, provider_free_ep);
+void drives_free() {
+	reg_free(&drives, provider_free_ep);
 }
 
-ept_t *endpoints_find(int drive) {
-	ept_t *ept = NULL;
-	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
+drive_t *drive_find(int drive) {
+	drive_t *ept = NULL;
+	for(int i=0; (ept = reg_get(&drives, i)) != NULL;i++) {
                 if (ept->drive == drive) {
                         return ept;
                 }
         }
-	log_warn("Drive %d is not assigned!\n", drive);
+	log_info("Drive %d is not assigned!\n", drive);
 
         return NULL;
 }
 
 
-int endpoints_unassign(int drive) {
+int drive_unassign(int drive) {
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	ept_t *ept = NULL;
-        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
+	drive_t *ept = NULL;
+        for(int i=0;(ept = reg_get(&drives, i)) != NULL;i++) {
                	if (ept->drive == drive) {
 			// remove from list
-			reg_remove(&endpoints, ept);
+			reg_remove(&drives, ept);
 			// clean up
 			provider_t *prevprov = ept->ep->ptype;
 			prevprov->freeep(ept->ep);
@@ -104,22 +104,22 @@ int endpoints_unassign(int drive) {
 	return rv;
 }
 
-void endpoints_assign(int drive, endpoint_t *newep) {
+void drive_assign(int drive, endpoint_t *newep) {
 	newep->is_assigned++;
 
 	// build endpoint list entry
-	ept_t *ept = mem_alloc(&endpoints_type);
+	drive_t *ept = mem_alloc(&drives_type);
 	ept->drive = drive;
 	ept->ep = newep;
 	ept->cdpath = mem_alloc_str2("/", "root_cd_path");
 
 	// register new endpoint
-	reg_append(&endpoints, ept);
+	reg_append(&drives, ept);
 }
 
-void endpoints_dump(const char *prefix, const char *eppref) {
+void drives_dump(const char *prefix, const char *eppref) {
 	for (int i = 0; ; i++) {
-		ept_t *ept = reg_get(&endpoints, i);
+		drive_t *ept = reg_get(&drives, i);
 		if (ept != NULL) {
 			log_debug("%s// Dumping endpoint for drive %d\n", prefix, ept->drive);
 			log_debug("%s{\n", prefix);

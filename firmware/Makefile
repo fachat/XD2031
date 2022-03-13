@@ -49,7 +49,7 @@ endif
 
 # If no DEVICE=<yourdevice> is given, default to xs1541
 DEVICE?=xs1541
-DEVICES=xs1541 petSD petSD2
+DEVICES=xs1541 petSD petSD2 nano488 nano488e
 # sockserv contains Linux-specific code, so try that on Linux only
 ifeq ($(shell uname -s),Linux)
   DEVICES+=sockserv
@@ -80,12 +80,11 @@ AUTODEP=-MMD -MP -MF $(DEPDIR)$(@F).d
 # Sorting include paths and defines simplifies checking them
 INCPATHS=. ../common ./fatfs $(ARCH) $(DEVICE)
 INCLUDE=$(sort $(addprefix -I,$(INCPATHS)))
-SDEFS=$(sort $(DEFS))
 
 # CFLAGS/ASFLAGS common to all devices/platforms
 #CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-Wall -Wextra -DFIRMWARE
-CFLAGS+=-std=gnu99 $(MCU_CC) $(INCLUDE) $(SDEFS)
+CFLAGS+=-Wall -pedantic -Wextra -DFIRMWARE
+CFLAGS+=-std=gnu11 -O2 $(MCU_CC) $(INCLUDE) $(DEFS)
 ifneq ($(V),1)
 CFLAGS+=-Wno-unused-parameter
 endif
@@ -108,6 +107,9 @@ BINNAME=$(SWNAME)-$(VERSION)-$(DEVICE)-$(MCU)
 SRC=$(wildcard *.c) $(wildcard ../common/*.c)
 # The device makefile automatically includes the platform Makefile
 include $(DEVICE)/Makefile
+
+# add hardware name, so it can be included in common code (errnames.c)
+DEFS+=-DHW_NAME=\"$(HW_NAME)\"
 
 # Optional modules (enabled by USE_* in device/Makefile)
 ifeq ($(strip $(USE_FAT)),y)

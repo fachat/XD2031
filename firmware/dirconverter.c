@@ -44,47 +44,24 @@
  * helper for conversion of ASCII to PETSCII
  */
 
-static uint8_t *append(charconv_t converter, uint8_t *outp, const char *to_append) {
-	int l = strlen(to_append);
-	converter(to_append, l+1, (char*) outp, l+1);
-//        while(*to_append != 0) {
-//                *outp = *to_append; //ascii_to_petscii(*to_append);
-//                outp++;
-//                to_append++;
-//        }
-//        *outp = 0;
-        return outp + l;
-}
+static const char IN_ROM ft_del[] = "del";
+static const char IN_ROM ft_seq[] = "seq";
+static const char IN_ROM ft_prg[] = "prg";
+static const char IN_ROM ft_usr[] = "usr";
+static const char IN_ROM ft_rel[] = "rel";
 
+static const char* const IN_ROM ftypes[] = { ft_del, ft_seq, ft_prg, ft_usr, ft_rel };
 
 static uint8_t out[64];
 
-int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
+static uint8_t *append(charconv_t converter, uint8_t *outp, const char *to_append) {
+	int l = rom_strlen(to_append);
+	rom_memcpy(outp, to_append, l+1);
+	converter((char*) outp, l+1, (char*) outp, l+1);
+        return outp + l;
+}
 
-	// convert from provider to PETSCII
-	charconv_t converter = cconv_converter(ep->provider->charset(ep->provdata), CHARSET_PETSCII);
-	charconv_t asciiconv = cconv_converter(CHARSET_ASCII, CHARSET_PETSCII);
-
-	uint8_t *inp = NULL;
-	uint8_t *outp = &(out[0]);
-
-	if (p == NULL) {
-		debug_puts("P IS NULL!");
-		return -1;
-	}
-
-	inp = packet_get_buffer(p);
-	uint8_t type = inp[FS_DIR_MODE];
-	uint8_t attribs = inp[FS_DIR_ATTR];
-
-
-	if (type == FS_DIR_MOD_NAM) {
-		*outp = 1; outp++;	// load address low
-		*outp = 4; outp++;	// load address high
-	}
-
-	*outp = 1; outp++;		// link address low; will be overwritten on LOAD
-	*outp = 1; outp++;		// link address high
+uint16_t get_lineno(uint8_t type, uint8_t attribs, uint8_t drive, uint8_t *inp) {
 
 	uint16_t lineno = 0;
 
@@ -175,6 +152,37 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 
 		}
 	}
+	return lineno;
+}
+
+
+int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
+
+	// convert from provider to PETSCII
+	charconv_t converter = cconv_converter(ep->provider->charset(ep->provdata), CHARSET_PETSCII);
+	charconv_t asciiconv = cconv_converter(CHARSET_ASCII, CHARSET_PETSCII);
+
+	uint8_t *inp = NULL;
+	uint8_t *outp = &(out[0]);
+
+	if (p == NULL) {
+		debug_puts("P IS NULL!");
+		return -1;
+	}
+
+	inp = packet_get_buffer(p);
+	uint8_t type = inp[FS_DIR_MODE];
+	uint8_t attribs = inp[FS_DIR_ATTR];
+
+	if (type == FS_DIR_MOD_NAM) {
+		*outp = 1; outp++;	// load address low
+		*outp = 4; outp++;	// load address high
+	}
+
+	*outp = 1; outp++;		// link address low; will be overwritten on LOAD
+	*outp = 1; outp++;		// link address high
+
+	uint16_t lineno = get_lineno(type, attribs, drive, inp);
 	*outp = lineno & 255; outp++;
 	*outp = (lineno>>8) & 255; outp++;
 
@@ -190,6 +198,8 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		}
 	}
 
+
+
 	if (type != FS_DIR_MOD_FRE && type != FS_DIR_MOD_FRS) {
 		*outp = '"'; outp++;
 		uint8_t i = FS_DIR_NAME;
@@ -201,13 +211,9 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 			l = 16;
 		}
 		converter((char*)(inp+i), l+1, (char*)outp, l+1);
+//term_rom_printf(IN_ROM_STR("2: len=%d, l=%d\n"), outp-out, l);
 		outp += l;
 		i += l;
-//		while ((inp[i] != 0) && (i < (FS_DIR_NAME + 16))) {
-//			*outp = ascii_to_petscii(inp[i]);
-//			outp++;
-//			i++;
-//		}
 		// note: not counted in i
 		*outp = '"'; outp++;
 
@@ -223,7 +229,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		} else
 		if (type == FS_DIR_MOD_NAM || type == FS_DIR_MOD_NAS) {
 			// file name entry
-			outp = append(asciiconv, outp, SW_NAME_LOWER);
+			outp = append(asciiconv, outp, IN_ROM_STR(SW_NAME_LOWER));
 		} else {
 
 			// fill up with spaces, at least one space behind filename
@@ -234,21 +240,19 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		}
 	}
 
-
 	// add file type
 	if (type == FS_DIR_MOD_DIR) {
-		outp = append(asciiconv, outp, "dir  ");
+		outp = append(asciiconv, outp, IN_ROM_STR("dir  "));
 	} else
 	if (type == FS_DIR_MOD_FIL) {
 		if (attribs & FS_DIR_ATTR_SPLAT) {
 			*(outp-1) = '*';
 		}
-		const char *ftypes[] = { "del", "seq", "prg", "usr", "rel" };
 		uint8_t ftype = attribs & FS_DIR_ATTR_TYPEMASK;
 		if (ftype < 5) {
-			outp = append(asciiconv, outp, ftypes[ftype]);
+			outp = append(asciiconv, outp, (const char*) rom_read_pointer(&ftypes[ftype]));
 		} else {
-			outp = append(asciiconv, outp, "---");
+			outp = append(asciiconv, outp, IN_ROM_STR("---"));
 		}
 		*outp++ = (attribs & FS_DIR_ATTR_LOCKED) ? '<' : ' ';
 		*outp = ' '; outp++;
@@ -259,7 +263,7 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 		if (lineno > 1000) { *outp = ' '; outp++; }
 	} else
 	if (type == FS_DIR_MOD_FRE || type == FS_DIR_MOD_FRS) {
-		outp = append(asciiconv, outp, "blocks free."); 
+		outp = append(asciiconv, outp, IN_ROM_STR("blocks free.")); 
 		memset(outp, ' ', 13); outp += 13;
 
 		if (type != FS_DIR_MOD_FRS) {
@@ -273,7 +277,9 @@ int8_t directory_converter(endpoint_t *ep, packet_t *p, uint8_t drive) {
 	// outp points to last (null) byte to be transmitted, thus +1
 	uint8_t len = outp - out + 1;
 	if (len > packet_get_capacity(p)) {
-		debug_puts("CONVERSION NOT POSSIBLE!"); debug_puthex(len); debug_putcrlf();
+
+		term_rom_printf(IN_ROM_STR( "CONVERSION NOT POSSIBLE: out=%p, outp=%p, len=%d, max=%d\n"), 
+			out, outp, len, packet_get_capacity(p));
 		return -1;	// conversion not possible
 	}
 

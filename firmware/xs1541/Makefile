@@ -16,6 +16,7 @@ MCU?=m644p
 #########################################################################
 # Should not be modified
 
+HW_NAME=XS-1541
 
 # specific switches for this device
 DEFS+=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM

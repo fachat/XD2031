@@ -69,8 +69,6 @@
 #define IEEE_ATN_HANDLER        ISR(IEEE_ATN_INT_VECT)
 #define IEEE_ATN_INT            INT0
 
-#define HW_NAME			"PETSD"
-
 #define	IEEE_SECADDR_OFFSET	0
 #define	IEC_SECADDR_OFFSET	16
 

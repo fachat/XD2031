@@ -32,7 +32,7 @@ struct err_struct {
 };
 
 #ifndef HW_NAME
-#define HW_NAME	"<unknown>"
+#define HW_NAME	"<UNKNOWN>"
 #endif
 
 /// Version number string, will be added to message 73

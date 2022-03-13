@@ -44,9 +44,12 @@ static inline void delayms(uint8_t t)
 	while (ms > 0);
 }
 
+// currently the only one that requires the 
+#ifndef TIMER_TCA
 static inline void delayus(uint8_t us)
 {
 	delayhw_us(us);
 }
+#endif
 
 #endif

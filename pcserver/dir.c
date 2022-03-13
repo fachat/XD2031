@@ -73,6 +73,9 @@ int dir_fill_entry_from_direntry(char *dest, charset_t outcset, int driveno, dir
 		// blocks free
 		dest[FS_DIR_NAME] = 0;
 	} else {
+
+		log_debug("Converting DIR entry from %s to %s\n", 
+			cconv_charsetname(de->cset), cconv_charsetname(outcset));
 		charconv_t converter = cconv_converter(de->cset, outcset);
 
 
