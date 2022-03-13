@@ -680,17 +680,36 @@ int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_chdir(const char *inname, int namelen, charset_t cset) {
+int cmd_chdir(const char *inname, int inlen, charset_t cset) {
 
-	(void) namelen;
-	(void) cset;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	openpars_t pars;
+	int num_files = 2;
+	drive_and_name_t names[2];
 
-	int rv = CBM_ERROR_FAULT;
+	rv = parse_filename_packet((uint8_t*) inname, inlen, &pars, names, &num_files);
 
-	log_info("CHDIR(%s)\n", inname);
+	if (rv == CBM_ERROR_OK) {
 
-	//rv = provider_chdir(inname, namelen, cset);
+	    if (num_files == 1) {
 
+		int drive = names[0].drive;
+		char *name = names[0].name;
+
+		log_debug("Chdir on server drive: %d:%s\n", drive, name);
+		
+		// check trailing '/' on provider parameter
+		int l = strlen(name);
+		if (l > 0 && name[l-1] == '/') {
+			name[l-1] = 0;
+		}
+
+		rv = provider_chdir(drive, &names[0], cset);
+	    } else {
+		log_error("Illegal number of parameters (%d)\n", num_files);
+		rv = CBM_ERROR_FAULT;
+	    }
+	}
 	return rv;
 }
 

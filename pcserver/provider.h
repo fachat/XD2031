@@ -264,7 +264,8 @@ provider_t *provider_find(const char *pname);
 /**
  * change directory for an endpoint
  */
-int provider_chdir(const char *inname, int namelen, charset_t cset);
+int provider_chdir(int drive, drive_and_name_t *to_addr, charset_t cset);
+
 
 /**
  * cleans up a temporary provider after it has been done with,

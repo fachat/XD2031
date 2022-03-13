@@ -121,6 +121,7 @@ typedef struct {
 	// derived from endpoint_t
 	endpoint_t	 	base;
 	// payload
+	endpoint_t		*mount;				// mount endpoint; NULL for root
 	char			*basepath;			// malloc'd base path
 	char			*curpath;			// malloc'd current path
 } fs_endpoint_t;
@@ -133,6 +134,7 @@ static void endpoint_init(const type_t *t, void *obj) {
 
 	fsep->basepath = NULL;
 	fsep->curpath = NULL;
+	fsep->mount = NULL;
 
 	fsep->base.ptype = &fs_provider;
 
@@ -428,6 +430,10 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 
 	File *fp = (File*) file;
 	fs_endpoint_t *parentep = (fs_endpoint_t*) file->endpoint;
+	// get to the actual mount point to check for the right basepath
+	while (parentep->mount) {
+		parentep = parentep->mount;
+	}
 
 	// basepath is real malloc'd, not mem_alloc_*'d
 	char *basepath = os_realpath(fp->ospath);
@@ -454,6 +460,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 
 	// copy into current path
 	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_curpath");
+	fsep->mount = parentep;
 
 	// free resources
 	close_fd(fp);

@@ -216,48 +216,79 @@ void provider_init() {
 }
 
 
-/**
- * provider_chdir uses the XD2031 name format, i.e. first byte is drive
- * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
- * It then identifies the drive, puts the CD path before the name if it
- * is not absolute, and allocates the new name that it returns
- */
-#if 0
-int provider_chdir(const char *inname, int namelen, charset_t cset) {
+int provider_chdir(int drive, drive_and_name_t *to_addr, charset_t cset) {
+	int err = CBM_ERROR_FAULT;
 
-	int drive = inname[0];
-	inname++;
-	namelen--;
+	log_info("Chdir provider '%s' with '%s' to drive %d\n", to_addr->drivename, to_addr->name, drive);
 
-	if (namelen <= 0) {
-		inname = NULL;
+	endpoint_t *target = NULL;
+	endpoint_t *newep = NULL;
+
+	if (to_addr->name == NULL || strlen((char*)to_addr->name) == 0) {
+		drive_unassign(drive);
+		return CBM_ERROR_SYNTAX_INVAL;
 	}
 
-	if (drive == NAMEINFO_UNDEF_DRIVE) {
-		return CBM_ERROR_FAULT;
+	if (to_addr->drive == NAMEINFO_UNUSED_DRIVE) {
+		// this is actually ok
+		//to_addr->drivename = (uint8_t*) "fs";
+		//to_addr->drive = NAMEINFO_UNDEF_DRIVE;
 	}
 
-	log_debug("Trying to resolve drive %d with path '%s'\n", drive, inname);
+	//err = resolve_endpoint(to_addr, cset, from_cmdline, &target);
+	drive_t *drv = drive_find(drive);
 
-	ept_t *ept = drive_find(drive);
+	if (drv != NULL) {
 
-	if (ept == NULL) {
-		// drive number not found
-		return CBM_ERROR_DRIVE_NOT_READY;
+	    target = drv->ep;
+
+	    if (strlen((char*)to_addr->name) > 0) {
+		file_t *parentdir = endpoint_root(target); // target->ptype->root(target);
+
+		err = resolve_dir((const char**)&to_addr->name, cset, &parentdir);
+		if (err == CBM_ERROR_OK) {
+
+			file_t *dir = NULL;
+
+			openpars_t pars;
+			openpars_init_options(&pars);
+			// got the enclosing directory, now get the dir itself
+			err = resolve_open(parentdir, to_addr, cset, &pars, FS_OPEN_DR, &dir);
+
+			if (err == CBM_ERROR_OK) {
+
+				err = dir->endpoint->ptype->to_endpoint(dir, &newep);
+
+				if (err != CBM_ERROR_OK) {
+					dir->handler->fclose(dir, NULL, NULL);
+				}
+			} else {
+				parentdir->handler->fclose(parentdir, NULL, NULL);
+			}
+		} 
+		
+		provider_cleanup(target);
+	    } else {
+		// make permanent
+		target->is_temporary = 0;
+		newep = target;
+	    }
 	}
 
-	const char *newpath = malloc_path(ept->cdpath, inname);
-	const char *path = NULL;
+	if (newep != NULL) {
+		// check if the drive is already in use and free it if necessary
+		// NOTE: a Map construct would be nice here...
 
-	int rv = handler_resolve_path(ept->ep, newpath, cset, &path);
+		drive_unassign(drive);
 
-	if (rv == CBM_ERROR_OK) {
-		mem_free(ept->cdpath);
-		ept->cdpath = path;
+		drive_assign(drive, newep);
+
+		return CBM_ERROR_OK;
 	}
-	return rv;
+
+	return err;
 }
-#endif
+
 
 /*
  * dump the in-memory structures (for analysis / debug)
