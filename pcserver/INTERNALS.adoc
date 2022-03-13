@@ -72,6 +72,8 @@ The endpoint can be retrieved from the provider. When doing so, only the necessa
 data is consumed from the address input, for the rest to be consumed by further
 parsing.
 
+Note that an endpoint can be created from a file that comes from another endpoint, see below.
+
 === File
 
 A file or directory is represented by the
@@ -101,14 +103,66 @@ The typical resolver process works as follows:
 1. resolve_endpoint() to get an endpoint_t
 2. endpoint_root() to get the root directory (file_t) of that endpoint
 3. resolve_dir() to get the directory (file_t) based on the given path
-4. resolve_open() to get the actual files and/or do appropriate actions ... TODO that should be a loop around resolve_scan to handle multiple files ...
+4. resolve_scan() to get the actual files and/or do appropriate actions. 
+
+resolve_scan() can be called multiple times, each returning the next matching directory entry.
+Each directory entry is matched against potentially multiple matching patterns given to resolve_scan.
+Alternatively, for FS_OPEN_* and FS_MKDIR, resolve_open() combines some common code.
 
 === Special Effects
 
 The are a number of special features that should be discussed separately.
 
 1. assign a drive
+1. multiple match patterns
+1. file type wrapping
 1. allow "/" in files for di_provider
-2. multiple match patterns
-3. file type wrapping
+
+
+==== Assigning a Drive
+
+==== Multiple match patterns
+
+In Commodore DOS, a selector can have multiple matching patterns. So, for example, a scratch (delete) command
+can look like
+
+----
+	S0:foo,1:ba?,z*
+----
+
+to scratch files on multiple drives at the same time. 
+
+To achieve this, in the resolve_scan() method, all the matching patterns are checked
+against the directory entry that has been read. 
+
+TODO: currently only a single drive (that of the first pattern) is checked.
+
+==== File type wrapping
+
+File type wrapping is done to handle specific file types transparently. 
+For example, when a disk image file of a known type is encountered, it is
+automatically wrapped into an own handler, and is presented as a directory
+that can be chdir'd into. As the image file contains a whole own structure,
+it uses an own provider and endpoint, where the endpoint represents the
+specific disk image.
+
+File type wrapping is also done to handpe P00 image files, that are presented
+to the Commodore with the metadata that is contained in the file header
+inside the actual file, instead of the P00 file itself.
+
+To achieve this, in the resolve_scan method, a handler_wrap() method
+is called to check all the registered handlers if they recognize
+the file (from a direntry_t) and can wrap it. If they match,
+they return a new direntry_t that encapsulates the original direntry,
+but presents the corrected data.
+
+TODO: recursive. When wrapped, re-do the checks so we can have gzipped P00 file for example.
+
+==== Allowing "/" in files
+
+In a disk image file, Commodore DOS allows the "/" as normal part of the file name.
+Separating search patterns by the "/" before matching would not match such files.
+Instead, the provider code matches the search pattern itself. Most will separate
+with the "/", but the disk image provider will ignore it and handle it as
+normal character. This way files with "/" can be handled.
 
