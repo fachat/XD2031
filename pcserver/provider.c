@@ -30,7 +30,7 @@
 #include "log.h"
 #include "hashmap.h"
 #include "provider.h"
-#include "endpoints.h"
+#include "drives.h"
 #include "resolver.h"
 
 // TODO: this is ... awkward
@@ -109,7 +109,7 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 	endpoint_t *newep = NULL;
 
 	if (to_addr->name == NULL || strlen((char*)to_addr->name) == 0) {
-		endpoints_unassign(drive);
+		drive_unassign(drive);
 		return CBM_ERROR_OK;
 	}
 
@@ -158,9 +158,9 @@ int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int fr
 		// check if the drive is already in use and free it if necessary
 		// NOTE: a Map construct would be nice here...
 
-		endpoints_unassign(drive);
+		drive_unassign(drive);
 
-		endpoints_assign(drive, newep);
+		drive_assign(drive, newep);
 
 		return CBM_ERROR_OK;
 	}
@@ -184,7 +184,7 @@ static void provider_free_entry(registry_t *reg, void *entry) {
 
 void provider_free() {
 
-	endpoints_free();
+	drives_free();
 
 	reg_free(&providers, provider_free_entry);
 }
@@ -195,7 +195,7 @@ void provider_init() {
 
 	provider_map = hash_init_stringkey_nocase(10, 7, name_from_provider);
 
-	endpoints_init();
+	drives_init();
 
         // manually handle the initial provider
         fs_provider.init();
@@ -239,7 +239,7 @@ int provider_chdir(const char *inname, int namelen, charset_t cset) {
 
 	log_debug("Trying to resolve drive %d with path '%s'\n", drive, inname);
 
-	ept_t *ept = endpoints_find(drive);
+	ept_t *ept = drive_find(drive);
 
 	if (ept == NULL) {
 		// drive number not found
@@ -267,7 +267,7 @@ void provider_dump() {
 	const char *prefix = dump_indent(indent);
 	const char *eppref = dump_indent(indent+1);
 
-	endpoints_dump(prefix, eppref);
+	drives_dump(prefix, eppref);
 
 	for (int i = 0; ; i++) {
 		providers_t *p = reg_get(&providers, i);

@@ -36,7 +36,7 @@
 
 #include "log.h"
 #include "provider.h"
-#include "endpoints.h"
+#include "drives.h"
 #include "handler.h"
 
 static int resolve_scan_int(file_t *dir, drive_and_name_t *pattern, int num_pattern, bool fixpattern, 
@@ -122,7 +122,7 @@ int resolve_endpoint(drive_and_name_t *dname, charset_t cset, int privileged, en
         log_debug("Trying to resolve drive %d with name '%s'\n", dname->drive, dname->drivename);
 
 	// NOTE: cdpath not yet used!
-	ept_t *ept = endpoints_find(dname->drive);
+	drive_t *ept = drive_find(dname->drive);
 
 	if (ept != NULL) {
 		*outep = ept->ep;

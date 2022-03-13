@@ -44,7 +44,7 @@
 #include "channel.h"
 #include "xcmd.h"
 #include "resolver.h"
-#include "endpoints.h"
+#include "drives.h"
 
 #define	MAX_BUFFER_SIZE			64
 
@@ -474,7 +474,7 @@ static int drive_scan_next(drive_and_name_t *dnt, charset_t cset,
 
 		if (chan->searchdrv < 10) {
 			// numeric drive
-			ept_t *ep = endpoints_find(chan->searchdrv);
+			drive_t *ep = drive_find(chan->searchdrv);
 			if (ep != NULL) {
 				// drive is assigned
 				for (idx = 0; idx < num_files; idx++) {
