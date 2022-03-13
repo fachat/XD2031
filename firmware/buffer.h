@@ -35,10 +35,10 @@ typedef struct {
 	// what channel has the buffer, -1 unused
 	int8_t channel_no;
 	// read and write pointers in the buffer
-	// wptr is one "behind" the rptr (which is incremented below), to
+	// wptr is one "behind" the rptr to
 	// accomodate for the preload byte
 	uint8_t rptr;		// read pointer
-	uint8_t wptr;		// read pointer
+	uint8_t wptr;		// write pointer
 	// preload flag
 	uint8_t pflag;		// see PFLAG defines below
 	// pointer to the last valid bytes (can be 0-255, where 0 is only the pointer is valid)

@@ -49,14 +49,15 @@ typedef enum {
 	CBM_ERROR_WRITE_ERROR = 28,
 	// error numbers 30-34 are all just "SYNTAX ERROR" on the 1541
 	CBM_ERROR_SYNTAX_UNKNOWN = 30,	// "general syntax"
-	//CBM_ERROR_SYNTAX_NOCMD        = 31,   // "invalid command"
-	//CBM_ERROR_SYNTAX_LONGLINE     = 32,   // "command is longer than 58 chars"
+	CBM_ERROR_SYNTAX_NOCMD        = 31,   // "invalid command"
+	CBM_ERROR_SYNTAX_LONGLINE     = 32,   // "command is longer than 58 chars"
 	CBM_ERROR_SYNTAX_PATTERN = 33,	// "invalid file name" - typically patterns in SAVE
 	CBM_ERROR_SYNTAX_NONAME = 34,
 	CBM_ERROR_FILE_NAME_TOO_LONG = 38,	// new for ENAMETOOLONG
 	// new problems
 	CBM_ERROR_SYNTAX_INVAL = 40,	// EINVAL
 	CBM_ERROR_SYNTAX_DIR_SEPARATOR = 41,	// name contains directory separator
+	CBM_ERROR_SYNTAX_WILDCARDS = 42,	// name contains wildcards
 	// REL file errors
 	CBM_ERROR_RECORD_NOT_PRESENT = 50,	// also when REL file rec lengths not match
 	CBM_ERROR_OVERFLOW_IN_RECORD = 51,

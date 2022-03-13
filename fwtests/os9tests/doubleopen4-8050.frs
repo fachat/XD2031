@@ -1,0 +1,80 @@
+atn 28 ff
+send "I0"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f4
+send "FILE,L," 80
+atn 3f
+atn 28 6f
+send "P" 04 00 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 6f
+send "P" 04 01 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 6f
+send "P" 04 02 00 00 0d
+atn 3f
+atn 48 6f
+expect "50, RECORD NOT PR"
+recv "ESENT,00,00,0" 0d
+atn 5f
+atn 28 64
+send "0123456789ABCDE_"
+atn 3f
+atn 28 e4 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 f5
+send "FILE,L"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "P" 05 01 00 00 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 65
+expect "0"
+atn 5f
+atn 28 f5
+send "FILE,L"
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 28 6f
+send "P" 05 01 00 05 0d
+atn 3f
+atn 48 6f
+recv "00, OK,00,00,0" 0d
+atn 5f
+atn 48 65
+expect "4"
+atn 5f
+atn 48 65
+expect "5"
+atn 5f
+atn 48 65
+expect "6"
+atn 5f
+atn 28 ef 3f
+atn 28 e5 3f
+atn 28 e5 3f

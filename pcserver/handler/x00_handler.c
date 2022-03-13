@@ -63,6 +63,19 @@ static type_t x00_file_type = {
 	x00_file_init
 };
 
+typedef struct {
+	direntry_t	de;		// embedded
+	direntry_t	*parent_de;
+	uint8_t		name[17];
+} x00_dirent_t;
+
+static type_t x00_dirent_type = {
+	"x00_dirent",
+	sizeof(x00_dirent_t),
+	NULL
+};
+
+
 /*
  * identify whether a given file is an x00 file type
  *
@@ -71,19 +84,25 @@ static type_t x00_file_type = {
  *
  * name is the current file name
  */
-static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, charset_t cset, const char **outname) {
+static int x00_wrap(direntry_t *dirent, direntry_t **outde) {
 
-	//log_debug("x00_resolve: infile=%s\n", infile->filename);
+	log_debug("x00_wrap: infile=%s\n", dirent->name);
 
 	// check the file name of the given file_t, if it actually is a Pxx file.
 
 	// must be at least one character, plus "." plus "x00" ending
-	if (infile->filename == NULL || strlen(infile->filename) < 5) {
+	if (dirent->name == NULL || strlen((char*)dirent->name) < 5) {
 		// not found, but no error
 		return CBM_ERROR_OK;
 	}
 
-	const char *name = conv_name_alloc(infile->filename, cset, CHARSET_ASCII);
+	if (dirent->mode != FS_DIR_MOD_FIL) {
+		// wrong de type
+		return CBM_ERROR_OK;
+	}
+
+	const char *name = conv_name_alloc((char*)dirent->name, 
+		dirent->cset, CHARSET_ASCII);
 
 	//log_debug("x00_resolve: infile converted to=%s\n", name);
 
@@ -92,7 +111,7 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 	const char *p = name + strlen(name) - 4;
 
 	if (*p != '.') {
-		mem_free((char*)name);
+		mem_free(name);
 		return CBM_ERROR_OK;
 	}
 	p++;
@@ -131,33 +150,36 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 		break;
 	}
 
+	// clean up
+	mem_free((char*)name);
+
 	// ok, we have ensured we have an x00 file name
 	// now make sure it actually is an x00 file
+
+	// open it first
+	openpars_t pars;
+	openpars_init_options(&pars);
+	file_t *infile = NULL;
+	int rv = dirent->handler->open2(dirent, &pars, FS_OPEN_RD, &infile);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
 
 	// read x00 header
 	uint8_t x00_buf[X00_HEADER_LEN];
 	int flg;
 
-	if (!infile->seekable) {
-		log_warn("Found x00 file '%s', but is not seekable!\n", infile->filename);
-		return CBM_ERROR_FILE_TYPE_MISMATCH;
-	}
-
-	// seek to start of file
-	infile->handler->seek(infile, 0, SEEKFLAG_ABS);
 	// read p00 header
-	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, cset);
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, CHARSET_ASCII);
+
+	// close file again
+	infile->handler->fclose(infile, NULL, NULL);
 
 	if (strcmp("C64File", (char*)x00_buf) != 0) { 
-		mem_free((char*)name);
+		// not a C64 x00 file
 		return CBM_ERROR_FILE_NOT_FOUND;
 	}
-
-	// ok, we found a real x00 file
-	log_info("Found %c00 file '%s' addressed as '%s'\n", typechar, x00_buf+8, name);
-
-	// clear up
-	mem_free((char*)name);
 
 	// check with the open options
 
@@ -166,36 +188,91 @@ static int x00_resolve(file_t *infile, file_t **outfile, const char *inname, cha
 
 	if (x00_buf[0x18] != 0) {
 		// corrupt header - zero is needed here for string termination
+		infile->handler->fclose(infile, NULL, NULL);
 		return CBM_ERROR_FILE_TYPE_MISMATCH;
 	}
 
-	const char *xname = conv_name_alloc((char*)&(x00_buf[8]), CHARSET_PETSCII, cset);
-
-	// now compare the original file name with the search pattern
-	if (!compare_dirpattern(xname, inname, outname)) {
-		mem_free(xname);
-		return CBM_ERROR_FILE_NOT_FOUND;
-	}
-
+	// ok, we found a real x00 file
+	log_info("Found %c00 file '%s' addressed as '%s'\n", typechar, x00_buf+8, name);
 
 	// done, alloc x00_file and prepare for operation
 	// no seek necessary, read pointer is already at start of payload
+
+	x00_dirent_t *de = mem_alloc(&x00_dirent_type);
+
+	de->de.parent = NULL;
+	de->de.handler = &x00_handler;
+
+	de->de.size = dirent->size - X00_HEADER_LEN;
+	de->de.moddate = dirent->moddate;
+	de->de.recordlen = x00_buf[0x19];
+	de->de.mode = dirent->mode;
+	de->de.attr = dirent->attr;
+	de->de.type = ftype;
+	de->de.cset = CHARSET_PETSCII;
+
+	memcpy(&de->name, (char*)&(x00_buf[8]), 16);
+	de->name[16] = 0; // zero-terminate
+	de->de.name = de->name;
+
+	de->parent_de = dirent;
+
+	*outde = (direntry_t*)de;
+
+	return CBM_ERROR_OK;
+}
+
+static int x00_open2(direntry_t *de, openpars_t *pars, int opentype, file_t **outfp) {
+
+	(void) pars;
+
+	x00_dirent_t *dirent = (x00_dirent_t*) de;
+
+	// alloc x00_file and prepare for operation
+	// no seek necessary, read pointer is already at start of payload
+	openpars_t mypars;
+	openpars_init_options(&mypars);
+
+	file_t *infile = NULL;
+	int rv = dirent->parent_de->handler->open2(dirent->parent_de, &mypars, opentype, &infile);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+
+	// TODO: if FS_OPEN_RD/RW, read, otherwise seek, return if not seekable
+	// read p00 header
+	uint8_t x00_buf[X00_HEADER_LEN];
+	int flg;
+	infile->handler->readfile(infile, (char*)x00_buf, X00_HEADER_LEN, &flg, CHARSET_ASCII);
 
 	x00_file_t *file = mem_alloc(&x00_file_type);
 
 	file->file.isdir = 0;
 	file->file.handler = &x00_handler;
 	file->file.parent = infile;
+	file->file.filename = mem_alloc_str2((char*)dirent->name, "x00_filename");
+	file->file.recordlen = dirent->de.recordlen;
+	file->file.attr = dirent->de.attr;
+	file->file.type = dirent->de.type;
+	file->file.filesize = dirent->de.size;
 
-	file->file.filename = xname;
+	*outfp = (file_t*)file;
 
-	file->file.recordlen = x00_buf[0x19];
-	file->file.type = ftype;
+	return CBM_ERROR_OK;
+}
 
-	file->file.attr = infile->attr;
-	file->file.filesize = infile->filesize - X00_HEADER_LEN;
 
-	*outfile = (file_t*)file;
+static int x00_scratch2(direntry_t *dirent) {
+
+	x00_dirent_t *de = (x00_dirent_t*) dirent;
+
+	return de->parent_de->handler->scratch2(de->parent_de);
+}
+
+static int x00_declose(direntry_t *de) {
+
+	mem_free(de);
 
 	return CBM_ERROR_OK;
 }
@@ -243,69 +320,36 @@ static int x00_equals(file_t *thisfile, file_t *otherfile) {
 
 }
 
-static size_t x00_realsize(file_t *file) {
+static size_t x00_realsize2(direntry_t *dirent) {
 
-	if (file->parent != NULL) {
-		return file->parent->handler->realsize(file->parent) - X00_HEADER_LEN;
-	}
-	return CBM_ERROR_FAULT;
+	x00_dirent_t *de = (x00_dirent_t*) dirent;
+
+	return de->parent_de->handler->realsize2(de->parent_de) - X00_HEADER_LEN;
 }
 
 
 
 static handler_t x00_handler = {
 	"X00", 		//const char	*name;			// handler name, for debugging
-
-	x00_resolve,	//int		(*resolve)(file_t *infile, file_t **outfile, 
-			//		uint8_t type, const char *name, const char *opts); 
-
-	default_close, 	//void		(*close)(file_t *fp, int recurse);	// close the file
-
-	default_open,	//int		(*open)(file_t *fp); 	// open a file
-
-	// -------------------------
-			// get converter for DIR entries
-//	NULL,
-
+	NULL,		// resolve2
+	x00_wrap,	// wrap
+	default_fclose,	// fclose
+	x00_declose,	// declose
+	x00_open2,	//int		(*open2)(direntry_t *fp); 	// open a file
 	default_parent,	// file_t* parent(file_t*)
-
-	// -------------------------
-	
 	x00_seek,	// position the file
-			//int		(*seek)(file_t *fp, long abs_position);
-
 	default_read,	// read file data
-			//int		(*readfile)(file_t *fp, char *retbuf, int len, int *readflag);	
-
 	default_write,	// write file data
-			//int		(*writefile)(file_t *fp, char *buf, int len, int is_eof);	
-
 	x00_truncate,	// truncate	(file_t *fp, long size);
-
-	// -------------------------
-
-	NULL,		// int direntry(file_t *fp, file_t **outentry);
-
+	NULL,		// int direntry2(file_t *fp, file_t **outentry);
 	NULL,		// int create(file_t *fp, file_t **outentry, cont char *name, uint8_t filetype, uint8_t reclen);
-
-	// -------------------------
-
 	default_flush,
-
 	x00_equals,
-
-	x00_realsize,
-
-	default_scratch,
-
+	x00_realsize2,
+	x00_scratch2,	// delete2
 	NULL,		// mkdir not supported
-
-	NULL,		// rmdir not supported
-
-	NULL,		// move not supported
-
-	// -------------------------
-
+	NULL,		// rmdir2 not supported
+	NULL,		// move2 not supported
 	x00_dump
 };
 

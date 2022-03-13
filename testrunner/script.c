@@ -407,7 +407,7 @@ int parse_buf(line_t *line, const char *in, char **outbuf, int *outlen) {
 int parse_msg(line_t *line, const char *in, char **outbuf, int *outlen) {
 	(void) line; // silence
 	*outlen = strlen(in);
-	*outbuf = mem_alloc_str(in);
+	*outbuf = mem_alloc_str2(in, "in_msg");
 
 	return 0;
 }
@@ -435,7 +435,7 @@ int parse_line(const char *buffer, int n, line_t **linep, int num) {
 		line->cmd = CMD_COMMENT;
 		line->num = num;
 		line->length = strlen(p);
-		line->buffer = mem_alloc_str(p);
+		line->buffer = mem_alloc_str2(p, "line_buffer");
 		*linep = line;
 		return 0;
 	}

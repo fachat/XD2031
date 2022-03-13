@@ -24,6 +24,18 @@ extern int cmd_dir(int sockfd, int argc, const char *argv[]);
 extern int cmd_ls(int sockfd, int argc, const char *argv[]);
 extern int cmd_put(int sockfd, int argc, const char *argv[]);
 extern int cmd_get(int sockfd, int argc, const char *argv[]);
+extern int cmd_rm(int sockfd, int argc, const char *argv[]);
+extern int cmd_rmdir(int sockfd, int argc, const char *argv[]);
+extern int cmd_mkdir(int sockfd, int argc, const char *argv[]);
+extern int cmd_move(int sockfd, int argc, const char *argv[]);
+extern int cmd_copy(int sockfd, int argc, const char *argv[]);
+extern int cmd_assign(int sockfd, int argc, const char *argv[]);
+extern int cmd_cd(int sockfd, int argc, const char *argv[]);
+
+// --------------------------------------------------------------------------
+// helpers
+
+void log_cbmerr(uint8_t cerrno, uint8_t track, uint8_t sect);
 
 // --------------------------------------------------------------------------
 // send/receive packets

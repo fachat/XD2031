@@ -39,6 +39,8 @@ static inline void mem_free(const void *ptr) {
 	//*ptr = NULL;
 }
 
+const char *to_string(void *);
+
 // alloc single object
 void *mem_alloc_(const type_t * type, char *file, int line);
 #define mem_alloc(t) mem_alloc_(t, __FILE__, __LINE__)
@@ -53,16 +55,18 @@ void *mem_realloc_n_(size_t n, const type_t * type, void *ptr, char *file,
 #define mem_realloc_n(n, type, ptr) mem_realloc_n_(n, type, ptr, __FILE__, __LINE__)
 
 // alloc multiple object, returning a pointer to an array
-void *mem_alloc_c_(size_t n, const char *name, char *file, int line);
-#define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__)
+void *mem_alloc_c_(size_t n, const char *name, char *file, int line, const char* (*to_string)(void*));
+#define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__, NULL)
+#define mem_alloc_c_str(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__, to_string)
 
 // allocate memory and copy given string
-char *mem_alloc_str_(const char *orig, char *file, int line);
-#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
+char *mem_alloc_str_(const char *orig, char *name, char *file, int line, const char* (*to_string)(void*));
+//#define mem_alloc_str(s) mem_alloc_str_(s, NULL, __FILE__, __LINE__)
+#define mem_alloc_str2(s,n) mem_alloc_str_(s, n, __FILE__, __LINE__, to_string)
 
 // allocate memory and copy given string up to n chars
-char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line);
-#define mem_alloc_strn(s,n) mem_alloc_strn_(s, n, __FILE__, __LINE__)
+char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line, const char* (*to_string)(void*));
+#define mem_alloc_strn(s,n) mem_alloc_strn_(s, n, __FILE__, __LINE__, to_string)
 
 /**
  * malloc a new path, and copy the given base path and name to it,

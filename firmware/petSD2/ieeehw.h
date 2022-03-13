@@ -74,6 +74,11 @@ static inline void nrfdlo(void)
 	is_nrfdout = 0;
 }
 
+static inline void ndachi_raw(void)
+{
+	IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC high
+}
+
 static inline void ndachi(void)
 {
 	// disable interrupt to avoid race condition
@@ -81,11 +86,16 @@ static inline void ndachi(void)
 	// setting NDAC lo
 	cli();
 	if (atnishi() || is_atna) {
-		IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC high
+		ndachi_raw();
 	}
 	// allow interrupt again
 	sei();
 	is_ndacout = 1;
+}
+
+static inline void nrfdhi_raw(void)
+{
+	IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);	// NRFD high
 }
 
 static inline void nrfdhi(void)
@@ -95,7 +105,7 @@ static inline void nrfdhi(void)
 	// setting NDAC lo
 	cli();
 	if (atnishi() || is_atna) {
-		IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);	// NRFD high
+		nrfdhi_raw();
 	}
 	// allow interrupt again
 	sei();
@@ -251,8 +261,8 @@ static inline void setrx(void)
 	IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);	// Enable DAV pull-up 
 	IEEE_D_PORT = 0xff;	// Enable data pull-ups
 	eoihi();		// Release EOI
-	nrfdhi();		// Release NRFD
-	ndachi();		// Release NDAC
+	nrfdlo();		// Release NRFD
+	ndaclo();		// Release NDAC
 	telo();			// Bus driver => LISTEN
 	IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);	// NDAC as output
 	IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);	// NRFD as output
@@ -261,5 +271,6 @@ static inline void setrx(void)
 // switch hardware to idle (same as settx here, but maybe different
 // with different hardware
 #define setidle() setrx()
+#define setidle_listen() setrx()
 
 #endif

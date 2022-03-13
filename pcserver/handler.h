@@ -24,7 +24,7 @@
 
 #include <inttypes.h>
 
-#include "provider.h"
+//#include "provider.h"
 
 /*
  * register a new provider, usually called at startup
@@ -47,32 +47,9 @@ file_t *handler_find(file_t * parent, uint8_t type, const char *name, charset_t 
 		     const char *opts, const char **outname);
 
 /*
- * recursively resolve a file from an endpoint using the given inname as path
+ * wrap directory entry
  */
-int handler_resolve_file(endpoint_t * ep, file_t ** outfile,
-			 const char *inname, charset_t cset, const char *opts, uint8_t type);
-
-/*
- * recursively resolve a dir from an endpoint using the given inname as path
- */
-int handler_resolve_dir(endpoint_t * ep, file_t ** outdir,
-			const char *inname, charset_t cset, const char **outpattern,
-			const char *opts);
-
-/*
- * recursively resolve a dir from an endpoint using the given inname as path
- * and creating an endpoint for an assign from it
- */
-int handler_resolve_assign(endpoint_t * ep, endpoint_t ** outep,
-			   const char *resolve_path, charset_t cset);
-
-/*
- * resolve a path, for CHDIR
- *
- * Uses handler_resolve() from above to do the bulk work
- */
-int handler_resolve_path(endpoint_t * ep, const char *inname, charset_t cset,
-			 const char **outpath);
+int handler_wrap(direntry_t *dirent, direntry_t **outde);
 
 /*
  * resolve a file_t from an endpoint, for a block operation
@@ -115,6 +92,7 @@ file_t *handler_parent(file_t * file);
 // default implementation for handlers
 
 int default_close(file_t *file, int recurse, char *outbuf, int *outlen);
+int default_fclose(file_t *file, char *outbuf, int *outlen);
 
 int default_seek(file_t *file, long pos, int flag);
 

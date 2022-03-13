@@ -32,7 +32,7 @@
 // TODO: date/time
 typedef struct {
 	const char 	*name;
-	int		len;
+	unsigned int	len;
 	int		attr;
 	int		estimate;
 	int		etype;		// FS_DIR_MOD_*
@@ -55,8 +55,8 @@ static int parse_dir_packet(const uint8_t *buf, int len, dirinfo_t *dir) {
 
 	dir->len = buf[FS_DIR_LEN]
 			+ (buf[FS_DIR_LEN+1]<<8)
-			+ (buf[FS_DIR_LEN+2]<<8)
-			+ (buf[FS_DIR_LEN+3]<<8);
+			+ (buf[FS_DIR_LEN+2]<<16)
+			+ (buf[FS_DIR_LEN+3]<<24);
 
 	dir->attr = buf[FS_DIR_ATTR];
 	dir->ftype = buf[FS_DIR_ATTR] & FS_DIR_ATTR_TYPEMASK;
@@ -104,14 +104,16 @@ static void print_ls_packet(dirinfo_t *dir) {
 
 static void print_dir_packet(dirinfo_t *dir) {
 
-	int len = 0;
-	int l = 0;
+	unsigned int len = 0;
+	unsigned int l = 0;
 
 	switch (dir->etype) {
 	case FS_DIR_MOD_NAM:
+		// fall-through
 	case FS_DIR_MOD_NAS:
 		len = (dir->len + 255) / 256;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		color_reverse();
 		l = strlen(dir->name);
 		l = (l > 16) ? 16 : l;
@@ -126,7 +128,8 @@ static void print_dir_packet(dirinfo_t *dir) {
 		// fall-through
 	case FS_DIR_MOD_FIL:
 		len = (dir->len + 253) / 254;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		l = len;
 		l = (l<10)?0:(l<100)?1:(l<1000)?2:(l<10000)?3:(l<100000)?4:5;
 		printf("%s ", "      "+l); 
@@ -141,38 +144,31 @@ static void print_dir_packet(dirinfo_t *dir) {
 			);
 		break;
 	case FS_DIR_MOD_FRE:
+		// fall-through
 	case FS_DIR_MOD_FRS:
 		len = (dir->len + 255) / 256;
-		printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		//printf("%c%d ", (dir->attr & FS_DIR_ATTR_ESTIMATE) ? '~':' ', len);
+		printf(" %d ", len);
 		printf("BLOCKS FREE\n");
 		break;
 	}
 }
 
-static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
+static int dir_single(int sockfd, int type, const char *name) {
 
-	uint8_t *name = mem_alloc_c(256, "parse buffer");
 	uint8_t *buf = mem_alloc_c(256, "msg buffer");
 	uint8_t pkgfd = 0;
 
 	nameinfo_t ninfo;
 	dirinfo_t dir;
 
-	if (argc > 2) {
-		log_error("Too many parameters!\n");
-		mem_free(name);
-		mem_free(buf);
-		return -1;
-	}
+	nameinfo_init(&ninfo);
 
-	if (argc == 1) {
-		// note that parse_filename parses in-place, nameinfo then points to name buffer
-		strncpy((char*)name, argv[0], 255);
-		name[255] = 0;
-	} else {
-		name[0] = 0;
-	}
-	parse_filename(name, strlen((const char*)name), 255, &ninfo, PARSEHINT_LOAD);
+	// do as the firmware does
+	strncpy((char*)buf+1, name, 254);
+	buf[255] = 0;
+	buf[0] = '$';
+	parse_filename(buf, strlen((char*)buf), 256, &ninfo, PARSEHINT_LOAD);
 
 	int rv = send_longcmd(sockfd, FS_OPEN_DR, pkgfd, &ninfo);
 
@@ -222,13 +218,36 @@ static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
 				break;
 			}
 		    } while(rv == 0); 
+		} else {
+		    rv = buf[FSP_DATA];
 		}
+	} else {
+		rv = CBM_ERROR_FAULT;
 	}
 	mem_free(buf);
-	mem_free(name);
 	return rv;
 
 }
+
+static int cmd_dir_int(int sockfd, int type, int argc, const char *argv[]) {
+
+	char *name = mem_alloc_c(256, "parse buffer");
+	int rv = CBM_ERROR_OK;
+
+	if (argc == 0) {
+		rv = dir_single(sockfd, type, "");
+	} else {
+		for (int i = 0; rv == CBM_ERROR_OK && i < argc; i++) {
+
+			rv = dir_single(sockfd, type, argv[i]);
+		}
+	}
+
+	mem_free(name);
+
+	return rv;
+}
+
 
 int cmd_dir(int sockfd, int argc, const char *argv[]) {
 	return cmd_dir_int(sockfd, 0, argc, argv);

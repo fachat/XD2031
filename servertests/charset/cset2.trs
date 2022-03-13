@@ -6,7 +6,7 @@ channel device
 
 message find file with 'UPPER' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'UPPER'
+send :FS_OPEN_RD .len 02 00 00 'UPPER' 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file
@@ -15,7 +15,7 @@ expect :FS_REPLY .len 02 00
 
 message find file with 'lower' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'lower'
+send :FS_OPEN_RD .len 02 00 00 'lower' 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file
@@ -30,7 +30,7 @@ expect :FS_REPLY .len 7c 00
 
 message find file with 'lower' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 4C 4F 57 45  52
+send :FS_OPEN_RD .len 02 00 00 4C 4F 57 45  52 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file
@@ -39,7 +39,7 @@ expect :FS_REPLY .len 02 00
 
 message find file with 'lower' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'lower'
+send :FS_OPEN_RD .len 02 00 00 'lower' 00
 # File not found
 expect :FS_REPLY .len 02 3E
 
@@ -47,7 +47,7 @@ channel device
 
 message find file with 'lower' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'lower'
+send :FS_OPEN_RD .len 02 00 00 'lower' 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file

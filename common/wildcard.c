@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "charconvert.h"
 #include "wildcard.h"
 
 /**
@@ -162,6 +163,71 @@ static int8_t advanced_match(const char *name, const char *pattern)
 	}
 	return match;
 }
+
+/**
+ * compares the given name to the given pattern
+ * and returns true if it matches.
+ * Both names are null-terminated, but if the name is finished, 
+ * and the pattern ends with a '/' character, the name still matches.
+ * The inout pointers to pattern and name are moved behind the position
+ * where there is no match, or to the end.
+ *
+ * Note: assumption is that any(!) charset converts ',', '?', '*' and '/' to identities
+ */
+int8_t match_pattern(const char **pattern, unic_t (*pconv)(const char **p), 
+                        const char **tomatch, unic_t (*mconv)(const char **p),
+                        bool advanced) {
+
+	// are we matching or not ('*')?
+	bool match = true;
+	// next char after '*'
+	unic_t next = 0;
+
+	while (true) {
+		// match end chars
+		if (0 == **tomatch) {
+			// matching name is at end?
+			return (0 == **pattern) || (**pattern == '/') || (**pattern == ',');
+		}
+		if (!match) {
+			// we are in '*' mode; check of matching name matches pattern after wildcard
+			// note: by definition NOT null, as this has been checked before
+			unic_t mc = mconv(tomatch);
+			if (mc != next) {
+				// next in loop
+				continue;
+			}
+			match = true;
+			// now tomatch and pattern point after wildcard area
+		}
+		if (*pattern == NULL || 0 == **pattern) {
+			// pattern at end but name isn't
+			return false;
+		}
+		// side effect on inout pattern/tomatch vars
+		// so only single execution in loop
+		unic_t pc = pconv(pattern);
+		unic_t mc = mconv(tomatch);
+		// '?' wildcard
+		if (pc == '?') {
+			// ignore check, continue with next char
+			continue;
+		}
+		if (pc == '*') {
+			match = false;
+			if (advanced) {
+				next = pconv(pattern);
+			}
+			continue;
+		}
+		if (pc != mc) {
+			// no match
+			return false;
+		}
+	}
+	return false;
+}
+
 
 /**
  * compares the given name to the given pattern

@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <strings.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -204,6 +203,10 @@ void log_hexdump2(const char *p, int len, int petscii, const char *prefix) {
 
 	}
 	color_default();
+
+	if (fflush(stdout) < 0) {
+		fprintf(stderr, "flushing error: %d (%s)\n", errno, strerror(errno));
+	}
 }
 
 void log_hexdump(const char *p, int len, int petscii) {
@@ -216,35 +219,4 @@ const char* dump_indent(int n) {
 }
 
 
-#if 0
-void test_log(void) {
-	log_term("log_term ");
-	log_term("without CR\n");
-	log_term("log_term with CR\n");
-	log_term("log_term with CR\n");
 
-	log_info("log_info ");
-	log_info("without CR\n");
-	log_info("log_info with CR\n");
-	log_info("log_info with CR\n");
-
-	log_warn("log_warn ");
-	log_warn("without CR\n");
-	log_warn("log_warn with CR\n");
-	log_warn("log_warn with CR\n");
-
-	log_error("log_error ");
-	log_error("without CR\n");
-	log_error("log_error with CR\n");
-	log_error("log_error with CR\n");
-
-	// log_errno supports only single lines without CR
-	log_errno("log_errno without CR");
-
-	printf("--> log_debug() messages appear only with -v option set\n");
-	log_debug("log_debug ");
-	log_debug("without CR\n");
-	log_debug("log_debug with CR\n");
-	log_debug("log_debug with CR\n");
-}
-#endif

@@ -24,20 +24,18 @@
 
 ****************************************************************************/
 
-#include <stddef.h>
+#include <stdio.h>
 
 #include "log.h"
-#include "handler.h"
+#include "provider.h"
+#include "channel.h"
 
 
 //------------------------------------------------------------------------------------
 // Mapping from channel number for open files to endpoint providers
 // These are set when the channel is opened
+// TODO: make mem_alloc'd
 
-typedef struct {
-       int             	channo;
-       file_t      	*fp;
-} chan_t;
 
 chan_t chantable[MAX_NUMBER_OF_ENDPOINTS];
 
@@ -49,12 +47,12 @@ void channel_init() {
         }
 }
 
-file_t *channel_to_file(int chan) {
+chan_t *channel_get(int chan) {
 
        int i;
         for(i=0;i<MAX_NUMBER_OF_ENDPOINTS;i++) {
                if (chantable[i].channo == chan) {
-                       return chantable[i].fp;
+                       return &chantable[i];
                }
         }
        log_info("Did not find open file for channel %d\n", chan);
@@ -67,6 +65,9 @@ void channel_free(int channo) {
                if (chantable[i].channo == channo) {
                        chantable[i].channo = -1;
                        chantable[i].fp = NULL;
+		       drive_and_name_free(chantable[i].searchpattern, chantable[i].num_pattern);
+		       chantable[i].searchpattern = NULL;
+		       chantable[i].searchdrv = -1;
                }
         }
 }
@@ -79,14 +80,20 @@ void channel_set(int channo, file_t *fp) {
 		if (chantable[i].channo == channo) {
 			log_error("Closing leftover file for channel %d\n", channo);
 			if (chantable[i].fp != NULL) {
-				chantable[i].fp->handler->close(chantable[i].fp, 1, NULL, NULL);
+				chantable[i].fp->handler->fclose(chantable[i].fp, NULL, NULL);
 			}
 			chantable[i].fp = NULL;
 			chantable[i].channo = -1;
+			chantable[i].num_pattern = 0;
+			chantable[i].searchpattern = NULL;
+		        chantable[i].searchdrv = -1;
 		}
                if (chantable[i].channo == -1) {
                        chantable[i].channo = channo;
                        chantable[i].fp = fp;
+		       chantable[i].num_pattern = 0;
+		       chantable[i].searchpattern = NULL;
+		       chantable[i].searchdrv = -1;
                        return;
                }
         }

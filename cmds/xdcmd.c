@@ -28,6 +28,7 @@
 #include "wireformat.h"
 #include "name.h"
 #include "xdcmd.h"
+#include "errnames.h"
 
 
 // --------------------------------------------------------------------------
@@ -70,9 +71,9 @@ int send_longcmd(int sockfd, uint8_t cmd, uint8_t fd, nameinfo_t *ninfo) {
 
 	uint8_t *buf = mem_alloc_c(256, "longcmd buffer");
 
-	if (ninfo->drive == NAMEINFO_UNUSED_DRIVE) {
+	if (ninfo->trg.drive == NAMEINFO_UNUSED_DRIVE) {
 		// default drive
-		ninfo->drive = 0;
+		ninfo->trg.drive = 0;
 	}
 
 	uint8_t len = assemble_filename_packet(buf+FSP_DATA, ninfo);
@@ -165,6 +166,20 @@ int recv_packet(int fd, uint8_t *outbuf, int buflen) {
 }
 
 // --------------------------------------------------------------------------
+// error message
+
+void log_cbmerr(uint8_t cerrno, uint8_t track, uint8_t sect) {
+
+	const char *errname = errmsg(cerrno);
+
+	log_error("%02d, %s,%02d,%02d\n",
+			cerrno,
+			errname,
+			track,
+			sect);
+}
+
+// --------------------------------------------------------------------------
 
 static int cmd_info(int sockfd, int argc, const char *argv[]) {
 
@@ -190,17 +205,6 @@ static int cmd_info(int sockfd, int argc, const char *argv[]) {
 	return 0;
 }
 
-static int cmd_assign(int sockfd, int argc, const char *argv[]) {
-
-	log_error("cmd_assign(sockfd=%d, argc=%d, argv[]=%s) - not yet implemented!\n",
-		sockfd, argc, argc>0 ? argv[0] : "-");
-
-	char *buf = mem_alloc_c(4, "assign buffer");
-
-
-	mem_free(buf);	
-	return 0;
-}
 
 // --------------------------------------------------------------------------
 // command dispatch code
@@ -247,6 +251,32 @@ static const cmdtab_t cmdtab[] = {
 				"Options:",
 				"-f                  overwrite existing files (default is not to overwrite)",
 			NULL }},
+	{	"rm",	cmd_rm,
+			"Delete file(s) from the CBM server filesystem. Multiple files or patterns can be specified.",
+			{	"<drive:><file_pattern_1> [ <drive:><file_pattern_2> ... ]",
+			NULL }},
+	{	"rmdir", cmd_rmdir,
+			"Delete an empty directory from the CBM server filesystem. Multiple patterns can be specified.",
+			{	"<drive:><dir_pattern_1> [ <drive:><dir_pattern_2> ... ]",
+			NULL }},
+	{	"mkdir", cmd_mkdir,
+			"Create a directory on the CBM server filesystem. Multiple patterns can be specified.",
+			{	"<drive:><dir_pattern_1> [ <drive:><dir_pattern_2> ... ]",
+			NULL }},
+	{	"mv", cmd_move,
+			"Move a file or directory to a new location. Only works reliably with source and target on same drive.",
+			{	"<drive:><src_pattern>  <drive:><trg_pattern> ",
+				"<drive:><trg_pattern>=<src_pattern>",
+			NULL }},
+	{	"cp", cmd_copy,
+			"Copy one or more files into a new file.",
+			{	"<drive:><src_pattern> [<drive:><src_pattern_2> ...]  <drive:><trg_pattern> ",
+				"<drive:><trg_pattern>=<drive:><src_pattern>[,<drive:><src_pattern_2>[,...]]",
+			NULL }},
+	{	"cd", cmd_cd,
+			"Change to a new directory.",
+			{	"<drive:><pattern>",
+			NULL }},
 };
 
 const int numcmds = sizeof(cmdtab) / sizeof(cmdtab_t);
@@ -260,8 +290,14 @@ void usage(int rv) {
                 " options=\n"
                 "   -T <socket> define socket device to use (instead of device)\n"
                 "   -?          gives you this help text\n"
+		"\n"
 		" Commands have own options and usually include '--' to end options list\n"
-		" commands:\n"
+		" A '<drive:><pattern>' spec usually consists of a drive number and filename like so:\n"
+		"   0:testfile\n"
+		" It may, however, be extended with paths, and named drives like:\n"
+		"   ftp://ftp.zimmers.net/pub/cbm\n"
+		"\n"
+		" The following commands are available:\n"
         );
 	for (int i = 0; i < numcmds; i++) {
 		printf(" %-8s   %s\n", cmdtab[i].name, cmdtab[i].usage);
@@ -395,6 +431,9 @@ endpars:
 
 	int rv = cmd->func(sockfd, argc-p, argv+p);
 
+	if (rv != CBM_ERROR_OK) {
+		log_cbmerr(rv, 0, 0);
+	}
 
 	close(sockfd);
 

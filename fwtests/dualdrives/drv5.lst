@@ -1,0 +1,23 @@
+
+
+;drv1.prg ==0401==
+   10 rem load a dual disk drive directory with selection pattern
+  100 a$="$0:a*,:b*,1:c*"
+  110 gosub 1000
+  120 a$="$0:a*,:b*,1:c*"
+  130 gosub 1000
+  900 poke 2,2:sys 2:rem JAM
+  910 end
+ 1000 rem load directory manually
+ 1100 print a$:open 1,8,0,a$
+ 1110 get#1,a$,a$:rem load address
+ 1120 get#1,a$,a$:rem link address
+ 1130 get#1,a$,b$:rem blocks
+ 1140 a=asc(a$+chr$(0)):b=asc(b$+chr$(0))
+ 1150 bl=a+256*b:print bl;
+ 1160 get#1,a$:if st = 0 and a$<>"" then print a$;:goto 1160
+ 1170 print:if st = 0 then 1120
+ 1180 close 1
+ 1190 return
+
+ 

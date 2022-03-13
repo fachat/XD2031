@@ -26,7 +26,6 @@
  into the argv[] array.
 */
 
-#include "types.h"
 #include "mem.h"
 #include "xcmd.h"
 #include "log.h"

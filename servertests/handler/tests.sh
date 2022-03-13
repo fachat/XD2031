@@ -36,7 +36,7 @@ TESTFILES="F1,p P2U.P00 F3.S00 F4,S T1.U00 T2,u REL2.R00 Rel1,l20"
 COMPAREFILES=""
 
 # server options
-SERVEROPTS="-v -A0:fs=."
+SERVEROPTS="-v -A0:=fs:."
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.trs"

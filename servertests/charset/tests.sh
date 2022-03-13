@@ -25,7 +25,7 @@ TESTFILES="dsk.d64"
 COMPAREFILES="dsk.d64"
 
 # server options
-SERVEROPTS="-v -A0:fs=dsk.d64"
+SERVEROPTS="-v -A0:=fs:dsk.d64"
 
 # tsr scripts from the directory to exclude
 #EXCLUDE="position1.trs"

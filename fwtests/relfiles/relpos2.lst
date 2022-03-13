@@ -1,0 +1,32 @@
+
+
+;reltest2.4.prg ==0401==
+  100 d=8
+ 1000 open1,d,15
+ 2000 print"open new rel file with reclen, checking handling of ending CR in P - similar to relbug1-26"
+ 2010 open2,d,2,"0:rel1,l,"+chr$(127)
+ 2020 gosub9000
+ 2100 print#1,"p"chr$(2)chr$(3)chr$(0);
+ 2110 gosub9000
+ 2120 print#2,"foo"
+ 2130 gosub9000
+ 3100 print#1,"p"chr$(2)chr$(4)chr$(0)
+ 3110 gosub9000
+ 3120 print#2,"f22"
+ 3210 gosub9000
+ 4100 print#1,"p"chr$(2)chr$(5)chr$(0)chr$(0);
+ 4110 gosub9000
+ 4120 print#2,"f33"
+ 4210 gosub9000
+ 5100 print#1,"p"chr$(2)chr$(6)chr$(0)chr$(0)
+ 5110 gosub9000
+ 5120 print#2,"f44"
+ 5210 gosub9000
+ 8800 close2
+ 8900 close1
+ 8910 get a$:if a$="" then 8910
+ 8920 poke2,2:sys2:rem exit vice
+ 9000 input#1,a,b$,t,s
+ 9010 printa","b$","t","s
+ 9020 return
+

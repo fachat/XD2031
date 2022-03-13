@@ -30,6 +30,13 @@
     
 #include "errors.h"		// pull in the error numbers
     
+// limits
+
+// max number of files/patterns to send as search patterns for DIR, SCRATCH, COPY
+#define	MAX_NAMEINFO_FILES	4
+// Max packet size to send. Should be sent in the READ command?
+//#define MAX_BUFFER_SIZE                 64
+
 /* data struct exchanged between client and server */ 
 #define FSP_CMD         0	/* command, see the FS_* defines below */
 #define FSP_LEN         1	/* total packet length, i.e. including CMD and LEN */
@@ -46,7 +53,8 @@
 #define NAMEINFO_UNUSED_DRIVE   0xff	// unspecified like: LOAD"file",8
 #define NAMEINFO_UNDEF_DRIVE    0xfe	// non-numeric drive like: LOAD"ftp:file",8
 #define NAMEINFO_LAST_DRIVE     0xfd	// colon without drive means last drive: LOAD":file",8
-    
+
+
 /** 
  * filesystem commands 
  */ 
@@ -151,12 +159,16 @@
 #define   FS_DIR_MODE    FS_DATE_LEN + 5   	/* =11;   type of directory entry, see FS_DIR_MOD_* below */
 #define   FS_DIR_NAME    FS_DIR_MODE + 1   	/* =12;   zero-terminated file name */
     
+// max length. Keep lower byte zero, to allow for int arithmetic rounding to 254 byte blocks
+#define	  FS_DIR_LEN_MAX (0xffffff00)
+
 /* type of directory entries */ 
     
 #define   FS_DIR_MOD_FIL 0    	/* file */
 #define   FS_DIR_MOD_NAM 1    	/* disk name */
 #define   FS_DIR_MOD_FRE 2    	/* number of free bytes on disk in DIR_LEN */
 #define   FS_DIR_MOD_DIR 3    	/* subdirectory */
+// deprecated (never set):
 #define   FS_DIR_MOD_NAS 4       /* disk name  [Suppress LOAD address] */
 #define   FS_DIR_MOD_FRS 5       /* free bytes [Suppress BASIC end bytes] */
     
@@ -168,6 +180,8 @@
 #define	  FS_DIR_ATTR_LOCKED	0x40	/* write-protected, show "<" */
 #define	  FS_DIR_ATTR_TRANS	0x20	/* transient - will (be?) @-replace(d by) other file */
 #define	  FS_DIR_ATTR_ESTIMATE	0x10	/* file size is an estimate only (may require lengthy computation) */
+#define	  FS_DIR_ATTR_SEEK	0x08	/* file is seekable */
+
 #define	  FS_DIR_ATTR_TYPEMASK	0x07	/* file type mask - see below */
     
 /* represents a (logical) CBM file type - providers may use them or ignore them

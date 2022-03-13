@@ -122,6 +122,23 @@ cmd_tab_t cmds[] = {
  
 // -----------------------------------------------------------------------
 
+/*
+ * same as write(2) but ensures the byte is written
+ */
+ssize_t write_byte(int fd, const void *data, size_t count) {
+        int n;
+        while (count > 0) {
+                while ((n = write(fd, data, count)) < 0) {
+                        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                                log_error("testrunner: write error %d (%s)\n",
+                                        errno,strerror(errno));
+                                return -1;
+                        }
+                }
+                count -= n;
+        }
+        return n;
+}
 
 void send_sync(int fd) {
 	log_debug("send sync\n");
@@ -132,7 +149,7 @@ void send_sync(int fd) {
 		buf[i] = FS_SYNC;
 	}
 
-	write(fd, buf, sizeof(buf));
+	write_byte(fd, buf, sizeof(buf));
 }
 
 
@@ -161,7 +178,7 @@ int read_packet(int fd, char *outbuf, int buflen) {
                 if (cmd == FS_SYNC) {
                   // the byte is the FS_SYNC command
 		  // mirror it back
-		  write(fd, buf+rdp+FSP_CMD, 1);
+		  write_byte(fd, buf+rdp+FSP_CMD, 1);
                   rdp++;
 		} else 
 		if (plen < FSP_DATA) {
@@ -301,7 +318,7 @@ int execute_script(int sockfd, int toolsfd, registry_t *script) {
 				log_hexdump2(line->buffer, line->length, 0, "Send  : ");
 			}
 
-			size = write(curfd, line->buffer, line->length);
+			size = write_byte(curfd, line->buffer, line->length);
 			if (size < 0) {
 				log_errno("Error writing to socket at line %d\n", lineno);
 				err = -1;

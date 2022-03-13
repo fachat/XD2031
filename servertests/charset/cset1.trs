@@ -4,7 +4,7 @@ message testing finding files with upper and/or lower case letters
 
 message find file with 'UPPER' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'UPPER'
+send :FS_OPEN_RD .len 02 00 00 'UPPER' 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file
@@ -13,7 +13,7 @@ expect :FS_REPLY .len 02 00
 
 message find file with 'lower' case name
 # open  file
-send :FS_OPEN_RD .len 02 00 'lower'
+send :FS_OPEN_RD .len 02 00 00 'lower' 00
 # OK
 expect :FS_REPLY .len 02 00
 # close file

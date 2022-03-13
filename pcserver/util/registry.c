@@ -20,12 +20,10 @@
 ****************************************************************************/
 
 
-#include <stdio.h>
 #include <string.h>
 
-#include "types.h"
-#include "log.h"
 #include "mem.h"
+#include "log.h"
 #include "registry.h"
 
 
@@ -53,10 +51,27 @@ int reg_size(registry_t *reg) {
 	return reg->numentries;
 }
 
+// find a given entry
+static int reg_find(registry_t *reg, void *entry) {
+
+	for (int i = reg->numentries-1; i >= 0; i--) {
+		if (reg->entries[i] == entry) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+
 // adds a pre-allocated struct
 void reg_append(registry_t *reg, void *ptr) {
 
-	log_debug("Adding entry %p to registry %pd (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
+	log_debug("Adding entry %p to registry %p (%s, size=%d)\n", ptr, reg, reg->name, reg->numentries);
+
+	if (reg_find(reg, ptr) >= 0) {
+		log_error("Trying to add entry %p multiple times to registry %s\n", ptr, reg->name);
+		return;
+	}
 
 	if (reg->numentries >= reg->capacity) {
 		int newcap = reg->capacity * 3. / 2.;
@@ -134,6 +149,8 @@ void reg_free(registry_t *reg, void (*entry_free)(registry_t *reg, void *entry))
 		for (int i = reg->numentries-1; i >= 0; i--) {
 			if (reg->entries[i] != NULL) {
 				entry_free(reg, reg->entries[i]);
+				// fail fast, just in case
+				reg->entries[i] = NULL;
 			}
 		}		
 	}

@@ -29,7 +29,9 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#define       DEBUG 0
+#ifndef DEBUG
+#define       DEBUG 1
+#endif
 
 
 // do this always(?)
@@ -46,50 +48,15 @@
 
 extern const char nullstring[7];
 
-static inline void debug_putc(char c) {
-	term_putc(c);
-} 
-
-static inline void debug_putcrlf() {
-	term_putcrlf();
-	term_flush();
-} 
+void debug_putc(char c);
+void debug_putcrlf();
  
-
-
 #define	debug_puts(s)	term_rom_puts(IN_ROM_STR(s))
-
-//#define       debug_puts(s)   term_puts((s))
-
-    
 
 #define	debug_printf(format, ...)	term_rom_printf(IN_ROM_STR(format), __VA_ARGS__)
 
-//#define       debug_printf(format, ...)       term_printf((format), __VA_ARGS__)
-
-
-static char hexnibs[] =
-    { '0', '1', '2', '3', '4', '5', '6', '7', 
-	'8', '9', 'a', 'b', 'c', 'd',
-	'e', 'f'
-};
-
-
- 
-static inline void debug_putnib(char c)
-{
-	debug_putc(hexnibs[c & 15]);
-} 
- 
-static inline void debug_puthex(char c)
-{
-	debug_putnib(c >> 4);
-	debug_putnib(c);
-} 
- 
- 
+void debug_puthex(char c);
 void debug_hexdump(uint8_t * p, uint16_t len, uint8_t petscii);
- 
 void debug_dump_packet(packet_t * p);
  
 

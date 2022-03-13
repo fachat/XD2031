@@ -28,6 +28,30 @@
 #define	CHARCONVERT_H
 
 #include <inttypes.h>
+#include <stdbool.h>
+
+#include "petscii.h"
+
+typedef uint16_t unic_t;
+
+/** 
+ * to unicode
+ */
+static inline unic_t petscii_to_unic(const char **ptr) {
+        unic_t c = petscii_to_ascii(**ptr);
+        (*ptr)++;       // petscii is single char
+        return c;
+}
+
+/** 
+ * to unicode
+ */
+static inline unic_t isolatin1_to_unic(const char **ptr) {
+        unic_t c = **ptr;
+        (*ptr)++;       // iso-8859-1 is single char
+        return c;
+}
+
 
 // charset number is defined by supported charset table, -1 is unsupported
 typedef signed char charset_t;
@@ -50,15 +74,23 @@ charset_t cconv_getcharset(const char *charsetname);
 typedef int (*charconv_t) (const char *in, const uint8_t inlen, char *out,
 			    const uint8_t outlen);
 
-// fallback
-//charconv_t cconv_identity;
-int cconv_identity(const char *in, const uint8_t inlen, char *out,
-		    const uint8_t outlen);
+// compare in1 and in2 and return 0 on equal.
+typedef int (*charmatch_t) (const char **pattern, const char **tomatch,
+			    uint8_t advanced);
 
 // get a converter from one charset to another
 charconv_t cconv_converter(charset_t from, charset_t to);
 
+// get a matcher between two charsets
+charmatch_t cconv_matcher(charset_t pattern, charset_t tomatch);
+
 // get a const pointer to the string name of the character set
 const char *cconv_charsetname(charset_t cnum);
+
+// scan the given pattern until a delimiter character is reached
+// during scan, check whether a character in match is found
+// return the pointer to the char after the delimiter when found, NULL otherwise.
+// if not found. Return "matched" true when a match is found.
+const char *cconv_scan(const char *pattern, charset_t cset, char delim, const char *match, bool *matched);
 
 #endif

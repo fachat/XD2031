@@ -1,0 +1,168 @@
+
+= Internals of the Server
+
+The server uses a number of data structs, the purpose of which is not immediately
+understandable. This documentation tries to document some of it.
+
+
+== Data Structures
+
+=== Provider
+
+A provider enables access to a specific type of storage or file system interface.
+So, there are providers for 
+fs:: standard file system
+di:: disk images, 
+ftp/http:: curl (ftp/http), or 
+tcp:: TCP/IP connections
+at the moment.
+
+The provider is represented by a pointer to such a struct:
+
+----
+	provider_t
+----
+
+This struct contains methods to create and remove endppoints for normal files,
+but also for block access.
+
+=== Handler
+
+A file handler manages the contents of specific type of file. For example, there are handlers for
+di:: disk images (as part of the disk image provider)
+x00:: P00 file handler
+typed:: files that contain the file type as ",P" (or similar) extension on the host
+
+One main purpose of the handlers is to have the file show up in the directory under its
+'Commodore' name instead of the host filename. So, for example the P00 files contain
+the original long (up to 16 chars) name inside the file in a header. The handler extracts
+that file name and has it displayed on a directory. It also hides the header from 
+normal read/write operations transparently.
+Also, a disk image file will be shown in the directory not as a file, but as a directory,
+so it can be CD'd into it.
+
+Further plans include a file handler for zip and potentially other archive files.
+
+A handler is represented by a
+
+----
+	handler_t
+----
+struct that contains the necessary methods to handle a file.
+
+=== Endpoint
+
+An endpoint represents a concrete address given from a provider.
+
+For example, when a file "fs:folder/filename" is requested, the endpoint
+represents the base folder for the filesystem access (see also '-R' command line option).
+If a file "http:hostname/path" is requested, the endpoint represents the 
+HTTP connection to the host 'hostname'.
+
+An endpoint is represented by the struct
+
+----
+	endpoint_t
+----
+
+that contains some administrative data, and esp. a registry of open files for 
+that endpoint.
+
+The endpoint can be retrieved from the provider. When doing so, only the necessary
+data is consumed from the address input, for the rest to be consumed by further
+parsing.
+
+Note that an endpoint can be created from a file that comes from another endpoint, see below.
+
+=== File
+
+A file or directory is represented by the
+
+----
+	file_t
+----
+
+struct. A file has a link to the endpoint it belongs, and also a pointer to the handler to manage its content.
+A 'file_t' can represent a file, but also a directory.
+
+=== Directory entry
+
+A directory entry as part of a listing is represented by a
+
+----
+	direntry_t
+----
+
+struct.
+ 
+
+== Resolver process
+
+The typical resolver process works as follows:
+
+1. resolve_endpoint() to get an endpoint_t
+2. endpoint_root() to get the root directory (file_t) of that endpoint
+3. resolve_dir() to get the directory (file_t) based on the given path
+4. resolve_scan() to get the actual files and/or do appropriate actions. 
+
+resolve_scan() can be called multiple times, each returning the next matching directory entry.
+Each directory entry is matched against potentially multiple matching patterns given to resolve_scan.
+Alternatively, for FS_OPEN_* and FS_MKDIR, resolve_open() combines some common code.
+
+=== Special Effects
+
+The are a number of special features that should be discussed separately.
+
+1. assign a drive
+1. multiple match patterns
+1. file type wrapping
+1. allow "/" in files for di_provider
+
+
+==== Assigning a Drive
+
+==== Multiple match patterns
+
+In Commodore DOS, a selector can have multiple matching patterns. So, for example, a scratch (delete) command
+can look like
+
+----
+	S0:foo,1:ba?,z*
+----
+
+to scratch files on multiple drives at the same time. 
+
+To achieve this, in the resolve_scan() method, all the matching patterns are checked
+against the directory entry that has been read. 
+
+TODO: currently only a single drive (that of the first pattern) is checked.
+
+==== File type wrapping
+
+File type wrapping is done to handle specific file types transparently. 
+For example, when a disk image file of a known type is encountered, it is
+automatically wrapped into an own handler, and is presented as a directory
+that can be chdir'd into. As the image file contains a whole own structure,
+it uses an own provider and endpoint, where the endpoint represents the
+specific disk image.
+
+File type wrapping is also done to handpe P00 image files, that are presented
+to the Commodore with the metadata that is contained in the file header
+inside the actual file, instead of the P00 file itself.
+
+To achieve this, in the resolve_scan method, a handler_wrap() method
+is called to check all the registered handlers if they recognize
+the file (from a direntry_t) and can wrap it. If they match,
+they return a new direntry_t that encapsulates the original direntry,
+but presents the corrected data.
+
+TODO: recursive. When wrapped, re-do the checks so we can have gzipped P00 file for example.
+
+==== Allowing "/" in files
+
+In a disk image file, Commodore DOS allows the "/" as normal part of the file name.
+Separating search patterns by the "/" before matching would not match such files.
+Instead, the provider code matches the search pattern itself. Most will separate
+with the "/", but the disk image provider will ignore it and handle it as
+normal character. This way files with "/" can be handled.
+

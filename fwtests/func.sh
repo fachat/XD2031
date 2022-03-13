@@ -15,7 +15,7 @@ FIRMWARE=${BASEDIR}/firmware/${THISBINDIR}/${BINNAME}
 
 RUNNER="$THISDIR"/../../testrunner/fwrunner
 
-SERVER="$THISDIR"/${BASEDIR}/pcserver/fsser
+SERVER="$THISDIR"/${BASEDIR}/pcserver/xdserver
 
 # make sure we have a firmware
 #(cd ${BASEDIR}/firmware; DEVICE=sockserv make)
@@ -350,16 +350,18 @@ for script in $TESTSCRIPTS; do
 		############################################
 		# start server
 
-		echo "Start server as:" $SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR 
+		echo "Start server as:" $SERVER -s $SSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR 
 		if test "x$LOGFILE" = "x-"; then
-			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR &
+			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR &
 		else
-			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR > $TMPDIR/$script.log 2>&1 &
+			$SERVER -s $SSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR > $TMPDIR/$script.log 2>&1 &
 		fi
 		SERVERPID=$!
 
-		# wait till server is up, just to be sure
-		while [ ! -S $TMPDIR/$SSOCKET ]; do sleep 0.1; done
+		if [ ! -S $TMPDIR/$SSOCKET ]; then
+			echo  "wait till server is up"
+			while [ ! -S $TMPDIR/$SSOCKET ]; do sleep 0.1; done
+		fi;
 
 		############################################
 		# start firmware
@@ -392,8 +394,13 @@ for script in $TESTSCRIPTS; do
 			while [ ! -S $TMPDIR/$CSOCKET ]; do sleep 0.1; done
 
 			echo "Starting runner as: $RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script"
-			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script | sed -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+			#$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script 2>&1 | sed -u -e "s%$TMPDIR%%g" | tail -n +3 | tee $TMPDIR/$RUNNERLOG;
+			$RUNNER $RVERBOSE -w -d $TMPDIR/$CSOCKET $script 2>&1 | tee $TMPDIR/$RUNNERLOG.1;
 			RESULT=${PIPESTATUS[0]}
+			# remove tempdir from log, so it can be compared
+			cat $TMPDIR/$RUNNERLOG.1 | sed -e "s%$TMPDIR%%g" | tail -n +3 > $TMPDIR/$RUNNERLOG
+			rm $TMPDIR/$RUNNERLOG.1 
+
 			#gdb -ex "break main" -ex "run $RVERBOSE -w -d $TMPDIR/$CSOCKET $script" $RUNNER
 			#RESULT=$?
 			
@@ -453,7 +460,7 @@ for script in $TESTSCRIPTS; do
 		for i in $DEBUG; do
 			echo "break $i" >> $DEBUGFILE
 		done;
-		gdb -x $DEBUGFILE -ex "run -s $SSOCKET $VERBOSE $SERVEROPTS $TMPDIR" $SERVER
+		gdb -x $DEBUGFILE -ex "run -s $SSOCKET $VERBOSE $SERVEROPTS -R $TMPDIR" $SERVER
 	fi;
 
 	#echo "Killing server (pid $SERVERPID)"

@@ -23,53 +23,10 @@
 #define	DIR_H
 
 /**
- * advanced wildcards
- * If set to true, anything following a '*' must also match
- */
-extern int advanced_wildcards;
-
-/**
- * traverse a directory and find the first match for the pattern,
- * using the Commodore file search pattern matching algorithm.
- * Returns a malloc'd pathname, which has to be freed
- */
-char *find_first_match(const char *dir, const char *pattern,
-		       int (*check) (const char *name));
-
-/**
- * fopen the first matching directory entry, using the given
- * options string
- */
-FILE *open_first_match(const char *dir, const char *pattern,
-		       const char *options);
-
-/**
- * calls the callback on every matching file, returning the number of matches
- * The callback gets the match count as first parameter (starting with one),
- * and if it returns != 0 then the loop is exited.
- */
-int dir_call_matches(const char *dir, const char *pattern,
-		     int (*callback) (const int num_of_match,
-				      const char *name));
-
-/**
- * fill the buffer with a header entry, using the driveno as line number
- * and dirpattern as file name
- *
- * returns the length of the written buffer
- */
-int dir_fill_header(char *dest, int driveno, const char *dirpattern);
-
-/**
- * finds the next directory entry matching the given directory pattern
- */
-struct dirent *dir_next(DIR * dp, const char *dirpattern);
-
-/**
  * fill in the buffer with a directory entry
  *
  * returns the length of the written buffer
  */
-int dir_fill_entry_from_file(char *dest, file_t * file, int maxsize);
+int dir_fill_entry_from_direntry(char *dest, charset_t outcset, int driveno, direntry_t * file, int maxsize);
 
 #endif

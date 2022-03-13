@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012,2014 Andre Fachat, Nils Eilers
+    Commodore filesystem server
+    Copyright (C) 2012,2018 Andre Fachat, Nils Eilers
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -33,42 +33,41 @@
 
 #include "os.h"
 
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
 #include <string.h>
-#include <strings.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
-#include "charconvert.h"
-#include "wireformat.h"
-#include "list.h"
-#include "cmd.h"
-#include "charconvert.h"
-#include "petscii.h"
 #include "provider.h"
+#include "charconvert.h"
 #include "dir.h"
-#include "handler.h"
-#include "log.h"
-#include "xcmd.h"
 #include "channel.h"
-#include "serial.h"
-#include "handler.h"
-#include "cmdnames.h"
-
-#define DEBUG_CMD
-#undef DEBUG_CMD_TERM
-#undef DEBUG_READ
-#undef DEBUG_WRITE
+#include "xcmd.h"
+#include "resolver.h"
+#include "drives.h"
 
 #define	MAX_BUFFER_SIZE			64
-#define	RET_BUFFER_SIZE			200
+
+#undef	DEBUG_CMD
 
 
 //------------------------------------------------------------------------------------
-//
+
+static int drive_scan_next(drive_and_name_t *dnt, charset_t cset, 
+			chan_t *chan, int last_drv);
+
+
+//------------------------------------------------------------------------------------
+
+static int is_privileged = 0;
+
+void cmd_set_privileged() {
+	log_debug("Set path resolve to privileged\n");
+	is_privileged = 1;
+}
+
+//------------------------------------------------------------------------------------
+
 
 
 void cmd_init() {
@@ -93,71 +92,73 @@ void cmd_free() {
 	provider_free();
 }
 
-int cmd_assign(const char *assign_str, charset_t cset, int from_cmdline) {
 
-	log_debug("Assigning from server: '%s'\n", assign_str);
+//------------------------------------------------------------------------------------
 
-			if (!isdigit(assign_str[0])) {
-				log_error("Could not identify %c as drive number!\n", assign_str[0]);
-				return CBM_ERROR_FAULT;
-			}
+int cmd_assign_cmdline(const char *inname, charset_t cset) {
 
-			if (assign_str[1] != ':') {
-				log_error("Could not identify %s as ASSIGN parameter\n", assign_str);
-				return CBM_ERROR_FAULT;
-			}
-	
-			// int rv = provider_assign(argv[i][2] & 0x0f, &(argv[i][4]));
-			int rv=0;
-			int drive = assign_str[0] & 0x0f;
-			char *provider_parameter;
-			const char *provider_name;
-			int provider_len;
+	int err = CBM_ERROR_OK;
+	const int BUFLEN = 255;
 
-			// provider name followed by parameter?
-			char *p = strchr(assign_str, '=');
-			if (p) {
-				if ((p - assign_str - 2) > MAX_LEN_OF_PROVIDER_NAME) {
-					log_error("Provider name '%.8s'.. exceeds %d characters\n", assign_str + 2,
-						  MAX_LEN_OF_PROVIDER_NAME);
-				} else {
-					// fix provider parameter character set
-					//const char *orig_charset = mem_alloc_str(
-					//				provider_get_ext_charset());
-					//provider_set_ext_charset(CHARSET_ASCII_NAME);
+	uint8_t *name = mem_alloc_c_str(BUFLEN+1, "assign name buffer");
+	strncpy((char*) name, inname, BUFLEN);
+	name[BUFLEN] = 0;
 
-					provider_name = assign_str + 2;
-					provider_len = p - assign_str - 2;
-					provider_parameter = p + 1;
+	nameinfo_t ninfo;
+	nameinfo_init(&ninfo);
 
-					// make provider name a null-terminated string
-					char *pname = mem_alloc_c(provider_len + 1, "provider_name");
-					strncpy (pname, provider_name, provider_len+1);
-					pname[provider_len] = 0;
+	parse_cmd_pars(name, strlen((char*)name), CMD_ASSIGN, &ninfo);
+	if (ninfo.cmd != CMD_ASSIGN) {
+		err = CBM_ERROR_SYNTAX_NONAME;
+	} else
+	if (ninfo.num_files != 1) {
+                log_error("Wrong number of parameters!\n");
+                err = CBM_ERROR_SYNTAX_NONAME;
+	}
 
-					// check trailing '/' on provider parameter
-					int l = strlen(provider_parameter);
-					if (l > 0 && provider_parameter[l-1] == '/') {
-						provider_parameter[l-1] = 0;
-					}
+	if (err == CBM_ERROR_OK) {
 
-					log_debug("cmdline_assign '%s' = '%s'\n", pname, 
-						provider_parameter);
-					rv = provider_assign(drive, pname, 
-						provider_parameter, CHARSET_ASCII, from_cmdline);
+		err = provider_assign(ninfo.trg.drive, &ninfo.file[0], cset, true);
+	}
 
-					mem_free(pname);
-					// reset character set
-					//provider_set_ext_charset(orig_charset);
-					//mem_free(orig_charset);
-				}
-			} else {
-				log_debug("No parameter for cmdline_assign\n");
-				rv = provider_assign(drive, assign_str + 2, NULL, cset, 0);
-			} 
-			if (rv < 0) {
-				log_error("Could not assign, error number is %d\n", rv);
-			}
+	mem_free(name);
+	return err;
+}
+
+int cmd_assign_packet(const char *inname, int inlen, charset_t cset) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	openpars_t pars;
+	int num_files = 2;
+	drive_and_name_t names[2];
+
+	rv = parse_filename_packet((uint8_t*) inname, inlen, &pars, names, &num_files);
+
+	if (rv == CBM_ERROR_OK) {
+
+	    if (num_files == 2) {
+
+
+		int drive = names[0].drive;
+		uint8_t *provider_name = names[1].drivename;
+		uint8_t *provider_parameter = names[1].name;
+
+		log_debug("Assigning from server: %d:=%s(%d):%s\n", drive, provider_name, names[1].drive, provider_parameter);
+		
+		// check trailing '/' on provider parameter
+		int l = strlen((char*)provider_parameter);
+		if (l > 0 && provider_parameter[l-1] == '/') {
+			provider_parameter[l-1] = 0;
+		}
+
+		log_debug("cmdline_assign '%s' = '%s'\n", provider_name, provider_parameter);
+
+		rv = provider_assign(drive, &names[1], cset, is_privileged ? true : false);
+	    } else {
+		log_error("Illegal number of parameters (%d)\n", num_files);
+		rv = CBM_ERROR_FAULT;
+	    }
+	}
 	return rv;
 }
 
@@ -172,45 +173,59 @@ const char *get_options(const char *name, int len) {
 
 // ----------------------------------------------------------------------------------
 
-int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int cmd) {
+int cmd_open_file(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv, char *outbuf, int *outlen, int cmd) {
+
 	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	const char *name = NULL;
 	file_t *fp = NULL;
+	file_t *dir = NULL;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
 	int outln = 0;
 
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		provider_t *prov = (provider_t*) ep->ptype;
-		//provider_convto(prov)(name, convlen, name, convlen);
-		const char *options = get_options(inname + 1, namelen - 1);
-		log_info("OPEN %d (%d->%s:%s,%s)\n", cmd, tfd,
-			prov->name, name, options);
-		rv = handler_resolve_file(ep, &fp, name, cset, options, cmd);
-		if ((rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) && fp->recordlen > 0) {
-			int record = fp->recordlen;
-			outbuf[0] = record & 0xff;
-			outbuf[1] = (record >> 8) & 0xff;
-			outln = 2;
-			rv = CBM_ERROR_OPEN_REL;
-		}
-		if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
-			channel_set(tfd, fp);
-		} else {
-			if (fp != NULL) {
-				fp->handler->close(fp, 1, outbuf, &outln);
-				fp = NULL;
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	log_info("Open file for drive: %d(%s), path='%s' -> rv=%d\n", 0xff & names[0].drive, names[0].drivename, names[0].name, rv);
+
+	if (rv == CBM_ERROR_OK) {
+	    // TODO: default endpoint? 
+	    endpoint_t *ep = NULL;
+	    // note: may modify names.trg.name in-place
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &ep);
+	    if (rv == CBM_ERROR_OK) {
+		dir = endpoint_root(ep);
+		rv = resolve_dir((const char**)&names[0].name, cset, &dir);
+		if (rv == CBM_ERROR_OK) {
+			// now resolve the actual filename
+			rv = resolve_open(dir, names, cset, &pars, cmd, &fp);
+			if (rv == CBM_ERROR_OK || rv == CBM_ERROR_OPEN_REL) {
+				// ok, we have the directory entry
+				if (fp->recordlen > 0) {
+					int record = fp->recordlen;
+					outbuf[0] = record & 0xff;
+					outbuf[1] = (record >> 8) & 0xff;
+					outln = 2;
+					rv = CBM_ERROR_OPEN_REL;
+				}
+				fp->openmode = cmd;
+				channel_set(tfd, fp);
 			}
-			log_rv(rv);
 		}
-		// cleanup when not needed anymore
-		provider_cleanup(ep);
-		mem_free(name);
+	    }
 	}
+	if (rv != CBM_ERROR_OK && rv != CBM_ERROR_OPEN_REL) {
+		log_rv(rv);
+		if (dir) {
+			dir->handler->fclose(dir, NULL, NULL);
+		}
+	}
+
 	*outlen = outln;
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
 
 int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
 	
@@ -223,26 +238,75 @@ int cmd_info(char *outbuf, int *outlen, charset_t outcset) {
 	return rv;
 }
 
-int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset) {
+// ----------------------------------------------------------------------------------
+
+int cmd_read(int tfd, char *outbuf, int *outlen, int *readflag, charset_t outcset, drive_and_name_t *lastdrv) {
 	
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
 
-	file_t *fp = channel_to_file(tfd);
-	if (fp != NULL) {
-		    *readflag = 0;	// default just in case
-		    rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
-		    // TODO: handle error (rv<0)
-		    if (rv < 0) {
-				// an error is sent as REPLY with error code
-				rv = -rv;
-				log_rv(rv);
-		    } else {
-				*outlen = rv;
-				rv = CBM_ERROR_OK;
-		    }
+	file_t *fp = NULL;
+	chan_t *chan = channel_get(tfd);
+	if (chan != NULL) {
+		fp = chan->fp;
+/*
+		if (fp == NULL) {
+			// start of new directory scan
+	       	    	endpoint_t *ep = NULL;
+	    		// note: may modify names.trg.name in-place
+       	    		rv = resolve_endpoint(chan->searchpattern, outcset, is_privileged, &ep);
+	    		if (rv == 0) {
+				file_t *fp = endpoint_root(ep); // ep->ptype->root(ep);
+
+				rv = resolve_dir((const char **)&chan->searchpattern->name, outcset, &fp);
+				if (rv == 0) {
+					fp->openmode = FS_OPEN_DR;
+					chan->fp = fp;
+				}
+			}
+		}
+*/
 	}
+
+	if (fp != NULL) {
+		*readflag = 0;	// default just in case
+		if (fp->openmode == FS_OPEN_DR) {
+			direntry_t *direntry;
+			rv = resolve_scan(fp, chan->searchpattern, chan->num_pattern, outcset, true, &direntry, readflag);
+			if (!rv) {
+				rv = dir_fill_entry_from_direntry(outbuf, outcset, lastdrv->drive, direntry, 
+						MAX_BUFFER_SIZE-FSP_DATA);
+				direntry->handler->declose(direntry);
+	
+				if (READFLAG_EOF & *readflag) {
+					// end of dir - do we need another scan?
+					int rvx = drive_scan_next(chan->searchpattern, outcset, chan, lastdrv->drive);
+
+					if (rvx == CBM_ERROR_OK) {
+						*readflag &= ~READFLAG_EOF;
+					}
+				}
+
+			}
+		} else {
+		    	rv = fp->handler->readfile(fp, outbuf, MAX_BUFFER_SIZE-FSP_DATA, readflag, outcset);
+		}
+		// TODO: handle error (rv<0)
+		if (rv < 0) {
+			// an error is sent as REPLY with error code
+			rv = -rv;
+			log_rv(rv);
+		} else {
+			*outlen = rv;
+			rv = CBM_ERROR_OK;
+		}
+	} else {
+		log_rv(rv);
+	}
+
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 
@@ -252,21 +316,29 @@ int cmd_write(int tfd, int cmd, const char *indata, int datalen) {
 	//printf("WRITE: chan=%d, ep=%p\n", tfd, ep);
 	if (fp != NULL) {
 		bool_t has_eof = (cmd == FS_WRITE_EOF);
+#ifdef DEBUG_CMD
 		if (has_eof) {
 			log_info("WRITE_WITH_EOF(%d)\n", tfd);
 		}
-		rv = fp->handler->writefile(fp, indata, datalen, has_eof);
-		if (rv < 0) {
-			// if negative, then it's an error
-			rv = -rv;
-			log_rv(rv);
+#endif
+		if (fp->handler->writefile) {
+			rv = fp->handler->writefile(fp, indata, datalen, has_eof);
+			if (rv < 0) {
+				// if negative, then it's an error
+				rv = -rv;
+				log_rv(rv);
+			} else {
+				// returns the number of bytes written when positive
+				rv = CBM_ERROR_OK;
+			}
 		} else {
-			// returns the number of bytes written when positive
-			rv = CBM_ERROR_OK;
+			rv = CBM_ERROR_FAULT;
 		}
 	}
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_position(int tfd, const char *indata, int datalen) {
 
@@ -290,6 +362,8 @@ int cmd_position(int tfd, const char *indata, int datalen) {
 }
 
 
+// ----------------------------------------------------------------------------------
+
 int cmd_close(int tfd, char *outbuf, int *outlen) {
 
 	int rv = CBM_ERROR_FILE_NOT_OPEN;
@@ -299,92 +373,282 @@ int cmd_close(int tfd, char *outbuf, int *outlen) {
 	file_t *fp = channel_to_file(tfd);
 	if (fp != NULL) {
 		log_info("CLOSE(%d)\n", tfd);
-		rv = fp->handler->close(fp, 1, outbuf, outlen);
+		if (outlen) {
+			*outlen = 0;
+		}
+		rv = fp->handler->fclose(fp, outbuf, outlen);
 		channel_free(tfd);
 	}
 	return rv;
 }
 
-int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset) {
+// ----------------------------------------------------------------------------------
+
+static drive_and_name_t *alloc_fixup_dirpattern(drive_and_name_t *pattern, int num_files, 
+		drive_and_name_t *lastdrv) {
+
+	drive_and_name_t *dnt = NULL;
+
+	if (num_files == 0) {
+		return NULL;
+	}
+
+	size_t len = num_files * sizeof(drive_and_name_t);
+	dnt = mem_alloc_c(len, "dir_pattern");
+
+	for (int i = 0; i < num_files; i++) {
+		
+		drive_and_name_init(&dnt[i]);
+
+		if (pattern[i].drive == NAMEINFO_LAST_DRIVE) {
+			if (i == 0) {
+				dnt[i].drive = lastdrv->drive;
+				dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) lastdrv->drivename, "drivename");
+			} else {
+				dnt[i].drive = dnt[i-1].drive;
+				dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) dnt[i-1].drivename, "drivename");
+			}
+		} else {
+			dnt[i].drive = pattern[i].drive;
+			dnt[i].drivename = (uint8_t*) mem_alloc_str2((const char*) pattern[i].drivename, "drivename");
+		}
+		dnt[i].name = (uint8_t*) mem_alloc_str2((const char*) pattern[i].name, "fname");
+
+		dnt[i].drivename_m = (char*) dnt[i].drivename;
+		dnt[i].name_m = (char*) dnt[i].name;
+	}
+
+	if (lastdrv->drivename) {
+		mem_free(lastdrv->drivename);
+		lastdrv->drivename = NULL;
+	}
+	return dnt;
+}
+
+/*
+ * Identify and open the next drive directory in a directory listing.
+ *
+ * The algorithm of the CBM DOS is to first scan the drive used last, then the
+ * second drive. The second drive then becomes the last drive, and is shown first
+ * on the next directory. 
+ * During a drive scan, all search patterns are then matched against drive and
+ * pattern. 
+ * 
+ * So in a drive search pattern list (each directory command can have multiple pattern)
+ * each pattern could apply to one drive, or both. A drive is only included in the
+ * directory listing, if any one of the pattern applies to it.
+ *
+ * So here we first scan the last drive, then go through the list of assigned
+ * drives (with the exception of the last drive). Last we go through the non-assigned
+ * drives (like "ftp:"). 
+ * 
+ * In our system we have the complication that each pattern can potentially contain
+ * a directory path before the actual pattern. This pattern will only be evaluated
+ * for the first pattern that matches a drive. The other pattern then will apply
+ * to this directory directly.
+ */
+static int drive_scan_next(drive_and_name_t *dnt, charset_t cset, 
+			chan_t *chan, int last_drv) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	const char *name = NULL;
-	file_t *fp = NULL;
+	int idx = -1;
+	int num_files = chan->num_pattern;
 
-	//log_debug("Open directory for drive: %d\n", 0xff & buf[FSP_DATA]);
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		provider_t *prov = (provider_t*) ep->ptype;
-		const char *options = get_options(inname, namelen - 1);
-		log_info("OPEN_DR(%d->%s:%s)\n", tfd, prov->name, name);
-		rv = handler_resolve_dir(ep, &fp, name, cset, NULL, options);
-		if (rv == 0) {
-			channel_set(tfd, fp);
-		} else {
-			log_rv(rv);
+	while (rv == CBM_ERROR_DRIVE_NOT_READY) {
+		if (chan->searchdrv < 0) {
+			// initial drive
+			chan->searchdrv = last_drv;
+		} else 
+		if (chan->searchdrv == last_drv) {
+			// done with the last drive, start from 0 (or 1 if last_drv is 0)
+			chan->searchdrv = last_drv ? 0 : 1;
+		} else
+		if (chan->searchdrv < 10+num_files) {
+			// up to 10 numeric drives
+			chan->searchdrv++;
+			if (chan->searchdrv == last_drv) {
+				// skip last drive, we did this first
+				chan->searchdrv++;
+			}
 		}
-		// cleanup when not needed anymore
-		provider_cleanup(ep);
-		mem_free(name);
+
+		if (chan->searchdrv < 10) {
+			// numeric drive
+			drive_t *ep = drive_find(chan->searchdrv);
+			if (ep != NULL) {
+				// drive is assigned
+				for (idx = 0; idx < num_files; idx++) {
+					if (dnt[idx].drive == chan->searchdrv
+						|| dnt[idx].drive == NAMEINFO_UNUSED_DRIVE) {
+						// found a matching search pattern
+						rv = CBM_ERROR_OK;
+						break;
+					}
+				}
+			}
+		} else {
+			// scan search pattern for named drive
+			idx = chan->searchdrv - 10;
+			if (idx >= num_files) {
+				// went over the last drive
+				return CBM_ERROR_DRIVE_NOT_READY;
+			}
+			if (dnt[idx].drive == NAMEINFO_UNDEF_DRIVE) {
+				// found a named drive
+				rv = CBM_ERROR_OK;
+			}
+		}
+	}
+
+	// idx contains a matching drive
+
+       	endpoint_t *ep = NULL;
+	int searchdrv=dnt[idx].drive;
+	dnt[idx].drive = chan->searchdrv;
+       	rv = resolve_endpoint(&dnt[idx], cset, is_privileged, &ep);
+	dnt[idx].drive= searchdrv;
+	if (rv == CBM_ERROR_OK) {
+		file_t *fp = endpoint_root(ep); //ep->ptype->root(ep);
+
+		rv = resolve_dir((const char **)&dnt[idx].name, cset, &fp);
+		if (rv == CBM_ERROR_OK) {
+			fp->openmode = FS_OPEN_DR;
+			chan->fp = fp;
+		}
+	}
+	if (rv != CBM_ERROR_OK) {
+		log_rv(rv);
+	}
+	return rv;
+}
+
+int cmd_open_dir(int tfd, const char *inname, int namelen, charset_t cset, drive_and_name_t *lastdrv) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+	drive_and_name_t *dnt = NULL;
+
+        rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (rv == 0) {
+	    	dnt = alloc_fixup_dirpattern(names, num_files, lastdrv);
+	
+	    	log_info("Open directory for drive: %d (%s), path='%s'\n", names[0].drive, names[0].drivename, names[0].name);
+
+	    	channel_set(tfd, NULL);
+		chan_t *chan = channel_get(tfd);
+
+		chan->searchpattern = dnt;
+		chan->num_pattern = num_files;
+		chan->searchdrv = -1;
+
+		rv = drive_scan_next(dnt, cset, chan, lastdrv->drive);
+	}
+	if (rv != CBM_ERROR_OK) {
+		log_rv(rv);
+	}
+
+	return rv;
+}
+
+// ----------------------------------------------------------------------------------
+
+static int delete_name(drive_and_name_t *name, charset_t cset, endpoint_t **epp, int isrmdir, int *outdeleted) {
+
+	int rv = resolve_endpoint(name, cset, is_privileged, epp);
+	endpoint_t *ep = *epp;
+	file_t *dir = NULL;
+
+	if (rv == CBM_ERROR_OK) {
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
+		rv = resolve_dir((const char**)&name->name, cset, &dir);
+		while (rv == CBM_ERROR_OK) {
+			// now resolve the actual filenames
+			direntry_t *dirent = NULL;
+			rv = resolve_scan(dir, name, 1, cset, false, 
+					&dirent, NULL);
+			if (dirent) {
+				log_info("DELETE(%s / %s)\n", dir->filename, dirent->name);
+				if (isrmdir) {
+					// do a "RMDIR"
+					if (dirent->handler->rmdir2) {
+						dirent->handler->rmdir2(dirent);
+					} else {
+						log_error("Unable to RMDIR %s\n", dirent->name);
+					}
+				} else {
+					// do a "DELETE"
+					if (dirent->handler->scratch2) {
+						dirent->handler->scratch2(dirent);
+					} else {
+						log_error("Unable to DELETE %s\n", dirent->name);
+					}
+				}
+				(*outdeleted)++;
+				dirent->handler->declose(dirent);
+			}
+		}
+		if (rv == CBM_ERROR_FILE_NOT_FOUND) {
+			// no match is ok
+			rv = CBM_ERROR_OK;
+		}
+	}
+	if (dir) {
+		dir->handler->fclose(dir, NULL, NULL);
 	}
 	return rv;
 }
 
 int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, int *outlen, int isrmdir) {
+
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
 	int outdeleted = 0;
-	file_t *file = NULL;
+
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (rv == CBM_ERROR_OK) {
+	    	// TODO: default endpoint? 
+	    	endpoint_t *ep = NULL;
+
+	    	int i = 0;
+	    	while (rv == CBM_ERROR_OK && i < num_files) {
+	    		// note: may modify names.trg.name in-place
+			// ep will be carried over from previous invocations
+			rv = delete_name(&names[i], cset, &ep, isrmdir, &outdeleted);
+			i++;
+	    	}
+	}
+	if (rv == CBM_ERROR_OK) {
+		outbuf[0] = outdeleted > 99 ? 99 : outdeleted;
+		*outlen = 1;
+		rv = CBM_ERROR_SCRATCHED;
+	}
+	return rv;
+}
+
+// ----------------------------------------------------------------------------------
+
+static int mkdir_name(drive_and_name_t *name, charset_t cset, openpars_t *pars, endpoint_t **epp) {
+
+	int rv = resolve_endpoint(name, cset, is_privileged, epp);
+	endpoint_t *ep = *epp;
 	file_t *dir = NULL;
-	int readflag;
-	const char *name;
-	const char *outname;
 
-	(void) namelen;	// silence unused warning
-
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		rv = handler_resolve_dir(ep, &dir, name, cset, NULL, NULL);
-
+	if (rv == CBM_ERROR_OK) {
+		dir = endpoint_root(ep); // ep->ptype->root(ep);
+		rv = resolve_dir((const char**)&name->name, cset, &dir);
 		if (rv == CBM_ERROR_OK) {
-
-			if (dir->handler->direntry != NULL) {
-
-				while (((rv = dir->handler->direntry(dir, &file, 1, &readflag, &outname, cset))
-							== CBM_ERROR_OK)
-					&& file != NULL) {
-
-					log_info("DELETE(%s)\n", file->filename);
-
-					if (isrmdir) {
-						if (file->handler->rmdir != NULL) {
-							// supports RMDIR
-							rv = file->handler->rmdir(file);
-						} else {
-							log_warn("File %s does not support RMDIR\n", 
-									file->filename);
-						}
-					} else {
-						rv = file->handler->scratch(file);
-					}
-
-					if (rv != CBM_ERROR_OK) {
-						break;
-					}
-					outdeleted++;
-				}
-
-				if (rv == CBM_ERROR_OK) {
-					outbuf[0] = outdeleted > 99 ? 99 : outdeleted;
-					*outlen = 1;
-					rv = CBM_ERROR_SCRATCHED;
-				}
-			} else {
-				rv = CBM_ERROR_FAULT;
-			}
-			dir->handler->close(dir, 1, NULL, NULL);
+			rv = resolve_open(dir, name, cset, pars, FS_MKDIR, NULL);
 		}
-		mem_free(name);
-		provider_cleanup(ep);
+	}
+	if (dir) {
+		dir->handler->fclose(dir, NULL, NULL);
 	}
 	return rv;
 }
@@ -392,166 +656,271 @@ int cmd_delete(const char *inname, int namelen, charset_t cset, char *outbuf, in
 int cmd_mkdir(const char *inname, int namelen, charset_t cset) {
 
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	file_t *newdir = NULL;
-	const char *name = NULL;
 
-	(void) namelen;	// silence unused warning
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
 
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
-		log_info("MKDIR(%s)\n", name);
-		rv = handler_resolve_file(ep, &newdir, name, cset, NULL, FS_MKDIR);
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
-		provider_cleanup(ep);
-		mem_free(name);
+	if (rv == CBM_ERROR_OK) {
+	    	// TODO: default endpoint? 
+	    	endpoint_t *ep = NULL;
+
+	    	int i = 0;
+	    	while (rv == CBM_ERROR_OK && i < num_files) {
+	    		// note: may modify names.trg.name in-place
+			// ep will be carried over from previous invocations
+			rv = mkdir_name(&names[i], cset, &pars, &ep);
+			i++;
+	    	}
 	}
 	return rv;
 }
 
-int cmd_chdir(const char *inname, int namelen, charset_t cset) {
+// ----------------------------------------------------------------------------------
 
-	int rv = CBM_ERROR_FAULT;
+int cmd_chdir(const char *inname, int inlen, charset_t cset) {
 
-	log_info("CHDIR(%s)\n", inname);
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	openpars_t pars;
+	int num_files = 2;
+	drive_and_name_t names[2];
 
-	rv = provider_chdir(inname, namelen, cset);
+	rv = parse_filename_packet((uint8_t*) inname, inlen, &pars, names, &num_files);
 
+	if (rv == CBM_ERROR_OK) {
+
+	    if (num_files == 1) {
+
+		int drive = names[0].drive;
+		char *name = names[0].name;
+
+		log_debug("Chdir on server drive: %d:%s\n", drive, name);
+		
+		// check trailing '/' on provider parameter
+		int l = strlen(name);
+		if (l > 0 && name[l-1] == '/') {
+			name[l-1] = 0;
+		}
+
+		rv = provider_chdir(drive, &names[0], cset);
+	    } else {
+		log_error("Illegal number of parameters (%d)\n", num_files);
+		rv = CBM_ERROR_FAULT;
+	    }
+	}
 	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_move(const char *inname, int namelen, charset_t cset) {
 
-	int err = CBM_ERROR_DRIVE_NOT_READY;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	direntry_t *dirent = NULL;
+	file_t *srcdir = NULL;
+	file_t *trgdir = NULL;
+	endpoint_t *srcep = NULL;
+	endpoint_t *trgep = NULL;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
 
-	int todrive = inname[0];
-	const char *fromname = NULL;
-	const char *toname = NULL;
-	endpoint_t *epto = provider_lookup(inname, namelen, cset, &toname, NAMEINFO_UNDEF_DRIVE);
-	if (epto != NULL) {
-		const char *name2 = strchr(inname+1, 0);	// points to null byte after name
-		name2++;					// first byte of second name
-		endpoint_t *epfrom = provider_lookup(name2, namelen, cset, &fromname, todrive);
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
-		if (epfrom != NULL) {
-			file_t *fromfile = NULL;
-			
-			err = handler_resolve_file(epfrom, &fromfile, fromname, cset, NULL, FS_MOVE);
-			
-			if (err == CBM_ERROR_OK) {
-				file_t *todir = NULL;
-				const char *topattern = NULL;
-	
-				err = handler_resolve_dir(epto, &todir, toname, cset, &topattern, NULL);
-
-				if (err == CBM_ERROR_OK && todir != NULL) {
-
-					// TODO check if that is really working (with those temp provs...)
-					if (fromfile->endpoint == todir->endpoint) {
-						// we can just forward it to the provider proper
-
-						if (fromfile->handler->move != NULL) {
-							err = fromfile->handler->move(fromfile, todir, topattern, cset);
-						} else {
-							// e.g. x00 does not support it now
-							log_warn("File type spec not supported\n");
-							err = CBM_ERROR_DRIVE_NOT_READY;
-						}	
-					} else {
-						// TODO some kind of copy/remove stuff...
-						log_warn("Drive spec combination not supported\n");
-						err = CBM_ERROR_DRIVE_NOT_READY;
-					}
-					todir->handler->close(todir, 1, NULL, NULL);
-				}
-				fromfile->handler->close(fromfile, 1, NULL, NULL);
-			}
-			provider_cleanup(epfrom);
-		}
-		provider_cleanup(epto);
+	if (num_files != 2) {
+		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
-	return err;
+
+	if (rv == CBM_ERROR_OK) {
+
+	    // TODO: default endpoint? 
+	    // note: may modify names.trg.name in-place
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &trgep);
+	    if (rv == CBM_ERROR_OK) {
+
+		srcep = trgep;	// default
+		rv = resolve_endpoint(&names[1], cset, is_privileged, &srcep);
+		if (rv == CBM_ERROR_OK) {
+    	
+		    if (srcep == trgep) {
+
+			// find the source file
+			srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
+			rv = resolve_dir((const char**)&names[1].name, cset, &srcdir);
+
+			if (rv == CBM_ERROR_OK) {
+			    // now resolve the actual source filename into dirent
+			    rv = resolve_scan(srcdir, &names[1], 1, cset, 
+					    false, &dirent, NULL);
+			    if (rv == CBM_ERROR_OK && dirent) {
+		
+				// find the target directory	
+				trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
+				rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
+
+				if (rv == CBM_ERROR_OK) {
+
+				    if (dirent->handler->move2) {
+					rv = dirent->handler->move2(dirent, trgdir, (const char*) names[0].name, cset);
+				    } else {
+					rv = CBM_ERROR_FAULT;
+				    }
+				    trgdir->handler->fclose(trgdir, NULL, NULL);
+				}
+				dirent->handler->declose(dirent);
+			    }
+			    srcdir->handler->fclose(srcdir, NULL, NULL);
+			}
+		    } else {
+       		    	rv = CBM_ERROR_DRIVE_NOT_READY;
+		    	provider_cleanup(trgep);
+		    }
+		    provider_cleanup(srcep);
+		}
+	    }
+	}
+	return rv;
+}
+
+// ----------------------------------------------------------------------------------
+
+static int copy_file(file_t *tofile, drive_and_name_t *name, charset_t cset) {
+
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	file_t *srcdir = NULL;
+	file_t *fromfile = NULL;
+	endpoint_t *srcep = NULL;
+	openpars_t pars;
+
+	openpars_init_options(&pars);
+
+	// TODO: default endpoint? 
+	// note: may modify names.trg.name in-place
+	rv = resolve_endpoint(name, cset, is_privileged, &srcep);
+	if (rv == CBM_ERROR_OK) {
+
+	    // find the target directory	
+	    srcdir = endpoint_root(srcep); // srcep->ptype->root(srcep);
+	    rv = resolve_dir((const char**)&name->name, cset, &srcdir);
+
+	    if (rv == CBM_ERROR_OK) {
+			
+		rv = resolve_open(srcdir, name, cset, &pars, FS_OPEN_RD, &fromfile);
+
+		if (rv == CBM_ERROR_OK) {
+			// read file is open, can do the copy
+			char buffer[8192];
+			int readflag = 0;
+			int rlen = 0;
+			int wlen = 0;
+			int nwritten = 0;
+
+			do {
+				rlen = fromfile->handler->readfile(fromfile, 
+					buffer, 8192, &readflag, cset);
+				if (rlen < 0) {
+					rv = -rlen;
+					break;
+				}
+				nwritten = 0;
+				while (rlen > nwritten) {
+					wlen = tofile->handler->writefile(tofile,
+						buffer + nwritten, rlen - nwritten, 
+						readflag & READFLAG_EOF);
+					if (wlen < 0) {
+						rv = -wlen;
+						break;
+					}
+					nwritten += wlen;
+				}
+			} while ((rv == CBM_ERROR_OK) 
+				&& ((readflag & READFLAG_EOF) == 0));	
+
+			fromfile->handler->fclose(fromfile, NULL, NULL);
+		}
+		srcdir->handler->fclose(srcdir, NULL, NULL);
+	    }
+	    provider_cleanup(srcep);
+	}
+	return rv;
 }
 
 int cmd_copy(const char *inname, int namelen, charset_t cset) {
 
-	int err = CBM_ERROR_DRIVE_NOT_READY;
+	int rv = CBM_ERROR_DRIVE_NOT_READY;
+	file_t *trgdir = NULL;
+	file_t *fp = NULL;
+	endpoint_t *trgep = NULL;
+	openpars_t pars;
+	int num_files = MAX_NAMEINFO_FILES+1;
+	drive_and_name_t names[MAX_NAMEINFO_FILES+1];
 
-	int todrive = inname[0];
-	const char *fromname = NULL;
-	const char *toname = NULL;
-	const char *p = inname+1;
-	endpoint_t *epto = provider_lookup(inname, namelen, cset, &toname, NAMEINFO_UNDEF_DRIVE);
-	if (epto != NULL) {
-		file_t *tofile = NULL;
-		err = handler_resolve_file(epto, &tofile, toname, cset, NULL, FS_OPEN_WR);
-		if (err == CBM_ERROR_OK) {
-			// file is opened for writing...
-			// now iterate over the source files
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
 
-			file_t *fromfile = NULL;
-
-			// find next name
-			fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
-			int thislen = namelen - (fromname - inname);
-			while ((err == CBM_ERROR_OK) && (thislen > 0)) {
-				p = fromname + 1;
-				endpoint_t *fromep = provider_lookup(fromname, thislen, cset, &fromname, todrive);
-				if (fromep != NULL) {
-					err = handler_resolve_file(fromep, &fromfile, fromname, cset,
-										NULL, FS_OPEN_RD);
-					if (err == CBM_ERROR_OK) {
-						// read file is open, can do the copy
-						char buffer[8192];
-						int readflag = 0;
-						int rlen = 0;
-						int wlen = 0;
-						int nwritten = 0;
-
-						do {
-							rlen = fromfile->handler->readfile(fromfile, 
-									buffer, 8192, &readflag, cset);
-							if (rlen < 0) {
-								err = -rlen;
-								break;
-							}
-							nwritten = 0;
-							while (rlen > nwritten) {
-								wlen = tofile->handler->writefile(tofile,
-									buffer + nwritten, rlen - nwritten, 
-									readflag & READFLAG_EOF);
-								if (wlen < 0) {
-									err = -wlen;
-									break;
-								}
-								nwritten += wlen;
-							}
-						} while ((err == CBM_ERROR_OK) 
-								&& ((readflag & READFLAG_EOF) == 0));	
-						
-						fromfile->handler->close(fromfile, 1, NULL, NULL);
-					}
-					provider_cleanup(fromep);
-				}
-				fromname = strchr(p, 0) + 1;	// behind terminating zero-byte
-				thislen = namelen - (fromname - inname);
-			}				
-			tofile->handler->close(tofile, 1, NULL, NULL);
-		}
-		provider_cleanup(epto);
+	if (num_files < 2) {
+		return CBM_ERROR_SYNTAX_UNKNOWN;
 	}
-	return err;
+
+	if (rv == CBM_ERROR_OK) {
+
+	    // TODO: default endpoint? 
+	    // note: may modify names.trg.name in-place
+	    rv = resolve_endpoint(&names[0], cset, is_privileged, &trgep);
+	    if (rv == CBM_ERROR_OK) {
+
+		// find the target directory	
+		trgdir = endpoint_root(trgep); // trgep->ptype->root(trgep);
+		rv = resolve_dir((const char**)&names[0].name, cset, &trgdir);
+
+		if (rv == CBM_ERROR_OK) {
+			
+		    rv = resolve_open(trgdir, names, cset, &pars, FS_OPEN_WR, &fp);
+
+		    if (rv == CBM_ERROR_OK) {
+
+		    	for (int i = 1; rv == CBM_ERROR_OK && i < num_files; i++) {
+			    if (names[i].drive == NAMEINFO_UNUSED_DRIVE 
+				|| names[i].drive == NAMEINFO_LAST_DRIVE) {
+				names[i].drive = names[i-1].drive;
+			    }
+			    rv = copy_file(fp, &names[i], cset);
+			}
+
+			fp->handler->fclose(fp, NULL, NULL);
+		    }
+		}
+		trgdir->handler->fclose(trgdir, NULL, NULL);
+
+		provider_cleanup(trgep);
+	    }
+	}
+	
+	return rv;
 }
+
+// ----------------------------------------------------------------------------------
 
 int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int *outlen) {
 
 	(void)datalen; // silence warning unused parameter
 
+	drive_and_name_t name;
+	endpoint_t *ep = NULL;
+
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
+
+	drive_and_name_init(&name);
 
 	// not file-related, so no file descriptor (tfd)
 	// we only support mapped drives (thus name is NULL)
 	// we only interpret the drive, so namelen for the lookup is 1
-	endpoint_t *ep = provider_lookup(indata, 1, 0, NULL, NAMEINFO_UNDEF_DRIVE);
+
+	name.drive = *indata;
+	rv = resolve_endpoint(&name, CHARSET_ASCII, is_privileged, &ep);
+	//endpoint_t *ep = provider_lookup(indata, 1, 0, NULL, NAMEINFO_UNDEF_DRIVE);
+	
 	if (ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->block != NULL) {
@@ -569,16 +938,43 @@ int cmd_block(int tfd, const char *indata, const int datalen, char *outdata, int
 	return rv;
 }
 
+// ----------------------------------------------------------------------------------
+
 int cmd_format(const char *inname, int namelen, charset_t cset) {
-
+	
 	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	const char *name = NULL;
 
-	endpoint_t *ep = provider_lookup(inname, namelen, cset, &name, NAMEINFO_UNDEF_DRIVE);
-	if (ep != NULL) {
+	openpars_t pars;
+	int num_files = 2;
+	drive_and_name_t names[2];
+	endpoint_t *ep = NULL;
+
+	rv = parse_filename_packet((uint8_t*) inname, namelen, &pars, names, &num_files);
+
+	if (rv != CBM_ERROR_OK) {
+		return rv;
+	}
+
+	if (num_files > 2) {
+		return CBM_ERROR_SYNTAX_PATTERN;
+	}
+	if (num_files == 2) {
+		// format has ID
+		if (names[1].drive != NAMEINFO_UNUSED_DRIVE) {
+			return CBM_ERROR_SYNTAX_INVAL;
+		}
+		if (names[1].name == NULL
+			|| strlen((char*)names[1].name) > 2) {
+			return CBM_ERROR_SYNTAX_INVAL;
+		}
+	}
+
+	rv = resolve_endpoint(names, cset, is_privileged, &ep);
+
+	if (rv == CBM_ERROR_OK && ep != NULL) {
 		provider_t *prov = (provider_t*) ep->ptype;
 		if (prov->format != NULL) {
-			rv = prov->format(ep, inname + 1);
+			rv = prov->format(ep, (char*)names[0].name, num_files == 2 ? (char*)names[1].name : NULL);
 		}
 	}
 	return rv;

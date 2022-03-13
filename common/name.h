@@ -43,13 +43,17 @@
  * as "0:" is more than the single drive byte.
  */
 
-#define MAX_NAMEINFO_FILES 4
+// MAX_NAMEINFO_FILES is defined in the wireformat.
 
 typedef struct {
 	uint8_t drive;		// starts from 0 (real zero, not $30 = ASCII "0")
 	uint8_t *drivename;	// name of drive ("FTP", ...)
 	uint8_t *name;		// pointer to the actual name
-	uint8_t namelen;	// length of file name
+#ifdef SERVER
+	char *drivename_m;	// malloc'd string pointers for drivename 
+	char *name_m;		// and name that can be freed after use
+#endif
+	uint8_t namelen;	// length of file name - needed for RELfiles, as zero can be included in "name"
 } drive_and_name_t;
 
 // the parameter actually used for an OPEN on the server
@@ -70,6 +74,30 @@ typedef struct {
 	drive_and_name_t file[MAX_NAMEINFO_FILES];	// optional source drive_name info
 } nameinfo_t;
 
+static inline void nameinfo_init(nameinfo_t *ninfo) {
+	memset(ninfo, 0, sizeof(nameinfo_t));
+	ninfo->cmd = CMD_NONE;
+}
+
+// init drive and name with drive 0, without name (or drivename)
+static inline void drive_and_name_init(drive_and_name_t *dnt) {
+	memset(dnt, 0, sizeof(drive_and_name_t));
+}
+
+static inline void drive_and_name_lastdrv(drive_and_name_t *dnt, int num_files, int *lastdrv) {
+
+	int i = 0;
+	while (i < num_files) {
+		if (dnt[i].drive == NAMEINFO_LAST_DRIVE) {
+			dnt[i].drive = *lastdrv;
+		} else
+		if (dnt[i].drive != NAMEINFO_UNUSED_DRIVE && dnt[i].drive != NAMEINFO_UNDEF_DRIVE) {
+			*lastdrv = dnt[i].drive;
+		}
+		i++;
+	}
+}
+
 // nameinfo option bits
 #define	NAMEOPT_NONBLOCKING	0x01	// use non-blocking access
 
@@ -78,15 +106,21 @@ typedef struct {
 
 /*
  * parse a CBM file name or command argument (is_command != 0 for commands), and
- * fill the nameinfo global var with the result.
+ * fill the nameinfo var with the result.
  * Copies the content of the command_buffer to the end of the buffer, so that it
  * can be re-assembled at the beginning without having to worry about moving all parts
  * in the right direction.
  */
 void parse_filename(uint8_t *in, uint8_t dlen, uint8_t inlen, nameinfo_t *result, uint8_t parsehint);
 
-#define	PARSEHINT_COMMAND	1	// when called from command handler
+
+#define	PARSEHINT_COMMAND	1	// when called from command handler, including command
 #define	PARSEHINT_LOAD		2	// when called from file handler and secaddr=0
+
+/**
+ * Parse a command file parameter, using cmd as hint
+ */
+void parse_cmd_pars (uint8_t *cmdstr, uint8_t len, command_t cmd, nameinfo_t *result);
 
 /**
  * The following two methods assemble a command packet with the filenames from a 
@@ -139,7 +173,21 @@ uint8_t assemble_filename_packet(uint8_t * trg, nameinfo_t * nameinfo);
  * Returns error code, most specifically SYNTAX codes if the packet
  * cannot be parsed.
  */
-cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, nameinfo_t * nameinfo);
+cbm_errno_t parse_filename_packet(uint8_t * src, uint8_t len, openpars_t *pars, drive_and_name_t * names, int *num_files);
+
+/*
+ * frees all the memory from a drive_and_name_t (must have been allocated separately)
+ */
+static inline void drive_and_name_free(drive_and_name_t *dnt, int num_dnt) {
+	
+	if (dnt == NULL) {
+		return;
+	}
+	for (int i = 0; i < num_dnt; i++) {
+		mem_free(dnt[i].drivename);
+		mem_free(dnt[i].name);
+	}
+}
 
 #endif
 

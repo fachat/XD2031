@@ -1,0 +1,401 @@
+
+Resolver Description
+====================
+
+The "resolver" identifies a file or directory when it is opened.
+
+This text describes the use cases and implementation of the "resolving" process. 
+
+Commodore DOS Basics
+--------------------
+
+The XD2031 firmware mimics a Commodore disk drive, so we look into the way Commodore DOS
+resolves filenames. It is, in fact, rather flexible - but also somewhat complex:
+
+1) Commodore DOS allows multiple (up to four) filename/patterns in many commands, even 
+when loading a directory. The different patterns are separated by comma.
+
+	file1,file2
+
+2) Each filename/pattern can (optionally) have a drive number before it, separated by 
+a colon ':'. For example:
+
+	0:file1,file2,1:file3
+
+3) If no colon is given, all drives are assumed. I.e. in the example above, when used to
+loading a directory, file1 is returned from drive 0, file3 from drive 1, but file2 is 
+listed in both directories. The same holds true for commands like scratch.
+
+4) If there is only a colon, but no drive number, the drive number of the previous command
+or command part before it is used. In the following example
+
+	0:c*,1:b*,:a*
+
+files starting with a will only be matched from the drive 1.
+
+
+Definitions
+-----------
+
+File: you know what a file is, right?
+
+Filepath: the address of a file or directory on some filesystem, e.g. "/var/log/messages"
+
+Path-part: the name of directory when used as part of a filepath to address a file,
+	e.g. "var" is a path-part in the filepath given above, as is "log", but
+	not "messages".
+
+Filename: The last part of a filepath of a file or directory entry, without any preceding path parts
+	e.g. "messages" is a filename in the filepath given above.
+	Note: when filepath addresses a directory, the filename may be named "directory name".
+
+file-pattern: Similar to filename, but containing wildcard characters
+
+path-pattern: Similar to path-part, but containing wildcard characters.
+
+Directory: a collection of files
+
+Directory tree: a directory, including all files and subdirectories (where available)
+
+Provider: a driver for a defined type of directory access. Examples are the "di" provider,
+	for "disk images", that allows accessing Commodore Dxx disk image files as 
+	directory. Another one is the "curl" provider to access files via the "http" or
+	"ftp" protocols. The "fs" file system provider provides access to the host
+	file system.
+
+Provider-Address: a combination of a provider name and a an filepath relative to this
+	provider. A provider-address could for example be provider "fs" and a path
+	"/var/tmp/xd2031" as address in the "fs" = file system provider. The format
+	of a provider-address usually is 
+
+		<provider>":"<filepath>"
+
+	for example
+
+		fs:/var/tmp/xd2031
+
+Endpoint: an endpoint defines the root of a "mounted" directory tree. A
+	"mounted" directory is known to the system by a short name so that it can
+	be used to quickly open a file in that directory tree.
+	A short name usually is a drive number (e.g. "0:") that is a short name
+	for an assigned provider-address. For example it could be assigned as:
+
+		0:	-> 	fs:/home/user1/xdrive
+
+	Other providers, like "ftp", or "telnet" provide generic endpoints 
+	like "ftp:" or "http:", that can be used instead of the drive number, like in
+
+		ftp:ftp.zimmers.net/pub/cbm
+
+
+Overview
+--------
+
+Before a file or directory can be accessed, it has to be opened. To open the file
+or direcory, it must be found, or "resolved" using the name and path given in the
+open command. This is the task of the resolver.
+
+The first step is to find the drive. In Commodore DOS a drive was indicated by a
+single digit, usually 0 or 1 for dual-disk drives. Here it is generalized into
+the concept of an "endpoint". An endpoint can still be a drive number, but also
+a name of filesystem service provider, like "fs" for the actual filesystem, 
+"http" for a web interface and so on. A drive number actually needs to be assigned 
+to a filesystem provider to be usable. This assign operation defines the endpoint
+for the drive, e.g. the filesystem provider and the path to the directory in that
+filesystem. In case of a drive number the resolver looks up the assigned endpoint
+before it applies the actual filename.
+
+An endpoint thus consists of a provider and a base address on that
+provider. The path and name given in the open is then searched relative 
+to the base address of the endpoint.
+
+Examples are (in pseudo-code):
+
+	assign("0", "fs:/etc")
+	open("0:passwd", "r")
+
+	open("ftp:ftp.zimmers.net/pub/cbm/index.html", "r")
+
+	assign("1", "http://www.zimmers.net/anonftp/pub/cbm/")
+	open("1:index.html", "r")
+
+
+Concepts
+--------
+
+Wrappers
+
+To make file access more convenient, some container file formats are automatically
+resolved. For example, when .Dxx file is used in the path, it is not seen as a .Dxx file
+but as a directory named after the file, without the extension. Navigating into this
+pseudo-directory results in being able to access the files stored in the Dxx file.
+
+Supported (or planned) container file formats are:
+	- Commodore disk images
+	- zip files (planned)
+	- tar files (planned)
+	- FAT file system image (planned)
+
+Another wrapper is for encapsulated file formats. The first one are the so-called 
+"P00" files, even though these files may also encapsulate other file types ("SEQ", "REL", ...) 
+and not only "PRG" files. The purpose of these files is (was) to encapsulate the (long) 
+Commodore file name in a host DOS file name that may be much shorter (8 characters only) 
+and of a different encoding.
+
+Supported encapsulated file formats are:
+	- P00 files
+	- typed files (i.e. files ending with ",P" to determine the file type)
+	- gz files (gnu zipped files, planned)
+
+A challenge is that each file in a directory needs to be evaluated to see
+if it is a container file with possibly a differently mapped filename, and the 
+mapped filename needs to be 1) filtered against the given filename filter, and
+2) displayed.
+
+This may result in the fact that one filename may appear multiple times in a directory.
+Even though this is (usually) be prohibited by the underlying filesystem, unwrapping
+a file can reveal a mapped filename that may be the same as another directory entry.
+
+Another challenge with these file types is that not only do they need to show up under
+their encapsulated file name in a (potentially filtered) directory listing, but they
+also need to be resolved when opening a file. Potentially every directory level
+could be a wrapped file, and has in principle to be checked.
+
+Here however, a shortcut is implemented. When a path is given to a provider to resolve,
+the provider does a depth-first exact match for each path element to a directory
+level. Only if there is no exact match found (or e.g. there are wildcards in the search
+pattern at this level), the directory is scanned and each file is checked for 
+wrapped files.
+
+Note: a provider can signal that its files are not wrapped - e.g. the disk image
+provider will do this.
+
+
+Character sets and Encoding
+---------------------------
+
+The Commodore uses its own character set, that, for example, moves upper and 
+lower characters to different places. A filename in a directory or a container file
+can be stored for example in PETSCII (for disk images or P00 files), or any of the
+possible user space encodings, most often probably ASCII or ISO-Latin-1 (ISO-8859-1), 
+or Unicode in e.g. UTF-8 encoding.
+
+Any filename character set conversions between requestor (calling an API) and the 
+stored filename in most cases introduces losses. For example converting a filename 
+from PETSCII to ASCII will loose some Commodore-specific characters. 
+Therefore each filename not only includes the actual name (as byte array), but 
+also the character set and encoding. Conversion is avoided unless absolutely
+necessary.
+
+For example the server wireformat interface can be switched between character sets,
+and this character set is kept until the actual filename comparison is done. This way
+a PETSCII client can use its own PETSCII filenames, and use PETSCII-named files
+stored in a P00 or D64 image file.
+
+Internally the conversion is done by converting into Unicode character set if necessary,
+except when both sides have the same encoding (e.g. both PETSCII).
+
+NOTE: the current implementation only supports character sets and encodings that
+keep the special characters (below) as their single-byte ASCII values.
+(as is true for ISO-latin-1, or even UTF-8)
+
+
+Special characters
+------------------
+
+A Commodore filename can contain characters that are not allowed on e.g. a Posix file
+system, for example the "/" slash character. Other allowed characters like the "<"
+or "&" ampersand are (usually) allowed in Unix filesystem but not in DOS filenames.
+
+In particular, these characters have special meanings:
+
+	":"	separator between drive/provider name and path
+	","	separator after filename to provide file type or other options
+		Also separator between filenames in commands that accept multiple
+		filenames
+	"="	separator in commands between target and source (e.g. 1:trg=0:src)
+
+	"?"	wildcard character for a single char
+	"*"	wildcard character for the rest of the filename 
+
+What is particularly missing is the backslash "\" and the "/" slash character as 
+directory separator. These are normal characters in a Commodore DOS filename.
+
+To understand the limitations, one needs to be aware of the execution of open and 
+other commands:
+
+                        /-- single command line string ("C0:foo=bar", "file,s,a")
+                        :
+                        :                /-- separate strings, zero-terminated, 
+                        :                :   ("0:foo","bar"; "file")
+                        :                :   with options separated into own parameters
+                        :                :
+                        V                V
+CBM:      User entry  ----->  Parser  --/----> filesystem API
+                                        |
+                                        |
+host:     User entry  -----> cmdline ---/  
+          "xdcopy"           parser
+
+ 
+The "," and "=" separator characters are used only in the user-visible command interface. 
+The command parser extracts the provider-address and parameters, or multiple 
+provider-addresses and gives these to the API. So "," and "=" are relevant in the parser 
+only but not the API.
+
+NOTE: it may be useful to be able to specify an escape character for the parser so
+"," and "=" could be used e.g. in URLs.
+
+The parser is located in the firmware, and determines the parameters required
+by the API. The wireformat protocol is a protocol to transfer the API calls from 
+the firmware to the host server.
+
+The ":" character is part of the provider-addresses given to the API. 
+It is used when the provider-address is interpreted, but only the first ":" is consumed 
+this way. Further colon characters can still appear in the path, as will be used e.g. 
+for port numbers in the http provider.
+
+The "?" and "*" wildcard characters are relevant in matching a search pattern to
+a filename. The "?" matches any single character. The "*" in Commodore matches the
+whole rest of the filename. An option can be used to switch to standard Unix
+matching, so that a "*" matches a part of the filename only, and matching continues
+after the "*".
+
+When a file is created, it is the task of the underlying provider / file system to 
+reject filenames that are illegal in that provider. The exact set of illegal characters
+may vary between file system types.
+
+Note that this so far does not allow creating files in Commodore DOS format containing
+a slash "/" character. A provider - like the disk image provider - may thus signal to 
+the resolver that it does not support subdirectories. A "slash" may then be used as a 
+normal character.
+
+
+Resolving
+---------
+
+When a file is created via API, the path is resolved to the target directory. Then
+the file is searched for to not create a duplicate filename, then the file is created.
+
+This process has the following steps:
+
+1) find the endpoint
+
+The provider-address is looked at to find a ":" colon character. The text before the 
+colon is interpreted as provider name. 
+
+If it is a digit, the mounted endpoint for this drive number is looked up. If it is
+a string starting with an textual character, the provider with the given name is 
+looked up and the default endpoint is used.
+
+2) find the root directory
+
+The endpoint has a function to return the root directory.
+
+3) resolve the filename/pattern
+
+For this step, the directory has a method "resolve" it is given the filepath. In this
+method the filepath is interpreted as much as possible until the last directory separator
+character ("/"). 
+
+Note that in this process the provider for the given directory may choose to interpret
+filenames that are normally not allowed in Commodore DOS, for example including
+"," or "=" in URLs.
+
+The method returns the pointer to the (character behind the) last directory separator char 
+that it has consumed in the filepath. The consumed path is given back in form
+of a directory file handle. In the ideal case, the returned values point to the filename 
+to be looked at in the returned directory (i.e. there is no further directory separator), 
+and the process continues with step 5.
+
+When, in the next part of a path, a wildcard is detected, the process returns early.
+The path-attern wildcard is not processed, the returned values are the directory to 
+which the wildcard should be applied and a pointer to the wildcard path-pattern.
+
+Also, when a part of the path is not found, the resolve method returns with the directory
+where the filename wasn't found, and a pointer to the unresolved path-part in the filepath.
+
+4) look up wrapped files
+
+If the filename was not fully processed in step 3, use the direntry2() call to scan the 
+returned directory one entry after the other. Each directory entry is then given to each 
+wrapper to see if it applies to it, potentially returning a wrapped direntry. 
+Each resulting directory entry is then matched against the next path-part
+resp. path-pattern
+
+If it is found, it is verified that it is a directory (file type mismatch if not), and 
+the process goes back to step 3.
+
+If the directory is fully scanned and the path-part still has not been found, there is 
+a file not found error, but the directory and the (not found) filename are returned
+nevertheless.
+
+5) Use the returned directory
+
+As the resolve returns the directory and the last part of a file-path 
+
+
+API
+===
+
+General
+	resolve_endpoint(const char **pattern, endpoint_t **outep)
+		resolve an endpoint from the drive/provider-name part of 
+		a provider-address. 
+
+	resolve_dir(const char **pattern, endpoint_t *ep, file_t **outdir)
+		resolve a directory until the last part of a path/filename
+		in the given endpoint
+
+	resolve_scan(file_t *dir, const char *pattern, direntry_t **outdirentry)
+		Scan a given directory, return a found directory entry
+		Can be called multiple times with the same pattern/dir until all
+		entries are scanned
+
+
+
+Endpoint
+	file_t getRootDir()	
+		return an open file_t for the root directory, ready for resolving
+		(Needs to be closed after use)
+
+Directory
+	err_t resolve(file_t *dir, const char **pattern, file_t **outdir)
+		resolves the pattern in dir, returning the found directory in outdir
+		and pattern points to the next filename.
+		returns PATH_NOT_FOUND if path is not found.
+		(outdir needs to be closed after use; dir can be closed if not further
+		needed; except when dir is returned as outdir...)
+
+	err_t direntry(...)
+		scan the directory
+
+	err_t close();
+		stop using it.
+
+Provider
+	file_t wrap(file_t *inner)
+
+
+
+Use Cases
+=========
+
+UC001	Assign an endpoint
+UC002	Un-assign an endpoint
+
+UC010	Open a file for reading
+UC011	Open a file for writing
+ UC011a	File exists
+ UC011b	File does not exist
+
+UC020	Open a directory for reading
+
+UC030	Delete a file pattern
+UC031	Rename a file
+UC032	Copy a file
+
+UC040 	Make directory
+UC041	Remove a directory
+UC042	Change into a directory
+

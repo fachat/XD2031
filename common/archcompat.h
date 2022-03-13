@@ -51,7 +51,7 @@ static inline void debug_putcrlf(void)
 #define nullstring "<NULL>"
 
 #define IN_ROM
-static inline uint8_t rom_read_byte(uint8_t * a)
+static inline uint8_t rom_read_byte(const uint8_t * a)
 {
 	return *a;
 }
@@ -66,9 +66,9 @@ static inline void *rom_memcpy(void *dest, const void *src, size_t n)
 	return memcpy(dest, src, n);
 }
 
-static inline void *rom_read_pointer(void *p)
+static inline const void *rom_read_pointer(const void *p)
 {
-	return p;
+	return *((void**)p);
 }
 
 #define rom_sprintf(s, f, ...) sprintf(s, f, __VA_ARGS__)

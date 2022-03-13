@@ -17,6 +17,8 @@ MCU=pc
 #DEFS+=-DHAS_IEC -DHAS_IEEE -DHAS_EEPROM
 DEFS+=-DHAS_SOCK488 
 
+HW_NAME=PCSOCK
+
 #SRC+=xs1541/ieeehw.c xs1541/iechw.c xs1541/device.c xs1541/atn.S
 SRC+=sockserv/device.c sockserv/uarthw.c sockserv/sock488.c sockserv/socket.c
 

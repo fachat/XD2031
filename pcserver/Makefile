@@ -9,7 +9,7 @@ else
   ARCH    = posix
 endif
 
-TARGET=fsser
+TARGET=xdserver
 
 # Sorting include paths and defines simplifies checking them
 INCPATHS=. ../common util os handler $(ARCH)
@@ -27,7 +27,7 @@ include Makefile.common
 
 
 run:
-	MALLOC_CHECK_=1 ./fsser -d auto -A0:fs=../sample -A1:fs=../tools .
+	MALLOC_CHECK_=1 ./$(TARGET) -d auto -A0:fs=../sample -A1:fs=../tools .
 
 -include Makefile.local
 
@@ -81,17 +81,17 @@ daemon:
 
 exorcism:
 	@if [ `id -u` != "0" ] ; then echo "must be root!"; exit 1; fi;
-	service fsser stop
+	service $(TARGET) stop
 	@if $$(command -v chkconfig > /dev/null ) ; then       \
-	   chkconfig --del fsser                              ;\
-	   rm -f /etc/init.d/fsser $(PREFIX)/$(BINDIR)/fsserd ;\
+	   chkconfig --del $(TARGET)                              ;\
+	   rm -f /etc/init.d/$(TARGET) $(PREFIX)/$(BINDIR)/$(TARGET) ;\
 	   systemctl daemon-reload                            ;\
 	else                                                   \
-	   rm -f /etc/init.d/fsser $(PREFIX)/$(BINDIR)/fsserd ;\
-	   update-rc.d fsser remove                           ;\
+	   rm -f /etc/init.d/$(TARGET) $(PREFIX)/$(BINDIR)/$(TARGET) ;\
+	   update-rc.d $(TARGET) remove                           ;\
 	fi
 	@echo "Personal files preserved:"
-	@echo "- /etc/default/fsser"
-	@echo "- /var/log/fsser"
+	@echo "- /etc/default/$(TARGET)"
+	@echo "- /var/log/$(TARGET)"
 
-.PHONY: all install uninstall run dmg fsser daemon exorcism
+.PHONY: all install uninstall run dmg $(TARGET) daemon exorcism

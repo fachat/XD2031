@@ -173,6 +173,24 @@ int wrp = 0;
 int rdp = 0;
 
 /*
+ * same as write(2) but ensures the byte is written
+ */
+ssize_t write_byte(int fd, const void *data, size_t count) {
+	int n;
+	while (count > 0) {
+		while ((n = write(fd, data, count)) < 0) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+			   	log_error("testrunner: write error %d (%s)\n",
+               				errno,strerror(errno));
+              			return -1;
+			}
+		}
+		count -= n;
+	}
+	return n;
+}
+
+/*
  * return 0 on EOF, and 1 on successful read, the data is stored 
  * in the address pointed to by *data. A return of -1 is another error.
  */
@@ -201,7 +219,7 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 
 	outcmd = S488_REQ;
 	do {
-		n = write(fd, &outcmd, 1);
+		n = write_byte(fd, &outcmd, 1);
 		
 		n = read_byte(fd, &incmd);
 		if (n <= 0) {
@@ -225,11 +243,11 @@ int read_packet(int fd, char *outbuf, int buflen, int *outeof) {
 			outcmd = S488_REQ;
 		}
 
-	} while((wrp < buflen) && (!eof));
+	} while((wrp < buflen) && (!eof) && (!tout));
 
 	if (n > 0) {
 		outcmd = S488_ACK;
-		n = write(fd, &outcmd, 1);
+		n = write_byte(fd, &outcmd, 1);
 	}
 		
 	*outeof = eof;
@@ -354,12 +372,12 @@ int execute_script(int sockfd, registry_t *script) {
 					// TODO explicit EOF handling
 					cmd |= S488_EOF;
 				}
-				size = write(sockfd, &cmd, 1);
+				size = write_byte(sockfd, &cmd, 1);
 				if (size < 0) {
 					log_errno("Error writing to socket at line %d\n", lineno);
 					err = -1;
 				}
-				size = write(sockfd, line->buffer+i, 1);
+				size = write_byte(sockfd, line->buffer+i, 1);
 				if (size < 0) {
 					log_errno("Error writing to socket at line %d\n", lineno);
 					err = -1;

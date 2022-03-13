@@ -36,6 +36,7 @@
 #include "charconvert.h"
 #include "types.h"
 #include "mem.h"
+#include "name.h"
 #include "in_device.h"
 #include "provider.h"
 #include "wireformat.h"
@@ -43,8 +44,15 @@
 #include "list.h"
 #include "cmd.h"
 #include "serial.h"
+#include "cmdnames.h"
 
-#define	MAX_BUFFER_SIZE			64
+#define DEBUG_CMD
+#undef DEBUG_CMD_TERM
+#undef DEBUG_READ	/* low level reads from line data */
+#define DEBUG_WRITE
+
+
+#define	MAX_OPT_BUFFER_SIZE		16
 #define	RET_BUFFER_SIZE			200
 
 
@@ -54,6 +62,9 @@ static void in_device_constructor(const type_t *t, void *o) {
 
 	d->wrp = 0;
 	d->rdp = 0;
+
+	// inits with drive 0
+	drive_and_name_init(&d->lastdrv);
 
 	d->charset = cconv_getcharset(CHARSET_ASCII_NAME);
 }
@@ -92,7 +103,7 @@ static void dev_sync(serial_port_t readfd, serial_port_t writefd) {
 	do {
 		n = os_read(readfd, syncbuf, 1);
 #ifdef DEBUG_READ
-	        log_debug("sync read %d bytes: ",n);
+	        log_debug("sync read %d bytes: \n",n);
 		log_hexdump(syncbuf, n, 0);
 #endif
 		if (n < 0) {
@@ -115,7 +126,7 @@ static void dev_write_packet(serial_port_t fd, char *retbuf) {
 	if (e < 0) {
 		log_error("Error on write: %d\n", errno);
 	}
-#if defined(DEBUG_WRITE) || defined(DEBUG_CMD)
+#if defined(DEBUG_WRITE) //|| defined(DEBUG_CMD)
 	log_debug("write %02x %02x %02x (%s):\n", 255&retbuf[0], 255&retbuf[1],
 			255&retbuf[2], command_to_name(255&retbuf[FSP_CMD]) );
 	log_hexdump(retbuf + 3, retbuf[FSP_LEN] - 3, 0);
@@ -132,13 +143,13 @@ static void cmd_sendxcmd(serial_port_t writefd, char buf[]) {
 		log_debug("Option %d: %s\n", i, opt);
 
 		int len = strlen(opt);
-		if (len > MAX_BUFFER_SIZE - FSP_DATA) {
+		if (len > MAX_OPT_BUFFER_SIZE - FSP_DATA) {
 			log_error("Option is too long to be sent: '%s'\n", opt);
 		} else {
 			buf[FSP_CMD] = FS_SETOPT;
 			buf[FSP_LEN] = FSP_DATA + len + 1;
 			buf[FSP_FD] = FSFD_SETOPT;
-			strncpy(buf+FSP_DATA, opt, MAX_BUFFER_SIZE);
+			strncpy(buf+FSP_DATA, opt, MAX_OPT_BUFFER_SIZE);
 			buf[FSP_DATA + len] = 0;
 
 			// TODO: error handling
@@ -171,7 +182,6 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 	unsigned int len;
 	char retbuf[RET_BUFFER_SIZE];
 	int rv;
-	char *name2;
 
 	cmd = buf[FSP_CMD];		// 0
 	len = 255 & buf[FSP_LEN];	// 1
@@ -223,11 +233,7 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 
 	int readflag = 0;
 	int sendreply = 1;
-	const char *name = buf+FSP_DATA+1;
-	int drive = buf[FSP_DATA]&255;
 	int outlen = 0;
-	int namelen = len - FSP_DATA;
-
 
 	// dispatch to the correct cmd_* routine.
 	// may someday be replaced by an array lookup when the routine calls have been unified...
@@ -238,18 +244,18 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 	case FS_OPEN_WR:
 	case FS_OPEN_OW:
 	case FS_OPEN_RW:
-		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, retbuf+FSP_DATA+1, &outlen, cmd);
+		rv = cmd_open_file(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, &dt->lastdrv, retbuf+FSP_DATA+1, &outlen, cmd);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1 + outlen;
 		break;
 	case FS_OPEN_DR:
-		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset);
+		rv = cmd_open_dir(tfd, buf+FSP_DATA, len-FSP_DATA, dt->charset, &dt->lastdrv);
 		retbuf[FSP_DATA] = rv;
 		retbuf[FSP_LEN] = FSP_DATA + 1;
 		break;
 	case FS_READ:
 		// note that on the server side, we do not need to handle FS_DATA*, as we only send those
-		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag, dt->charset);
+		rv = cmd_read(tfd, retbuf+FSP_DATA, &outlen, &readflag, dt->charset, &dt->lastdrv);
 		if (rv != CBM_ERROR_OK) {
 			retbuf[FSP_DATA] = rv;
 			retbuf[FSP_LEN] = FSP_DATA + 1;
@@ -329,14 +335,8 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 		// and the path is interpreted as relative to an existing endpoint.
 		// If the provider name is a real name, the path is absolute.
 		//
-		name2 = strchr(name, 0) + 2; // skips the drive number of the name2
-		if ((name2 - name) > namelen) {
-			// name2 is behind packet - so it's invalid
-			// name2 being NULL means unassign
-			name2 = NULL;
-		}
-		log_info("ASSIGN(%d -> %s = %s)\n", drive, name, name2);
-		rv = provider_assign(drive, name, name2, dt->charset, 0);
+		rv = cmd_assign_packet(buf+FSP_DATA, len-FSP_DATA, dt->charset);
+		//rv = provider_assign(drive, name, name2, dt->charset, 0);
 		if (rv != 0) {
 			log_rv(rv);
 		}
@@ -374,6 +374,9 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
       		break;
 	default:
 		log_error("Received unknown command: %d in a %d byte packet\n", cmd, len);
+		int n = buf[FSP_LEN];
+		log_info("cmd %s :%d bytes @%p : \n", command_to_name(255&buf[FSP_CMD]), n, buf);
+		log_hexdump(buf, n, 0);
 	}
 
 	if (sendreply) {
@@ -432,6 +435,7 @@ int in_device_loop(in_device_t *tp) {
               }
 #endif
 
+#if 0	// this only works for the actual serial device
 	      if(!n) {
 		if(!device_still_present()) {
 			log_error("Device lost.\n");
@@ -439,6 +443,7 @@ int in_device_loop(in_device_t *tp) {
                 }
 		return 1;
 	      }
+#endif
 
               if(n < 0) {
 

@@ -20,6 +20,7 @@
 */
 
 #include <ctype.h>
+#include <string.h>
 
 #include "cmd.h"
 #include "cmd2.h"
@@ -109,18 +110,22 @@ int8_t command_execute(uint8_t channel_no, bus_t *bus, errormsg_t *errormsg,
 				return file_submit_call(channel_no, FS_ASSIGN, command->command_buffer, errormsg, rtconf, &nameinfo, callback, 1);
 			}
 			break;
+#ifdef HAS_BUFFERS
 		case CMD_UX:
 			rv = cmd_user(bus, (char*) command->command_buffer, &err_trk, &err_sec, &err_drv);
 			break;
 		case CMD_BLOCK:
 			rv = cmd_block(bus, (char*) command->command_buffer, &err_trk, &err_sec, &err_drv);
 			break;
+#endif
 		case CMD_EXT:
 			rv = rtconfig_set(rtconf, (char*) command->command_buffer);
 			break;
+#ifdef HAS_BUFFERS
 		case CMD_POSITION:
 			rv = relfile_position(bus, (char*) nameinfo.trg.name, nameinfo.trg.namelen, errormsg);
 			break;
+#endif
 #ifdef HAS_RTC
 		case CMD_TIME:
 			rv = rtc_time( (char*) command->command_buffer, errormsg);

@@ -28,7 +28,7 @@ COMPAREFILES="rel2.d64"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=rel2.d64"
+SERVEROPTS="-v -A0:=fs:rel2.d64"
 
 #firmware options
 FWOPTS=-Xsock488:E=-

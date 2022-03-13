@@ -58,6 +58,11 @@
 #define	IEEE_INPUT_ATN		PIND
 #define	IEEE_PIN_ATN		PD3
 
+#define IEEE_DDR_SRQ		DDRC
+#define	IEEE_PORT_SRQ		PORTC
+#define	IEEE_INPUT_SRQ		PINC
+#define	IEEE_PIN_SRQ		PC3
+
 #define	IEEE_D_DDR		DDRA
 #define	IEEE_D_PORT		PORTA
 #define	IEEE_D_PIN		PINA
@@ -67,12 +72,9 @@
 
 /* interrupt init from sd2iec */
 
-#define IEEE_ATN_INT          PCINT3
-#define IEEE_PCINT            PCINT27
+#define IEEE_PCINT   		PCINT27
 
 //#define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
-
-#define HW_NAME			"XS-1541"
 
 // DATA and CLK use the same port
 #define IEC_DDR			DDRD

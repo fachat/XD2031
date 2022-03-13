@@ -35,10 +35,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/dir.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fnmatch.h>
 #include <string.h>
 
@@ -55,7 +57,7 @@ static char *serial_device_path = NULL;
 int device_open(char *device) {
 	int fdesc = open(device, O_RDWR | O_NOCTTY); // | O_NDELAY);
 	mem_free(serial_device_path);
-	serial_device_path = mem_alloc_str(device);
+	serial_device_path = mem_alloc_str2(device, "devicename");
 	return fdesc;
 }
 
@@ -126,7 +128,9 @@ int config_ser(int fd) {
         // Communication speed (simple version, using the predefined
         // constants)
 
-        if(cfsetispeed(&config, B115200) < 0 || cfsetospeed(&config, B115200) < 0) {
+//        if(cfsetispeed(&config, B115200) < 0 || cfsetospeed(&config, B115200) < 0) {
+        if(cfsetispeed(&config, B38400) < 0 || cfsetospeed(&config, B38400) < 0) {
+//        if(cfsetispeed(&config, B4800) < 0 || cfsetospeed(&config, B4800) < 0) {
 		log_error("Could not set required line speed!");
 		return -1;
         }
@@ -160,7 +164,7 @@ int guess_device(char** device) {
 		    (!strcmp("ttyAMA0", entry->d_name))) {
 			log_info("Serial device /dev/%s auto-detected\n", entry->d_name);
 			if (*device) {
-				fprintf(stderr, "Unable to decide which serial device it is. "
+				log_error("Unable to decide which serial device it is. "
 				                "Please pick one.\n");
 				exit(EXIT_RESPAWN_NEVER);
 			}
@@ -171,7 +175,7 @@ int guess_device(char** device) {
 	}
 	closedir(dirptr); // free ressources claimed by opendir
 	if(*device == NULL) {
-		fprintf(stderr, "Could not auto-detect device: none found\n");
+		log_error("Could not auto-detect device: none found\n");
 		return(EXIT_FAILURE);
 	}
 	return EXIT_SUCCESS;
@@ -222,7 +226,8 @@ int config_ser(serial_port_t h) {
 		return -1;
 	}
 
-	dcb.BaudRate = CBR_115200;
+	//dcb.BaudRate = CBR_115200;
+	dcb.BaudRate = CBR_76800;
 	dcb.ByteSize = 8;
 	dcb.StopBits = ONESTOPBIT;
 	dcb.Parity   = NOPARITY;
@@ -275,25 +280,4 @@ int device_still_present(void) {
 }
 #endif
 
-#if 0
-int main(void)
-{
-	char *devicename;
-	serial_port_t serial_port;
 
-	guess_device(&devicename);
-
-	serial_port = device_open(devicename);
-	if(os_open_failed(serial_port)) {
-		log_error("Unable to open serial device: %s\n", os_strerror(os_errno()));
-		exit(EXIT_FAILURE);
-	}
-	if(config_ser(serial_port)) {
-		log_error("Unable to configure serial port: %s\n", os_strerror(os_errno()));
-		exit(EXIT_RESPAWN_NEVER);
-	}
-	device_close(serial_port);
-
-	return 0;
-}
-#endif

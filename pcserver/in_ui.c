@@ -35,12 +35,10 @@
 
 #include <stdbool.h>
 #include <strings.h>
+#include <stdio.h>
 
 #include "provider.h"
-#include "dir.h"
-#include "list.h"
 #include "cmd.h"
-#include "errors.h"
 #include "cmdline.h"
 
 static int user_interface_enabled = true;
@@ -93,7 +91,6 @@ void disable_user_interface(void) {
 // reads stdin and returns true, if the main loop should abort
 int in_ui_loop(void) {
 
-	int err;
 	char buf[INBUF_SIZE + 1];
 
 	// are we enabled?

@@ -22,7 +22,7 @@
 #define OPENPARS_H
 
 // for openpars_t
-#include "name.h"
+//#include "name.h"
 
 // ************
 // process options from the optional OPEN parameter string

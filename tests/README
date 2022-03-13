@@ -1,0 +1,30 @@
+
+This folder contains misc test cases.
+
+
+1) reldump.c
+	This allows dumping REL files. TO use it:
+
+		1) make reldump
+		2) run "reldump <diskimagename> <filename>" to dump "filename" from "diskimagename"
+
+2) dump.lst
+	This is a small test case that saves an 8k ROM dump to a file using BASIC PRINT# with a 
+	single character in each print.
+	This exposes the case where LISTEN timing is not good enough, where character have been 
+	lost.
+	To use this test:
+
+		1) make dump
+		2) load the resulting "dump" into the PET and run it
+		3) check the resulting "test" 8k ROM dump against the expected size and value
+
+3) seq.lst
+	A simplified version of dump - it just writes out the bytes 00, 01, 02, .. one by one,
+	until it has written a full 8k. This makes it easier to find missing bytes in a hexdump
+
+4) i180_mkrel.lst, i180_lsrel.lst
+	Creating a REL file with record len #64 by writing records with PRINT# (mkrel)
+	and reading the records back (lsrel).
+	Executing on a real SFD1001 actually looses bytes at the beginning of every fourth record
+

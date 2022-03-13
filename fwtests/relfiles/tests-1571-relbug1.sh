@@ -28,7 +28,7 @@ COMPAREFILES="relbug1.d71"
 
 # server options
 #SERVEROPTS="-v -A0:fs=rel1.d64"
-SERVEROPTS="-v -A0:fs=relbug1.d71"
+SERVEROPTS="-v -A0:=fs:relbug1.d71"
 
 #firmware options
 FWOPTS=-Xsock488:E=-

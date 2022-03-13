@@ -42,6 +42,7 @@
 #include "petscii.h"
 #include "imgtool.h"
 #include "relfiles.h"
+#include "charconvert.h"
 #include "wildcard.h"
 
 

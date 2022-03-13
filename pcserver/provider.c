@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Commodore filesystem server
+    Copyright (C) 2012,2018 Andre Fachat
 
     Derived from:
     OS/A65 Version 1.3.12
@@ -25,20 +25,13 @@
 ****************************************************************************/
 
 #include <stdio.h>
-#include <ctype.h>
 #include <string.h>
 
 #include "log.h"
+#include "hashmap.h"
 #include "provider.h"
-#include "errors.h"
-#include "wireformat.h"
-#include "types.h"
-#include "registry.h"
-#include "mem.h"
-#include "handler.h"
-
-#include "charconvert.h"
-
+#include "drives.h"
+#include "resolver.h"
 
 // TODO: this is ... awkward
 extern provider_t http_provider;
@@ -70,6 +63,7 @@ static type_t providers_type = {
 };
 
 static registry_t providers;
+static hash_t *provider_map;
 
 int provider_register(provider_t *provider) {
 
@@ -82,97 +76,18 @@ int provider_register(provider_t *provider) {
 		p->native_cset_idx = -1;
 	}
 
+	hash_put(provider_map, provider);
 	reg_append(&providers, p);
 
 	return 0;
 }
 
-// return the index of the given provider in the providers[] table
-#if 0
-static int provider_index(provider_t *prov) {
-
-	for (int i = 0; ; i++) {
-		providers_t *p = reg_get(&providers, i);
-		if (p == NULL) {
-			return -1;
-		}
-		if (p->provider == prov) {
-			return i;
-		}
-	}
-	return -1;
-}
-#endif
-
-// -----------------------------------------------------------------
-
-typedef struct {
-        int             drive;
-        endpoint_t      *ep;
-	const char	*cdpath;
-} ept_t;
-
-static void endpoints_init(const type_t *type, void *obj) {
-	(void)type; // silence unused warning
-
-	ept_t *p = (ept_t*) obj;
-
-	p->drive = -1;
-	p->ep = NULL;
-	p->cdpath = NULL;	
+provider_t *provider_find(const char *name) {
+	return (provider_t*) hash_get(provider_map, name);
 }
 
-static type_t endpoints_type = {
-	"endpoints",
-	sizeof(ept_t),
-	endpoints_init
-};
-
-static registry_t endpoints;
-
-static int unassign(int drive) {
-	int rv = CBM_ERROR_DRIVE_NOT_READY;
-	ept_t *ept = NULL;
-        for(int i=0;(ept = reg_get(&endpoints, i)) != NULL;i++) {
-               	if (ept->drive == drive) {
-			// remove from list
-			reg_remove(&endpoints, ept);
-			// clean up
-			provider_t *prevprov = ept->ep->ptype;
-			prevprov->freeep(ept->ep);
-			if (ept->cdpath != NULL) {
-				mem_free(ept->cdpath);
-			}
-			// free it
-			mem_free(ept);
-			ept = NULL;
-			rv = CBM_ERROR_OK;
-			break;
-               	}
-       	}
-	return rv;
-}
-
-
-//------------------------------------------------------------------------------------
-// wrap a given (raw) file into a container file_t (i.e. a directory), when
-// it can be identified by one of the providers - like a d64 file, or a ZIP file
-file_t *provider_wrap(file_t *file) {
-
-	for (int i = 0; ; i++) {
-		providers_t *p = reg_get(&providers, i);
-		if (p == NULL) {
-			return NULL;
-		}
-		if (p->provider->wrap != NULL) {
-			file_t *outfile = NULL;
-			int err = p->provider->wrap(file, &outfile);
-			if (err == CBM_ERROR_OK) {
-				return outfile;
-			}
-		}
-	}
-	return NULL;
+static const char* name_from_provider(const void *entry) {
+	return ((provider_t*)entry)->name;
 }
 
 
@@ -181,164 +96,95 @@ file_t *provider_wrap(file_t *file) {
  * drive is the endpoint number to assign the new provider to.
  * name denotes the actual provider for the given drive/endpoint
  * 
- * of the "A0:fs=foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
+ * of the "A0:=fs:foo/bar" the "0" becomes the drive, "fs" becomes the wirename,
  * and "foo/bar" becomes the assign_to.
  */
-int provider_assign(int drive, const char *wirename, const char *assign_to, charset_t cset, int from_cmdline) {
+int provider_assign(int drive, drive_and_name_t *to_addr, charset_t cset, int from_cmdline) {
 
 	int err = CBM_ERROR_FAULT;
 
-	log_info("Assign provider '%s' with '%s' to drive %d\n", wirename, assign_to, drive);
+	log_info("Assign provider '%s' with '%s' to drive %d\n", to_addr->drivename, to_addr->name, drive);
 
-	endpoint_t *parent = NULL;
-	provider_t *provider = NULL;
+	endpoint_t *target = NULL;
 	endpoint_t *newep = NULL;
 
-	if (assign_to == NULL) {
-		return unassign(drive);
+	if (to_addr->name == NULL || strlen((char*)to_addr->name) == 0) {
+		drive_unassign(drive);
+		return CBM_ERROR_OK;
 	}
 
-	int len = strlen(wirename);
+	if (to_addr->drive == NAMEINFO_UNUSED_DRIVE) { // || to_addr->drivename == NULL || strlen(to_addr->drivename) == 0) {
+		to_addr->drivename = (uint8_t*) "fs";
+		to_addr->drive = NAMEINFO_UNDEF_DRIVE;
+	}
 
-	if (len == 0) {
-		char *assign_to_rooted = NULL;
-		// we don't actually have a provider name - use the default provider
-		parent = fs_root_endpoint(assign_to, &assign_to_rooted, from_cmdline);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got default provider %p ('%s')\n", provider, provider->name);
+	err = resolve_endpoint(to_addr, cset, from_cmdline, &target);
+	if (err == CBM_ERROR_OK) {
 
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		}
-		if (assign_to_rooted != NULL) {
-			mem_free(assign_to_rooted);
-		}
-		if (newep != NULL) {
-			if (from_cmdline) {
-				newep->is_temporary = 0;
-			}
-		}
-		// if not found, something's clearly wrong, as the default provider "fs"
-		// should be there. So return FAULT...
-	} else
-	if ((isdigit(wirename[0])) && (len == 1)) {
-		// check if it is a drive
-		// (works as long as isdigit() is the same for all available char sets)
-		// we have a drive number
-		int drv = wirename[0] & 0x0f;
-		char drvname[2];
-		drvname[0] = drv;
-		drvname[1] = 0;
-		parent = provider_lookup(drvname, len, 0, NULL, NAMEINFO_UNDEF_DRIVE);
-		if (parent != NULL) {
-			provider = parent->ptype;
-			log_debug("Got drive number: %d, with provider %p\n", drv, provider);
+	    if (strlen((char*)to_addr->name) > 0) {
+		file_t *parentdir = endpoint_root(target); // target->ptype->root(target);
 
-			err = handler_resolve_assign(parent, &newep, assign_to, cset);
-	                if (err != CBM_ERROR_OK || newep == NULL) {
-        	                log_error("resolve path returned err=%d, p=%p\n", err, newep);
-                	        return err;
-                	}
-		} else {
-			// did not find drive number on lookup
-			err = CBM_ERROR_DRIVE_NOT_READY;
-		}
-	} else {
+		err = resolve_dir((const char**)&to_addr->name, cset, &parentdir);
+		if (err == CBM_ERROR_OK) {
 
-		char *ascname = conv_name_alloc(wirename, cset, CHARSET_ASCII);
+			file_t *dir = NULL;
 
-		log_debug("Provider=%p\n", provider);
+			openpars_t pars;
+			openpars_init_options(&pars);
+			// got the enclosing directory, now get the dir itself
+			err = resolve_open(parentdir, to_addr, cset, &pars, FS_OPEN_DR, &dir);
 
-		if (provider == NULL) {
-			// check each of the providers in turn
-			for (int i = 0; ; i++) {
-				providers_t *p = reg_get(&providers, i);
-				if (p != NULL) {
-					log_debug("Compare to provider '%s'\n", p->provider->name);
-					const char *pname = p->provider->name;
-					if (!strcmp(pname, ascname)) {
-						// got one
-						provider = p->provider;
-						if (p->provider->newep != NULL) {
-							log_debug("Found provider named '%s'\n", 
-									provider->name);
-						} else {
-							log_warn("Ignoring assign to a non-root "
-									"provider '%s'\n", provider->name);
-						}
-						break;
-					}
-				} else {
-					break;
+			if (err == CBM_ERROR_OK) {
+
+				err = dir->endpoint->ptype->to_endpoint(dir, &newep);
+
+				if (err != CBM_ERROR_OK) {
+					dir->handler->fclose(dir, NULL, NULL);
 				}
-			}
-		}
-
-		mem_free(ascname);
-	
-		if (provider != NULL) {
-			if (provider->newep == NULL) {
-				log_error("Tried to assign an indirect provider %s directly\n",wirename);
-				return CBM_ERROR_FAULT;
-			}
-
-			// get new endpoint
-			newep = provider->newep(parent, assign_to, cset, from_cmdline);
-			if (newep) {
-				newep->is_temporary = 0;
 			} else {
-				return CBM_ERROR_FAULT;
+				parentdir->handler->fclose(parentdir, NULL, NULL);
 			}
-		}
+		} 
+		
+		provider_cleanup(target);
+	    } else {
+		// make permanent
+		target->is_temporary = 0;
+		newep = target;
+	    }
 	}
 
 	if (newep != NULL) {
 		// check if the drive is already in use and free it if necessary
 		// NOTE: a Map construct would be nice here...
 
-		unassign(drive);
+		drive_unassign(drive);
 
-		newep->is_assigned++;
-
-		// build endpoint list entry
-		ept_t *ept = mem_alloc(&endpoints_type);
-		ept->drive = drive;
-		ept->ep = newep;
-		ept->cdpath = mem_alloc_str("/");
-
-		// register new endpoint
-		reg_append(&endpoints, ept);
+		drive_assign(drive, newep);
 
 		return CBM_ERROR_OK;
 	}
-	return CBM_ERROR_FAULT;
+
+	return err;
 }
 
 void provider_cleanup(endpoint_t *ep) {
-	if (ep->is_temporary) {
+	if (ep->is_temporary && !ep->is_assigned) {
 		log_debug("Freeing temporary endpoint %p\n", ep);
 		provider_t *prevprov = ep->ptype;
 		prevprov->freeep(ep);
 	}
 }
 
-static void provider_free_ep(registry_t *reg, void *entry) {
-	(void) reg;
-	mem_free(entry);
-}
-
 static void provider_free_entry(registry_t *reg, void *entry) {
+	(void)reg;
 	((providers_t*)entry)->provider->free();
 	mem_free(entry);
 }
 
 void provider_free() {
 
-	reg_free(&endpoints, provider_free_ep);
+	drives_free();
 
 	reg_free(&providers, provider_free_entry);
 }
@@ -347,7 +193,9 @@ void provider_init() {
 
 	reg_init(&providers, "providers", 10);
 
-	reg_init(&endpoints, "endpoints", 10);
+	provider_map = hash_init_stringkey_nocase(10, 7, name_from_provider);
+
+	drives_init();
 
         // manually handle the initial provider
         fs_provider.init();
@@ -367,154 +215,80 @@ void provider_init() {
         di_provider.init();
 }
 
-/**
- * provider_lookup uses the XD2031 name format, i.e. first byte is drive
- * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
- * It then identifies the drive, puts the CD path before the name if it
- * is not absolute, and allocates the new name that it returns
- */
-endpoint_t *provider_lookup(const char *inname, int namelen, charset_t cset, const char **outname, int default_drive) {
 
-	int drive = inname[0];
-	inname++;
-	namelen--;
+int provider_chdir(int drive, drive_and_name_t *to_addr, charset_t cset) {
+	int err = CBM_ERROR_FAULT;
 
-	if (namelen <= 0) {
-		inname = NULL;
+	log_info("Chdir provider '%s' with '%s' to drive %d\n", to_addr->drivename, to_addr->name, drive);
+
+	endpoint_t *target = NULL;
+	endpoint_t *newep = NULL;
+
+	if (to_addr->name == NULL || strlen((char*)to_addr->name) == 0) {
+		drive_unassign(drive);
+		return CBM_ERROR_SYNTAX_INVAL;
 	}
 
-	if (drive == NAMEINFO_LAST_DRIVE) {
-		drive = default_drive;
+	if (to_addr->drive == NAMEINFO_UNUSED_DRIVE) {
+		// this is actually ok
+		//to_addr->drivename = (uint8_t*) "fs";
+		//to_addr->drive = NAMEINFO_UNDEF_DRIVE;
 	}
 
-	if (drive == NAMEINFO_UNDEF_DRIVE) {
-		if (inname == NULL || inname[0] == 0) {
-			// no name specified, so return NULL (no provider found)
-			return NULL;
-		}
-		// the drive is not specified by number, but by provider name
-		char *p = strchr(inname, ':');
-		if (p != NULL) {
-			// found provider separator
+	//err = resolve_endpoint(to_addr, cset, from_cmdline, &target);
+	drive_t *drv = drive_find(drive);
 
-			log_debug("Trying to find provider for: %s\n", inname);
+	if (drv != NULL) {
 
-			const char *provname = conv_name_alloc(inname, cset, CHARSET_ASCII);
-			unsigned int l = p-(inname);
-			p++; // first char after ':'
-			for (int i = 0; ; i++) {
-				providers_t *pp = reg_get(&providers, i);
-				if (pp == NULL) {
-					break;
+	    target = drv->ep;
+
+	    if (strlen((char*)to_addr->name) > 0) {
+		file_t *parentdir = endpoint_root(target); // target->ptype->root(target);
+
+		err = resolve_dir((const char**)&to_addr->name, cset, &parentdir);
+		if (err == CBM_ERROR_OK) {
+
+			file_t *dir = NULL;
+
+			openpars_t pars;
+			openpars_init_options(&pars);
+			// got the enclosing directory, now get the dir itself
+			err = resolve_open(parentdir, to_addr, cset, &pars, FS_OPEN_DR, &dir);
+
+			if (err == CBM_ERROR_OK) {
+
+				err = dir->endpoint->ptype->to_endpoint(dir, &newep);
+
+				if (err != CBM_ERROR_OK) {
+					dir->handler->fclose(dir, NULL, NULL);
 				}
-				provider_t *prov = pp->provider;
-				if (prov != NULL && (strlen(prov->name) == l)
-					&& (strncmp(prov->name, provname, l) == 0)) {
-					// we got a provider, but no endpoint yet
-
-					log_debug("Found provider '%s', trying to create temporary endpoint for '%s'\n", 
-						prov->name, p);
-	
-					if (prov->tempep != NULL) {
-						endpoint_t *ep = prov->tempep(&p, cset);
-						if (ep != NULL) {
-							if (outname != NULL) {
-								*outname = mem_alloc_str(p);
-							}
-							log_debug("Created temporary endpoint %p\n", ep);
-							ep->is_temporary = 1;
-						}
-						mem_free(provname);
-						return ep;
-					} else {
-						log_error("Provider '%s' does not support temporary drives\n",
-							prov->name);
-					}
-					mem_free(provname);
-					return NULL;
-				}
+			} else {
+				parentdir->handler->fclose(parentdir, NULL, NULL);
 			}
-			mem_free(provname);
-			log_error("Did not find provider for %s\n", inname);
-			return NULL;
-		} else {
-			log_info("No provider name given for undef'd drive '%s', trying default %d\n", 
-									inname, default_drive);
-			if (default_drive == NAMEINFO_UNDEF_DRIVE) {
-				log_error("No provider found\n");
-				return NULL;
-			}
-			// continue checking the assigned list for this drive
-			drive = default_drive;
-		}
+		} 
+		
+		provider_cleanup(target);
+	    } else {
+		// make permanent
+		target->is_temporary = 0;
+		newep = target;
+	    }
 	}
 
-	log_debug("Trying to resolve drive %d with name '%s'\n", drive, inname);
+	if (newep != NULL) {
+		// check if the drive is already in use and free it if necessary
+		// NOTE: a Map construct would be nice here...
 
-	ept_t *ept = NULL;
-	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
-                if (ept->drive == drive) {
-			if (outname != NULL) {
-				if (inname != NULL) {
-					*outname = malloc_path(ept->cdpath, inname);
-				} else {
-					*outname = NULL;
-				}
-			}
-                        return ept->ep;
-                }
-        }
-	log_warn("Drive %d is not assigned!\n", drive);
+		drive_unassign(drive);
 
-        return NULL;
+		drive_assign(drive, newep);
+
+		return CBM_ERROR_OK;
+	}
+
+	return err;
 }
 
-
-/**
- * provider_chdir uses the XD2031 name format, i.e. first byte is drive
- * (or NAMEINFO_UNDEF_DRIVE), rest until the zero-byte is file name.
- * It then identifies the drive, puts the CD path before the name if it
- * is not absolute, and allocates the new name that it returns
- */
-int provider_chdir(const char *inname, int namelen, charset_t cset) {
-
-	int drive = inname[0];
-	inname++;
-	namelen--;
-
-	if (namelen <= 0) {
-		inname = NULL;
-	}
-
-	if (drive == NAMEINFO_UNDEF_DRIVE) {
-		return CBM_ERROR_FAULT;
-	}
-
-	log_debug("Trying to resolve drive %d with path '%s'\n", drive, inname);
-
-	ept_t *ept = NULL;
-	for(int i=0; (ept = reg_get(&endpoints, i)) != NULL;i++) {
-                if (ept->drive == drive) {
-			break;	// found it
-                }
-        }
-
-	if (ept == NULL) {
-		// drive number not found
-		return CBM_ERROR_DRIVE_NOT_READY;
-	}
-
-	const char *newpath = malloc_path(ept->cdpath, inname);
-	const char *path = NULL;
-
-	int rv = handler_resolve_path(ept->ep, newpath, cset, &path);
-
-	if (rv == CBM_ERROR_OK) {
-		mem_free(ept->cdpath);
-		ept->cdpath = path;
-	}
-	return rv;
-}
 
 /*
  * dump the in-memory structures (for analysis / debug)
@@ -524,20 +298,8 @@ void provider_dump() {
 	const char *prefix = dump_indent(indent);
 	const char *eppref = dump_indent(indent+1);
 
-	for (int i = 0; ; i++) {
-		ept_t *ept = reg_get(&endpoints, i);
-		if (ept != NULL) {
-			log_debug("%s// Dumping endpoint for drive %d\n", prefix, ept->drive);
-			log_debug("%s{\n", prefix);
-			log_debug("%sdrive=%d;\n", eppref, ept->drive);
-			log_debug("%scdpath='%s';\n", eppref, ept->cdpath);
-			log_debug("%sendpoint=%p ('%s');\n", eppref, ept->ep, 
-								ept->ep->ptype->name);
-			log_debug("%s}\n", prefix);
-		} else {
-			break;
-		}
-	}
+	drives_dump(prefix, eppref);
+
 	for (int i = 0; ; i++) {
 		providers_t *p = reg_get(&providers, i);
 		if (p != NULL) {

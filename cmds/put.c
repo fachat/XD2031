@@ -85,12 +85,19 @@ endopts:
 	uint8_t *buf = mem_alloc_c(BUFLEN+1, "msg buffer");
 	uint8_t pkgfd = 0;
 	nameinfo_t ninfo;
+	nameinfo_init(&ninfo);
 
         // note that parse_filename parses in-place, nameinfo then points to name buffer
         strncpy((char*)name, trgname, BUFLEN);
         name[BUFLEN] = 0;
 
         parse_filename(name, strlen((const char*)name), BUFLEN, &ninfo, PARSEHINT_LOAD);
+
+	if (ninfo.trg.name == NULL || strlen((char*)ninfo.trg.name) == 0) {
+		// replace target name with first source name (maybe addressed as drive: only)
+		ninfo.trg.name = (uint8_t*)argv[p];
+		ninfo.trg.namelen = strlen(argv[p]);
+	}
 
         if (send_longcmd(sockfd, force ? FS_OPEN_OW : FS_OPEN_WR, pkgfd, &ninfo)) {
 	        if ((recv_packet(sockfd, buf, 256) > 0)
@@ -148,6 +155,7 @@ endopts:
 			    }
 			} else {
 				log_error("Error opening file: %d\n", buf[FSP_DATA]);
+				rv = buf[FSP_DATA];
 			}
 		} else {
 			log_error("Problem receiving reply to open\n");

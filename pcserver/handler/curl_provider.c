@@ -52,8 +52,6 @@
 #include "dir.h"
 
 
-#undef DEBUG_CURL
-
 #define	MAX_BUFFER_SIZE	64
 
 #define	MAX_PROTO_SIZE	11	// max length of "<proto>://", like "webdavs://", plus one "/" path separator
@@ -70,7 +68,7 @@ static int curl_init_done = 0;
 // list of endpoints
 static registry_t endpoints;
 
-static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen);
+static int curl_fclose(file_t *fp, char *outbuf, int *outlen);
 
 typedef enum {
 	PROTO_FTP,
@@ -82,12 +80,15 @@ typedef enum {
 
 struct curl_endpoint_t;
 
-typedef struct File {
+typedef struct curl_file_s curl_file_t;
+
+struct curl_file_s {
 	file_t	file;			// embedded
 	int	chan;			// channel
 	CURL 	*session;		// curl session info
 	CURLM 	*multi;			// curl session info
-	int	(*read_converter)(struct curl_endpoint_t *cep, struct File *fp, char *retbuf, int len, int *eof);
+	char 	*path;			// path to current file
+	int	(*read_converter)(struct curl_endpoint_t *cep, curl_file_t *fp, char *retbuf, int len, int *eof);
 
 	char	*wrbuffer;		// write transfer buffer (for callback) - malloc'd
 	int	wrbuflen;		// write transfer buffer length (for callback)
@@ -99,12 +100,12 @@ typedef struct File {
 	int	bufrp;			// buffer read pointer
 	// directory read state
 	int	read_state;		// data for read_converter / read_file
-} File;
+};
 
 
 static void file_init(const type_t *t, void *obj) {
         (void) t;       // silence unused warning
-        File *fp = (File*) obj;
+        curl_file_t *fp = (curl_file_t*) obj;
 
         //log_debug("initializing fp=%p (used to be chan %d)\n", fp, fp == NULL ? -1 : fp->chan);
 
@@ -127,15 +128,18 @@ static void file_init(const type_t *t, void *obj) {
 
 	fp->read_converter = NULL;
 	fp->read_state = 0;
+
+	fp->path = NULL;
 }
 
 static type_t file_type = {
         "curl_file",
-        sizeof(File),
+        sizeof(curl_file_t),
         file_init
 };
 
 
+static int open_dr(curl_file_t *file, openpars_t *pars);
 
 
 //#define	min(a,b)	(((a)<(b))?(a):(b))
@@ -178,9 +182,37 @@ static type_t endpoint_type = {
         endpoint_init
 };
 
+typedef struct {
+	direntry_t	de;
+} curl_dirent_t;
+
+static void curl_dirent_init(const type_t *t, void *obj) {
+
+	(void) t;
+
+	curl_dirent_t *de = (curl_dirent_t*)obj;
+
+	de->de.handler = &curl_file_handler;
+	de->de.parent = NULL;
+	de->de.size = 0;
+	de->de.moddate = 0;
+	de->de.mode = FS_DIR_MOD_FIL;
+	de->de.type = 0;
+	de->de.attr = 0;
+	de->de.name = NULL;
+	de->de.cset = CHARSET_ASCII;
+}
+
+static type_t curl_dirent_type = {
+        "curl_dirent",
+        sizeof(curl_dirent_t),
+	curl_dirent_init
+};
+
+
 static void curl_free_file(registry_t *reg, void *en) {
 	(void)reg;
-        ((file_t*)en)->handler->close((file_t*)en, 1, NULL, NULL);
+        ((file_t*)en)->handler->fclose((file_t*)en, NULL, NULL);
 }
 
 static void curl_free_ep(registry_t *reg, void *en) {
@@ -217,9 +249,15 @@ static curl_endpoint_t *new_endpoint(const char *path, charset_t cset) {
 
 	curl_endpoint_t *fsep = mem_alloc(&endpoint_type);
 
+
 	// separate host from path
 	// if hostend is NULL, then we only have the host
 	char *hostend=strchr(path, '/');
+	// remove leading "/"
+	while (hostend == path) {
+		path++;
+		hostend = strchr(path, '/');
+	}
 
 	fsep->host_buffer = conv_name_alloc(path, cset, CHARSET_ASCII);
 	char *p = strchr(fsep->host_buffer, '/');
@@ -235,17 +273,12 @@ static curl_endpoint_t *new_endpoint(const char *path, charset_t cset) {
 }
 
 
-static curl_endpoint_t *_new(const char *path, charset_t cset) {
-
-	curl_endpoint_t *fsep = new_endpoint(path, cset);
-
-	return fsep;
-}
-
 //-----------------------------------------------------
 // protocol specific endpoint handling
 
-static endpoint_t *ftp_temp(char **name, charset_t cset) {
+static endpoint_t *ftp_temp(char **name, charset_t cset, int priv) {
+
+	(void) priv;
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -255,7 +288,7 @@ static endpoint_t *ftp_temp(char **name, charset_t cset) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name, cset);
+	curl_endpoint_t *fsep = new_endpoint(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
@@ -271,7 +304,9 @@ static endpoint_t *ftp_temp(char **name, charset_t cset) {
 	return (endpoint_t*) fsep;
 }
 
-static endpoint_t *http_temp(char **name, charset_t cset) {
+static endpoint_t *http_temp(char **name, charset_t cset, int priv) {
+
+	(void) priv;
 
 	log_debug("trying to create temporary drive for '%s'\n", *name);
 
@@ -281,43 +316,13 @@ static endpoint_t *http_temp(char **name, charset_t cset) {
 		*end = 0;
 	}
 
-	curl_endpoint_t *fsep = _new(*name, cset);
+	curl_endpoint_t *fsep = new_endpoint(*name, cset);
 
 	if (end == NULL) {
 		*name = (*name)+strlen(*name);
 	} else {
 		*name = end+1;	// filename part
 	}
-
-	// not sure if this is needed...
-	fsep->protocol = PROTO_HTTP;
-
-	fsep->base.ptype = &http_provider;
-	
-	return (endpoint_t*) fsep;
-}
-
-static endpoint_t *ftp_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
-
-	(void) parent; // silence warning unused parameter
-        (void) from_cmdline;    // silence unused parameter warning
-
-	curl_endpoint_t *fsep = _new(path, cset);
-
-	// not sure if this is needed...
-	fsep->protocol = PROTO_FTP;
-
-	fsep->base.ptype = &ftp_provider;
-	
-	return (endpoint_t*) fsep;
-}
-
-static endpoint_t *http_new(endpoint_t *parent, const char *path, charset_t cset, int from_cmdline) {
-
-	(void) parent; // silence warning unused parameter
-        (void) from_cmdline;    // silence unused parameter warning
-
-	curl_endpoint_t *fsep = _new(path, cset);
 
 	// not sure if this is needed...
 	fsep->protocol = PROTO_HTTP;
@@ -336,7 +341,7 @@ static char* add_parent_path(char *buffer, file_t *file) {
 
 		//strcat(buffer, file->filename);
 
-		char *p = mem_alloc_str(file->filename);
+		char *p = mem_alloc_str2(file->filename, "curl_parent_path");
 		char *newbuf = malloc_path(buffer, p);
 		mem_free(p);
 		mem_free(buffer);
@@ -355,7 +360,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
                 return CBM_ERROR_FAULT;
         }
 
-        File *fp = (File*) file;
+        curl_file_t *fp = (curl_file_t*) file;
         curl_endpoint_t *parentep = (curl_endpoint_t*) file->endpoint;
 
         if (parentep == NULL) {
@@ -366,15 +371,15 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
         curl_endpoint_t *newep = mem_alloc(&endpoint_type);
 
 
-	newep->host_buffer = mem_alloc_str(parentep->host_buffer);
+	newep->host_buffer = mem_alloc_str2(parentep->host_buffer, "curl_dirname_to_endpoint");
 	if (parentep->path_buffer != NULL) {
-		newep->path_buffer = mem_alloc_str(parentep->path_buffer);
+		newep->path_buffer = mem_alloc_str2(parentep->path_buffer, "curl_to_endpoint_name");
 	}
 	
 	newep->path_buffer = add_parent_path(newep->path_buffer, file);
 
         // free resources
-        curl_close((file_t*)fp, 1, NULL, NULL);
+        curl_fclose((file_t*)fp, NULL, NULL);
 
         *outep = (endpoint_t*)newep;
         return CBM_ERROR_OK;
@@ -385,7 +390,7 @@ static int curl_to_endpoint(file_t *file, endpoint_t **outep) {
 //-----------------------------------------------------
 
 
-static void close_fd(File *fp) {
+static void close_fd(curl_file_t *fp) {
 
 	reg_remove(&fp->file.endpoint->files, fp);
 
@@ -401,12 +406,14 @@ static void close_fd(File *fp) {
 		}
 	}
 
+	mem_free(fp->file.filename);
+	mem_free(fp->path);
 	mem_free(fp);
 }
 
-static File *reserve_file(endpoint_t *ep) {
+static curl_file_t *reserve_file(endpoint_t *ep) {
 
-	File *file = mem_alloc(&file_type);
+	curl_file_t *file = mem_alloc(&file_type);
 
 	file->file.endpoint = ep;
 
@@ -448,16 +455,11 @@ void curl_pfree(endpoint_t *ep) {
 // commands as sent from the device
 
 // close a file descriptor
-static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
+static int curl_fclose(file_t *fp, char *outbuf, int *outlen) {
 	(void) outbuf;
 
-        close_fd((File*)fp);
+        close_fd((curl_file_t*)fp);
 
-        if (recurse) {
-                if (fp->parent != NULL) {
-                        fp->parent->handler->close(fp->parent, 1, NULL, NULL);
-                }
-        }
 	if (outlen != NULL) 
 		*outlen = 0;
 	return CBM_ERROR_OK;
@@ -465,7 +467,7 @@ static int curl_close(file_t *fp, int recurse, char *outbuf, int *outlen) {
 
 static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
-	File *fp = (File*) user;
+	curl_file_t *fp = (curl_file_t*) user;
 
 	fp->rdbufdatalen = 0;
 
@@ -498,7 +500,7 @@ printf("\n");
 	return inlen;
 }
 
-static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
+static CURLMcode pull_data(curl_endpoint_t *cep, curl_file_t *fp, int *eof) {
 	int running_handles = 0;
 	
 	*eof = 0;
@@ -546,7 +548,7 @@ static CURLMcode pull_data(curl_endpoint_t *cep, File *fp, int *eof) {
 	return rv;
 }
 
-static int reply_with_data(curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *eof) {
+static int reply_with_data(curl_endpoint_t *cep, curl_file_t *fp, char *retbuf, int len, int *eof) {
 
 	// we already have some data to give back
 	int datalen = fp->rdbufdatalen - fp->bufrp;
@@ -582,7 +584,7 @@ static int read_file(file_t *file, char *retbuf, int len, int *readflag, charset
 
 	(void) outcset;
 
-	File *fp = (File*) file;
+	curl_file_t *fp = (curl_file_t*) file;
 
 		curl_endpoint_t *cep = (curl_endpoint_t*) fp->file.endpoint;
 
@@ -631,191 +633,73 @@ static file_t *curl_root(endpoint_t *ep) {
 
         log_entry("curl_root");
 
-        File *fp = reserve_file(ep);
+        curl_file_t *fp = reserve_file(ep);
 
         return (file_t*) fp;
 }
 
 
-static int curl_direntry(file_t *fp, file_t **outentry, int isresolve, int *readflag, const char **outpattern, charset_t outcset) {
+static int curl_declose(direntry_t *dirent) {
+
+	mem_free(dirent->name);
+	mem_free(dirent);
+
+	return CBM_ERROR_OK;
+}
+
+static int curl_direntry2(file_t *dirfp, direntry_t **outentry, int isdirscan, int *readflag, const char *preview, charset_t cset) {
+
+	(void) preview;
+	(void) cset;
 	(void) readflag;	// silence warning
+
+	int err = CBM_ERROR_OK;
         *outentry = NULL;	// just in case
 
-	file_t *wrapfile = NULL;
+        log_debug("ENTER: curl_direntry2 '%s' fp=%p, dirstate=%d\n", dirfp->filename, dirfp, dirfp->dirstate);
 
-        log_debug("ENTER: curl_direntry fp=%p, dirstate=%d\n", fp, fp->dirstate);
-
-        if (fp->handler != &curl_file_handler) {
+        if (dirfp->handler != &curl_file_handler) {
                 return CBM_ERROR_FAULT;
         }
 
-        curl_endpoint_t *tnep = (curl_endpoint_t*) fp->endpoint;
-
-        if (!isresolve) {
-		// TODO ftp dir
-                // escape, we don't show a dir
-                return CBM_ERROR_OK;
-        }
-
-
-        File *retfile = reserve_file((endpoint_t*) tnep);
-
-	retfile->file.parent = fp;
-
-	// compute file name (filename is stored in the external charset, e.g. PETSCII)
-        char *name = mem_alloc_str(fp->pattern);
-	char *p = strchr(name, '/');
-	if (p != NULL) {
-		// shorten file/dir name to next dir separator if exists
-		*p = 0;
-	}
-        retfile->file.filename = name;
-	retfile->file.isdir = 1;	// just in case
-
-        if ( handler_next((file_t*)retfile, fp->pattern, outcset, outpattern, &wrapfile)
-                                == CBM_ERROR_OK) {
-	        *outentry = wrapfile;
-                int rv = CBM_ERROR_OK;
-		return rv;
-	}
-
-	curl_close((file_t*)retfile, 0, NULL, NULL);
-
-        return CBM_ERROR_OK;
-}
-
-// ----------------------------------------------------------------------------------
-
-// open a file for reading, writing, or appending
-static int open_file(file_t *file, openpars_t *pars, int type) {
-
-	(void)pars; // silence warning unused parameter
-
-	int rv = CBM_ERROR_FAULT;
-
-	curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
-	File *fp = (File*) file;
-
-		// create session	
-		fp->multi = curl_multi_init();
-
-		if (fp->multi == NULL) {
-			log_error("multi session is NULL\n");
-			return rv;
-		}
-
-		fp->session = curl_easy_init();
-
-		if (fp->session == NULL) {
-			log_error("easy session is NULL\n");
-			curl_multi_cleanup(fp->multi);
-			return rv;
-		}
-
-		// set options
-		curl_easy_setopt(fp->session, CURLOPT_VERBOSE, (long)1);
-		//curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
-		curl_easy_setopt(fp->session, CURLOPT_WRITEDATA, fp);
-		//curl_easy_setopt(fp->session, CURLOPT_READFUNCTION, read_cb);
-		curl_easy_setopt(fp->session, CURLOPT_READDATA, fp);
-		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
-
-		// prepare name
-		mem_append_str5(&cep->name_buffer, 
-			((provider_t*)(cep->base.ptype))->name,
-			"://",
-			cep->host_buffer,
-			"/",
-			cep->path_buffer);
-
-		cep->name_buffer = add_parent_path(cep->name_buffer, (file_t*)fp);
-
-		if (type == FS_OPEN_DR) {
-			// end with a slash "/" to indicate a dir list
-			mem_append_str2(&cep->name_buffer, "/", NULL);
-		}
-
-		log_info("curl URL: %s\n", cep->name_buffer);
-
-		// set URL
-		curl_easy_setopt(fp->session, CURLOPT_URL, cep->name_buffer);
-
-		// debatable...
-		curl_easy_setopt(fp->session, CURLOPT_BUFFERSIZE, (long) MAX_BUFFER_SIZE);
-
-		// add to multi session
-		//curl_multi_add_handle(fp->multi, fp->session);
-
-		rv = CBM_ERROR_OK;
+	curl_file_t *fp = (curl_file_t*) dirfp;
 	
-	return rv;
-}
-
-static int open_rd(file_t *file, openpars_t *pars, int type) {
-
-	int rv = open_file(file, pars, type);
-
-	if (rv == CBM_ERROR_OK) {
-		File *fp = (File*) file;
-
-		// set for receiving
-		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
-
-// HTTP
-//  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-		// protocol specific stuff	
-		//if (fp->protocol == FTP) {
-		// 	// FTP append
-		// 	curl_easy_setopt(fp->session, CURLOPT_APPEND);
-		//}	
-
-		//add to multi session
-		CURLMcode rv = curl_multi_add_handle(fp->multi, fp->session);
-
-		printf("multi add returns %d\n", rv);
-
-		return CBM_ERROR_OK;
-	}
-	return rv;
-}
-
-/**
- * converts the list of file names from an FTP NLST command
- * to a wireformat dir entry.
- *
- * Because of the FS_DIR_* macros used here, the wireformat.h include
- * is required, which I would like to have avoided...
- */
-int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf, int len, int *readflag) {
-
-	if (len < FS_DIR_NAME + 1) {
-		log_error("read buffer too small for dir entry (is %d, need at least %d)\n",
-				len, FS_DIR_NAME+1);
-		return -CBM_ERROR_FAULT;
+	if (fp->session == NULL) {
+		err = open_dr(fp, NULL);
 	}
 
-	// prepare dir entry
-	memset(retbuf, 0, FS_DIR_NAME+1);	
+        curl_endpoint_t *cep = (curl_endpoint_t*) dirfp->endpoint;
 
+	// read direntry
 	*readflag = READFLAG_DENTRY;
+
+	// create direntry to return
+	curl_dirent_t *de = mem_alloc(&curl_dirent_type);
+	de->de.parent = dirfp;
 
 	int eof = 0;	
 	int l = 0;
-	char *namep = retbuf + FS_DIR_NAME;
+	int len = 64;
+	char name[64];
+	char *namep = name;
+
 	switch(fp->read_state) {
 	case 0:		// disk name
-		l = dir_fill_header(retbuf, 0, cep->path_buffer);
-		fp->read_state++;
-		break;
+		if (isdirscan) {
+			de->de.mode = FS_DIR_MOD_NAM;
+			de->de.name = (uint8_t*)mem_alloc_str2(cep->path_buffer, "curl_de_diskname");
+			de->de.cset = CHARSET_ASCII;
+			fp->read_state++;
+			break;
+		}
+		// falls through
 	case 1:
 		// file names
 #ifdef DEBUG_CURL
 		log_debug("get filename, bufdatalen=%d, bufrp=%d, eof=%d\n",
 			fp->rdbufdatalen, fp->bufrp, *readflag);
 #endif
-
-		l = FS_DIR_NAME;
-		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FIL;
+		de->de.mode = FS_DIR_MOD_FIL;
 		do {
 			while ((fp->rdbufdatalen <= fp->bufrp) && (eof == 0)) {
 
@@ -825,7 +709,8 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 
 				if (rv != CURLM_OK) {
 					log_error("Error retrieving directory data (%d)\n", rv);
-					return -CBM_ERROR_DIR_ERROR;
+					mem_free(de);
+					return CBM_ERROR_DIR_ERROR;
 				}
 			}
 			// find length of name
@@ -867,47 +752,137 @@ int dir_nlst_read_converter(struct curl_endpoint_t *cep, File *fp, char *retbuf,
 		}
 		while ((*namep != 0) && (eof == 0));	// not null byte, then not done
 		eof = 0;
-		if (l > FS_DIR_NAME) {
-			// Check if filename has a known extension, e.g. PRG USR SEQ
-			// Default to PRG for files that have no extension
-			// Default to SEQ to prevent LOADing unknown extensions
-			retbuf[FS_DIR_ATTR] |= extension_to_filetype(retbuf + FS_DIR_NAME,
+
+		de->de.name = (uint8_t*)mem_alloc_str2(name, "curl_direntry");
+
+		de->de.attr |= extension_to_filetype(name,
 					FS_DIR_TYPE_PRG, FS_DIR_TYPE_SEQ);
+		break;
+	case 2:
+		if (isdirscan) {
+			log_debug("final dir entry\n");
+			de->de.mode = FS_DIR_MOD_FRE;
+			*readflag |= READFLAG_EOF;
+			fp->read_state++;
 			break;
 		}
-		// otherwise fall through
-	case 2:
-		log_debug("final dir entry\n");
-		retbuf[FS_DIR_MODE] = FS_DIR_MOD_FRE;
-		retbuf[FS_DIR_NAME] = 0;
-		l = FS_DIR_NAME + 1;
-		*readflag |= READFLAG_EOF;
-		fp->read_state++;
-		break;
+		// falls through
+	case 3:
+		err = CBM_ERROR_FAULT;
 	}
-#ifdef DEBUG_CURL
-	printf("Got some dir data : datalen=%d\n", l);
-        for (int i = 0; i < FS_DIR_NAME; i++) {
-	        printf("%02x ", retbuf[i]);
-        }
-        printf(": %s\n", retbuf+FS_DIR_NAME);
-#endif
-	return l;
+
+	*outentry = (direntry_t*) de;
+
+	return err;
 }
 
 
-static int open_dr(file_t *file, openpars_t *pars) {
+// ----------------------------------------------------------------------------------
+
+// open a file for reading, writing, or appending
+static int open_file(curl_file_t *file, openpars_t *pars, int type) {
 
 	(void)pars; // silence warning unused parameter
 
-	// curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
-	File *fp = (File*) file;
+	int rv = CBM_ERROR_FAULT;
 
-	int rv = open_file(file, pars, FS_OPEN_DR);
+	curl_endpoint_t *cep = (curl_endpoint_t*) file->file.endpoint;
+	curl_file_t *fp = (curl_file_t*) file;
+
+		// create session	
+		fp->multi = curl_multi_init();
+
+		if (fp->multi == NULL) {
+			log_error("multi session is NULL\n");
+			return rv;
+		}
+
+		fp->session = curl_easy_init();
+
+		if (fp->session == NULL) {
+			log_error("easy session is NULL\n");
+			curl_multi_cleanup(fp->multi);
+			return rv;
+		}
+
+		// set options
+		curl_easy_setopt(fp->session, CURLOPT_VERBOSE, (long)1);
+		//curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
+		curl_easy_setopt(fp->session, CURLOPT_WRITEDATA, fp);
+		//curl_easy_setopt(fp->session, CURLOPT_READFUNCTION, read_cb);
+		curl_easy_setopt(fp->session, CURLOPT_READDATA, fp);
+		curl_easy_setopt(fp->session, CURLOPT_ERRORBUFFER, &(cep->error_buffer));
+
+		mem_free(cep->name_buffer);
+		cep->name_buffer = NULL;
+		// prepare name
+		mem_append_str5(&cep->name_buffer, 
+			((provider_t*)(cep->base.ptype))->name,
+			"://",
+			cep->host_buffer,
+			"/",
+			cep->path_buffer);
+
+		mem_append_str2(&cep->name_buffer, "/", fp->path);
+
+		if (type == FS_OPEN_DR) {
+			// end with a slash "/" to indicate a dir list
+			mem_append_str2(&cep->name_buffer, "/", NULL);
+		}
+
+		log_info("curl URL: %s\n", cep->name_buffer);
+
+		// set URL
+		curl_easy_setopt(fp->session, CURLOPT_URL, cep->name_buffer);
+
+		// debatable...
+		curl_easy_setopt(fp->session, CURLOPT_BUFFERSIZE, (long) MAX_BUFFER_SIZE);
+
+		// add to multi session
+		//curl_multi_add_handle(fp->multi, fp->session);
+
+		rv = CBM_ERROR_OK;
+	
+	return rv;
+}
+
+static int open_rd(curl_file_t *file, openpars_t *pars, int type) {
+
+	int rv = open_file(file, pars, type);
+
+	if (rv == CBM_ERROR_OK) {
+		curl_file_t *fp = (curl_file_t*) file;
+
+		// set for receiving
+		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
+
+// HTTP
+//  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+		// protocol specific stuff	
+		//if (fp->protocol == FTP) {
+		// 	// FTP append
+		// 	curl_easy_setopt(fp->session, CURLOPT_APPEND);
+		//}	
+
+		//add to multi session
+		CURLMcode rv = curl_multi_add_handle(fp->multi, fp->session);
+
+		printf("multi add returns %d\n", rv);
+
+		return CBM_ERROR_OK;
+	}
+	return rv;
+}
+
+
+static int open_dr(curl_file_t *file, openpars_t *pars) {
+
+	// curl_endpoint_t *cep = (curl_endpoint_t*) file->endpoint;
+	curl_file_t *fp = (curl_file_t*) file;
+
+	int rv = open_file(fp, pars, FS_OPEN_DR);
 	if (rv == CBM_ERROR_OK) {
 
-		fp->read_converter = &dir_nlst_read_converter;	// do DIR conversion
-	
 		// set for receiving
 		curl_easy_setopt(fp->session, CURLOPT_WRITEFUNCTION, write_cb);
 
@@ -916,7 +891,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 		//
 		// NLST is the "name list" without other data
 		char *cmd = NULL;
-		mem_append_str2(&cmd, "NLST ", file->filename);
+		mem_append_str2(&cmd, "NLST ", "" /*file->filename*/);
 		// custom FTP command to make info more grokable
 		curl_easy_setopt(fp->session, CURLOPT_CUSTOMREQUEST, cmd);
 		mem_free(cmd);
@@ -937,7 +912,7 @@ static int open_dr(file_t *file, openpars_t *pars) {
 
 static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *user) {
 
-	File *fp = (File*) user;
+	curl_file_t *fp = (curl_file_t*) user;
 
 	long rdlen = size * nmemb;
 	long datalen = fp->wrbufdatalen - fp->bufwp;
@@ -964,7 +939,7 @@ printf("\n");
 static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int iseof) {
 
 	curl_endpoint_t *cep = (curl_endpoint_t*) ep;
-	File *fp = find_file(ep, tfd);
+	curl_file_t *fp = find_file(ep, tfd);
 
 	CURLMcode rv = CURLM_OK;
 
@@ -1009,16 +984,39 @@ static int write_file(endpoint_t *ep, int tfd, char *buf, int len, int iseof) {
 
 #endif
 
-static int curl_open(file_t *fp, openpars_t *pars, int type) {
+static int curl_open2(direntry_t *dirent, openpars_t *pars, int type, file_t **outfp) {
+
+	int err = CBM_ERROR_OK;
+
+	curl_file_t *cfp = reserve_file(dirent->parent->endpoint);
+	cfp->file.filename = mem_alloc_str2((char*)dirent->name, "curl_open_filename");
+
+	char *p = ((curl_file_t*)dirent->parent)->path;
+	if (p) {
+		cfp->path = p;
+		mem_append_str2(&cfp->path, "/", (char*)dirent->name);
+	} else {
+		cfp->path = mem_alloc_str2((char*)dirent->name, "curl_open_path");
+	}
 
         switch (type) {
                 case FS_OPEN_RD:
-                        return open_rd(fp, pars, FS_OPEN_RD);
+                        err = open_rd(cfp, pars, FS_OPEN_RD);
+			break;
                 case FS_OPEN_DR:
-                        return open_dr(fp, pars);
+                        err = open_dr(cfp, pars);
+			break;
                 default:
-                        return CBM_ERROR_FAULT;
+                        err = CBM_ERROR_FAULT;
         }
+
+	if (err == CBM_ERROR_OK) {
+		*outfp = (file_t*) cfp;
+	} else {
+		close_fd(cfp);
+		*outfp = NULL;
+	}
+	return err;
 }
 
 
@@ -1026,7 +1024,7 @@ static int curl_open(file_t *fp, openpars_t *pars, int type) {
 
 static void curl_dump_file(file_t *fp, int recurse, int indent) {
 
-        File *file = (File*)fp;
+        curl_file_t *file = (curl_file_t*)fp;
         const char *prefix = dump_indent(indent);
 
         log_debug("%shandler='%s';\n", prefix, file->file.handler->name);
@@ -1041,7 +1039,7 @@ static void curl_dump_file(file_t *fp, int recurse, int indent) {
         }
         log_debug("%sisdir='%d';\n", prefix, file->file.isdir);
         log_debug("%sdirstate='%d';\n", prefix, file->file.dirstate);
-        log_debug("%spattern='%s';\n", prefix, file->file.pattern);
+        //log_debug("%spattern='%s';\n", prefix, file->file.pattern);
         log_debug("%sfilesize='%d';\n", prefix, file->file.filesize);
         log_debug("%sfilename='%s';\n", prefix, file->file.filename);
         log_debug("%srecordlen='%d';\n", prefix, file->file.recordlen);
@@ -1063,7 +1061,7 @@ static void curl_dump_ep(curl_endpoint_t *fsep, int indent) {
         log_debug("%sis_assigned='%d';\n", prefix, fsep->base.is_assigned);
         log_debug("%sfiles={;\n", prefix);
         for (int i = 0; ; i++) {
-                File *file = (File*) reg_get(&fsep->base.files, i);
+                curl_file_t *file = (curl_file_t*) reg_get(&fsep->base.files, i);
                 log_debug("%s// file at %p\n", eppref, file);
                 if (file != NULL) {
                         log_debug("%s{\n", eppref, file);
@@ -1107,12 +1105,10 @@ provider_t ftp_provider = {
 	CHARSET_ASCII_NAME,
 	curl_init,
 	curl_end,
-	ftp_new,
 	ftp_temp,
 	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
-	NULL,	// wrap
 	NULL, 	// direct
 	NULL,	// format
 	curl_dump 	// dump
@@ -1123,12 +1119,10 @@ provider_t http_provider = {
 	CHARSET_ASCII_NAME,
 	curl_init,
 	curl_end,
-	http_new,
 	http_temp,
 	curl_to_endpoint,
 	curl_pfree,
 	curl_root,
-	NULL,	// wrap
 	NULL, 	// direct
 	NULL,	// format
 	curl_dump 	// dump
@@ -1136,23 +1130,25 @@ provider_t http_provider = {
 
 static handler_t curl_file_handler = {
         "curl_file_handler",
-        NULL,                   // resolve
-        curl_close,             // close
-        curl_open,              // open
+        NULL, 		        // resolve2
+        NULL,                   // wrap
+	curl_fclose,		// fclose
+	curl_declose,		// declose
+        curl_open2, 	       	// open2
         handler_parent,         // default parent() implementation
         NULL,                   // fs_seek,                // seek
         read_file,              // readfile
         NULL,			// writefile unsupported for now
         NULL,                   // truncate
-        curl_direntry,          // direntry
+        curl_direntry2,         // direntry2
         NULL,                   // fs_create,              // create
         NULL,                   // fs_flush,               // flush data out to disk
         NULL,                   // fs_equals,              // check if two files (e.g. d64 files are the same)
-        NULL,                   // fs_realsize,            // real size of file (same as file->filesize here)
-        NULL,                   // fs_delete,              // delete file
+        NULL,                   // fs_realsize2,            // real size of file (same as file->filesize here)
+        NULL,                   // fs_delete2,              // delete file
         NULL,                   // fs_mkdir,               // create a directory
-        NULL,                   // fs_rmdir,               // remove a directory
-        NULL,                   // fs_move,                // move a file or directory
+        NULL,                   // fs_rmdir2,               // remove a directory
+        NULL,                   // fs_move2,                // move a file or directory
         curl_dump_file            // dump file
 };
 

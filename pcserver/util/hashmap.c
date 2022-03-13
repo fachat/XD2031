@@ -28,6 +28,7 @@
 #include <strings.h>
 
 #include "mem.h"
+#include "log.h"
 #include "array_list.h"
 #include "hashmap.h"
 #include "astring.h"

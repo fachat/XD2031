@@ -1,7 +1,7 @@
 /****************************************************************************
 
-    Serial line filesystem server
-    Copyright (C) 2012 Andre Fachat
+    Serial line filesystem server - memory handling
+    Copyright (C) 2012,2018 Andre Fachat
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,24 +28,35 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifndef __APPLE__
 #include <malloc.h>
 #endif
 
-#include "types.h"
-#include "log.h"
 #include "mem.h"
+#include "log.h"
 
 
 #define	DEBUG_MEM
+#undef	DEBUG_MEM_VERBOSE
 
 #ifdef DEBUG_MEM
-#define	MEM_MAGIC	0xbadc0de
+// establish place for a MAGIC value before each payload
+#define	MEM_MAGIC	0xafafafaf
+#define	MEM_ERR		0x0badc0de
 #define	MEM_OFFSET	(sizeof(int))
 #else
 #define	MEM_OFFSET	0
 #endif
+
+// --------------------------------------------------------------------------------
+// min alloc size to allow for setting of int value on free
+
+static const size_t MIN_LEN = sizeof(int);
+static inline size_t min_alloc(size_t size) {
+	return (size > MIN_LEN ? size : MIN_LEN) + MEM_OFFSET;
+}
 
 // --------------------------------------------------------------------------------
 // memory allocation checker
@@ -56,6 +67,7 @@ typedef struct {
 	void *ptr;
 	const char *name;
 	const char *file;
+	const char *(*to_string)(void*);
 	int line;
 } mem_record_t;
 
@@ -68,11 +80,17 @@ static int mem_last = 0;
 // first unused entry lies here or behind this rec#
 static int mem_tag = 0;
 
-#define check_alloc(ptr, file, line) check_alloc_(ptr, NULL, file, line)
-#define check_alloc2(ptr, name, file, line) check_alloc_(ptr, name, file, line)
+#define check_alloc(ptr, file, line) check_alloc_(ptr, NULL, file, line, NULL)
+#define check_alloc_s(ptr, file, line,to_string) check_alloc_(ptr, NULL, file, line, to_string)
+#define check_alloc2(ptr, name, file, line) check_alloc_(ptr, name, file, line, NULL)
+#define check_alloc_s2(ptr, name, file, line, to_string) check_alloc_(ptr, name, file, line, to_string)
 #define check_free(ptr) check_free_(ptr)
 
-static void check_alloc_(void *ptr, const char *name, char *file, int line) {
+const char *to_string(void *p) {
+	return (const char*) p;
+}
+
+static void check_alloc_(void *ptr, const char *name, char *file, int line, const char* (*to_string)(void*)) {
 	if(!ptr) {
 		fprintf(stderr, "Could not allocate memory, "
 		"file: %s line: %d\n", file, line);
@@ -120,13 +138,21 @@ static void check_alloc_(void *ptr, const char *name, char *file, int line) {
 	mem_records[mem_tag].file = file;
 	mem_records[mem_tag].line = line;
 	mem_records[mem_tag].name = name;
+	mem_records[mem_tag].to_string = to_string;
 }
 
 static void check_free_(const void *ptr) {
 
+	if (!ptr) {
+		// ignore NULL
+		return;
+	}
+
 	for (int i = 0; i < mem_last; i++) {
 		if (mem_records[i].ptr == ptr) {
+#ifdef DEBUG_MEM_VERBOSE
 			log_debug("Free memory at %p (from %s:%d, name=%s)\n", ptr, mem_records[i].file, mem_records[i].line, mem_records[i].name);
+#endif
 			// unalloc
 			mem_records[i].ptr = NULL;
 			if (i < mem_tag) {
@@ -139,7 +165,9 @@ static void check_free_(const void *ptr) {
 			return;
 		}
 	}
-	log_error("check_free: Trying to free memory at %p that is not allocated\n", ptr);
+	log_error("check_free: Trying to free memory at %p that is not allocated (not in list)\n", ptr);
+	// fail fast
+	exit(-1);
 }
 
 // --------------------------------------------------------------------------------
@@ -152,8 +180,9 @@ void mem_exit (void) {
 	for (int i = 0; i < mem_last; i++) {
 
 		if (mem_records[i].ptr != NULL) {
-			fprintf(stderr, "Did not free memory at %p, allocated in %s:%d, name=%s\n", 
-					mem_records[i].ptr, mem_records[i].file, mem_records[i].line, mem_records[i].name);
+			fprintf(stderr, "Did not free memory at %p, allocated in %s:%d, name=%s, value='%s'\n", 
+					mem_records[i].ptr, mem_records[i].file, mem_records[i].line, mem_records[i].name,
+					mem_records[i].to_string ? mem_records[i].to_string(mem_records[i].ptr):"<null>");
 
 		}
 	}
@@ -163,16 +192,20 @@ void mem_exit (void) {
 
 // allocate memory and copy given string up to n chars
 //#define mem_alloc_strn(s,n) mem_alloc_str_(s, n, __FILE__, __LINE__)
-char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
+char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line, const char* (*to_string)(void*)) {
+
+	if (orig == NULL) {
+		return NULL;
+	}
 
 	size_t len = strlen(orig);
 	if (len > n) {
 		len = n;
 	}
 
-	char *ptr = malloc(len+MEM_OFFSET+1);
+	char *ptr = malloc(min_alloc(len+1));
 
-	check_alloc(ptr, file, line);		
+	check_alloc_s(ptr, file, line, to_string);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
@@ -188,14 +221,17 @@ char *mem_alloc_strn_(const char *orig, size_t n, char *file, int line) {
 
 // allocate memory and copy given string
 //#define mem_alloc_str(s) mem_alloc_str_(s, __FILE__, __LINE__)
-char *mem_alloc_str_(const char *orig, char *file, int line) {
+char *mem_alloc_str_(const char *orig, char *name, char *file, int line, const char* (*to_string)(void*)) {
+
+	if (orig == NULL) {
+		return NULL;
+	}
 
 	int len = strlen(orig);
-	len+=MEM_OFFSET;
 
-	char *ptr = malloc(len+1);
+	char *ptr = malloc(min_alloc(len+1));
 
-	check_alloc(ptr, file, line);		
+	check_alloc_s2(ptr, name, file, line, to_string);
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
 #endif
@@ -210,12 +246,12 @@ char *mem_alloc_str_(const char *orig, char *file, int line) {
 void *mem_alloc_(const type_t *type, char *file, int line) {
 	// for now just malloc()
 
-	void *ptr = malloc(type->sizeoftype + MEM_OFFSET);
+	void *ptr = malloc(min_alloc(type->sizeoftype));
 
-	check_alloc(ptr, file, line);
+	check_alloc2(ptr, type->name, file, line);
 
 	// malloc returns "non-initialized" memory! 
-	memset(ptr, 0, type->sizeoftype);
+	memset(ptr, 0, type->sizeoftype + MEM_OFFSET);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
@@ -230,14 +266,14 @@ void *mem_alloc_(const type_t *type, char *file, int line) {
 }
 
 //#define mem_alloc_c(size, name) mem_alloc_c_(size, name, __FILE__, __LINE__)
-void *mem_alloc_c_(size_t n, const char *name, char *file, int line) {
+void *mem_alloc_c_(size_t n, const char *name, char *file, int line, const char* (*to_string) (void*)) {
 	// for now just malloc()
 
 	//(void) name; // name not used at the moment, silence warning
 
-	void *ptr = malloc(n + MEM_OFFSET);
+	void *ptr = malloc(min_alloc(n));
 
-	check_alloc2(ptr, name, file, line);
+	check_alloc_s2(ptr, name, file, line, to_string);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
@@ -253,7 +289,7 @@ void *mem_alloc_n_(const size_t n, const type_t *type, char *file, int line) {
 
 	void *ptr = calloc(n + ((MEM_OFFSET == 0) ? 0 : 1), type->sizeoftype);
 
-	check_alloc(ptr, file, line);
+	check_alloc2(ptr, type->name, file, line);
 
 #ifdef DEBUG_MEM
 	((int*)ptr)[0] = MEM_MAGIC;
@@ -285,17 +321,23 @@ void mem_free_(const void* ptr) {
 
 #ifdef DEBUG_MEM
 	if (ptr != NULL) {
-		ptr = ((char*)ptr) - MEM_OFFSET;
-		if ( ((int*)ptr)[0] != MEM_MAGIC ) {
-			log_error("Trying to free memory at %p that is not allocated\n", ptr);
-			return;
+
+		void *ptr1 = ((char*)ptr) - MEM_OFFSET;
+		if ( ((unsigned int*)ptr1)[0] != MEM_MAGIC ) {
+			log_error("Trying to free memory at %p that is not allocated (no MAGIC)\n", ptr);
+			// fail fast
+			exit(-1);
 		}
-		((int*)ptr)[0] = 0;
-		check_free(ptr);
+		// overwrite magic
+		((int*)ptr1)[0] = 0;
+
+		// overwrite first bytes
+		((int*)ptr)[0] = MEM_ERR;
+
+		ptr = ptr1;
 	}
-#else
-	check_free(ptr);
 #endif
+	check_free(ptr);
 	free((void*)ptr);
 
 }
@@ -306,14 +348,16 @@ void mem_free_(const void* ptr) {
  */
 char *malloc_path_(const char *base, const char *name, char *file, int line) {
 
+#ifdef DEBUG_MEM_VERBOSE
         log_debug("malloc_path: base=%s, name=%s\n", base, name);
+#endif
 
         if(name[0] == '/' || name[0]=='\\') base=NULL;  // omit base for absolute paths
         int l = (base == NULL) ? 0 : strlen(base);
         l += (name == NULL) ? 0 : strlen(name);
         l += 3; // dir separator, terminating zero, optional "."
 
-        char *dirpath = mem_alloc_c_(l, "malloc_path", file, line);
+        char *dirpath = mem_alloc_c_(l, "malloc_path", file, line, to_string);
         dirpath[0] = 0;
         if (base != NULL) {
                 strcat(dirpath, base);
@@ -326,7 +370,9 @@ char *malloc_path_(const char *base, const char *name, char *file, int line) {
                 strcat(dirpath, name);
         }
 
+#ifdef DEBUG_MEM_VERBOSE
         log_debug("Calculated new dir path: %s\n", dirpath);
+#endif
 
         return dirpath;
 }
@@ -347,6 +393,7 @@ void mem_append_str5(char **baseptr, const char *s1, const char *s2, const char 
 		+ 1;
 
 	char *base = mem_alloc_c(newlen, "mem_append");
+	base[0] = 0;
 
 	if (*baseptr != NULL) { strcpy(base, *baseptr); };
 	if (s1 != NULL) { strcat(base, s1); }

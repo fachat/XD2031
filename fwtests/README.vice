@@ -14,14 +14,12 @@ tests you will thus find a sequence "POKE2,2:SYS2" to exit VICE.
 To apply the patches to the VICE source tree, go into the unpacked VICE 
 source tar file and use the "patch" file utility:
 
-	cd <<your_path_to_vice_src>>/vice-2.4
+	cd <<your_path_to_vice_src>>/vice-3.4
 	patch -p1 < <<your_path_to_xd2031_src/fwtests/vice+sock488.diff
 
 (Note the single "<" is literal. An example is
 	cd /home/user/vice-2.4
-	patch -p1 < ../xd2031/fwtests/vice+jamexit.diff
-	patch -p1 < ../xd2031/fwtests/vice+sock488.diff
-	patch -p1 < ../xd2031/fwtests/vice+sockiec.diff
+	patch -p1 < ../xd2031/fwtests/vice-3.4+sock488.diff
 )
 Then build VICE with
 	./configure
@@ -55,7 +53,7 @@ on how to move files to make the result an official test case.
 As you usually will not install the patched VICE, you will most likely use the "VICE"
 environment variable to tell the "runvice" script which VICE to run. Like so:
 
-	VICE=../../vice-2.4/src ./runvice.sh reltest1.2
+	VICE=../../vice-3.4/src ./runvice.sh reltest1.2
 
 For even more convenience, you can source the file "setenv.sh" (after editing setenv-example.sh) 
 to point to the patched VICE source.

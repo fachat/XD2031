@@ -9,7 +9,7 @@ send :FS_CHARSET .len 7c 'PETSCII' 00
 expect :FS_REPLY .len 7c 00
 
 # open REL file
-send :FS_OPEN_DR .len 00 00 c6 2a 00
+send :FS_OPEN_DR .len 00 00 00 c6 2a 00
 expect :FS_REPLY .len 00 00
 
 # start reading; ignore date/time
