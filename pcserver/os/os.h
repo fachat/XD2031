@@ -171,6 +171,9 @@ static inline char *os_realpath(const char *path)
 
 typedef HANDLE serial_port_t;
 #define OS_OPEN_FAILED INVALID_HANDLE
+
+#define	EWOULDBLOCK	WSAEWOULDBLOCK
+
 static inline int device_close(serial_port_t device)
 {
 	return CloseHandle(device);

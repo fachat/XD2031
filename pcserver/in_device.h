@@ -32,7 +32,7 @@ typedef struct {
 	char buf[8192];
 } in_device_t;
 
-in_device_t *in_device_init(int readfd, int writefd, int do_reset);
+in_device_t *in_device_init(serial_port_t readfd, serial_port_t writefd, int do_reset);
 
 /**
  *

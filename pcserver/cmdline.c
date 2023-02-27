@@ -28,7 +28,7 @@
 
 #include "log.h"
 #include "errors.h"
-#include "err.h"
+//#include "err.h"
 #include "mem.h"
 #include "array_list.h"
 #include "hashmap.h"
