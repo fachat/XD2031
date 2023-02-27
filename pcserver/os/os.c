@@ -314,7 +314,7 @@ char *os_realpath(const char *path)
       if((isalpha(path[0])) && (path[1] == ':') &&
          ((path[2] == '/') || (path[2] == '\\'))) {
         log_debug("os_realpath: root directory with drive: %s\n", path);
-        char *p = mem_alloc_str(path);
+        char *p = mem_alloc_str2(path, "os_realpath");
         p[0] = toupper(p[0]);
         return p;
       }
@@ -352,7 +352,7 @@ char *os_realpath(const char *path)
     }
 
     // Drop trailing slashes
-    in_path = mem_alloc_str_(path, __FILE__, __LINE__);
+    in_path = mem_alloc_str2(path, "in_path");
     char *p = in_path + strlen(in_path) -1;
     while((*p == '/') || (*p == '\\')) *p-- = 0;
 
