@@ -30,10 +30,14 @@
 #include <inttypes.h>
 #include <fcntl.h>
 #include <sys/types.h>
+
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 
 
+#ifndef _WIN32
 static int socket_listen_int(const char *socketname) {
 
 	log_info("Opening socket %s for requests\n", socketname);
@@ -63,9 +67,13 @@ static int socket_listen_int(const char *socketname) {
 
 	return sockfd;
 }
+#endif
 
 static int socket_accept_int(int sockfd, int nonblock) {
- 
+
+#ifdef _WIN32
+	return -1;
+#else	
 	int clientfd;
 	socklen_t clientlen;
 	struct sockaddr_un client_addr;
@@ -86,6 +94,7 @@ static int socket_accept_int(int sockfd, int nonblock) {
 	}
 
 	return clientfd;
+#endif
 }
 
 
@@ -94,6 +103,9 @@ static int socket_accept_int(int sockfd, int nonblock) {
  */
 int socket_open(const char *socketname) {
 
+#ifdef _WIN32
+	return -1;
+#else
 	int sockfd = socket_listen_int(socketname);
 
 	if (sockfd < 0) {
@@ -107,6 +119,7 @@ int socket_open(const char *socketname) {
 		return -1;
 	}
 	return clientfd;
+#endif
 }
 
 /**
@@ -114,6 +127,9 @@ int socket_open(const char *socketname) {
  */
 int socket_listen(const char *socketname) {
 
+#ifdef _WIN32
+	return -1;
+#else
 	// note: getting the socket should be protected by a lock file according to 
 	// https://gavv.github.io/blog/unix-socket-reuse/
 
@@ -136,6 +152,7 @@ int socket_listen(const char *socketname) {
 		return -1;
 	}
 	return sockfd;
+#endif
 }
 
 /**
@@ -143,12 +160,16 @@ int socket_listen(const char *socketname) {
  */
 int socket_accept(int sockfd) {
 
+#ifdef _WIN32
+	return -1;
+#else
 	int clientfd = socket_accept_int(sockfd, 1);
 
 	if (clientfd < 0) {
 		return -1;
 	}
 	return clientfd;
+#endif
 }
 
 

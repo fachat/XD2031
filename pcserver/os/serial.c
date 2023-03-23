@@ -227,7 +227,8 @@ int config_ser(serial_port_t h) {
 	}
 
 	//dcb.BaudRate = CBR_115200;
-	dcb.BaudRate = CBR_76800;
+	//dcb.BaudRate = CBR_76800;
+	dcb.BaudRate = CBR_38400;
 	dcb.ByteSize = 8;
 	dcb.StopBits = ONESTOPBIT;
 	dcb.Parity   = NOPARITY;
@@ -259,6 +260,11 @@ int config_ser(serial_port_t h) {
 
 	if (!SetCommTimeouts(h, &timeouts)) {
 		log_error("Error setting serial timeouts\n");
+		return -1;
+	}
+
+	if (!SetCommMask( h, EV_TXEMPTY | EV_RXCHAR )) {
+		log_error("Error setting CommMask\n");
 		return -1;
 	}
 

@@ -200,13 +200,13 @@ void provider_init() {
         // manually handle the initial provider
         fs_provider.init();
 
+#ifndef _WIN32
         ftp_provider.init();
 	provider_register(&ftp_provider);
 
         http_provider.init();
 	provider_register(&http_provider);
 
-#ifndef _WIN32
         tcp_provider.init();
 	provider_register(&tcp_provider);
 #endif

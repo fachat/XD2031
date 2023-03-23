@@ -1,0 +1,15 @@
+CC=gcc
+
+OBJFILES= cerrno.o channel.o cmd.o cmdline.o dir.o drives.o handler.o in_device.o in_ui.o openpars.o provider.o resolver.o xcmd.o xdserver.o handler/curl_provider.o handler/di_provider.o handler/diskimgs.o handler/fs_provider.o handler/tcp_provider.o handler/typed_handler.o handler/x00_handler.o os/os.o os/privs.o os/serial.o os/terminal.o posix/loop.o posix/socket.o util/array_list.o util/hashmap.o util/log.o util/mem.o util/registry.o ../common/charconvert.o ../common/cmdnames.o ../common/errnames.o ../common/filetypes.o ../common/name.o ../common/wildcard.o
+
+%.o: %.c
+	gcc -g -W -Wall -pedantic -ansi -std=c11 -funsigned-char -I. -I../common -Ihandler -Ios -Iposix -Iutil -DSERVER -D_POSIX_C_SOURCE=200809 -c $< -o $@
+
+
+xdserver: ${OBJFILES}
+	#gcc ${OBJFILES} -o xdserver -lncurses -lcurl -lws2_32
+	gcc ${OBJFILES} -o xdserver -lncurses -lcurl -lws2_32 -static
+
+clean:
+	rm -f *.o */*.o ../common/*.o
+

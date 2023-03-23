@@ -169,10 +169,46 @@ static inline char *os_realpath(const char *path)
 
 #ifdef _WIN32
 
+/****************************************************************/
+/*
+ * from VLC vlc_fixups.h
+ */
+
+#if 0
+enum
+{
+    POLLERR=0x1,
+    POLLHUP=0x2,
+    POLLNVAL=0x4,
+    POLLWRNORM=0x10,
+    POLLWRBAND=0x20,
+    POLLRDNORM=0x100,
+    POLLRDBAND=0x200,
+    POLLPRI=0x400,
+};
+#define POLLIN  (POLLRDNORM|POLLRDBAND)
+#define POLLOUT (POLLWRNORM|POLLWRBAND)
+
+struct pollfd
+{
+    int fd;
+    short events;
+    short revents;
+};
+
+struct pollfd;
+#endif
+
+int poll (struct pollfd *, unsigned, int);
+
+
+/****************************************************************/
+
+
 typedef HANDLE serial_port_t;
 #define OS_OPEN_FAILED INVALID_HANDLE
 
-#define	EWOULDBLOCK	WSAEWOULDBLOCK
+//#define	EWOULDBLOCK	WSAEWOULDBLOCK
 
 static inline int device_close(serial_port_t device)
 {

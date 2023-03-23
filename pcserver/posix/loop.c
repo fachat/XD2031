@@ -19,7 +19,12 @@
 
 ****************************************************************************/
 
+#ifndef _WIN32
 #include <poll.h>
+#else
+#include <winsock2.h>
+#include "os.h"
+#endif
 #include <unistd.h>
 
 #include "mem.h"
@@ -262,7 +267,9 @@ int poll_loop(int timeoutMs) {
 					if (pinfo->write) {
 						pinfo->write(fd, pinfo->data);
 					} else {
+#ifndef _WIN32
 						log_error("unexpected POLLOUT on fd %d\n", fd);
+#endif
 					}
 				}
 				if (poll_pars[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {

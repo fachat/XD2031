@@ -179,6 +179,7 @@ static fs_endpoint_t *create_home_ep() {
 	// mallocs a buffer and stores the canonical real path in it
 	// might get into os.c (Linux (m)allocates the buffer automatically in the right size)
 	fsep->basepath = getcwd(NULL, 0);
+	os_patch_dir_separator(fsep->basepath);
 
 	// copy into current path
 	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_home_ep_path");
@@ -849,6 +850,7 @@ static int open_dr(fs_endpoint_t *fsep, const char *name, charset_t cset, File *
 	file->file.filename = tmpnamep;
 
 	file->ospath = os_realpath(fsep->curpath);
+log_debug("open_dr: ospath->%s\n", file->ospath);
 
 	*outfile = file;
 
@@ -862,6 +864,7 @@ static file_t *fsp_root(endpoint_t *ep) {
 	fs_endpoint_t *fsep = (fs_endpoint_t*) ep;
 
 	log_entry("fs_provider.fps_root");
+	log_debug("fs_provider.fps_root (basepath=%s, curpath=%s)", fsep->basepath, fsep->curpath);
 
 	File *file = NULL;
 
@@ -1573,6 +1576,7 @@ static File* create_file(direntry_t *dirent) {
 	File *newfp = reserve_file((fs_endpoint_t*)parent->file.endpoint);
 	newfp->ospath = newospath;
 	newfp->file.writable = (dirent->attr & FS_DIR_ATTR_LOCKED) ? 0 : 1;
+log_debug("create_file: ospath -> %s\n", newfp->ospath);
 
 	return newfp;
 }
@@ -1602,6 +1606,7 @@ static int fs_create(file_t *dirfp, file_t **outentry, const char *name, charset
 		retfile = reserve_file((fs_endpoint_t*)dirfp->endpoint);
 		
 		retfile->ospath = ospath;
+log_debug("fs_create: ospath -> %s\n", retfile->ospath);
 
 		retfile->file.writable = 1;
 		retfile->file.seekable = 1;
@@ -1703,6 +1708,7 @@ static int fs_resolve2(const char **pattern, charset_t cset, file_t **inoutdir) 
 	
 		File *newfp = reserve_file((fs_endpoint_t*)fp->file.endpoint);
 		newfp->ospath = newospath;
+log_debug("fs_resolve2: ospath -> %s\n", newfp->ospath);
 	
 		// close old
 		close_fd(fp);

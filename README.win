@@ -1,0 +1,66 @@
+
+New Windows building instructions
+=================================
+
+Windows lacks a proper poll() that includes serial as well as other sockets.
+The Socket API is different. So, this is a very crippled build.
+
+Basically it only allows receiving commands from a serial port, not from
+an Internet port or a local port. So, xdcmd commands are not working (not even compiling).
+
+Also, I had to remove all TCP/HTTP based functionalities. So, you can NOT use
+TCP to connect to host on the internet, or pull files directly from an internet FTP archive.
+
+
+Building
+--------
+
+To build it, you need to setup a MINGW64 build environment. The easiest way to do this that
+I found is to install an "MSYS2" environment. MSYS2 provides multiple build environments.
+Make sure you always select the MINGW64 one.
+
+Tools Installation
+------------------
+See also here https://docs.epics-controls.org/projects/how-tos/en/latest/getting-started/installation-windows-msys2.html
+
+1) Download the MSYS2 installer for "x86_64" from https://www.msys2.org/ and install it under c:\msys64
+	then open a command line shell for "MSYS MinGW 64-bit" from the windows start menu
+
+3) install various tools
+	pacman -S mingw-w64-x86_64-toolchain
+	pacman -S vim		# or any other editor of your choice
+	pacman -S git
+
+4) note I found in my trials to make it work I installed these packages where I am not sure
+if they are actually needed. I'll list them here just in case they are actually required:
+
+	pacman -S base-devel make gcc curl
+	pacman -S msys/libcurl-devel
+	pacman -S openssl-devel
+	pacman -S libssh-devel
+
+5) Update the whole system (multiple times until nothing more is updated/installed)
+	pacman -Syuu
+
+6) to run any of the following (build) commands, in the Windows start menu, use the
+	"MSYS MinGW64" shell.
+
+
+Download source
+---------------
+	git clone https://github.com/fachat/XD2031.git
+	cd XD2031
+
+Currently the code lives in the "win" branch, so you need to check this out:
+
+	git checkout win
+
+
+Build the server
+----------------
+
+	cd pcserver
+	make -f Makefile.win
+
+
+

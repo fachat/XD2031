@@ -56,6 +56,8 @@
 
 #define	TELNET_PORT	"23"
 
+#ifndef _WIN32
+
 //#define	min(a,b)	(((a)<(b))?(a):(b))
 
 static handler_t tcp_file_handler;
@@ -177,6 +179,7 @@ static void tnp_end(void) {
 static void tnp_init(void) {
 
 	reg_init(&endpoints, "tcp_endpoints", 5);
+
 }
 
 
@@ -696,4 +699,24 @@ provider_t tcp_provider = {
 	tnp_dump			// dump
 };
 
+#else
+
+static void tnp_init(void) {
+}
+
+provider_t tcp_provider = {
+	"tcp",
+	CHARSET_ASCII_NAME,		// not used as we don't do directories, but still
+	tnp_init,
+	NULL,
+	NULL,
+	NULL,				// to_endpoint
+	NULL,
+	NULL,			// root - basically only a handle to open files (ports)
+	NULL,				// block
+	NULL,				// format
+	NULL			// dump
+};
+
+#endif
 

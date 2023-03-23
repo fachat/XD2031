@@ -90,6 +90,9 @@ static inline void color_textcolor_cyan (void) {
 	color_textcolor(FOREGROUND_BLUE | FOREGROUND_GREEN);
 }
 
+//void color_reverse(void)		{ color_textcolor_reverse();	}
+static inline void color_reverse	   (void) { }
+
 #else
 
 // ----- POSIX -------------------------------------------------------------
@@ -210,6 +213,8 @@ static inline void color_textcolor_cyan    (void) { color_textcolor(cyan   ); }
 static inline void color_textcolor_reverse (void) { color_textcolor(reverse); }
 static inline void color_textcolor_normal  (void) { color_textcolor(default_color ); }
 
+void color_reverse(void)		{ color_textcolor_reverse();	}
+
 #endif // _WIN32
 
 // ----- COMMON ------------------------------------------------------------
@@ -221,5 +226,4 @@ void color_log_warn(void)		{ color_textcolor_yellow();	}
 void color_log_info(void)		{ color_textcolor_blue();	}
 void color_log_debug(void)		{ color_textcolor_magenta();	}
 
-void color_reverse(void)		{ color_textcolor_reverse();	}
 

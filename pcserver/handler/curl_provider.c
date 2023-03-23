@@ -32,6 +32,8 @@
  * curl-library-based internet access filesystem.
  */
 
+#ifndef _WIN32
+
 #define DEBUG_CURL
 
 #include "os.h"
@@ -1152,4 +1154,5 @@ static handler_t curl_file_handler = {
         curl_dump_file            // dump file
 };
 
+#endif
 
