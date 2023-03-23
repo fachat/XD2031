@@ -8,7 +8,8 @@ OBJFILES= cerrno.o channel.o cmd.o cmdline.o dir.o drives.o handler.o in_device.
 
 xdserver: ${OBJFILES}
 	#gcc ${OBJFILES} -o xdserver -lncurses -lcurl -lws2_32
-	gcc ${OBJFILES} -o xdserver -lncurses -lcurl -lws2_32 -static
+	#gcc ${OBJFILES} -o xdserver -lncurses -lcurl -lws2_32 -static
+	gcc ${OBJFILES} -o xdserver -lws2_32 -static
 
 clean:
 	rm -f *.o */*.o ../common/*.o
