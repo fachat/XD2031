@@ -487,6 +487,8 @@ int16_t bus_attention(bus_t *bus, uint8_t b) {
 #ifdef DEBUG_BUS
 		debug_printf("Bus: cmd_handler(%s)\n", bus->command.command_buffer);
 #endif
+		bus->command.command_buffer[bus->command.command_length] = 0;
+
         	st = cmd_handler(bus);
         }
 	// as it's unlisten, we need to wait for ATN end
