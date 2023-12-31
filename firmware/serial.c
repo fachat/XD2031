@@ -214,12 +214,15 @@ static void send(void) {
 	}	
 }
 
+static char dbgcnt = 1;
 
 /**
  * interrupt for received data
  */
 static void push_data_to_packet(int8_t rxdata)
 {
+
+	//debug_printf("push data: %02x (%c), st=%d\n", rxdata, isprint(rxdata)?rxdata:'-', rxstate);
 	switch(rxstate) {
 	case RX_IDLE:
 		// no current packet
@@ -262,6 +265,7 @@ static void push_data_to_packet(int8_t rxdata)
 						current_is_eoi, current_data_left) >= 0) {
 					rxstate = RX_DATA;
 				}
+				// debug_printf("%d: found receive buffer for chan %d; data left=%d, packet len=%d\n", dbgcnt++, current_channelno, current_data_left, current_rxpacket->len);
 				break;
 			}
 		}
@@ -288,6 +292,7 @@ static void push_data_to_packet(int8_t rxdata)
 			// prohibit receiving just in case (we reuse the rx buffer e.g. 
 			// in X option)
 			serial_lock = 1;
+			//debug_printf("%d: do callback on channel %d, cmd=%d, data left=%d, packet=%p, len=%d\n", dbgcnt++, current_channelno, current_is_eoi, current_data_left, current_rxpacket, current_rxpacket->len);
 			if (rx_channels[current_channelpos].callback(current_channelno, 
 					(rxstate == RX_IGNORE) ? -1 : 0, 
 					(rxstate == RX_IGNORE) ? NULL : current_rxpacket) == 0) {
@@ -311,15 +316,19 @@ static void push_data_to_packet(int8_t rxdata)
 /*****************************************************************************
  * try to send data to the uart ring buffer, or try to receive something
  */
+static int8_t enter = 1;
+
 void serial_delay() {
 	// can we receive?
-	if (!serial_lock) {
+	if (!serial_lock && enter) {
+		enter = 0;
 		int16_t data = uarthw_receive();
 		while (data >= 0) {
 			push_data_to_packet(0xff & data);
 			// try next byte
 			data = uarthw_receive();
 		}
+		enter = 1;
 	}
 	// try to send
 	send();

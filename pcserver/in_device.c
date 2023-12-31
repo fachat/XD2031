@@ -344,6 +344,7 @@ static void dev_dispatch(char *buf, in_device_t *dt) {
 		break;
 	case FS_RESET:
 		log_info("RESET\n");
+		sleep(1);
 		// send the X command line options again
 		cmd_sendxcmd(dt->writefd, retbuf);
 		// we have already sent everything

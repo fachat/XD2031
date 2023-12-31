@@ -51,6 +51,8 @@
 #define	MAX_RTCONFIG	1
 #endif
 
+#define	RTC_DEBUG	0
+
 static void do_charset();
 
 static endpoint_t *endpoint;
@@ -115,9 +117,13 @@ void rtconfig_init_rtc(rtconfig_t *rtc, uint8_t devaddr) {
 static uint8_t out_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) {
 	int8_t outrv;
 
-        //debug_printf("setopt cb err=%d\n", errno);
+#if RTC_DEBUG
+        debug_printf("setopt out_cb err=%d\n", errno);
+#endif
         if (errno == CBM_ERROR_OK) {
-                //debug_printf("rx command: %s\n", buf);
+#if RTC_DEBUG
+                debug_printf("rx command: %s\n", buf);
+#endif
 
 		uint8_t cmd = packet_get_type(rxpacket);
 
@@ -159,7 +165,9 @@ static void do_setopt(char *buf, uint8_t len) {
 	for (uint8_t i = 0; i < num_rtcs; i++) {
 		rtconfig_t *rtc = rtcs[i];
 		const char *name = rtc->name;
-
+#if RTC_DEBUG
+		debug_printf("checking for config %s\n", name);
+#endif
 		uint8_t j;
 		for (j = 0; j < len; j++) {
 			if (name[j] == 0
@@ -181,11 +189,15 @@ static void do_setopt(char *buf, uint8_t len) {
 // re-entrant!
 static uint8_t setopt_callback(int8_t channelno, int8_t errno, packet_t *rxpacket) {
 
-        //debug_printf("setopt cb err=%d\n", errno);
+#if RTC_DEBUG
+        debug_printf("setopt cb err=%d\n", errno);
+#endif
         if (errno == CBM_ERROR_OK) {
-                //debug_printf("rx command: %s\n", buf);
-
 		uint8_t cmd = packet_get_type(rxpacket);
+#if RTC_DEBUG
+                debug_printf("rx command: %d -> %s\n", cmd, buf);
+#endif
+
 		uint8_t len = packet_get_contentlen(rxpacket);
 
 		switch(cmd) {

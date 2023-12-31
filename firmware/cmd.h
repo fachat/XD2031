@@ -36,7 +36,7 @@
 
 typedef struct {
 	uint8_t command_length;
-	// command buffer
+	// command buffer; allow for null-termination
 	uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE + 2];
 //      errormsg_t      *errormsg;
 } cmd_t;

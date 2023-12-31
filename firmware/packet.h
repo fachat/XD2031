@@ -39,7 +39,6 @@
 #include "rtconfig.h"
 #include "delay.h"
 
-//#include "debug.h"
 
 /***********************************************************************************
  * packet stuff 
@@ -173,11 +172,17 @@ static inline void packet_update_wp(packet_t * packet, int8_t datalen)
 /*
  * writes a byte into the buffer.
  * Note: no bounds check!
- */
+ *
 static inline void packet_write_char(packet_t * buf, uint8_t ch)
 {
-	buf->buffer[buf->wp++] = ch;
+	if (buf->wp >= buf->len) {
+		debug_printf("Buffer overflow at %d bytes\n", buf->wp);
+	} else {
+		buf->buffer[buf->wp++] = ch;
+	}
 }
+*/
+void packet_write_char(packet_t * buf, uint8_t ch);
 
 static inline uint8_t packet_read_char(packet_t * buf)
 {
