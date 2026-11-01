@@ -544,7 +544,7 @@ if test $CLEAN -ge 2; then
 
         # only remove work dir if we own it (see option -R)
 	if test $OWNDIR -ge 1; then	
-		rmdir $TMPDIR
+		rmdir --ignore-fail-on-non-empty $TMPDIR
 	fi;
 else 
 	echo "Find debug info in $TMPDIR" >&5

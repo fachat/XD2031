@@ -432,7 +432,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 	fs_endpoint_t *parentep = (fs_endpoint_t*) file->endpoint;
 	// get to the actual mount point to check for the right basepath
 	while (parentep->mount) {
-		parentep = parentep->mount;
+		parentep = (fs_endpoint_t*) parentep->mount;
 	}
 
 	// basepath is real malloc'd, not mem_alloc_*'d
@@ -460,7 +460,7 @@ static int fsp_to_endpoint(file_t *file, endpoint_t **outep) {
 
 	// copy into current path
 	fsep->curpath = mem_alloc_str2(fsep->basepath, "fs_curpath");
-	fsep->mount = parentep;
+	fsep->mount = (endpoint_t*) parentep;
 
 	// free resources
 	close_fd(fp);
